@@ -1,4 +1,3 @@
 start RegFileTestbench
-add wave RegFileTestbench/*
-add wave RegFileTestbench/DUT/*
+log -r /*
 run 1000us
