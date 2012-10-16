@@ -5,12 +5,32 @@
 			Type="SimulationSrcs"
 			RelSrcDir="$PSRCDIR/sim_1">
 		<Filter Type="Srcs"/>
+		<File Path="$PPRDIR/../hardware/src/ALUTestVectorTestbench.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/ALUTestbench.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
 		<File Path="$PPRDIR/../hardware/src/EchoTestbench.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
 				<Attr Name="UsedInImplementation"
-						Val="0"/>
+						Val="1"/>
 				<Attr Name="UsedInSimulation"
 						Val="1"/>
 			</FileInfo>
@@ -20,7 +40,7 @@
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
 				<Attr Name="UsedInImplementation"
-						Val="0"/>
+						Val="1"/>
 				<Attr Name="UsedInSimulation"
 						Val="1"/>
 			</FileInfo>
