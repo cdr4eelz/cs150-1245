@@ -7,6 +7,7 @@
 /plan/CPU.sim/
 build/
 *~
+*.xxx
 *.tar
 *.tgz
 *.gz
