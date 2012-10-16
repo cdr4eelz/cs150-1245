@@ -1,0 +1,13 @@
+-w
+-logic_opt off
+-ol std
+-t 1
+-register_duplication off
+-global_opt off
+-mt 2
+-cm area
+-ir off
+-pr off
+-lc off
+-power off
+

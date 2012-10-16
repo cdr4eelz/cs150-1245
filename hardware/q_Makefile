@@ -1,0 +1,31 @@
+TOP := ml505top
+SRC := src
+TEMPLATES := q_cfg
+WORKINGDIR ?= /scratch
+
+TARGETS = all synth xst map par timing bitgen impact report schematic schem ise
+
+RSYNC := rsync -EXrLAtg --verbose
+
+BUILDDIR := $(WORKINGDIR)/q_build_$(USER)
+MAKEFILE := $(BUILDDIR)/$(TOP)/Makefile
+MAKEARGS := TOP=$(TOP) SRC=../srcX TEMPLATES=../cfgX
+
+$(TARGETS): $(MAKEFILE)
+	$(MAKE) $@ -C $(BUILDDIR)/$(TOP) $(MAKEARGS) | tee $(BUILDDIR)/log
+
+$(MAKEFILE): $(BUILDDIR)/cfgX/Makefile
+	mkdir -p $(BUILDDIR)/$(TOP)
+	cp $< $@
+
+$(BUILDDIR)/cfgX/Makefile: sync
+
+sync:
+	mkdir -p $(BUILDDIR)
+	$(RSYNC) --delete $(TEMPLATES)/ $(BUILDDIR)/cfgX
+	$(RSYNC) --delete $(SRC)/ $(BUILDDIR)/srcX
+
+clean:
+	rm -rf $(BUILDDIR)
+
+.PHONY := $(TARGETS) clean sync

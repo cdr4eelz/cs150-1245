@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo -e "\n\nMAKE REGULAR: $@\n\n" | tee m_log
+
+make $@ >>m_log 2>m_err &
+
+tail -f m_log | grep -n -f sparse.grep
+
