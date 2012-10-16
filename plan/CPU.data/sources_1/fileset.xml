@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DARoots Version="1"
+		Minor="22">
+	<FileSet Name="sources_1"
+			Type="DesignSrcs"
+			RelSrcDir="$PSRCDIR/sources_1">
+		<Filter Type="Srcs"/>
+		<File Path="$PPRDIR/../hardware/src/IORegister.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/MIPS150.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/RegFile.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/UART.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/UAReceive.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/dmem_blk_ram/dmem_blk_ram.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/imem_blk_ram/imem_blk_ram.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/ml505top.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<Config>
+			<Option Name="DesignMode"
+					Val="RTL"/>
+			<Option Name="TopModule"
+					Val="ml505top"/>
+		</Config>
+	</FileSet>
+</DARoots>
