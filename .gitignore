@@ -5,6 +5,7 @@
 /software/*/*.v
 /plan/tmp/
 /plan/CPU.sim/
+/plan/CPU.data/wt/
 build/
 *~
 *.xxx
