@@ -1,12 +1,4 @@
-`ifndef CPUBUSSES_VH
-`define CPUBUSSES_VH
 
-task UnpackCRS;
-    input  [ 2:0 ] CRS;
-    output clk, rst, stl;
-    begin
-        {clk, rst, stl} = CRS;
-    end
-endtask
+`define BUS_CPUGlobal_width 3
+`define BUS_CPUGlobal_type [(`BUS_CPUGlobal_width-1):0]
 
-`endif // CPUBUSSES_VH

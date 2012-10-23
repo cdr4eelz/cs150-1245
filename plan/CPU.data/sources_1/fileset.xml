@@ -5,6 +5,66 @@
 			Type="DesignSrcs"
 			RelSrcDir="$PSRCDIR/sources_1">
 		<Filter Type="Srcs"/>
+		<File Path="$PPRDIR/../hardware/src/imem_blk_ram/imem_blk_ram.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/imem_blk_ram/imem_blk_ram.ngc">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/dmem_blk_ram/dmem_blk_ram.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/dmem_blk_ram/dmem_blk_ram.ngc">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/MEMHandler.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/StageWF.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
 		<File Path="$PPRDIR/../hardware/src/Opcode.vh">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
@@ -75,6 +135,16 @@
 						Val="1"/>
 			</FileInfo>
 		</File>
+		<File Path="$PPRDIR/../hardware/src/CPUBusses.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
 		<File Path="$PPRDIR/../hardware/src/HazardControl.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
@@ -96,6 +166,16 @@
 			</FileInfo>
 		</File>
 		<File Path="$PPRDIR/../hardware/src/InstructionField.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/StageM.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -136,46 +216,6 @@
 			</FileInfo>
 		</File>
 		<File Path="$PPRDIR/../hardware/src/ml505top.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/imem_blk_ram/imem_blk_ram.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/imem_blk_ram/imem_blk_ram.ngc">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/dmem_blk_ram/dmem_blk_ram.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/dmem_blk_ram/dmem_blk_ram.ngc">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -226,16 +266,6 @@
 			</FileInfo>
 		</File>
 		<File Path="$PPRDIR/../hardware/src/IORegister.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/CPUBusses.vh">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>

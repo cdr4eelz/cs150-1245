@@ -1,9 +1,10 @@
 
 module StageDX(
-    input  [ 2:0 ] CRS,
-    input  [31:0 ] PC_WF,
-    input  [31:0 ] INST_WF,
-    output [31:0 ] NextPC_DX_,
+    input  [ 2:0 ] CPUGlobal,
+    
+    input  [31:0 ] PC,
+    input  [31:0 ] INST,
+    output [31:0 ] NextPC,
 
     input  Forward1, Forward2,
     input  [31:0 ] ForwardValue,
@@ -23,8 +24,11 @@ module StageDX(
     output [31:0 ] R2ValueDX_,
     output [31:0 ] PCPLUS8DX_
 );
-`include "CPUBusses.vh"
-    wire  clk, reset, stall; UnpackCRS(CRS, clk, reset, stall);
+
+    wire  clk, reset, stall;
+    BUS_CPUGlobal_module BUS_CPUGlobal( .BUS(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stall)
+    );
 
 	wire [ 5:0 ] _opcode_;
 	wire [ 4:0 ] _rs_, _rt_, _rd_, _shamt_;
@@ -33,7 +37,7 @@ module StageDX(
 	wire [25:0 ] _target_;
 	
 	InstructionRange decodeRanges(
-		.INST(INST_WF),	// Pass in the instruction
+		.INST(INST),	// Pass in the instruction
 		.opcode(_opcode_),				// Receive basic bit-ranges by "standard names"
 		// These below are for internal use only (parsed immediately into fields)
 		.rs(_rs_), .rt(_rt_), .rd(_rd_), .shamt(_shamt_),
@@ -47,7 +51,7 @@ module StageDX(
 	wire [31:0 ] PCTARGET, PCBRANCH, PCPLUS4, PCPLUS8;
 
 	InstructionField decodeFields(
-		._pc(PC_WF), ._opcode(_opcode_),
+		._pc(PC), ._opcode(_opcode_),
 		._rs(_rs_), ._rt(_rt_), ._rd(_rd_), ._shamt(_shamt_),
 		._funct(_funct_), ._immediate(_immediate_), ._target(_target_),
 		.IPCODE(IPCODE), .BASE(BASE), .DEST(DEST), .SOFFSET(SOFFSET),
@@ -100,7 +104,7 @@ module StageDX(
 
 	assign jumpPC = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);
 	assign takeJump  = (Jump || takeBranch);
-	assign NextPC_DX_ = (takeJump) ? jumpPC : PCPLUS4;
+	assign NextPC = (takeJump) ? jumpPC : PCPLUS4;
 	
 
 endmodule
