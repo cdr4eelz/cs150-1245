@@ -5,27 +5,48 @@ module MIPS150(
     output FPGA_SERIAL_TX
 );
 
+`include "CPUBusses.vh"
+wire [ 2:0 ] CRS = {clk,rst,stall};
 
-StageWF wf
-	(.clk(clk), .rst(rst), .stall(stall),
+
+StageWF s_WF
+	(.CRS(CRS),
 	.PCWF_(PCWF_), .PCNext_DX_(PCNext_DX_),
 	.INST(INST)
 	);
-StageDX dx
-	(.clk(clk), .rst(rst), .stall(stall),
+	
+StageDX s_DX
+	(.CRS(CRS),
 	.PC_WF(PCWF_), .PCNext_DX_(PCNext_DX_)
 	);
-StageM  m
-	(.clk(clk), .rst(rst), .stall(stall)
+	
+StageM  s_M
+	(.CRS(CRS)
 	);
 
-iblk iblk
-	(xyz);
-dblk dblk
-	(pdq);
-uart uart
-	(abc);
+dmem_blk_ram mem_DATA(
+		clka,
+		ena,
+		wea,
+		addra,
+		dina,
+		douta);
 
+UART uart
+    (.Clock(clk), .Reset(rst),
+    .SIn(FPGA_SERIAL_RX), .SOout(FPGA_SERIAL_TX)
+    );
+    
+/*	
+	  input   [7:0] DataIn,
+	  input         DataInValid,
+	  output        DataInReady,
+	
+	  output  [7:0] DataOut,
+	  output        DataOutValid,
+	  input         DataOutReady,
+	);
+*/
 
 endmodule
     

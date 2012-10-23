@@ -1,6 +1,6 @@
 
 module StageDX(
-    input  clk, reset, stall,
+    input  [ 2:0 ] CRS,
     input  [31:0 ] PC_WF,
     input  [31:0 ] INST_WF,
     output [31:0 ] NextPC_DX_,
@@ -23,6 +23,8 @@ module StageDX(
     output [31:0 ] R2ValueDX_,
     output [31:0 ] PCPLUS8DX_
 );
+`include "CPUBusses.vh"
+    wire  clk, reset, stall; UnpackCRS(CRS, clk, reset, stall);
 
 	wire [ 5:0 ] _opcode_;
 	wire [ 4:0 ] _rs_, _rt_, _rd_, _shamt_;

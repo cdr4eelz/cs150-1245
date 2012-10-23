@@ -1,3 +1,6 @@
+`ifndef UTIL_VH
+`define UTIL_VH
+
 function integer log2;
   input integer x;
   begin
@@ -6,3 +9,5 @@ function integer log2;
       x = x >> 1;
   end
 endfunction
+
+`endif //UTIL_VH
