@@ -1,10 +1,11 @@
+`include "CPUBusses.vh"
 
 module StageDX(
-    input  [ 2:0 ] CPUGlobal,
+    inout  [ 2:0 ] CPUGlobal,
     
     input  [31:0 ] PC,
     input  [31:0 ] INST,
-    output [31:0 ] NextPC,
+    output [31:0 ] PCNext_,
 
     input  Forward1, Forward2,
     input  [31:0 ] ForwardValue,
@@ -26,7 +27,8 @@ module StageDX(
 );
 
     wire  clk, reset, stall;
-    BUS_CPUGlobal_module BUS_CPUGlobal( .BUS(CPUGlobal),
+    BUS_CPUGlobal_tap BUS_CPUGlobal
+    ( ._BUS_(CPUGlobal),
         .CLK(clk), .RST(rst), .STL(stall)
     );
 
