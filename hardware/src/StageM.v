@@ -1,7 +1,7 @@
 `include "CPUBusses.vh"
 
 module StageM(
-    inout  [ 2:0 ] CPUGlobal
+    inout `BUS_CPUGlobal_type CPUGlobal
     
 );
    

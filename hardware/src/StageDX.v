@@ -1,20 +1,20 @@
 `include "CPUBusses.vh"
 
 module StageDX(
-    inout  [ 2:0 ] CPUGlobal,
+    inout `BUS_CPUGlobal_type CPUGlobal,
     
     input  [31:0 ] PC,
     input  [31:0 ] INST,
     output [31:0 ] PCNext_,
-
+    
     input  Forward1, Forward2,
     input  [31:0 ] ForwardValue,
     input  [ 4:0 ] DestReg_M_,
     input  [31:0 ] RegValue_M_,
     
-    output [ 4:0 ] SrcReg1DX_,
-    output [ 4:0 ] SrcReg2DX_,
-
+    output [ 4:0 ] SrcReg1_,
+    output [ 4:0 ] SrcReg2_,
+    
     output MemToRegDX_,
     output MemWriteDX_,
     output MSignedDX_,

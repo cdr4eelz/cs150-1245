@@ -7,14 +7,9 @@ module MIPS150
     output FPGA_SERIAL_TX
 );
 
-    `BUS_CPUGlobal_type CPUGlobal;
-    BUS_CPUGlobal_tun BUS_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
-    
-    `BUS_ShakeRx_type(8) UARX;
-    `BUS_ShakeTx_type(8) UATX;
+    `BUS_CPUGlobal_type     CPUGlobal;
+    `BUS_ShakeRx_type(8)    UARX;
+    `BUS_ShakeTx_type(8)    UATX;
     
     /* Naming conventions:
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
@@ -42,9 +37,14 @@ module MIPS150
         .PC(PC_WF_), .INST(INST_WF_)
     );
     
+    
     // Pipeline border: WF/DX
-    wire [31:0 ] PC_DX   = PC_WF_;   // Is registered for us in prior stage
-    wire [31:0 ] INST_DX = INST_WF_; //      "
+    wire [31:0 ] PC_DX;   
+    wire [31:0 ] INST_DX;
+    PipelineRegister    #( .PreRegistered(1)   // Is registered for us in prior stage
+    ) REG_PC_DX         ( .CPUGlobal(CPUGlobal),    .In(PC_WF_),        .Out(PC_DX) );
+    PipelineRegister    #( .PreRegistered(1)   // Is registered for us in prior stage
+    ) REG_INST_DX       ( .CPUGlobal(CPUGlobal),    .In(INST_WF_),      .Out(INST_DX) );
     
     // Declare outputs of DX stage
     // ...
@@ -56,8 +56,11 @@ module MIPS150
         .PCNext_(PCNextDX_)
     );
     
-    reg  [31:0 ] PC_M;
-    always@(posedge clk) PC_M = PC_DX;
+    
+    // Pipeline border: DX/M
+    wire  [31:0 ] PC_M;
+    PipelineRegister #(
+    ) REG_PC_M          ( .CPUGlobal(CPUGlobal),    .In(PC_DX),         .Out(PC_M) );
     
     StageM  s_M
     (   .CPUGlobal(CPUGlobal)
@@ -66,6 +69,12 @@ module MIPS150
     //Outputs
     );
     
+    
+    // Plug into CPU module inputs
+    BUS_CPUGlobal_tun BUS_CPUGlobal
+    ( ._BUS_(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stall)
+    );
     
     // Key components indirectly wired elsewhere
     
@@ -87,12 +96,14 @@ module MIPS150
     UART uart
     (   .Clock(clk), .Reset(rst),  // Clocks of a feather
         .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
-        .DataIn(        `ShakeRx_DataIn(8,UARX)),
-        .DataInValid(   `ShakeRx_DataInValid(8,UARX)),
-        .DataInReady(   `ShakeRx_DataInReady(8,UARX)),
-        .DataOut(       `ShakeTx_DataOut(8,UATX)),
-        .DataOutValid(  `ShakeTx_DataOutValid(8,UATX)),
-        .DataOutReady(  `ShakeTx_DataOutReady(8,UATX))
+        // Receiver     (handshakes go both in/out)
+        .DataIn(        `ShakeRx_DataIn(        8,UARX)),
+        .DataInValid(   `ShakeRx_DataInValid(   8,UARX)),
+        .DataInReady(   `ShakeRx_DataInReady(   8,UARX)),
+        // Transmitter  (handshakes go both in/out)
+        .DataOut(       `ShakeTx_DataOut(       8,UATX)),
+        .DataOutValid(  `ShakeTx_DataOutValid(  8,UATX)),
+        .DataOutReady(  `ShakeTx_DataOutReady(  8,UATX))
     );
 
 endmodule
