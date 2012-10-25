@@ -7,23 +7,24 @@ module StageDX(
     input  [31:0 ] INST,
     output [31:0 ] PCNext_,
     
-    input  Forward1, Forward2,
-    input  [31:0 ] ForwardValue,
-    input  [ 4:0 ] DestReg_M_,
-    input  [31:0 ] RegValue_M_,
+    input  FWD_R1, FWD_R2,
+    input  [31:0 ] FWD_RValue,
+    input  [ 4:0 ] WBK_DestReg,
+    input  [31:0 ] WBK_RegValue,
     
-    output [ 4:0 ] SrcReg1_,
-    output [ 4:0 ] SrcReg2_,
+    output `BUS_IControl_type IControl_
     
-    output MemToRegDX_,
-    output MemWriteDX_,
-    output MSignedDX_,
-    output LinkDX_,
-    output [ 1:0 ] DataWidthDX_,
-    output [ 4:0 ] DestRegDX_,
-    output [31:0 ] ALUOutDX_,
-    output [31:0 ] R2ValueDX_,
-    output [31:0 ] PCPLUS8DX_
+/*
+    output MemToReg_,
+    output MemWrite_,
+    output MSigned_,
+    output Link_,
+    output [ 1:0 ] DataWidth_,
+    output [ 4:0 ] DestReg_,
+    output [31:0 ] ALUOut_,
+    output [31:0 ] R2Value_,
+    output [31:0 ] PCPLUS8_
+*/
 );
 
     wire  clk, reset, stall;
@@ -60,32 +61,43 @@ module StageDX(
 		.SRC(SRC), .SIMMED(SIMMED), .UIMMED(UIMMED),
 		.SHAMT(SHAMT), .RSHAMT(RSHAMT), .SRC1(SRC1), .SRC2(SRC2),
 		.PCTARGET(PCTARGET), .PCBRANCH(PCBRANCH),
-		.PCPLUS4(PCPLUS4), .PCPLUS8(PCPLUS8DX_)
+		.PCPLUS4(PCPLUS4), .PCPLUS8(PCPLUS8_)
 	);
 	
 	wire ALUSrcA, ALUSrcB, Jump, JR;
-	wire [ 3:0 ] ALUop;
 	wire [ 2:0 ] CmpOp;
 	
 	InstructionControl decodeControl(
 		.opcode(_opcode_), .rt(_rt_), .rd(_rd_), .funct(_funct_),
-		.MemToReg(MemToRegDX_), .MemWrite(MemWriteDX_),
-		.DataWidth(DataWidthDX_), .MSigned(MSignedDX_),
-		.Link(LinkDX_), .ISigned(ISigned),
-		.ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB), .ALUop(ALUop),
-		.DestReg(DestRegDX_), .Jump(Jump), .JR(JR), .CmpOp(CmpOp)
+		.IControl_(IControl_)
+/*		.MemToReg(MemToReg_), .MemWrite(MemWrite_),
+		.DataWidth(DataWidth_), .MSigned(MSigned_),
+		.Link(Link_), .ISigned(ISigned),
+		.ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB),
+		.DestReg(DestReg_), .Jump(Jump), .JR(JR), .CmpOp(CmpOp)
+*/
 	);
 	
-	assign SrcReg1DX_ = SRC1;	// Maybe varies?
-	assign SrcReg2DX_ = SRC2;
+	wire ISigned_;
+	BUS_IControl_tap BUS_IControl
+	( ._BUS_(IControl_),
+	   .ISigned(ISigned_)
+	);
+	
+	// Piggyback on existing ALUDecoder from lab
+	wire [ 3:0 ] ALUop;
+	ALUdec ALUDecoder(
+	    .opcode(_opcode_), .funct(_funct_),
+	    .ALUop(ALUop)
+	);
 	
 	wire [31:0 ] _rd1_, _rd2_;
 	
     RegFile regfile(
         .clk(clk),
         .we(!stall),
-        .ra1(SrcReg1DX_),
-        .ra2(SrcReg2DX_),
+        .ra1(SRC1),
+        .ra2(SRC2),
         .wa(DestReg_M_),
         .wd(RegValue_M_),
         .rd1(_rd1_),
@@ -95,13 +107,13 @@ module StageDX(
 	wire [31:0 ] R1, R2, A, B, jumpPC;
     wire takeBranch, takeJump;
     
-	assign R1 = (Forward1) ? ForwardValue : _rd1_;
-	assign R2 = (Forward2) ? ForwardValue : _rd2_;
-	assign R2ValueDX_ = R2;
+	assign R1 = (FWD_R1) ? FWD_RValue : _rd1_;
+	assign R2 = (FWD_R2) ? FWD_RValue : _rd2_;
+	assign R2Value_ = R2;
 	assign A = (ALUSrcA) ? SHAMT : R1;
-	assign B = (ALUSrcB) ? ((ISigned) ? SIMMED : UIMMED) : R2;
+	assign B = (ALUSrcB) ? ((ISigned_) ? SIMMED : UIMMED) : R2;
     
-	ALU alu(.A(A), .B(B), .ALUop(ALUop), .Out(ALUOutDX_));
+	ALU alu(.A(A), .B(B), .ALUop(ALUop), .Out(ALUOut_));
     BranchCMP bcmp(.branchOp(CmpOp), .A(A), .B(B), .doBranch(takeBranch));
 
 	assign jumpPC = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);

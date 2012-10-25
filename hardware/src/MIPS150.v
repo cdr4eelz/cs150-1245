@@ -47,25 +47,30 @@ module MIPS150
     ) REG_INST_DX       ( .CPUGlobal(CPUGlobal),    .In(INST_WF_),      .Out(INST_DX) );
     
     // Declare outputs of DX stage
-    // ...
+    // PCNext_ is forward declared since it feeds an earlier stage
+    `BUS_IControl_type IControlDX_;
     StageDX s_DX
     (   .CPUGlobal(CPUGlobal),
     //Inputs
         .PC(PC_DX), .INST(INST_DX),
     //Outputs
-        .PCNext_(PCNextDX_)
+        .PCNext_(PCNextDX_),
+        .IControl_(IControlDX_)
     );
     
     
     // Pipeline border: DX/M
     wire  [31:0 ] PC_M;
-    PipelineRegister #(
+    `BUS_IControl_type IControl_M;
+    PipelineRegister #( .Width(32)
     ) REG_PC_M          ( .CPUGlobal(CPUGlobal),    .In(PC_DX),         .Out(PC_M) );
+    PipelineRegister #( .Width(`BUS_IControl_width)
+    ) REG_IControl_M    ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M) );
     
     StageM  s_M
-    (   .CPUGlobal(CPUGlobal)
+    (   .CPUGlobal(CPUGlobal),
     //Inputs
-    
+        ._IControl(IControl_M)
     //Outputs
     );
     

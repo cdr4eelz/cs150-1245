@@ -7,21 +7,7 @@ module InstructionControl #(
 	input [ 4:0 ] rt,
 	input [ 4:0 ] rd,
 
-	output         MemToReg,
-	output [ 4:0 ] DestReg,
-	output         MemWrite,
-	output [ 1:0 ] DataWidth,
-	output         MSigned,
-	output         ALUSrcA,
-	output         ALUSrcB,
-	output [ 3:0 ] ALUop,
-	output         ISigned,
-	
-	output [ 2:0 ] CmpOp,
-	output         Jump,
-	output         JR,
-	output         Link
-	
+	output `BUS_IControl_type IControl_
 //	output [15:0 ] FAULT
 );
 
@@ -35,7 +21,7 @@ ControlUnit DevinControl(
 );
 */
 
-    assign UNKNOWN = 'bx;
+    assign UNKNOWN = 'bx; // Can swap out for default value if unknown not desired
     
 	// These characteristics could come from lookup table
 	assign isRType	= (opcode == 6'b000000);
@@ -50,26 +36,62 @@ ControlUnit DevinControl(
 	assign isRJump  = (isRType && (funct[5:3] == 3'b001));
 	assign isJump   = (isIJump || isRJump);
 	
-	assign ISigned = ((isMType || isIType) ? !opcode[2] : UNKNOWN);
-	assign ALUSrcA = (isRType && (opcode[5:2] == 0));
-	assign ALUSrcB = (isMType || isIType);
+/*	output         MemToReg,
+	output [ 4:0 ] DestReg,
+	output         MemWrite,
+	output [ 1:0 ] DataWidth,
+	output         MSigned,
+	output         ALUSrcA,
+	output         ALUSrcB,
+	output [ 3:0 ] ALUop,
+	output         ISigned,
 	
-	assign MemToReg = (isMLoad);
-	assign MemWrite = (isMStore);
-	assign DataWidth = (isMType) ? opcode[1:0] : 2'bx;
-	assign MSigned = (isMType && !isMStore && !opcode[1]) ? !opcode[2] : 1'bx;
-	
-	assign Jump = (isJump);
-	assign Link = (isJump);
-	assign JR = (isIJump || isRJump) ? isRJump : 1'bx;
-	assign CmpOp = (isBSimple) ? opcode[2:0] : ((isBGELTZ) ? opcode[2:0] << rt[0] : ((isJump) ? 3'b011 : 3'b000));
-	assign DestReg = (isJump? (opcode[0]? 5'b11111 : ((isRType&&funct[0])? rd : 5'b00000))
-	                          : (isRType? rd : ((isMLoad||isIType)? rt : 5'b00000)) );
-	
-ALUdec ALUDecoder(
-	.opcode(opcode), .funct(funct), .ALUop(ALUop)
+	output [ 2:0 ] CmpOp,
+	output         Jump,
+	output         JR,
+	output         Link
+*/
+BUS_IControl_tun BUS_Icontrol
+( ._BUS_(IControl_),
+    .ISigned(
+        (isMType || isIType) ? !opcode[2] : UNKNOWN
+    ),
+    .ALUSrcA(
+        isRType && (opcode[5:2] == 0)
+    ),
+    .ALUSrcB(
+        isMType || isIType
+    ),
+    
+    .MemToReg(
+        isMLoad
+    ),
+    .MemWrite(
+        isMStore
+    ),
+    .DataWidth(
+        (isMType) ? opcode[1:0] : 2'bx
+    ),
+    .MSigned(
+        (isMType && !isMStore && !opcode[1]) ? !opcode[2] : 1'bx
+    ),
+    
+    .Jump(
+        isJump
+    ),
+    .Link(
+        isJump
+    ),
+    .JR(
+        (isIJump || isRJump) ? isRJump : 1'bx
+    ),
+    .CmpOp(
+        (isBSimple) ? opcode[2:0] : ((isBGELTZ) ? opcode[2:0] << rt[0] : ((isJump) ? 3'b011 : 3'b000))
+    ),
+    .DestReg(
+            (isJump? (opcode[0]? 5'b11111 : ((isRType&&funct[0])? rd : 5'b00000))
+    	                          : (isRType? rd : ((isMLoad||isIType)? rt : 5'b00000)) )
+    )
 );
 
-//	assign FAULT = 0; // Will identify blatantly bad states
-	
 endmodule
