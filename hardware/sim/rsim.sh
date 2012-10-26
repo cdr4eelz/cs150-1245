@@ -1,13 +1,18 @@
 #!/bin/bash
 
 REMOTER=$1
-SRCDIR=team45/hardware/src
-SIMDIR=team45/hardware/sim/tests
+TARG=$2
+
+echo "SIM $TARG on $REMOTER..."
+
+BASEDIR=team45/hardware
 RSYNC="rsync -rtc --delete-before --verbose"
 
-$RSYNC --exclude [id]mem_blk_ram ~/$SRCDIR/ $REMOTER:~/$SRCDIR
-$RSYNC ~/$SIMDIR/ $REMOTER:~/$SIMDIR
+$RSYNC --exclude [id]mem_blk_ram ~/$BASEDIR/src/ $REMOTER:~/$BASEDIR/src
+$RSYNC ~/$BASEDIR/sim/tests/ $REMOTER:~/$BASEDIR/sim/tests
 
 
-ssh $REMOTER 'cd ~/team45/hardware/sim ; make clean all | tee rtrans.txt'
+ssh $REMOTER "cd ~/$BASEDIR/sim ; make $TARG | tee rtrans.txt"
+
+$RSYNC $REMOTER:~/$BASEDIR/sim/results/ ~/$BASEDIR/sim/results
 

@@ -1,16 +1,15 @@
 `ifndef CPUBUSSES_VH
 `define CPUBUSSES_VH
 
-//tuninput  {CLK.1,RST.1,STL.1}
-//tunoutput {}
-`define BUS_CPUGlobal_width     (1+1+1)
-`define BUS_CPUGlobal_type      tri  [1+1+1 -1: 0]
-`define CPUGlobal_tunIN(BUS)    BUS[1+1+1 -1: 0]
-//`define CPUGlobal_tunOUT(BUS)   
-`define CPUGlobal_CLK(BUS)          BUS[1+1+1 -1:  1+1]
-`define CPUGlobal_RST(BUS)          BUS[  1+1 -1:    1]
-`define CPUGlobal_STL(BUS)          BUS[    1 -1:    0]
-
+//tuninput.3  {CLK.1,RST.1,STL.1}
+//tunoutput.0 {}
+`define BUS_CPUGlobal_width     ((1+1+1)+(0))
+`define BUS_CPUGlobal_type      tri [     0: 3 - 1]
+`define CPUGlobal_tunIN(BUS)    BUS [     0: 3 - 1]
+`define CPUGlobal_tunOUT(BUS)   BUS [ 0 - 1: 0 - 1]
+`define CPUGlobal_CLK(BUS)      BUS [  0 +:  1]
+`define CPUGlobal_RST(BUS)      BUS [  1 +:  1]
+`define CPUGlobal_STL(BUS)      BUS [  2 +:  1]
 
 //tuninput  {MemToReg.1,DestReg.5,MemWrite.1,DataWidth.2,MSigned.1,
 //            ALUSrcA.1,ALLUSrcB.1,ALUop.4,ISigned.1,CmpOp.3,Jump.1,JR.1,Link.1}

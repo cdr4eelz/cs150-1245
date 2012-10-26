@@ -1,10 +1,12 @@
 `include "CPUBusses.vh"
 
 module StageM(
-    inout `BUS_CPUGlobal_type CPUGlobal,
-    input `BUS_IControl_type _IControl,
+    inout `BUS_CPUGlobal_type   CPUGlobal,
+    input `BUS_IControl_type    IControl,
     
-    input  [31:0 ]  _ALUOut
+    input  [31: 0]  ALUOut,
+    input  [31: 0]  R2Value,
+    input  [31: 0]  PCPLUS8
     
 );
    

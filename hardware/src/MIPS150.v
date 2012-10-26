@@ -1,16 +1,25 @@
 `include "CPUBusses.vh"
 
-module MIPS150
+module MIPS150 #(TAKEDUMP=0)
 (
-    input  clk, rst, stall,
-    input  FPGA_SERIAL_RX,
-    output FPGA_SERIAL_TX
+    input   clk, rst, stall,
+    input   FPGA_SERIAL_RX,
+    output  FPGA_SERIAL_TX
 );
 
     `BUS_CPUGlobal_type     CPUGlobal;
     `BUS_ShakeRx_type(8)    UARX;
     `BUS_ShakeTx_type(8)    UATX;
-    
+    // Memory busses
+    wire            IMEM_ena,                   DMEM_ena;
+    wire [11: 0]    IMEM_addra, IMEM_addrb,     DMEM_addra;
+    wire [31: 0]    IMEM_dina,  IMEM_doutb,     DMEM_douta, DMEM_dina;
+    wire [ 3: 0]    IMEM_wea,                   DMEM_wea;
+    assign IMEM_ena = 1'b1;
+    assign DMEM_ena = 1'b1;
+    assign IMEM_wea = 4'b0000;
+    assign DMEM_wea = 4'b0000;
+
     /* Naming conventions:
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
         xxxSS_  : Value unstable during given stage (but stable at posedge exit)
@@ -22,80 +31,98 @@ module MIPS150
                     used as input to a given stage.
     */
     
-    // Forward declarataions for wires that reach prior stages
-    wire [31:0 ] PCNextDX_;
+    // Forward declare wires to explicitly feedback to prior stages
+    wire [31: 0] PCNext_DX_WF_;
     
     // Declare outputs of WF stage
-    wire [31:0 ] PC_WF_;
-    wire [31:0 ] INST_WF_;
+    wire [31: 0] PC_WF_;
+    wire [31: 0] INST_WF_;
     StageWF s_WF    // WF STAGE itself
     (   .CPUGlobal(CPUGlobal),
-        .IMEM_read_addr(IMEM_addrb), .IMEM_read_data(IMEM_doutb),
+        .IMEM_read_addr(IMEM_addrb),
+        .IMEM_read_data(IMEM_doutb),
     //Inputs
-        .PCNext(PCNextDX_),
+        .PCNext     (PCNext_DX_WF_),
     //Outputs
-        .PC(PC_WF_), .INST(INST_WF_)
+        .PC         (PC_WF_),
+        .INST       (INST_WF_)
     );
     
     
     // Pipeline border: WF/DX
-    wire [31:0 ] PC_DX;   
-    wire [31:0 ] INST_DX;
+    wire [31: 0] PC_DX;   
+    wire [31: 0] INST_DX;
     PipelineRegister    #( .PreRegistered(1)   // Is registered for us in prior stage
-    ) REG_PC_DX         ( .CPUGlobal(CPUGlobal),    .In(PC_WF_),        .Out(PC_DX) );
+        ) REG_PC_DX         ( .CPUGlobal(CPUGlobal),    .In(PC_WF_),        .Out(PC_DX) );
     PipelineRegister    #( .PreRegistered(1)   // Is registered for us in prior stage
-    ) REG_INST_DX       ( .CPUGlobal(CPUGlobal),    .In(INST_WF_),      .Out(INST_DX) );
+        ) REG_INST_DX       ( .CPUGlobal(CPUGlobal),    .In(INST_WF_),      .Out(INST_DX) );
     
     // Declare outputs of DX stage
-    // PCNext_ is forward declared since it feeds an earlier stage
+    wire [31: 0] PCNextDX_;
     `BUS_IControl_type IControlDX_;
+    wire [31: 0] ALUOutDX_;
+    wire [31: 0] R2ValueDX_;
+    wire [31: 0] PCPLUS8DX_;
     StageDX s_DX
     (   .CPUGlobal(CPUGlobal),
     //Inputs
-        .PC(PC_DX), .INST(INST_DX),
+        .PC         (PC_DX),
+        .INST       (INST_DX),
     //Outputs
-        .PCNext_(PCNextDX_),
-        .IControl_(IControlDX_)
+        .PCNext_    (PCNextDX_),
+        .IControl_  (IControlDX_),
+        .ALUOut_    (ALUOutDX_),
+        .R2Value_   (R2ValueDX_),
+        .PCPLUS8_   (PCPLUS8DX_)
     );
-    
+    assign PCNext_DX_WF_ = PCNextDX_;   // Feedback to WF stage
     
     // Pipeline border: DX/M
-    wire  [31:0 ] PC_M;
     `BUS_IControl_type IControl_M;
-    PipelineRegister #( .Width(32)
-    ) REG_PC_M          ( .CPUGlobal(CPUGlobal),    .In(PC_DX),         .Out(PC_M) );
+    wire  [31: 0] ALUOut_M;
+    wire  [31: 0] R2Value_M;
+    wire  [31: 0] PCPLUS8_M;
     PipelineRegister #( .Width(`BUS_IControl_width)
-    ) REG_IControl_M    ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M) );
+        ) REG_IControl_M    ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M) );
+    PipelineRegister #( .Width(32)
+        ) REG_ALUOut_M      ( .CPUGlobal(CPUGlobal),    .In(ALUOutDX_  ),   .Out(ALUOut_M  ) );
+    PipelineRegister #( .Width(32)
+        ) REG_R2Value_M     ( .CPUGlobal(CPUGlobal),    .In(R2ValueDX_ ),   .Out(R2Value_M ) );
+    PipelineRegister #( .Width(32)
+        ) REG_PCPLUS8_M     ( .CPUGlobal(CPUGlobal),    .In(PCPLUS8DX_ ),   .Out(PCPLUS8_M ) );
     
     StageM  s_M
     (   .CPUGlobal(CPUGlobal),
     //Inputs
-        ._IControl(IControl_M)
+        .IControl   (IControl_M),
+        .ALUOut     (ALUOut_M),
+        .R2Value    (R2Value_M),
+        .PCPLUS8    (PCPLUS8_M)
     //Outputs
     );
     
     
-    // Plug into CPU module inputs
+    // Drive CPUGlobals from CPU module inputs
     BUS_CPUGlobal_tun BUS_CPUGlobal
     ( ._BUS_(CPUGlobal),
         .CLK(clk), .RST(rst), .STL(stall)
     );
     
     // Key components indirectly wired elsewhere
-    
+
     dmem_blk_ram DMEM
     (   .clka(clk),               // Clocks of a feather
-        .ena(DMEM_ena), .addra(DMEM_addra),     // One DMEM port...
-        .douta(DMEM_douta),                     //  for data read...
-        .dina(DMEM_dina), .wea(DMEM_wea)        //  & data write
+        .ena    (DMEM_ena),     .addra  (DMEM_addra),   // One DMEM port...
+        .douta  (DMEM_douta),                           //  for data read...
+        .dina   (DMEM_dina),    .wea    (DMEM_wea)      //  & data write
     );
     
     imem_blk_ram IMEM
     (   .clka(clk), .clkb(clk),    // Clocks of a feather
-        .ena(IMEM_), .addra(IMEM_addra),        // Separate IMEM port...
-        .dina(IMEM_dina), .wea(IMEM_wea),       //  for inst write...
-                                                // ...VS...
-        .addrb(IMEM_addrb), .doutb(IMEM_doutb)  //  inst fletch
+        .ena    (IMEM_ena),     .addra  (IMEM_addra),   // Separate IMEM port...
+        .dina   (IMEM_dina),    .wea    (IMEM_wea),     //  for inst write...
+                                                        // ...VS...
+        .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
     );
     
     UART uart

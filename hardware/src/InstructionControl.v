@@ -1,3 +1,4 @@
+`include "CPUBusses.vh"
 
 module InstructionControl #(
 	parameter strictMode = 0
@@ -23,6 +24,7 @@ ControlUnit DevinControl(
 
     assign UNKNOWN = 'bx; // Can swap out for default value if unknown not desired
     
+    // Pre-computations for clarity (presumably distilled out by logic simplification)
 	// These characteristics could come from lookup table
 	assign isRType	= (opcode == 6'b000000);
 	assign isMType	= (opcode[5] == 1'b1);
@@ -36,7 +38,8 @@ ControlUnit DevinControl(
 	assign isRJump  = (isRType && (funct[5:3] == 3'b001));
 	assign isJump   = (isIJump || isRJump);
 	
-/*	output         MemToReg,
+/*
+	output         MemToReg,
 	output [ 4:0 ] DestReg,
 	output         MemWrite,
 	output [ 1:0 ] DataWidth,
@@ -51,6 +54,7 @@ ControlUnit DevinControl(
 	output         JR,
 	output         Link
 */
+
 BUS_IControl_tun BUS_Icontrol
 ( ._BUS_(IControl_),
     .ISigned(
