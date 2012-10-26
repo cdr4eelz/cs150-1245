@@ -5,7 +5,7 @@
 			Type="SimulationSrcs"
 			RelSrcDir="$PSRCDIR/sim_1">
 		<Filter Type="Srcs"/>
-		<File Path="$PPRDIR/../hardware/src/ALUTestVectorTestbench.v">
+		<File Path="$PPRDIR/../hardware/src/testbench/ALUTestVectorTestbench.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -15,7 +15,7 @@
 						Val="1"/>
 			</FileInfo>
 		</File>
-		<File Path="$PPRDIR/../hardware/src/ALUTestbench.v">
+		<File Path="$PPRDIR/../hardware/src/testbench/ALUTestbench.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -25,7 +25,7 @@
 						Val="1"/>
 			</FileInfo>
 		</File>
-		<File Path="$PPRDIR/../hardware/src/EchoTestbench.v">
+		<File Path="$PPRDIR/../hardware/src/testbench/EchoTestbench.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -35,7 +35,7 @@
 						Val="1"/>
 			</FileInfo>
 		</File>
-		<File Path="$PPRDIR/../hardware/src/RegFileTestbench.v">
+		<File Path="$PPRDIR/../hardware/src/testbench/RegFileTestbench.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -45,7 +45,17 @@
 						Val="1"/>
 			</FileInfo>
 		</File>
-		<File Path="$PPRDIR/../hardware/src/PipelineRegisterTestbench.v">
+		<File Path="$PPRDIR/../hardware/src/testbench/PipelineRegisterTestbench.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/testbench/EchoMemTestbench.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>

@@ -1,12 +1,12 @@
 `include "CPUBusses.vh"
 
-module MIPS150 #(TAKEDUMP=0)
-(
+module MIPS150 #(
+    parameter   TAKEDUMP = 0
+) (
     input   clk, rst, stall,
     input   FPGA_SERIAL_RX,
     output  FPGA_SERIAL_TX
 );
-
     `BUS_CPUGlobal_type     CPUGlobal;
     `BUS_ShakeRx_type(8)    UARX;
     `BUS_ShakeTx_type(8)    UATX;
@@ -20,6 +20,59 @@ module MIPS150 #(TAKEDUMP=0)
     assign IMEM_wea = 4'b0000;
     assign DMEM_wea = 4'b0000;
 
+    // Key components indirectly wired elsewhere
+
+    dmem_blk_ram DMEM
+    (   .clka(clk),               // Clocks of a feather
+        .ena    (DMEM_ena),     .addra  (DMEM_addra),   // One DMEM port...
+        .douta  (DMEM_douta),                           //  for data read...
+        .dina   (DMEM_dina),    .wea    (DMEM_wea)      //  & data write
+    );
+    
+    imem_blk_ram IMEM
+    (   .clka(clk), .clkb(clk),    // Clocks of a feather
+        .ena    (IMEM_ena),     .addra  (IMEM_addra),   // Separate IMEM port...
+        .dina   (IMEM_dina),    .wea    (IMEM_wea),     //  for inst write...
+                                                        // ...VS...
+        .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
+    );
+    
+    UART uart
+    (   .Clock(clk), .Reset(rst),  // Clocks of a feather
+        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
+        // Receiver     (handshakes go both in/out)
+        .DataIn(        `ShakeRx_DataIn(        8,UARX)),
+        .DataInValid(   `ShakeRx_DataInValid(   8,UARX)),
+        .DataInReady(   `ShakeRx_DataInReady(   8,UARX)),
+        // Transmitter  (handshakes go both in/out)
+        .DataOut(       `ShakeTx_DataOut(       8,UATX)),
+        .DataOutValid(  `ShakeTx_DataOutValid(  8,UATX)),
+        .DataOutReady(  `ShakeTx_DataOutReady(  8,UATX))
+    );
+    
+    // Drive CPUGlobals from CPU module inputs
+    BUS_CPUGlobal_tun BUS_CPUGlobal
+    ( ._BUS_(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stall)
+    );
+    
+    
+    generate if (TAKEDUMP) begin:SENDINST
+        // Simple WX stage that slides through IMEM & stalls
+        wire [31: 0] PC_WF_;
+        wire [31: 0] INST_WF_;
+        StageWF s_WF    // WF STAGE itself
+        (   .CPUGlobal(CPUGlobal),
+            .IMEM_read_addr(IMEM_addrb),
+            .IMEM_read_data(IMEM_doutb),
+        //Inputs
+            .PCNext     (PCNext_DX_WF_),
+        //Outputs
+            .PC         (PC_WF_),
+            .INST       (INST_WF_)
+        );
+    end else begin:MIPSY
+    
     /* Naming conventions:
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
         xxxSS_  : Value unstable during given stage (but stable at posedge exit)
@@ -101,42 +154,6 @@ module MIPS150 #(TAKEDUMP=0)
     //Outputs
     );
     
-    
-    // Drive CPUGlobals from CPU module inputs
-    BUS_CPUGlobal_tun BUS_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
-    
-    // Key components indirectly wired elsewhere
-
-    dmem_blk_ram DMEM
-    (   .clka(clk),               // Clocks of a feather
-        .ena    (DMEM_ena),     .addra  (DMEM_addra),   // One DMEM port...
-        .douta  (DMEM_douta),                           //  for data read...
-        .dina   (DMEM_dina),    .wea    (DMEM_wea)      //  & data write
-    );
-    
-    imem_blk_ram IMEM
-    (   .clka(clk), .clkb(clk),    // Clocks of a feather
-        .ena    (IMEM_ena),     .addra  (IMEM_addra),   // Separate IMEM port...
-        .dina   (IMEM_dina),    .wea    (IMEM_wea),     //  for inst write...
-                                                        // ...VS...
-        .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
-    );
-    
-    UART uart
-    (   .Clock(clk), .Reset(rst),  // Clocks of a feather
-        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
-        // Receiver     (handshakes go both in/out)
-        .DataIn(        `ShakeRx_DataIn(        8,UARX)),
-        .DataInValid(   `ShakeRx_DataInValid(   8,UARX)),
-        .DataInReady(   `ShakeRx_DataInReady(   8,UARX)),
-        // Transmitter  (handshakes go both in/out)
-        .DataOut(       `ShakeTx_DataOut(       8,UATX)),
-        .DataOutValid(  `ShakeTx_DataOutValid(  8,UATX)),
-        .DataOutReady(  `ShakeTx_DataOutReady(  8,UATX))
-    );
-
+    end endgenerate
 endmodule
     
