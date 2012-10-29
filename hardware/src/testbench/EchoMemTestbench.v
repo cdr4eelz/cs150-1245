@@ -42,16 +42,18 @@ module EchoMemTestbench();
     integer finalcountdowneurope = 20;
     
     initial begin
-        Reset = 0; DataInValid = 0; DataOutReady = 0; #(5*Cycle)
+        Reset = 0; DataInValid = 0; DataOutReady = 0; #(3*Cycle)
         
-        Reset = 1; #(10*Cycle)
-        Reset = 0;
+        Reset = 1; #(6*Cycle)
+        Reset = 0; #1;
         
         while (finalcountdowneurope > 0) begin
-            #1; DataOutReady = 1;
-            wait (DataOutValid);
-            DataOutReady = 0;
-            $display("Got %d", DataOut);
+            DataOutReady = 1;
+            while (DataOutReady) begin
+                @ (posedge Clock) ;
+                if (DataOutValid) DataOutReady = 0;
+            end
+            $display("Got %b  %h (%d)", DataOut, DataOut, DataOut);
             #1; finalcountdowneurope = finalcountdowneurope - 1;
         end
         $display("Got enough.");

@@ -124,10 +124,20 @@ module ml505top
   	  end
  end
 
+`ifndef SIMXXX
+    reg [8:0] resetHack = 9'd0;
+    always @(negedge cpu_clk_g) begin:hackDown
+        if (!resetHack[8]) resetHack = resetHack + 1;
+    end
+    `define bootHack (&resetHack[7:3])
+`else
+    `define bootHack 1'b0
+`endif
+
   // MIPS 150 CPU
-  MIPS150 CPU(
+  EchoMem CPU(
       .clk(cpu_clk_g),
-      .rst(rst),
+      .rst(rst || bootHack),
       .stall(stall),
       .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
       .FPGA_SERIAL_TX(FPGA_SERIAL_TX)

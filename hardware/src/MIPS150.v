@@ -38,14 +38,14 @@ module MIPS150 (
     UART uart
     (   .Clock(clk), .Reset(rst),  // Clocks of a feather
         .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
-        // Receiver     (handshakes go both in/out)
-        .DataIn(        `ShakeRx_DataIn(        8,UARX)),
-        .DataInValid(   `ShakeRx_DataInValid(   8,UARX)),
-        .DataInReady(   `ShakeRx_DataInReady(   8,UARX)),
         // Transmitter  (handshakes go both in/out)
-        .DataOut(       `ShakeTx_DataOut(       8,UATX)),
-        .DataOutValid(  `ShakeTx_DataOutValid(  8,UATX)),
-        .DataOutReady(  `ShakeTx_DataOutReady(  8,UATX))
+        .DataIn(        `ShakeTx_DataIn(        8,UATX)),
+        .DataInValid(   `ShakeTx_DataInValid(   8,UATX)),
+        .DataInReady(   `ShakeTx_DataInReady(   8,UATX)),
+        // Receiver     (handshakes go both in/out)
+        .DataOut(       `ShakeRx_DataOut(       8,UARX)),
+        .DataOutValid(  `ShakeRx_DataOutValid(  8,UARX)),
+        .DataOutReady(  `ShakeRx_DataOutReady(  8,UARX))
     );
     
     // Drive CPUGlobals from CPU module inputs

@@ -6,7 +6,7 @@ module UATransmit(
   input         DataInValid,
   output        DataInReady,
 
-  output        reg SOut
+  output        SOut
 );
   // for log2 function
   `include "util.vh"
@@ -24,37 +24,36 @@ module UATransmit(
 
   reg [3:0] BitCount;
   reg [ClockCounterWidth-1:0] ClockCounter;
-  reg [7:0] Data;
+  reg [9:0] ShiftOut;
 
-  wire Idle, SymbolEdge;
+  wire TXRunning, SymbolEdge, StartTX;
 
-  assign DataInReady = (BitCount<=1); // Use "<= 1" if allowing stop-bit overlap
+  assign DataInReady = (BitCount == 0); // Use "<= 1" if allowing stop-bit overlap
+  assign SOut = (TXRunning) ? ShiftOut[0] : 1'b1;
 
   assign SymbolEdge = (ClockCounter == SymbolEdgeTime-1);
-  assign Idle = (BitCount == 0);
+  assign TXRunning = (BitCount != 0);
+  assign StartTX = (!TXRunning && DataInValid);
 
   always@(posedge Clock) begin // Manage ClockCounter
-    ClockCounter <= (Reset || SymbolEdge || Idle) ? 0 : ClockCounter + 1;
+    ClockCounter <= (Reset || SymbolEdge || !TXRunning) ? 0 : ClockCounter + 1;
   end
 
-  always@(posedge Clock) begin // Advance bit counter
-    if (Reset) BitCount <= 0;
-    else if (SymbolEdge) BitCount <= BitCount - 1;
+  always@(posedge Clock) begin // Manage BitCounter & shifting
+    if (Reset) begin
+      BitCount <= 0;
+      //shiftout <= 8'b0;
+    end else begin
+      if (TXRunning) begin
+        if (SymbolEdge) begin
+          BitCount <= BitCount - 1;
+          ShiftOut <= (ShiftOut >> 1); //{1'b0, ShiftOut[9:1]};
+        end
+      end else if (StartTX) begin // Entering TXRunning "state"
+        BitCount <= 4'd10; // Implicitly de-assert StartTX
+        ShiftOut <= {1'b1, DataIn, 1'b0}; // LSB shifted out first!
+      end // else idling!
+    end
   end
-
-  always@(posedge Clock) begin // Grab input data (synchronous)
-    if (Reset) Data <= 0;
-    else if (DataInReady && DataInValid) Data <= DataIn;
-  end
-
-  always@(BitCount, Data) begin // Drive SOut (in MUX style based on our state)
-    SOut <= 1'b1; // Presume IDLE
-    case (BitCount)
-      10: SOut <= 1'b0;
-      11,1,0: SOut <= 1'b1;
-      9,8,7,6,5,4,3,2: SOut <= Data[9-BitCount];
-    endcase
-  end
-
 
 endmodule
