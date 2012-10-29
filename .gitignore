@@ -1,5 +1,6 @@
 /hardware/src/[di]mem_blk_ram/
 /hardware/sim/results/
+/hardware/sim/xilinxcorelib_ver/
 /hardware/[mq]_err
 /hardware/[mq]_log
 /software/*/*.v
