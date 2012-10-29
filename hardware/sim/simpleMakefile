@@ -22,6 +22,7 @@ $(STATUS): $(SRCS) | build/Makefile
 build/Makefile:
 	mkdir -p build
 	(cd build; vlib work; vmap work work)
+	(cd build; vmap xilinxcorelib_ver ../xilinxcorelib_ver)
 	(cd build; \
 	vlog +acc -vopt -source -nocovercells  \
 	$(MODELSIM_GLBL) \
@@ -35,7 +36,7 @@ results:
 
 $(DOFILES) : build/%.do : tests/%.do
 	mkdir -p build
-	echo 'proc start {m} {vsim work.glbl $$m}' \
+	echo 'proc start {m} {vsim -L xilinxcorelib_ver work.glbl $$m}' \
 	| cat - $< > $@ 
 
 $(TESTINPUTSBUILD) : build/% : tests/%

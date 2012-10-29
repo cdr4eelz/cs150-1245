@@ -1,8 +1,6 @@
 `include "CPUBusses.vh"
 
-module MIPS150 #(
-    parameter   TAKEDUMP = 0
-) (
+module MIPS150 (
     input   clk, rst, stall,
     input   FPGA_SERIAL_RX,
     output  FPGA_SERIAL_TX
@@ -56,22 +54,6 @@ module MIPS150 #(
         .CLK(clk), .RST(rst), .STL(stall)
     );
     
-    
-    generate if (TAKEDUMP) begin:SENDINST
-        // Simple WX stage that slides through IMEM & stalls
-        wire [31: 0] PC_WF_;
-        wire [31: 0] INST_WF_;
-        StageWF s_WF    // WF STAGE itself
-        (   .CPUGlobal(CPUGlobal),
-            .IMEM_read_addr(IMEM_addrb),
-            .IMEM_read_data(IMEM_doutb),
-        //Inputs
-            .PCNext     (PCNext_DX_WF_),
-        //Outputs
-            .PC         (PC_WF_),
-            .INST       (INST_WF_)
-        );
-    end else begin:MIPSY
     
     /* Naming conventions:
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
@@ -154,6 +136,5 @@ module MIPS150 #(
     //Outputs
     );
     
-    end endgenerate
 endmodule
     

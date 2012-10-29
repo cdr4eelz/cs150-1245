@@ -20,14 +20,14 @@ module EchoMemTestbench();
     
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    MIPS150 #(.TAKEDUMP(1)) CPU
+    EchoMem CPU
     (   .clk(Clock), .rst(Reset), .stall(1'b0),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX)
     );
     
-    UART          #( .ClockFreq(       ClockFreq))
-    uart( .Clock(           Clock),
+    UART        #( .ClockFreq(       ClockFreq))
+    uart_tb( .Clock(           Clock),
         .Reset(           Reset),
         .DataIn(          DataIn),
         .DataInValid(     DataInValid),
@@ -54,7 +54,7 @@ module EchoMemTestbench();
             $display("Got %d", DataOut);
             #1; finalcountdowneurope = finalcountdowneurope - 1;
         end
-        $display("Giving up.");
+        $display("Got enough.");
         $finish();
     end
 
