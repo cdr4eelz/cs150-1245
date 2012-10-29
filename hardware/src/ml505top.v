@@ -134,8 +134,12 @@ module ml505top
     `define bootHack 1'b0
 `endif
 
+`ifndef CPUTYPE
+`define CPUTYPE MIPS150
+`endif
+
   // MIPS 150 CPU
-  EchoMem CPU(
+  `CPUTYPE CPU(
       .clk(cpu_clk_g),
       .rst(rst || bootHack),
       .stall(stall),

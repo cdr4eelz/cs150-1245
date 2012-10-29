@@ -1,7 +1,7 @@
 .section    .start
-.global     _start
+.global     _test2
 
-_start:
+_test2:
 
 addiu $s7, $0, 0x0
 # Test 1

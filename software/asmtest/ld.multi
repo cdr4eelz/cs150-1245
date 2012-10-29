@@ -1,0 +1,17 @@
+SECTIONS
+{
+    . = 0x10000000;
+    .text : {
+        test0.s.o (.start);
+    	. = 0x10010000;
+        test1.s.o (.start);
+        . = 0x10020000;
+        test2.s.o (.start);
+	. = 0x10100000;
+	* (.text)
+    }
+    . = 0x20000000;
+    .data : {
+	* (.data)
+    }
+}

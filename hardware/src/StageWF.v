@@ -27,5 +27,10 @@ module StageWF #(
     end
     
     assign IMEM_read_addr = PC_HOT[11:0];   // Do we worry about illegal addresses?
+    assign PC = PC_REG;
     assign INST = IMEM_read_data;
+    initial begin
+        $monitor("iWF: %h %h | %h %h %h", clk, reset, PC, IMEM_read_data, INST);
+    end
+    
 endmodule

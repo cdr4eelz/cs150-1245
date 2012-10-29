@@ -60,7 +60,7 @@ module StageDX(
 		.IControl_(IControl_)
 	);
 	
-	// Tap only pecific control signals used inside DX
+	// Tap only specific control signals used inside DX
 	wire ISigned, Jump, JR, ALUSrcA, ALUSrcB;
 	wire [ 2: 0] CmpOp;
 	BUS_IControl_tap BUS_IControl

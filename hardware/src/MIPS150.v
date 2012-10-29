@@ -83,7 +83,6 @@ module MIPS150 (
         .INST       (INST_WF_)
     );
     
-    
     // Pipeline border: WF/DX
     wire [31: 0] PC_DX;   
     wire [31: 0] INST_DX;
@@ -111,6 +110,11 @@ module MIPS150 (
         .PCPLUS8_   (PCPLUS8DX_)
     );
     assign PCNext_DX_WF_ = PCNextDX_;   // Feedback to WF stage
+    
+    initial $monitor("WF: %h %h | %h %h | %h %h %h", 
+        clk, rst, 
+        PC_WF_, INST_WF_, 
+        PC_DX, INST_DX, PCNextDX_);
     
     // Pipeline border: DX/M
     `BUS_IControl_type IControl_M;
