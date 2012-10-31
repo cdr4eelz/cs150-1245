@@ -1,4 +1,5 @@
 # TOP, SRC, TEMPLATES are passed in
+XST_DEFS ?= 
 SRCS := $(shell find $(SRC) -type f -name '*.v')
 UCF := $(wildcard $(SRC)/$(TOP).ucf)
 
@@ -21,7 +22,7 @@ $(XST_TMPDIR):
 	mkdir -p $@
 
 $(XST_BATCH): $(TEMPLATES)/xst.batch $(XST_PRJ)
-	sed "s/##TOPMODULE##/$(TOP)/g" < $< > $@
+	sed -e "s/##TOPMODULE##/$(TOP)/g" -e "s/##XSTDEFINES##/$(XST_DEFS)/g" < $< > $@
 
 $(XST_OUT): $(XST_BATCH)
 	xst -ifn $(TOP).xst -ofn $(TOP).syr

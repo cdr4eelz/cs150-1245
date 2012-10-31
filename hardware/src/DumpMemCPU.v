@@ -1,10 +1,11 @@
 `include "CPUBusses.vh"
 
 module DumpMemCPU (
-    input   clk, rst, stl,
+    input   clk, rst, stall,
     input   FPGA_SERIAL_RX,
     output  FPGA_SERIAL_TX
 );
+    wire stl = stall; // Just friendly rename
     `BUS_CPUGlobal_type     CPUGlobal;
     `BUS_ShakeRx_type(8)    UARX;
     `BUS_ShakeTx_type(8)    UATX;

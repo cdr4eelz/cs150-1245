@@ -136,7 +136,7 @@ module ml505top
 `endif
 
 `ifndef CPUTYPE
-`define CPUTYPE MIPS150 // Alternate is EchoMemCPU
+`define CPUTYPE MIPS150 // Alternate is DumpMemCPU
 `endif
 
   // MIPS 150 CPU
