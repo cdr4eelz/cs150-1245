@@ -5,47 +5,49 @@ module BUS_CPUGlobal_tun    // "tunnel" out multiple values
 ( inout `BUS_CPUGlobal_type _BUS_,
     input CLK, RST, STL
 );
-    assign `CPUGlobal_tunIN(_BUS_) = {CLK,RST,STL};
+    assign `CPUGlobal__IN(_BUS_) = {CLK,RST,STL};
 endmodule
 
 module BUS_CPUGlobal_tap    // "tap" into desired tunneled values
 ( inout `BUS_CPUGlobal_type _BUS_,
     output CLK, RST, STL
 );
-    assign {CLK,RST,STL} = `CPUGlobal_tunIN(_BUS_);
+    assign {CLK,RST,STL} = `CPUGlobal__IN(_BUS_);
 endmodule
 
 
 // IControl values (driven by decoder, used by everybody)
-module BUS_IControl_tun    // "tunnel" out multiple values
-( inout `BUS_IControl_type _BUS_,
+module BUS_ICTL_tun         // "tunnel" out multiple values
+( output `BUS_ICTL_type _BUS_,
     input          MemToReg,
     input  [ 4:0 ] DestReg,
     input          MemWrite,
     input  [ 1:0 ] DataWidth,
     input          MSigned,
-    input          ALUSrcA,
-    input          ALUSrcB,
+    input          ALUsrcA,
+    input          ALUsrcB,
+    input  [ 3:0 ] ALUop,
     input          ISigned,
     input  [ 2:0 ] CmpOp,
     input          Jump,
     input          JR,
     input          Link
 );
-    assign `IControl_tunIN(_BUS_)
+    assign `ICTL__IN(_BUS_)
         = {MemToReg,DestReg,MemWrite,DataWidth,MSigned,
-            ALUSrcA,ALUSrcB,ISigned,CmpOp,Jump,JR,Link};
+            ALUsrcA,ALUsrcB,ALUop,ISigned,CmpOp,Jump,JR,Link};
 endmodule
 
-module BUS_IControl_tap    // "tap" into desired tunneled values
-( inout `BUS_IControl_type _BUS_,
+module BUS_ICTL_tap         // "tap" into desired tunneled values
+( input `BUS_ICTL_type _BUS_,
     output         MemToReg,
     output [ 4:0 ] DestReg,
     output         MemWrite,
     output [ 1:0 ] DataWidth,
     output         MSigned,
-    output         ALUSrcA,
-    output         ALUSrcB,
+    output         ALUsrcA,
+    output         ALUsrcB,
+    output [ 3:0 ] ALUop,
     output         ISigned,
     output [ 2:0 ] CmpOp,
     output         Jump,
@@ -53,10 +55,9 @@ module BUS_IControl_tap    // "tap" into desired tunneled values
     output         Link
 );
     assign {MemToReg,DestReg,MemWrite,DataWidth,MSigned,
-        ALUSrcA,ALUSrcB,ISigned,CmpOp,Jump,JR,Link}
-            = `IControl_tunIN(_BUS_);
+        ALUsrcA,ALUsrcB,ALUop,ISigned,CmpOp,Jump,JR,Link}
+            = `ICTL__IN(_BUS_);
 endmodule
-
 
 
 // TAP/TUN of a DataHandshake Receiver

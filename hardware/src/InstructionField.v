@@ -41,7 +41,8 @@ function [31:0] ZEXT16_32;
 	ZEXT16_32 = {16'b0, in16};
 endfunction
 
-	// These will later from a common module and then be reconstructed via bit-masks
+	// These might later be reconstructed via bit-masks
+    wire isRType, isMType, isIType, isRIType, isBGEZ, isBranch;
 	assign isRType	= (_opcode == 6'b000000);
 	assign isMType	= (_opcode[5] == 1'b1);
 	assign isIType	= (_opcode[4] == 1'b1);
@@ -49,7 +50,8 @@ endfunction
 	assign isBGEZ	= (_opcode == 6'b000001);
 	assign isBranch	= (_opcode[3:2] == 2'b01) || isBGEZ;
 	
-	assign FUNCT	= (isRType) ? _funct : (isBGEZ) ? _rt : 'bx;
+	// These all should become functions (like SEXT above)
+	assign IPCODE	= (isRType) ? _funct : (isBGEZ) ? _rt : 'bx;
 	assign BASE	= (isMType) ? _rs : 'bx;
 	assign DEST	= (isMType || isIType) ? _rt : (isRType) ? _rd : 'bx;
 	assign SOFFSET	= (isBranch) ? (SEXT16_32(_immediate) | 'b0) : 'bx;

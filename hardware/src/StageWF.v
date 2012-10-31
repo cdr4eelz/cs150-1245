@@ -12,25 +12,25 @@ module StageWF #(
     output [31: 0] PC,
     output [31: 0] INST
 );
-    wire  clk, reset, stall;
+    wire  clk, rst, stl;
     BUS_CPUGlobal_tap BUS_CPUGlobal
     ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
+        .CLK(clk), .RST(rst), .STL(stl)
     );
     
+    reg  RST_REG;
+    
     wire [31: 0] PC_HOT;
-    assign PC_HOT = (reset) ? bootPC : PCNext;
+    assign PC_HOT = (RST_REG) ? bootPC : PCNext;
     
     reg [31: 0] PC_REG;
     always @(posedge clk) begin
-        PC_REG <= PC_HOT;
+        RST_REG <= rst;
+        PC_REG  <= PC_HOT;
     end
     
-    assign IMEM_read_addr = PC_HOT[11:0];   // Do we worry about illegal addresses?
+    assign IMEM_read_addr[11:0] = PC_HOT[13:2];   // Do we worry about illegal addresses?
     assign PC = PC_REG;
     assign INST = IMEM_read_data;
-    initial begin
-        $monitor("iWF: %h %h | %h %h %h", clk, reset, PC, IMEM_read_data, INST);
-    end
     
 endmodule

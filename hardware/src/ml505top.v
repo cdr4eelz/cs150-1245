@@ -17,6 +17,7 @@ module ml505top
   
   wire user_clk_g;
   
+  wire pll_fb;
   wire cpu_clk;
   wire cpu_clk_g;
   
@@ -124,7 +125,7 @@ module ml505top
   	  end
  end
 
-`ifndef SIMXXX
+`ifndef BOOTHACK
     reg [8:0] resetHack = 9'd0;
     always @(negedge cpu_clk_g) begin:hackDown
         if (!resetHack[8]) resetHack = resetHack + 1;
@@ -135,13 +136,13 @@ module ml505top
 `endif
 
 `ifndef CPUTYPE
-`define CPUTYPE MIPS150
+`define CPUTYPE MIPS150 // Alternate is EchoMemCPU
 `endif
 
   // MIPS 150 CPU
   `CPUTYPE CPU(
       .clk(cpu_clk_g),
-      .rst(rst || bootHack),
+      .rst(rst),
       .stall(stall),
       .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
       .FPGA_SERIAL_TX(FPGA_SERIAL_TX)

@@ -1,14 +1,21 @@
 `include "CPUBusses.vh"
 
+`timescale 1ns/1ps
+
 module MIPS150 (
     input   clk, rst, stall,
     input   FPGA_SERIAL_RX,
     output  FPGA_SERIAL_TX
 );
+    wire stl = stall;   // Just rename so it matches nicely internal to CPU
     `BUS_CPUGlobal_type     CPUGlobal;
     `BUS_ShakeRx_type(8)    UARX;
     `BUS_ShakeTx_type(8)    UATX;
-    // Memory busses
+
+    // Register & Memory busses
+    wire [ 4: 0] REG_ra1, REG_ra2, REG_wa;
+    wire [31: 0] REG_rd1, REG_rd2, REG_wd;
+    wire REG_we;
     wire            IMEM_ena,                   DMEM_ena;
     wire [11: 0]    IMEM_addra, IMEM_addrb,     DMEM_addra;
     wire [31: 0]    IMEM_dina,  IMEM_doutb,     DMEM_douta, DMEM_dina;
@@ -18,7 +25,19 @@ module MIPS150 (
     assign IMEM_wea = 4'b0000;
     assign DMEM_wea = 4'b0000;
 
+    wire FWD_R1 = 1'b0, FWD_R2 = 1'b0;
+    wire [31: 0] FWD_RValue = 32'd0;
+
     // Key components indirectly wired elsewhere
+
+    RegFile regfile
+    ( .clk(clk),
+        // Write is synchronous
+        .wa(REG_wa),    .wd(REG_wd),    .we(REG_we),
+        // Read is asynchronous
+        .ra1(REG_ra1),  .ra2(REG_ra2),
+        .rd1(REG_rd1),  .rd2(REG_rd2)
+    );
 
     dmem_blk_ram DMEM
     (   .clka(clk),               // Clocks of a feather
@@ -51,7 +70,7 @@ module MIPS150 (
     // Drive CPUGlobals from CPU module inputs
     BUS_CPUGlobal_tun BUS_CPUGlobal
     ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
+        .CLK(clk), .RST(rst), .STL(stl)
     );
     
     
@@ -68,60 +87,57 @@ module MIPS150 (
     
     // Forward declare wires to explicitly feedback to prior stages
     wire [31: 0] PCNext_DX_WF_;
+    wire [ 4: 0] WBKReg_M_WF_;
+    wire [31: 0] WBKDat_M_WF_;
     
+    assign REG_wa = WBKReg_M_WF_,   REG_wd = WBKDat_M_WF_,  REG_we = !stl;
+
     // Declare outputs of WF stage
-    wire [31: 0] PC_WF_;
-    wire [31: 0] INST_WF_;
+    wire [31: 0] PC_WF_, INST_WF_;
     StageWF s_WF    // WF STAGE itself
     (   .CPUGlobal(CPUGlobal),
-        .IMEM_read_addr(IMEM_addrb),
-        .IMEM_read_data(IMEM_doutb),
+        .IMEM_read_addr (IMEM_addrb),   .IMEM_read_data(IMEM_doutb),
     //Inputs
-        .PCNext     (PCNext_DX_WF_),
+        .PCNext         (PCNext_DX_WF_),
     //Outputs
-        .PC         (PC_WF_),
-        .INST       (INST_WF_)
+        .PC             (PC_WF_),       .INST       (INST_WF_)
     );
     
     // Pipeline border: WF/DX
-    wire [31: 0] PC_DX;   
-    wire [31: 0] INST_DX;
+    wire [31: 0] PC_DX, INST_DX;
     PipelineRegister    #( .PreRegistered(1)   // Is registered for us in prior stage
         ) REG_PC_DX         ( .CPUGlobal(CPUGlobal),    .In(PC_WF_),        .Out(PC_DX) );
     PipelineRegister    #( .PreRegistered(1)   // Is registered for us in prior stage
         ) REG_INST_DX       ( .CPUGlobal(CPUGlobal),    .In(INST_WF_),      .Out(INST_DX) );
-    
+
+    // Mini-forwarding calculation
+    wire [31: 0] FWD_rd1 = (FWD_R1) ? FWD_RValue : REG_rd1;
+    wire [31: 0] FWD_rd2 = (FWD_R2) ? FWD_RValue : REG_rd2;
+
     // Declare outputs of DX stage
-    wire [31: 0] PCNextDX_;
-    `BUS_IControl_type IControlDX_;
-    wire [31: 0] ALUOutDX_;
-    wire [31: 0] R2ValueDX_;
-    wire [31: 0] PCPLUS8DX_;
+    `BUS_ICTL_type IControlDX_;
+    wire [31: 0] ALUOutDX_, R2ValueDX_, PCPLUS8DX_;
     StageDX s_DX
-    (   .CPUGlobal(CPUGlobal),
+    ( .CPUGlobal(CPUGlobal),
+        .REG_R1_    (REG_ra1),          .REG_R2_    (REG_ra2),
+        .REG_D1_    (FWD_rd1),          .REG_D2_    (FWD_rd2),
     //Inputs
-        .PC         (PC_DX),
-        .INST       (INST_DX),
+        .PC         (PC_DX),            .INST       (INST_DX),
     //Outputs
-        .PCNext_    (PCNextDX_),
         .IControl_  (IControlDX_),
         .ALUOut_    (ALUOutDX_),
         .R2Value_   (R2ValueDX_),
-        .PCPLUS8_   (PCPLUS8DX_)
+        .PCPLUS8_   (PCPLUS8DX_),
+    //Feedbacks
+        .PCNext_    (PCNext_DX_WF_) // Feedback to WF stage
     );
-    assign PCNext_DX_WF_ = PCNextDX_;   // Feedback to WF stage
-    
-    initial $monitor("WF: %h %h | %h %h | %h %h %h", 
-        clk, rst, 
-        PC_WF_, INST_WF_, 
-        PC_DX, INST_DX, PCNextDX_);
     
     // Pipeline border: DX/M
-    `BUS_IControl_type IControl_M;
+    `BUS_ICTL_type IControl_M;
     wire  [31: 0] ALUOut_M;
     wire  [31: 0] R2Value_M;
     wire  [31: 0] PCPLUS8_M;
-    PipelineRegister #( .Width(`BUS_IControl_width)
+    PipelineRegister #( .Width(`BUS_ICTL_width)
         ) REG_IControl_M    ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M) );
     PipelineRegister #( .Width(32)
         ) REG_ALUOut_M      ( .CPUGlobal(CPUGlobal),    .In(ALUOutDX_  ),   .Out(ALUOut_M  ) );
@@ -136,9 +152,56 @@ module MIPS150 (
         .IControl   (IControl_M),
         .ALUOut     (ALUOut_M),
         .R2Value    (R2Value_M),
-        .PCPLUS8    (PCPLUS8_M)
+        .PCPLUS8    (PCPLUS8_M),
     //Outputs
+    //Feedbacks
+        .WBK_Reg_   (WBKReg_M_WF_),     .WBK_Val_   (WBKDat_M_WF_)
     );
     
-endmodule
+// synthesis translate_off
     
+    initial begin
+    //        $strobe ("-   -   -   -   -   -   -   -   -   -   -   -");
+    //        $strobe ("WF<DX: PC<=%h", PCNext_DX_WF_);
+    //        $strobe ("WF<M : R(%h,%d)<=%h", WBKReg_M_WF_, WBKReg_M_WF_, WBKDat_M_WF_);
+    end
+
+    reg[8:0] DBG_cycle, DBG_step;
+    always@(rst, stl) begin
+        $display("=============================================");
+        $display("CTL-: C %h  R %h  S %h", clk, rst, stl);
+        $strobe ("CTL+: C %h  R %h  S %h", clk, rst, stl);
+        $strobe ("+++++++++++++++++++++++++++++++++++++++++++++");
+        if (rst) begin
+            DBG_cycle = 'bz;  DBG_step = 'bz;
+        end else if (DBG_cycle[0] === 1'bz) begin
+            DBG_cycle = 0;  DBG_step = 0;
+        end
+    end
+    
+    always@(posedge clk) if (DBG_cycle >= 0) begin:DBG_RUN_POS
+        $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
+        $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stl, DBG_step);
+        $display("%d] WF/DX: %h %h", DBG_cycle, PC_DX, INST_DX);
+        $display("%d] DX/M : %h %h %h", DBG_cycle, ALUOut_M, R2Value_M, PCPLUS8_M);
+        $display("%d]      : %b", DBG_cycle, IControl_M);
+        $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
+        DBG_cycle = DBG_cycle + 1;
+        if (!stl) DBG_step = DBG_step + 1;
+        if (DBG_step > (32)) begin
+            $display("Ran %d / %d", DBG_cycle, DBG_step);
+            $finish();
+         end
+    end
+    
+    always@* begin
+        $display("%d]   CTL DX %b", DBG_cycle, IControlDX_);
+    end
+    always@* begin
+        $display(" REGR: S1(%h,%d)=%h (%d)", REG_ra1, REG_ra1, REG_rd1, REG_rd1);
+        $display("     : S2(%h,%d)=%h (%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
+    end
+    
+// synthesis translate_on
+    
+endmodule

@@ -2,18 +2,18 @@
 
 module StageM(
     inout `BUS_CPUGlobal_type   CPUGlobal,
-    input `BUS_IControl_type    IControl,
+    input `BUS_ICTL_type        IControl,
     
     input  [31: 0]  ALUOut,
     input  [31: 0]  R2Value,
-    input  [31: 0]  PCPLUS8
+    input  [31: 0]  PCPLUS8,
     
+    output [ 4: 0]  WBK_Reg_,
+    output [31: 0]  WBK_Val_
 );
-   
-    wire  clk, reset, stall;
-    BUS_CPUGlobal_tap BUS_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
+    parameter crap = "tastic";
+    
+    assign WBK_Reg_ = `ICTL_DestReg(IControl);
+    assign WBK_Val_ = ALUOut;
     
 endmodule

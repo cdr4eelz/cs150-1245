@@ -3,21 +3,34 @@
 
 //tuninput.3  {CLK.1,RST.1,STL.1}
 //tunoutput.0 {}
-`define BUS_CPUGlobal_width     ((1+1+1)+(0))
-`define BUS_CPUGlobal_type      tri [     0: 3 - 1]
-`define CPUGlobal_tunIN(BUS)    BUS [     0: 3 - 1]
-`define CPUGlobal_tunOUT(BUS)   BUS [ 0 - 1: 0 - 1]
-`define CPUGlobal_CLK(BUS)      BUS [  0 +:  1]
-`define CPUGlobal_RST(BUS)      BUS [  1 +:  1]
-`define CPUGlobal_STL(BUS)      BUS [  2 +:  1]
+`define BUS_CPUGlobal_width ((1+1+1)+(0))
+`define BUS_CPUGlobal_type  tri [0:`BUS_CPUGlobal_width-1]
+`define CPUGlobal__IN(BUS)  BUS [  0 +:  3 ]
+`define CPUGlobal__OUT(BUS) BUS [  4 +:  0 ]
+`define CPUGlobal_CLK(      BUS)    BUS [  0 +:  1 ]
+`define CPUGlobal_RST(      BUS)    BUS [  1 +:  1 ]
+`define CPUGlobal_STL(      BUS)    BUS [  2 +:  1 ]
 
-//tuninput  {MemToReg.1,DestReg.5,MemWrite.1,DataWidth.2,MSigned.1,
-//            ALUSrcA.1,ALLUSrcB.1,ALUop.4,ISigned.1,CmpOp.3,Jump.1,JR.1,Link.1}
-//tunoutput {}
-`define BUS_IControl_width    (1+5+1+2+1+1+1+1+3+1+1+1) // 19
-`define BUS_IControl_type     tri  [19 -1: 0]
-`define IControl_tunIN(BUS)   BUS[19 -1: 0]
-//`define IControl_tunOUT(BUS)  
+//tuninput.23{MemToReg.1,DestReg.5,MemWrite.1,DataWidth.2,MSigned.1,
+//            ALUsrcA.1,ALUsrcB.1,ALUop.4,ISigned.1,CmpOp.3,Jump.1,JR.1,Link.1}
+//tunoutput.0{}
+`define BUS_ICTL_width  ((1+5+1+2+1+1+1+4+1+3+1+1+1)+(0)) // 23
+`define BUS_ICTL_type   tri  [0:`BUS_ICTL_width-1]
+`define ICTL__IN(BUS)   BUS [  0 +: 23 ]
+`define ICTL__OUT(BUS)  BUS [ 24 +:  0 ]
+`define ICTL_MemToReg(  BUS)    BUS [  0 +:  1 ]
+`define ICTL_DestReg(   BUS)    BUS [  1 +:  5 ]
+`define ICTL_MemWrite(  BUS)    BUS [  6 +:  1 ]
+`define ICTL_DataWidth( BUS)    BUS [  7 +:  2 ]
+`define ICTL_MSigned(   BUS)    BUS [  9 +:  1 ]
+`define ICTL_ALUSrcA(   BUS)    BUS [ 10 +:  1 ]
+`define ICTL_ALLUSrcB(  BUS)    BUS [ 11 +:  1 ]
+`define ICTL_ALUop(     BUS)    BUS [ 12 +:  4 ]
+`define ICTL_ISigned(   BUS)    BUS [ 16 +:  1 ]
+`define ICTL_CmpOp(     BUS)    BUS [ 17 +:  3 ]
+`define ICTL_Jump(      BUS)    BUS [ 20 +:  1 ]
+`define ICTL_JR(        BUS)    BUS [ 21 +:  1 ]
+`define ICTL_Link(      BUS)    BUS [ 22 +:  1 ]
 
 
 //tuninput  {DataInValid.1, DataIn.DIw}

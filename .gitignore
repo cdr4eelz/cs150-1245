@@ -1,6 +1,6 @@
 /hardware/src/[di]mem_blk_ram/
 /hardware/sim/results/
-/hardware/sim/xilinxcorelib_ver/
+/hardware/sim/modelsim_libs/
 /hardware/[mq]_err
 /hardware/[mq]_log
 /software/*/*.v
@@ -34,3 +34,4 @@ build/
 *flist.txti
 *gen_readme.txt
 *.elf
+.cyg*
