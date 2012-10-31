@@ -1,7 +1,7 @@
 `include "CPUBusses.vh"
 
-module EchoMem (
-    input   clk, rst, stall,
+module DumpMemCPU (
+    input   clk, rst, stl,
     input   FPGA_SERIAL_RX,
     output  FPGA_SERIAL_TX
 );
@@ -15,7 +15,7 @@ module EchoMem (
     wire [ 7: 0]    TX_Data;
     wire TX_Valid, TX_Ready, ADVANCE, ADVANCE_LAST;
     
-    assign TX_Valid = ~stall;
+    assign TX_Valid = !stl;
     assign ADVANCE = TX_Valid && TX_Ready;
     assign ADDR_NEXT = (ADVANCE_LAST) ? (ADDR + 1) : ADDR;
     assign ADDR_W = (ADDR / 4);
@@ -80,7 +80,7 @@ module EchoMem (
     // Drive CPUGlobals from CPU module inputs
     BUS_CPUGlobal_tun BUS_CPUGlobal
     ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
+        .CLK(clk), .RST(rst), .STL(stl)
     );
     
 endmodule

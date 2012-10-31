@@ -2,7 +2,7 @@
 // 1ns rather than 1ps
 `timescale 1ns / 1ps
 
-module RegFileTestbench();
+module RegFileTestbench;
 
   parameter Halfcycle = 5; //half period is 5ns
 

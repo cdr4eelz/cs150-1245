@@ -55,7 +55,17 @@
 						Val="1"/>
 			</FileInfo>
 		</File>
-		<File Path="$PPRDIR/../hardware/src/testbench/EchoMemTestbench.v">
+		<File Path="$PPRDIR/../hardware/src/testbench/DumpMemTestbench.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/testbench/ASMTestbench.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>

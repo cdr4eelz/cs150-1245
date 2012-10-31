@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module EchoMemTestbench();
+module DumpMemTestbench;
     reg Clock, Reset;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
     
@@ -20,7 +20,7 @@ module EchoMemTestbench();
     
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    EchoMem CPU
+    DumpMemCPU CPU
     (   .clk(Clock), .rst(Reset), .stall(1'b0),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX)

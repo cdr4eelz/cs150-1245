@@ -295,7 +295,7 @@
 						Val="1"/>
 			</FileInfo>
 		</File>
-		<File Path="$PPRDIR/../hardware/src/EchoMem.v">
+		<File Path="$PPRDIR/../hardware/src/DumpMemCPU.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>

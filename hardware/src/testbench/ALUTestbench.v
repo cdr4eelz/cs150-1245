@@ -12,7 +12,7 @@
 
 `include "Opcode.vh"
 
-module ALUTestbench();
+module ALUTestbench;
 
     parameter Halfcycle = 5; //half period is 5ns
     

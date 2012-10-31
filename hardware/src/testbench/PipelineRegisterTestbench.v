@@ -2,7 +2,7 @@
 
 `include "CPUBusses.vh"
 
-module PipelineRegisterTestbench();
+module PipelineRegisterTestbench;
     reg clk, rst, stl;
     reg [3:0] in;
     wire [3:0] outA, outB;

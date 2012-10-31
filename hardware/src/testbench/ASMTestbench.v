@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module ASMTestbench();
+module ASMTestbench;
 
     reg Clock, Reset;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;

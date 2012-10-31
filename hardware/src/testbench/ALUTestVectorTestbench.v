@@ -8,7 +8,7 @@
 
 `timescale 1ns / 1ps
 
-module ALUTestVectorTestbench();
+module ALUTestVectorTestbench;
 
     parameter Halfcycle = 5; //half period is 5ns
 
