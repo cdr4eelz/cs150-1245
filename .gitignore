@@ -8,6 +8,7 @@
 /plan/CPU.sim/
 /plan/CPU.data/wt/
 build/
+*.dump
 *~
 *.xxx
 *.tar
