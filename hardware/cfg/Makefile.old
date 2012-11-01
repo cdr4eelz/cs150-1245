@@ -1,4 +1,5 @@
 # TOP, SRC, TEMPLATES are passed in
+XST_DEFS ?= 
 SRCS := $(shell find $(SRC) -type f -name '*.v')
 UCF := $(wildcard $(SRC)/$(TOP).ucf)
 
@@ -21,7 +22,7 @@ $(XST_TMPDIR):
 	mkdir -p $@
 
 $(XST_BATCH): $(TEMPLATES)/xst.batch $(XST_PRJ)
-	sed "s/##TOPMODULE##/$(TOP)/g" < $< > $@
+	sed -e "s/##TOPMODULE##/$(TOP)/g" -e "s/##XSTDEFINES##/$(XST_DEFS)/g" < $< > $@
 
 $(XST_OUT): $(XST_BATCH)
 	xst -ifn $(TOP).xst -ofn $(TOP).syr
@@ -37,6 +38,7 @@ NGC_DIRS := $(shell find $(SRC) -type d -exec echo -n "-sd {} " \;)
 $(NGDBUILD_OUT): $(XST_OUT) $(UCF)
 	ngdbuild -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) $(XST_OUT) $@
 
+ngc trans: $(NGDBUILD_OUT)
 
 
 #MAP
@@ -50,10 +52,9 @@ map: $(MAP_OUT)
 
 #PAR
 PAR_OUT := $(TOP).ncd
-PAR_OPTS := $(shell cat $(TEMPLATES)/par.opts | tr '\n' ' ')
 
 $(PAR_OUT): $(MAP_OUT)
-	par $(PAR_OPTS) $(MAP_OUT) $@ $(TOP).pcf
+	par -w -ol high -mt off $(MAP_OUT) $@ $(TOP).pcf
 
 par: $(PAR_OUT)
 

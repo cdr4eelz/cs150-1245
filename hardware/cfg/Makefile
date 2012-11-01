@@ -38,6 +38,7 @@ NGC_DIRS := $(shell find $(SRC) -type d -exec echo -n "-sd {} " \;)
 $(NGDBUILD_OUT): $(XST_OUT) $(UCF)
 	ngdbuild -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) $(XST_OUT) $@
 
+ngc trans: $(NGDBUILD_OUT)
 
 
 #MAP
@@ -51,11 +52,24 @@ map: $(MAP_OUT)
 
 #PAR
 PAR_OUT := $(TOP).ncd
+PAR_OPTS := $(shell cat $(TEMPLATES)/par.opts | tr '\n' ' ')
 
 $(PAR_OUT): $(MAP_OUT)
-	par -w -ol high -mt off $(MAP_OUT) $@ $(TOP).pcf
+	par $(PAR_OPTS) $(MAP_OUT) $@ $(TOP).pcf
 
 par: $(PAR_OUT)
+
+#NCD
+ncd: $(TOP).ncd
+
+#XDL
+XDL_OUT := $(TOP).xdl
+
+$(XDL_OUT): $(TOP).ncd
+	xdl -ncd2xdl $< $@
+
+xdl: $(XDL_OUT)
+
 
 #TRCE
 TCRE_OUT := $(TOP).twr
@@ -69,7 +83,7 @@ timing: $(TCRE_OUT)
 BITFILE := $(TOP).bit
 
 $(BITFILE): $(PAR_OUT)
-	bitgen -w $< $@ $(TOP).pcf
+	bitgen -w -l $< $@ $(TOP).pcf
 
 bitgen: $(BITFILE)
 
@@ -91,4 +105,4 @@ schematic schem ise:
 
 all: $(BITFILE) timing
 
-.PHONY = all synth xst map par timing bitgen impact report schematic schem ise clean
+.PHONY = all synth xst map par timing bitgen impact report schematic schem ise clean ngc trans ncd xdl

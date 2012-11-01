@@ -2,7 +2,7 @@ TOP := ml505top
 SRC := src
 TEMPLATES := cfg
 
-TARGETS = all synth xst map par timing bitgen impact report schematic schem ise
+TARGETS = all synth xst map par timing bitgen impact report schematic schem ise ngc trans ncd xdl
 
 BUILDDIR := build/$(TOP)
 MAKEFILE := $(BUILDDIR)/Makefile
@@ -18,4 +18,4 @@ $(MAKEFILE): cfg/Makefile
 clean:
 	rm -rf build
 
-.PHONY := $(TARGETS) clean
+.PHONY := $(TARGETS) clean sync

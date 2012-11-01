@@ -3,9 +3,10 @@ MODELSIM_LIBS ?= mti_se/10.1b_2/lin64
 MODELSIM_LIBD ?= $(XILINX_BASE)/ISE/verilog
 MODELSIM_GLBL ?= src/glbl.v
 
+VLOG_XOPS ?= +define+DEFMAKE=1
 VLOG_COPS ?= -vopt
 VLOG_OPTS ?= -quiet +acc -source -nocovercells -sfcu -note vlog-2605 $(VLOG_COPS)
-VLOG_XOPS ?= -lint -vlog01compat -pedanticerrors -nodeglitchalways
+VLOG_SOPS ?= -lint -vlog01compat -pedanticerrors -nodeglitchalways $(VLOG_XOPS)
 VLOG_LOGF ?= $(PWD)/build/comp_src.log
 
 XILINX_LIBS ?= unisims_ver unimacro_ver xilinxcorelib_ver secureip
@@ -33,6 +34,7 @@ do: $(DOFILES)
 	echo "Can cd to build then vsim < xyz.do"
 
 fresh: clean do results build/Makefile
+	echo "-----------------"
 	grep -E "Warning" $(VLOG_LOGF) || echo "NO WARNINGS"
 	grep -E "Error"   $(VLOG_LOGF) || echo "NO ERRORS"
 
@@ -56,7 +58,7 @@ build/Makefile: build
 	(cd build; for file in $(XILINX_LIBS_MAP); do \
 	vmap $$(basename $$file) $$file || exit 1; done)
 	(cd build; vlog $(VLOG_OPTS) $(MODELSIM_LIBD)/$(MODELSIM_GLBL) || exit 1)
-	(cd build; vlog $(VLOG_OPTS) $(VLOG_XOPS) -l $(VLOG_LOGF) $(INC) $(BSRC) || exit 1)
+	(cd build; vlog $(VLOG_OPTS) $(VLOG_SOPS) -l $(VLOG_LOGF) $(INC) $(BSRC) || exit 1)
 	(cd build; vmake > Makefile)
 
 results:

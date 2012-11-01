@@ -1,9 +1,9 @@
 TOP := ml505top
 SRC := src
-TEMPLATES := q_cfg
+TEMPLATES := cfg
 WORKINGDIR ?= /scratch
 
-TARGETS = all synth xst map par timing bitgen impact report schematic schem ise
+TARGETS = all synth xst map par timing bitgen impact report schematic schem ise ngc trans ncd xdl
 
 RSYNC := rsync -EXrLAtg --verbose
 
