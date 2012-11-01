@@ -28,51 +28,6 @@ module MIPS150 (
     wire FWD_R1 = 1'b0, FWD_R2 = 1'b0;
     wire [31: 0] FWD_RValue = 32'd0;
 
-    // Key components indirectly wired elsewhere
-
-    RegFile regfile
-    ( .clk(clk),
-        // Write is synchronous
-        .wa(REG_wa),    .wd(REG_wd),    .we(REG_we),
-        // Read is asynchronous
-        .ra1(REG_ra1),  .ra2(REG_ra2),
-        .rd1(REG_rd1),  .rd2(REG_rd2)
-    );
-
-    dmem_blk_ram DMEM
-    (   .clka(clk),               // Clocks of a feather
-        .ena    (DMEM_ena),     .addra  (DMEM_addra),   // One DMEM port...
-        .douta  (DMEM_douta),                           //  for data read...
-        .dina   (DMEM_dina),    .wea    (DMEM_wea)      //  & data write
-    );
-    
-    imem_blk_ram IMEM
-    (   .clka(clk), .clkb(clk),    // Clocks of a feather
-        .ena    (IMEM_ena),     .addra  (IMEM_addra),   // Separate IMEM port...
-        .dina   (IMEM_dina),    .wea    (IMEM_wea),     //  for inst write...
-                                                        // ...VS...
-        .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
-    );
-    
-    UART uart
-    (   .Clock(clk), .Reset(rst),  // Clocks of a feather
-        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
-        // Transmitter  (handshakes go both in/out)
-        .DataIn(        `ShakeTx_DataIn(        8,UATX)),
-        .DataInValid(   `ShakeTx_DataInValid(   8,UATX)),
-        .DataInReady(   `ShakeTx_DataInReady(   8,UATX)),
-        // Receiver     (handshakes go both in/out)
-        .DataOut(       `ShakeRx_DataOut(       8,UARX)),
-        .DataOutValid(  `ShakeRx_DataOutValid(  8,UARX)),
-        .DataOutReady(  `ShakeRx_DataOutReady(  8,UARX))
-    );
-    
-    // Drive CPUGlobals from CPU module inputs
-    BUS_CPUGlobal_tun BUS_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stl)
-    );
-    
     
     /* Naming conventions:
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
@@ -86,9 +41,9 @@ module MIPS150 (
     */
     
     // Forward declare wires to explicitly feedback to prior stages
-    wire [31: 0] PCNext_DX_WF_;
-    wire [ 4: 0] WBKReg_M_WF_;
-    wire [31: 0] WBKDat_M_WF_;
+    wire [31: 0] #1 PCNext_DX_WF_;
+    wire [ 4: 0] #1 WBKReg_M_WF_;
+    wire [31: 0] #1 WBKDat_M_WF_;
     
     assign REG_wa = WBKReg_M_WF_,   REG_wd = WBKDat_M_WF_,  REG_we = !stl;
 
@@ -158,6 +113,53 @@ module MIPS150 (
         .WBK_Reg_   (WBKReg_M_WF_),     .WBK_Val_   (WBKDat_M_WF_)
     );
     
+
+    // Key components indirectly wired elsewhere
+
+    RegFile regfile
+    ( .clk(clk),
+        // Write is synchronous
+        .wa(REG_wa),    .wd(REG_wd),    .we(REG_we),
+        // Read is asynchronous
+        .ra1(REG_ra1),  .ra2(REG_ra2),
+        .rd1(REG_rd1),  .rd2(REG_rd2)
+    );
+
+    dmem_blk_ram DMEM
+    (   .clka(clk),               // Clocks of a feather
+        .ena    (DMEM_ena),     .addra  (DMEM_addra),   // One DMEM port...
+        .douta  (DMEM_douta),                           //  for data read...
+        .dina   (DMEM_dina),    .wea    (DMEM_wea)      //  & data write
+    );
+    
+    imem_blk_ram IMEM
+    (   .clka(clk), .clkb(clk),    // Clocks of a feather
+        .ena    (IMEM_ena),     .addra  (IMEM_addra),   // Separate IMEM port...
+        .dina   (IMEM_dina),    .wea    (IMEM_wea),     //  for inst write...
+                                                        // ...VS...
+        .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
+    );
+    
+    UART uart
+    (   .Clock(clk), .Reset(rst),  // Clocks of a feather
+        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
+        // Transmitter  (handshakes go both in/out)
+        .DataIn(        `ShakeTx_DataIn(        8,UATX)),
+        .DataInValid(   `ShakeTx_DataInValid(   8,UATX)),
+        .DataInReady(   `ShakeTx_DataInReady(   8,UATX)),
+        // Receiver     (handshakes go both in/out)
+        .DataOut(       `ShakeRx_DataOut(       8,UARX)),
+        .DataOutValid(  `ShakeRx_DataOutValid(  8,UARX)),
+        .DataOutReady(  `ShakeRx_DataOutReady(  8,UARX))
+    );
+    
+    // Drive CPUGlobals from CPU module inputs
+    BUS_CPUGlobal_tun BUS_CPUGlobal
+    ( ._BUS_(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stl)
+    );
+    
+
 // synthesis translate_off
     
     initial begin

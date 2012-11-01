@@ -42,7 +42,7 @@ function [31:0] ZEXT16_32;
 endfunction
 
 	// These might later be reconstructed via bit-masks
-    wire isRType, isMType, isIType, isRIType, isBGEZ, isBranch;
+    wire #1 isRType, isMType, isIType, isRIType, isBGEZ, isBranch;
 	assign isRType	= (_opcode == 6'b000000);
 	assign isMType	= (_opcode[5] == 1'b1);
 	assign isIType	= (_opcode[4] == 1'b1);

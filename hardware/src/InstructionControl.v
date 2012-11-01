@@ -12,18 +12,8 @@ module InstructionControl #(
 //	output [15:0 ] FAULT
 );
 
-/*
-ControlUnit DevinControl(
-    .Opcode(opcode), .Funct(funct), .rd(rd), .rt_src2(rt),
-    .MSigned(MSigned), .MemToReg(MemToReg), .MemWrite(MemWrite),
-    .DataWidth(DataWidth), .ALUsrcA(ALUsrcA), .ALUsrcB(ALUsrcB),
-    .Link(Link), .CmpOp(CmpOp), .JR(JR), .Jump(Jump),
-    .DestReg(DestReg)
-);
-*/
-
     // Embed existing ALUDecoder from lab
-    wire [ 3: 0] ALUop;
+    wire [ 3: 0] #2 ALUop;
     ALUdec ALUDecoder(
         .opcode(opcode), .funct(funct),
         .ALUop(ALUop)
@@ -33,7 +23,7 @@ ControlUnit DevinControl(
     
     // Pre-computations for clarity (partly distilled out by logic simplification?)
 	// These characteristics could come from lookup table
-	wire isRType, isMType, isMStore, isMLoad, isIType, isBSimple,
+	wire #1 isRType, isMType, isMStore, isMLoad, isIType, isBSimple,
 	       isBGELTZ, isBranch, isIJump, isRJump, isJump;
 	assign isRType	= (opcode == 6'b000000);
 	assign isMType	= (opcode[5] == 1'b1);
@@ -47,8 +37,10 @@ ControlUnit DevinControl(
 	assign isRJump  = (isRType && (funct[5:3] == 3'b001));
 	assign isJump   = (isIJump || isRJump);
     
+	`BUS_ICTL_type #1 delayIControl;
+	assign #1 IControl_ = delayIControl;
     BUS_ICTL_tun BUS_ICTL
-    ( ._BUS_(IControl_),
+    ( ._BUS_(delayIControl),
         .ISigned(
             (isMType || isIType) ? !opcode[2] : `UNKNOWN
         ),

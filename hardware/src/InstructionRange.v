@@ -15,7 +15,7 @@ module InstructionRange #(
 //	output [15:0 ] FAULT
 );
 	
-	assign opcode      = INST[31:26];
+	assign #1 opcode      = INST[31:26];
 	assign rs          = INST[25:21];
 	assign rt          = INST[20:16];
 	assign rd          = INST[15:11];
