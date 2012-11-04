@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 `include "CPUBusses.vh"
 
 module StageDX(
@@ -20,46 +22,27 @@ module StageDX(
     output [31: 0] PCNext_
 );
     
-	wire [ 5: 0] _opcode_;
-	wire [ 4: 0] _rs_, _rt_, _rd_, _shamt_;
-	wire [ 5: 0] _funct_;
-	wire [15: 0] _immediate_;
-	wire [25: 0] _target_;
-	
-	InstructionRange decodeRanges(
-		.INST(INST),	// Pass in the instruction
-		.opcode(_opcode_),				// Receive basic bit-ranges by "standard names"
-		// These below are for internal use only (parsed immediately into fields)
-		.rs(_rs_), .rt(_rt_), .rd(_rd_), .shamt(_shamt_),
-		.funct(_funct_), .immediate(_immediate_), .target(_target_)
-	);
-	
-	InstructionControl decodeControl(
-		.opcode(_opcode_), .rt(_rt_), .rd(_rd_), .funct(_funct_),
-		.IControl_(IControl_)
-	);
-	
-	wire [ 5: 0] #5 IPCODE;
-	wire [ 4: 0] #5 BASE, DEST, SRC, RSHAMT, SRC1, SRC2;
-	wire [15: 0] #5 SOFFSET;
-	wire [31: 0] #5 SIMMED, UIMMED, SHAMT;
-	wire [31: 0] #5 PCTARGET, PCBRANCH, PCPLUS4, PCPLUS8;
+    wire [ 5: 0] #1 IPCODE;
+    wire [ 4: 0] #1 DEST, SRC1, SRC2;
+    wire [15: 0] #1 SOFFSET;
+    wire [31: 0] #1 SIMMED, UIMMED, SHAMT;
+    wire [31: 0] #1 PCTARGET, PCBRANCH, PCPLUS4, PCPLUS8;
     
-	InstructionField decodeFields(
-		._pc(PC), ._opcode(_opcode_),
-		._rs(_rs_), ._rt(_rt_), ._rd(_rd_), ._shamt(_shamt_),
-		._funct(_funct_), ._immediate(_immediate_), ._target(_target_),
-		.IPCODE(IPCODE), .BASE(BASE), .DEST(DEST), .SOFFSET(SOFFSET),
-		.SRC(SRC), .SIMMED(SIMMED), .UIMMED(UIMMED),
-		.SHAMT(SHAMT), .RSHAMT(RSHAMT), .SRC1(SRC1), .SRC2(SRC2),
+	InstructionControl decodeControl(
+		._pc(PC), ._inst(INST),
+
+		.IControl_(IControl_),
+		
+		.IPCODE(IPCODE), .DEST(DEST), .SOFFSET(SOFFSET),
+		.SIMMED(SIMMED), .UIMMED(UIMMED),
+		.SHAMT(SHAMT), .SRC1(SRC1), .SRC2(SRC2),
 		.PCTARGET(PCTARGET), .PCBRANCH(PCBRANCH),
 		.PCPLUS4(PCPLUS4), .PCPLUS8(PCPLUS8)
 	);
 	
 	// Asyncronously plug into outer register component
-	wire [31: 0] #2 R1, R2;   // Declare here to clarify dependencies
-	assign REG_R1_ = SRC1,     R1 = REG_D1_;
-	assign REG_R2_ = SRC2,     R2 = REG_D2_;
+	assign         REG_R1_ = SRC1,     REG_R2_ = SRC2;
+	wire [31: 0]   R1      = REG_D1_,  R2      = REG_D2_; // Redeclare here to clarify dependencies
 	
 	// Tap only specific control signals used inside DX
 	wire ISigned, Jump, JR, ALUsrcA, ALUsrcB;
@@ -73,25 +56,25 @@ module StageDX(
         .MemToReg(),.DestReg(),.MemWrite(),.DataWidth(),.MSigned(),.Link()
 	);
 	
-	wire [31: 0] #5 A, B, jumpPC;
+	wire [31: 0] #1 A, B, ALUResult;
 	assign A = (ALUsrcA) ? SHAMT : R1;
 	assign B = (ALUsrcB) ? ((ISigned) ? SIMMED : UIMMED) : R2;
-	assign jumpPC = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);
-    
-    wire #5 takeBranch;
-    BranchCMP bcmp
-    ( .branchOp(CmpOp), .A(A), .B(B),
-        .doBranch(takeBranch)
-    );
-    wire #5 takeJump;
-	assign takeJump  = (Jump || takeBranch); // Jump should use CmpOp
-    
 	ALU alu
 	( .A(A), .B(B), .ALUop(ALUop),
-	   .Out(ALUOut_)
+	   .Out(ALUResult)
 	);
-	assign #5 PCNext_ = (takeJump) ? jumpPC : PCPLUS4;
-	assign #5 R2Value_ = R2;
-    assign #5 PCPLUS8_ = PCPLUS8;	
+    
+    wire #1 takeBranch;
+    BranchCMP bcmp
+    ( .branchOp(CmpOp), .A(R1), .B(R2), // Always pull from register/forward output
+        .doBranch(takeBranch)
+    );
+	wire [31: 0] #1 jumpPC;
+	assign jumpPC = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);
+    
+	assign PCNext_ = (Jump || takeBranch) ? jumpPC : PCPLUS4;
+    assign ALUOut_ = ALUResult;
+	assign R2Value_ = R2;
+    assign PCPLUS8_ = PCPLUS8;	
     
 endmodule

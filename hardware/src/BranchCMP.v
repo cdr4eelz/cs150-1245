@@ -1,8 +1,9 @@
+`timescale 100ps / 1ps
 
 `include "BranchCMPop.vh"
 
-// Playing with functions to see if they help much.
-// Also might turn into generic CMP and impose the zeroing of B externally!
+// Playing with functions to see when they help much.
+// Now requires zeroing of B externally!
 
 module BranchCMP #(
 	parameter WIDTH = 32
@@ -24,20 +25,13 @@ function [0:0] fullCompare;
 			`FULLCMP_LT:	fullCompare = (A <  B);
 			`FULLCMP_GT:	fullCompare = (A >  B);
 			`FULLCMP_GE:	fullCompare = (A >= B);
-			`FULLCMP_LE:	fullCompare = (A < B) || (A == B);
+			`FULLCMP_LE:	fullCompare = (A <= B); //(A < B) || (A == B);
 			`FULLCMP_False:	fullCompare = 1'b0;
 			`FULLCMP_True:	fullCompare = 1'b1;
 		endcase
 	end
 endfunction
 
-	reg signed [WIDTH-1:0] localB;
-	always @(*) begin
-		case(branchOp)
-			`BRANCHCMP_EQab, `BRANCHCMP_NEab: localB = B;
-			default: localB = 0;
-		endcase
-	end
-	assign doBranch = fullCompare (branchOp, A, localB);
+	assign doBranch = fullCompare (branchOp, A, B);
 	
 endmodule

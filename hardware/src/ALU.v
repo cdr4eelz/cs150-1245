@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 // UC Berkeley CS150
 // Lab 3, Spring 2012
 // Module: ALU.v
@@ -36,7 +38,7 @@ module ALU(
 		`ALU_SRL:	Out = $unsigned(B) >>  shamt;
 		`ALU_SRA:	Out =   $signed(B) >>> shamt;
 		`ALU_NOR:	Out = ~A & ~B;
-		`ALU_XXX:	Out = 32'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
+		`ALU_XXX:	Out = 32'bx;
 		endcase
 	end
 endmodule

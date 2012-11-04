@@ -159,15 +159,13 @@ module MIPS150 (
         .CLK(clk), .RST(rst), .STL(stl)
     );
     
-
+    
 // synthesis translate_off
     
     initial begin
-    //        $strobe ("-   -   -   -   -   -   -   -   -   -   -   -");
-    //        $strobe ("WF<DX: PC<=%h", PCNext_DX_WF_);
-    //        $strobe ("WF<M : R(%h,%d)<=%h", WBKReg_M_WF_, WBKReg_M_WF_, WBKDat_M_WF_);
+        $display ("-   -   -   -   -   -   -   -   -   -   -   -");
     end
-
+    
     reg[8:0] DBG_cycle, DBG_step;
     always@(rst, stl) begin
         $display("=============================================");
@@ -190,18 +188,20 @@ module MIPS150 (
         $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
         DBG_cycle = DBG_cycle + 1;
         if (!stl) DBG_step = DBG_step + 1;
-        if (DBG_step > (32)) begin
+        if (DBG_step > (15)) begin
             $display("Ran %d / %d", DBG_cycle, DBG_step);
             $finish();
          end
     end
     
     always@* begin
-        $display("%d]   CTL DX %b", DBG_cycle, IControlDX_);
+        $display(" (%d) CTL DX %b", DBG_cycle, IControlDX_);
     end
     always@* begin
-        $display(" REGR: S1(%h,%d)=%h (%d)", REG_ra1, REG_ra1, REG_rd1, REG_rd1);
-        $display("     : S2(%h,%d)=%h (%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
+        if ((REG_ra1 >= 0) || (REG_ra2 >= 0)) begin
+            $display(" REGR: S1(%h,%d)=%h (%d)", REG_ra1, REG_ra1, REG_rd1, REG_rd1);
+            $display("     : S2(%h,%d)=%h (%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
+        end
     end
     
 // synthesis translate_on

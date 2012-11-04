@@ -3,6 +3,8 @@
 
 _test2:
 
+.set noreorder
+
 addiu $s7, $0, 0x0
 # Test 1
 
@@ -14,6 +16,12 @@ j Done
 
 Error:
 # Perhaps write the test number over serial
+addu $t1, $0, $0
+j Error
 
 Done:
 # Write success over serial
+nop
+nop
+j Done
+

@@ -125,7 +125,7 @@ module ml505top
   	  end
  end
 
-`ifndef BOOTHACK
+`ifdef BOOTHACK
     reg [8:0] resetHack = 9'd0;
     always @(negedge cpu_clk_g) begin:hackDown
         if (!resetHack[8]) resetHack = resetHack + 1;

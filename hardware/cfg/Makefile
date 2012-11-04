@@ -60,15 +60,13 @@ $(PAR_OUT): $(MAP_OUT)
 par: $(PAR_OUT)
 
 #NCD
-ncd: $(TOP).ncd
+ncd: $(TOP)_map.ncd $(TOP).ncd
 
 #XDL
-XDL_OUT := $(TOP).xdl
+xdl: $(TOP)_map.xdl $(TOP).ncd
 
-$(XDL_OUT): $(TOP).ncd
+%.xdl: %.ncd
 	xdl -ncd2xdl $< $@
-
-xdl: $(XDL_OUT)
 
 
 #TRCE

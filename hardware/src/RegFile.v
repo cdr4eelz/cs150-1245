@@ -36,6 +36,6 @@ module RegFile(input         clk,
         end
     end
     
-	assign rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
-	assign rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
+	assign #1 rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
+	assign #1 rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
 endmodule
