@@ -45,7 +45,7 @@
 						Val="1"/>
 			</FileInfo>
 		</File>
-		<File Path="$PPRDIR/../hardware/src/MEMHandler.v">
+		<File Path="$PPRDIR/../hardware/src/MEMIOPlex.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
