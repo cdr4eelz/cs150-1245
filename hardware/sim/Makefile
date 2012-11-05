@@ -33,6 +33,8 @@ all: $(TRANSCRIPT)
 do: $(DOFILES)
 	echo "Can cd to build then vsim < xyz.do"
 
+prep: do results compile
+
 fresh: clean do results build/Makefile
 	echo "-----------------"
 	grep -E "Warning" $(VLOG_LOGF) || echo "NO WARNINGS"
@@ -80,4 +82,4 @@ $(TRANSCRIPT) : results/%.transcript : build/%.do $(STATUS) $(TESTINPUTSBUILD) |
 clean:
 	rm -rf results build
 
-.PHONY := all clean compile do fresh
+.PHONY := all clean results builddir listlibs compile do fresh prep
