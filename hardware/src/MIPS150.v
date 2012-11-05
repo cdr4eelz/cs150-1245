@@ -9,22 +9,21 @@ module MIPS150 (
 );
     wire stl = stall;   // Just rename so it matches nicely internal to CPU
     `BUS_CPUGlobal_type     CPUGlobal;
+    `BUS_MEMIO_type         MemoryIO;
     `BUS_ShakeRx_type(8)    UARX;
     `BUS_ShakeTx_type(8)    UATX;
-
+    
     // Register & Memory busses
     wire [ 4: 0] REG_ra1, REG_ra2, REG_wa;
     wire [31: 0] REG_rd1, REG_rd2, REG_wd;
     wire REG_we;
-    wire            IMEM_ena,                   DMEM_ena;
+    
     wire [11: 0]    IMEM_addra, IMEM_addrb,     DMEM_addra;
     wire [31: 0]    IMEM_dina,  IMEM_doutb,     DMEM_douta, DMEM_dina;
     wire [ 3: 0]    IMEM_wea,                   DMEM_wea;
-    assign IMEM_ena = 1'b1;
-    assign DMEM_ena = 1'b1;
     assign IMEM_wea = 4'b0000;
     assign DMEM_wea = 4'b0000;
-
+    
     /* Naming conventions:
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
         xxxSS_  : Value unstable during given stage (but stable at posedge exit)
@@ -38,8 +37,8 @@ module MIPS150 (
     
     // Forward declare wires to explicitly feedback to prior stages
     wire [31: 0] #1 PCNext_DX_WF_;
-    wire [ 4: 0] #1 WBKReg_M_WF_;
-    wire [31: 0] #1 WBKDat_M_WF_;
+    wire [ 4: 0] #1 WBKReg_M_WF_;   // Not sure there really is a "W" stage anywhere!
+    wire [31: 0] #1 WBKDat_M_WF_;   // but the concept seems harmless.
     
     assign REG_wa = WBKReg_M_WF_,   REG_wd = WBKDat_M_WF_,  REG_we = !stl;
     
@@ -90,7 +89,7 @@ module MIPS150 (
     wire  [31: 0] ALUOut_M;
     wire  [31: 0] R2Value_M;
     wire  [31: 0] PCPLUS8_M;
-    PipelineRegister #( .Width(`BUS_ICTL_width)
+    PipelineRegister #( .Width(`BUS_ICTL_width) // Register all controls & let unused get pruned out
         ) REG_IControl_M    ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M) );
     PipelineRegister #( .Width(32)
         ) REG_ALUOut_M      ( .CPUGlobal(CPUGlobal),    .In(ALUOutDX_  ),   .Out(ALUOut_M  ) );
@@ -100,7 +99,8 @@ module MIPS150 (
         ) REG_PCPLUS8_M     ( .CPUGlobal(CPUGlobal),    .In(PCPLUS8DX_ ),   .Out(PCPLUS8_M ) );
     
     StageM  s_M
-    (   .CPUGlobal(CPUGlobal),
+    (   .CPUGlobal  (CPUGlobal),
+        .MemoryIO   (MemoryIO),
     //Inputs
         .IControl   (IControl_M),
         .ALUOut     (ALUOut_M),
@@ -111,9 +111,15 @@ module MIPS150 (
         .WBK_Reg_   (WBKReg_M_WF_),     .WBK_Val_   (WBKDat_M_WF_)
     );
     
-
+    // Temporarily plugged directly into DMEM only
+    BUS_MEMIO_tap BUS_MEMIO
+    ( ._BUS_(MemoryIO),
+        .Addr(DMEM_addra),  .WEnab(DMEM_wea),   .WData(DMEM_dina),
+        .RData(DMEM_douta)
+    );
+    
     // Key components indirectly wired elsewhere
-
+    
     RegFile regfile
     ( .clk(clk),
         // Write is synchronous
@@ -122,17 +128,17 @@ module MIPS150 (
         .ra1(REG_ra1),  .ra2(REG_ra2),
         .rd1(REG_rd1),  .rd2(REG_rd2)
     );
-
+    
     dmem_blk_ram DMEM
-    (   .clka(clk),               // Clocks of a feather
-        .ena    (DMEM_ena),     .addra  (DMEM_addra),   // One DMEM port...
+    (   .clka(clk),             // Clocks of a feather
+        .ena    (1'b1),         .addra  (DMEM_addra),   // One DMEM port...
         .douta  (DMEM_douta),                           //  for data read...
         .dina   (DMEM_dina),    .wea    (DMEM_wea)      //  & data write
     );
     
     imem_blk_ram IMEM
-    (   .clka(clk), .clkb(clk),    // Clocks of a feather
-        .ena    (IMEM_ena),     .addra  (IMEM_addra),   // Separate IMEM port...
+    (   .clka(clk), .clkb(clk), // Clocks of a feather
+        .ena    (1'b1),         .addra  (IMEM_addra),   // Separate IMEM port...
         .dina   (IMEM_dina),    .wea    (IMEM_wea),     //  for inst write...
                                                         // ...VS...
         .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
@@ -166,13 +172,10 @@ module MIPS150 (
     end
     
     task DO_FINISH;
-        integer i;
         begin
             $display("Ran %d / %d", DBG_cycle, DBG_step);
             $display("");
-            for (i=0; i < 32; i=i+1) begin
-                $display("R[%h,%d] = %h(%d)", i, i, regfile.R[i], regfile.R[i]);
-            end
+            regfile.DUMP();
             $finish();
         end
     endtask

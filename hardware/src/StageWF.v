@@ -3,9 +3,9 @@
 `include "CPUBusses.vh"
 
 module StageWF #(
-    parameter   [31: 0] bootPC = 32'h00000000
+    parameter   [31: 0] bootPC = 32'h20000000   // 2-lsb must be 0, upper nibble ought be 4'b0010
 ) (
-    inout  [ 2: 0] CPUGlobal,
+    input  [ 2: 0] CPUGlobal,
     output [11: 0] IMEM_read_addr,
     input  [31: 0] IMEM_read_data,
 
@@ -26,7 +26,7 @@ module StageWF #(
     assign PC_HOT = (RST_REG) ? bootPC : PCNext;
     
     reg [31: 0] PC_REG;
-    always @(posedge clk) begin
+    always @(posedge clk) begin //TODO: stall
         RST_REG <= rst;
         PC_REG  <= PC_HOT;
     end

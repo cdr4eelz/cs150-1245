@@ -127,6 +127,8 @@ module RegFileTestbench;
         #1; assertRegs(r, testREG[r], 15-r, testREG[15-r]);
     end
     
+    DUT.DUMP();
+    
     $display("All tests passed! %d", testnum);
     $finish();
   end

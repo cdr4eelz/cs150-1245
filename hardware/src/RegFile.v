@@ -14,28 +14,46 @@
 //  Author: <<YOUR NAME HERE>>
 //-----------------------------------------------------------------------------
 
-module RegFile(input         clk,
-               input         we,
-               input  [4:0]  ra1,
-               input  [4:0]  ra2,
-               input  [4:0]  wa,
-               input  [31:0] wd,
-               output [31:0] rd1,
-               output [31:0] rd2);
-    
+module RegFile #(
+    parameter DBG_LogStores = 1, DBG_DelayRead = 1
+) (
+    input         clk,
+    input         we,
+    input  [4:0]  ra1,
+    input  [4:0]  ra2,
+    input  [4:0]  wa,
+    input  [31:0] wd,
+    output [31:0] rd1,
+    output [31:0] rd2
+);
+
 // The dist-ram is already "true dual port", using coordinated writes
 //   to two banks and separate asynchronous reads.  Otherwise, we could
 //   mimic this ourselves with duplicate register banks.
-    
-    (* ram_style = "distributed" *) reg [31:0] R [31:0]; // Zero'th not used
-    
-    always @(posedge clk) begin
-        if (we && (wa != 5'd0)) begin
+
+(* ram_style = "distributed" *) reg [31:0] R [31:0];
+// Zero'th not used but seems nicer with warnings to have it.
+initial R[0] = 0; // For cosmetic purposes :)
+
+always @(posedge clk) begin
+    if (we && (wa != 5'd0)) begin
+        if (DBG_LogStores) begin
             $display("*STORE* REG: R[%h,%d] <= %h(%d)  *WAS* %h(%d)", wa, wa, wd, wd, R[wa], R[wa]);
-            R[wa] <= wd;
+        end
+        R[wa] <= wd;
+    end
+end
+
+assign #DBG_DelayRead rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
+assign #DBG_DelayRead rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
+
+task DUMP;
+    reg [5:0] r;
+    begin
+        for (r=0; r < 32; r=r+1) begin
+            $display("R[%h,%d] = %h(%d)", r, r, R[r], R[r]);
         end
     end
-    
-	assign #1 rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
-	assign #1 rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
+endtask
+
 endmodule
