@@ -3,7 +3,7 @@
 `include "CPUBusses.vh"
 
 module InstructionControl #(
-	parameter strictMode = 0
+	parameter strictMode = 0, NOUNKLE = 1
 )(
 	input [31:0 ] _inst,
 	input [31:0 ] _pc,
@@ -28,6 +28,7 @@ module InstructionControl #(
 //	output [15:0 ] FAULT
 );
 `define UNKNOWN 'bz // Can swap out for default value if unknown not desired
+`define DEFAULT 'b0
 
     function [31:0] SEXT16_32;
         input [15:0] in16;
@@ -50,13 +51,13 @@ module InstructionControl #(
     wire [ 5: 0] #1 _funct_;
     wire [15: 0] #1 _immediate_;
     wire [25: 0] #1 _target_;
-    assign _rs_         = (!isJType) ? _inst[25:21] : 5`UNKNOWN;
-    assign _rt_         = (!isJType) ? _inst[20:16] : 5`UNKNOWN;
-    assign _rd_         = (isRType) ? _inst[15:11] : 5`UNKNOWN;
-    assign _shamt_      = (isRType) ? _inst[10:6 ] : 5`UNKNOWN;
-    assign _funct_      = (isRType) ? _inst[ 5:0 ] : 6`UNKNOWN;
-    assign _immediate_  = (isIType) ? _inst[15:0 ] : 16`UNKNOWN;
-    assign _target_     = (isJType) ? _inst[25:0 ] : 26`UNKNOWN;
+    assign _rs_         = (!isJType || NOUNKLE) ? _inst[25:21] : 5`UNKNOWN;
+    assign _rt_         = (!isJType || NOUNKLE) ? _inst[20:16] : 5`UNKNOWN;
+    assign _rd_         = (isRType || NOUNKLE) ? _inst[15:11] : 5`UNKNOWN;
+    assign _shamt_      = (isRType || NOUNKLE) ? _inst[10:6 ] : 5`UNKNOWN;
+    assign _funct_      = (isRType || NOUNKLE) ? _inst[ 5:0 ] : 6`UNKNOWN;
+    assign _immediate_  = (isIType || NOUNKLE) ? _inst[15:0 ] : 16`UNKNOWN;
+    assign _target_     = (isJType || NOUNKLE) ? _inst[25:0 ] : 26`UNKNOWN;
     
     // Pre-computations for clarity (partly distilled out by logic simplification?)
 	// These characteristics could come from lookup table
@@ -82,19 +83,19 @@ module InstructionControl #(
 	assign isBranchX   = (_opcode_[5:1] == 5'b00010);
 	assign isBranch0   = (~|_opcode_[5:3] && ~^_opcode_[2:1]);
 	
-	assign IPCODE	= (isRType) ? _funct_ : (isBGELTZ) ? _rt_ : 6`UNKNOWN;
-	assign BASE     = (isMemory) ? _rs_ : 5`UNKNOWN;
+	assign IPCODE	= (isRType) ? _funct_ : (isBGELTZ || NOUNKLE) ? _rt_ : 6`UNKNOWN;
+	assign BASE     = (isMemory || NOUNKLE) ? _rs_ : 5`UNKNOWN;
 	assign DEST	    = (isRType) ? _rd_ : (isMLoad || isIComp) ? _rt_ : 5'd0;
-	assign SOFFSET	= (isMemory) ? (SEXT16_32(_immediate_)) : 32`UNKNOWN;
+	assign SOFFSET	= (isMemory || NOUNKLE) ? (SEXT16_32(_immediate_)) : 32`UNKNOWN;
 	assign SIMMED	= SEXT16_32(_immediate_);
 	assign UIMMED	= ZEXT16_32(_immediate_);
-	assign SHAMT	= (isRShiftI) ? _shamt_ : 5`UNKNOWN; 
-	assign SRC1     = (!isJType && !isRShiftI) ? _rs_ : 5`UNKNOWN; 
+	assign SHAMT	= (isRShiftI || NOUNKLE) ? _shamt_ : 5`UNKNOWN; 
+	assign SRC1     = ((!isJType && !isRShiftI) || NOUNKLE) ? _rs_ : 5`UNKNOWN; 
 	assign SRC2     = (isROther || isBranchX || isRShift || isMStore) ? _rt_ 
-	                   : (isBranch0) ? 5'd0 : 5`UNKNOWN;  
+	                   : (isBranch0 || NOUNKLE) ? 5'd0 : 5`UNKNOWN;  
 	
-	assign PCTARGET	= (isIJump) ? {_pc[31:28], _target_, 2'b00} : 32`UNKNOWN;
-	assign PCBRANCH	= (isBranch) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : 32`UNKNOWN;
+	assign PCTARGET	= (isIJump || NOUNKLE) ? {_pc[31:28], _target_, 2'b00} : 32`UNKNOWN;
+	assign PCBRANCH	= (isBranch || NOUNKLE) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : 32`UNKNOWN;
 	assign PCPLUS4	= _pc + 4;
 	assign PCPLUS8	= _pc + 8;
 	
@@ -110,7 +111,7 @@ module InstructionControl #(
     BUS_ICTL_tun BUS_ICTL
     ( ._BUS_(delayIControl),
         .ISigned(
-            (isMemory) ? 1'b1 : (isIComp) ? !_opcode_[2] : 1`UNKNOWN //TODO: Move to isXYZ
+            (isMemory) ? 1'b1 : (isIComp) ? !_opcode_[2] : 1`DEFAULT //TODO: Move to isXYZ
         ),
         .ALUsrcA(
             isRShiftI
@@ -127,10 +128,10 @@ module InstructionControl #(
             isMStore
         ),
         .DataWidth(
-            (isMemory) ? _opcode_[1:0] : 2`UNKNOWN
+            (isMemory) ? _opcode_[1:0] : 2`DEFAULT
         ),
         .MSigned(
-            (isMemory && !isMStore && !_opcode_[1]) ? !_opcode_[2] : 1`UNKNOWN
+            (isMemory && !isMStore && !_opcode_[1]) ? !_opcode_[2] : 1`DEFAULT
         ),
         
         .Jump(

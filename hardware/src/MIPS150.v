@@ -25,10 +25,6 @@ module MIPS150 (
     assign IMEM_wea = 4'b0000;
     assign DMEM_wea = 4'b0000;
 
-    wire FWD_R1 = 1'b0, FWD_R2 = 1'b0;
-    wire [31: 0] FWD_RValue = 32'd0;
-
-    
     /* Naming conventions:
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
         xxxSS_  : Value unstable during given stage (but stable at posedge exit)
@@ -46,7 +42,7 @@ module MIPS150 (
     wire [31: 0] #1 WBKDat_M_WF_;
     
     assign REG_wa = WBKReg_M_WF_,   REG_wd = WBKDat_M_WF_,  REG_we = !stl;
-
+    
     // Declare outputs of WF stage
     wire [31: 0] PC_WF_, INST_WF_;
     StageWF s_WF    // WF STAGE itself
@@ -64,11 +60,13 @@ module MIPS150 (
         ) REG_PC_DX         ( .CPUGlobal(CPUGlobal),    .In(PC_WF_),        .Out(PC_DX) );
     PipelineRegister    #( .PreRegistered(1)   // Is registered for us in prior stage
         ) REG_INST_DX       ( .CPUGlobal(CPUGlobal),    .In(INST_WF_),      .Out(INST_DX) );
-
+    
     // Mini-forwarding calculation
-    wire [31: 0] FWD_rd1 = (FWD_R1) ? FWD_RValue : REG_rd1;
-    wire [31: 0] FWD_rd2 = (FWD_R2) ? FWD_RValue : REG_rd2;
-
+    wire FWD_1 = (REG_wa>0 && (REG_wa==REG_ra1));
+    wire FWD_2 = (REG_wa>0 && (REG_wa==REG_ra2));
+    wire [31: 0] FWD_rd1 = (FWD_1) ? REG_wd : REG_rd1;
+    wire [31: 0] FWD_rd2 = (FWD_2) ? REG_wd : REG_rd2;
+    
     // Declare outputs of DX stage
     `BUS_ICTL_type IControlDX_;
     wire [31: 0] ALUOutDX_, R2ValueDX_, PCPLUS8DX_;
@@ -161,12 +159,24 @@ module MIPS150 (
     
     
 // synthesis translate_off
-    
+
+    reg[8:0] DBG_cycle, DBG_step;
     initial begin
         $display ("-   -   -   -   -   -   -   -   -   -   -   -");
     end
     
-    reg[8:0] DBG_cycle, DBG_step;
+    task DO_FINISH;
+        integer i;
+        begin
+            $display("Ran %d / %d", DBG_cycle, DBG_step);
+            $display("");
+            for (i=0; i < 32; i=i+1) begin
+                $display("R[%h,%d] = %h(%d)", i, i, regfile.R[i], regfile.R[i]);
+            end
+            $finish();
+        end
+    endtask
+    
     always@(rst, stl) begin
         $display("=============================================");
         $display("CTL-: C %h  R %h  S %h", clk, rst, stl);
@@ -180,6 +190,10 @@ module MIPS150 (
     end
     
     always@(posedge clk) if (DBG_cycle >= 0) begin:DBG_RUN_POS
+        $display(" REG1:R1(%h,%d)=%h(%d)", REG_ra1, REG_ra1, REG_rd1, REG_rd1);
+        if (FWD_1) $display(" *FWD1:       >>%h(%d)", FWD_rd1, FWD_rd1);
+        $display(" REG2:R1(%h,%d)=%h(%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
+        if (FWD_2) $display(" *FWD2:       >>%h(%d)", FWD_rd2, FWD_rd2);
         $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
         $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stl, DBG_step);
         $display("%d] WF/DX: %h %h", DBG_cycle, PC_DX, INST_DX);
@@ -188,22 +202,24 @@ module MIPS150 (
         $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
         DBG_cycle = DBG_cycle + 1;
         if (!stl) DBG_step = DBG_step + 1;
-        if (DBG_step > (15)) begin
-            $display("Ran %d / %d", DBG_cycle, DBG_step);
-            $finish();
-         end
+        if (DBG_step > (15)) DO_FINISH();
     end
     
-    always@* begin
+/*    always@* begin
         $display(" (%d) CTL DX %b", DBG_cycle, IControlDX_);
     end
     always@* begin
-        if ((REG_ra1 >= 0) || (REG_ra2 >= 0)) begin
-            $display(" REGR: S1(%h,%d)=%h (%d)", REG_ra1, REG_ra1, REG_rd1, REG_rd1);
-            $display("     : S2(%h,%d)=%h (%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
+        if (REG_ra1 >= 0) begin
+            $display(" reg1:%d R1(%h,%d)=%h (%d)", FWD_1, REG_ra1, REG_ra1, REG_rd1, REG_rd1);
         end
     end
-    
+    always@* begin
+        if (REG_ra2 >= 0) begin
+            $display(" reg2:%d R2(%h,%d)=%h (%d)", FWD_2, REG_ra2, REG_ra2, REG_rd2, REG_rd2);
+        end
+    end
+*/
+  
 // synthesis translate_on
     
 endmodule

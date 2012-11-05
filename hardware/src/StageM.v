@@ -16,6 +16,7 @@ module StageM(
     parameter crap = "tastic";
     
     assign WBK_Reg_ = `ICTL_DestReg(IControl);
-    assign WBK_Val_ = ALUOut;
+    assign WBK_Val_ = `ICTL_MemToReg(IControl) ? 32'b0 : 
+                        `ICTL_Link(IControl) ? PCPLUS8 : ALUOut;
     
 endmodule

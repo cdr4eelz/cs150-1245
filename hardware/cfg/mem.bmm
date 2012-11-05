@@ -1,0 +1,13 @@
+ADDRESS_MAP datamem PPC405 0
+ADDRESS_SPACE BRAM COMBINED INDEX_ADDRESSING[0x00000000:0x00003FFF]
+ADDRESS_RANGE RAMB36
+BUS_BLOCK
+CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [35:27];
+CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[2].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [26:18];
+CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[1].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [17:9];
+CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[0].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [8:0];
+END_BUS_BLOCK;
+END_ADDRESS_RANGE;
+END_ADDRESS_SPACE;
+END_ADDRESS_MAP;
+

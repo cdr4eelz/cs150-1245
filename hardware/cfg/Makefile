@@ -36,7 +36,7 @@ UCF_FLAG := $(if $(UCF),-uc $(UCF))
 NGC_DIRS := $(shell find $(SRC) -type d -exec echo -n "-sd {} " \;)
 
 $(NGDBUILD_OUT): $(XST_OUT) $(UCF)
-	ngdbuild -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) $(XST_OUT) $@
+	ngdbuild -bm $(TEMPLATES)/mem.bmm -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) $(XST_OUT) $@
 
 ngc trans: $(NGDBUILD_OUT)
 

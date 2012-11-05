@@ -26,7 +26,7 @@ vees: $(VEES)
 	bin2coe < $< > $@
 
 %.v: %.bin
-	bin2rom $(TARGET) 0 < $(TARGET).bin > $(TARGET).v
+	bin2rom test 0 < $< > $@
 
 clean:
 	rm -f rm *.coe *.mif *.v

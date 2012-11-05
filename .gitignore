@@ -1,3 +1,4 @@
+/hardware/cfg/mem_bd.bmm
 /hardware/src/[di]mem_blk_ram/
 /hardware/sim/results/
 /hardware/sim/modelsim_libs/

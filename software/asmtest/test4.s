@@ -3,8 +3,6 @@
 
 _test2:
 
-.set noreorder
-
 addiu $s7, $0, 0x0
 # Test 1
 
@@ -12,21 +10,16 @@ li $s0, 0x00000020
 addiu $t0, $0, 0x20
 addiu $s7, $s7, 1 # register to hold the test number (in case of failure)
 bne $t0, $s0, Error
-nop
 j Done
-nop
 
 Error:
 # Perhaps write the test number over serial
-addu $t1, $0, $s7
-nop
+addu $t1, $0, $0
 j Error
-nop
 
 Done:
 # Write success over serial
-addu $t2, $s7, $0
+nop
 nop
 j Done
-nop
 
