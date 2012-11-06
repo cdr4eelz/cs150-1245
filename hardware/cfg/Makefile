@@ -63,7 +63,7 @@ par: $(PAR_OUT)
 ncd: $(TOP)_map.ncd $(TOP).ncd
 
 #XDL
-xdl: $(TOP)_map.xdl $(TOP).ncd
+xdl: $(TOP)_map.xdl $(TOP).xdl
 
 %.xdl: %.ncd
 	xdl -ncd2xdl $< $@

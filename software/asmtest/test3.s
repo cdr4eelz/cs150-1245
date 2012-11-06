@@ -18,7 +18,12 @@ addu  $s5, $t5, $s4
 addu  $s6, $s5, $s5
 addu  $s7, $s6, $s5
 nop
-addiu $s7, $s7, 1 # register to hold the test number (in case of failure)
+addiu $s7, $s7, 3 # register to hold the test number (in case of failure)
+j Done
+
+Other:
+addiu $s7, $s7, 255
+nop
 j Done
 
 Done:

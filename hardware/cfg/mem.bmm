@@ -1,13 +1,27 @@
-ADDRESS_MAP datamem PPC405 0
-ADDRESS_SPACE BRAM COMBINED INDEX_ADDRESSING[0x00000000:0x00003FFF]
-ADDRESS_RANGE RAMB36
-BUS_BLOCK
-CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [35:27];
-CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[2].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [26:18];
-CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[1].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [17:9];
-CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[0].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [8:0];
-END_BUS_BLOCK;
-END_ADDRESS_RANGE;
-END_ADDRESS_SPACE;
+ADDRESS_MAP MipsyMemory PPC405 0
+
+// Note the slight difference in paths between the lanes:
+// CPU/DMEM vs. CPU/IMEM
+// SP.SINGLE_PRIM36.SP vs. SDP.SINGLE_PRIM36.TDP
+//  The _xmsgs/xst.xmsgs created by coregen seems a viable place to get the tail of these paths.
+
+    ADDRESS_SPACE BRAM_DATA RAMB36 WORD_ADDRESSING [0x00000000:0x00003FFF]
+        BUS_BLOCK
+            CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [35:27] OUTPUT = DMEM3.mem;
+            CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[2].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [26:18] OUTPUT = DMEM2.mem;
+            CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[1].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [17:9]  OUTPUT = DMEM1.mem;
+            CPU/DMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[0].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [8:0]   OUTPUT = DMEM0.mem;
+        END_BUS_BLOCK;
+    END_ADDRESS_SPACE;
+
+    ADDRESS_SPACE BRAM_INST RAMB36 WORD_ADDRESSING [0x10000000:0x10003FFF]
+        BUS_BLOCK
+            CPU/IMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [35:27] OUTPUT = IMEM3.mem;
+            CPU/IMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[2].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [26:18] OUTPUT = IMEM2.mem;
+            CPU/IMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[1].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = IMEM1.mem;
+            CPU/IMEM/BU2/U0/blk_mem_generator/valid.cstr/ramloop[0].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [8:0]   OUTPUT = IMEM0.mem;
+        END_BUS_BLOCK;
+    END_ADDRESS_SPACE;
+
 END_ADDRESS_MAP;
 
