@@ -21,8 +21,6 @@ module MIPS150 (
     wire [11: 0]    IMEM_addra, IMEM_addrb,     DMEM_addra;
     wire [31: 0]    IMEM_dina,  IMEM_doutb,     DMEM_douta, DMEM_dina;
     wire [ 3: 0]    IMEM_wea,                   DMEM_wea;
-    assign IMEM_wea = 4'b0000;
-    assign DMEM_wea = 4'b0000;
     
     /* Naming conventions:
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
@@ -44,8 +42,9 @@ module MIPS150 (
     
     // Declare outputs of WF stage
     wire [31: 0] PC_WF_, INST_WF_;
+    wire [15: 0] StepCount;
     StageWF s_WF    // WF STAGE itself
-    (   .CPUGlobal(CPUGlobal),
+    (   .CPUGlobal(CPUGlobal), .STEPCOUNT(StepCount),
         .IMEM_read_addr (IMEM_addrb),   .IMEM_read_data(IMEM_doutb),
     //Inputs
         .PCNext         (PCNext_DX_WF_),
@@ -55,9 +54,9 @@ module MIPS150 (
     
     // Pipeline border: WF/DX
     wire [31: 0] PC_DX, INST_DX;
-    PipelineRegister    #( .PreRegistered(1)   // Is registered for us in prior stage
+    PipelineRegister #( .Width(32), .PreRegistered(1)   // Registered for us in prior stage
         ) REG_PC_DX         ( .CPUGlobal(CPUGlobal),    .In(PC_WF_),        .Out(PC_DX) );
-    PipelineRegister    #( .PreRegistered(1)   // Is registered for us in prior stage
+    PipelineRegister #( .Width(32), .PreRegistered(1)   // Registered for us in prior stage
         ) REG_INST_DX       ( .CPUGlobal(CPUGlobal),    .In(INST_WF_),      .Out(INST_DX) );
     
     // Mini-forwarding calculation
@@ -111,12 +110,13 @@ module MIPS150 (
         .WBK_Reg_   (WBKReg_M_WF_),     .WBK_Val_   (WBKDat_M_WF_)
     );
     
-    // Temporarily plugged directly into DMEM only
-    BUS_MEMIO_tap BUS_MEMIO
+    // Temporarily plugged directly into DMEM & IMEM
+    BUS_MEMIO_tap BUS_MEMIO_D
     ( ._BUS_(MemoryIO),
         .Addr(DMEM_addra),  .WEnab(DMEM_wea),   .WData(DMEM_dina),
         .RData(DMEM_douta)
     );
+    assign IMEM_addra=DMEM_addra, IMEM_wea=DMEM_wea, IMEM_dina=DMEM_dina;
     
     // Key components indirectly wired elsewhere
     
@@ -197,15 +197,21 @@ module MIPS150 (
         if (FWD_1) $display(" *FWD1:       >>%h(%d)", FWD_rd1, FWD_rd1);
         $display(" REG2:R1(%h,%d)=%h(%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
         if (FWD_2) $display(" *FWD2:       >>%h(%d)", FWD_rd2, FWD_rd2);
-        $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
-        $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stl, DBG_step);
-        $display("%d] WF/DX: %h %h", DBG_cycle, PC_DX, INST_DX);
-        $display("%d] DX/M : %h %h %h", DBG_cycle, ALUOut_M, R2Value_M, PCPLUS8_M);
-        $display("%d]      : %b", DBG_cycle, IControl_M);
-        $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
+        $display("%d]   /WF: %h %h", DBG_cycle, PCNext_DX_WF_, PC_WF_);
+        $display("%d] M/   : R[%h,%d]<=%h(%d)", DBG_cycle, WBKReg_M_WF_, WBKReg_M_WF_, 
+                                                WBKDat_M_WF_, WBKDat_M_WF_);
+        
         DBG_cycle = DBG_cycle + 1;
         if (!stl) DBG_step = DBG_step + 1;
-        if (DBG_step > (15)) DO_FINISH();
+        if (DBG_step > (25)) DO_FINISH();
+        #1;
+        
+        $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
+        $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stl, DBG_step);
+        $display("%d] WF/DX: %h %h #%d", DBG_cycle, PC_DX, INST_DX, StepCount);
+        $display("%d] DX/M : %h =%h %h", DBG_cycle, PCPLUS8_M-8, ALUOut_M, R2Value_M);
+        $display("%d]      : %b", DBG_cycle, IControl_M);
+        $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
     end
     
 /*    always@* begin
