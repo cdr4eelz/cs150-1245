@@ -4,7 +4,7 @@
 //tuninput.3  {CLK.1,RST.1,STL.1}
 //tunoutput.0 {}
 `define BUS_CPUGlobal_width ((1+1+1)+(0))
-`define BUS_CPUGlobal_type  tri [0:`BUS_CPUGlobal_width-1]
+`define BUS_CPUGlobal_type  wire [0:`BUS_CPUGlobal_width-1]
 `define CPUGlobal__IN(BUS)  BUS [  0 +:  3 ]
 `define CPUGlobal__OUT(BUS) BUS [  4 +:  0 ]
 `define CPUGlobal_CLK(      BUS)    BUS [  0 +:  1 ]
@@ -15,7 +15,7 @@
 //            ALUsrcA.1,ALUsrcB.1,ALUop.4,ISigned.1,CmpOp.3,Jump.1,JR.1,Link.1}
 //tunoutput.0{}
 `define BUS_ICTL_width  ((1+5+1+2+1+1+1+4+1+3+1+1+1)+(0)) // 23
-`define BUS_ICTL_type   tri  [0:`BUS_ICTL_width-1]
+`define BUS_ICTL_type   wire [0:`BUS_ICTL_width-1]
 `define ICTL__IN(BUS)   BUS [  0 +: 23 ]
 `define ICTL__OUT(BUS)  BUS [ 24 +:  0 ]
 `define ICTL_MemToReg(  BUS)    BUS [  0 +:  1 ]
@@ -36,7 +36,7 @@
 //tuninput.48 {Addr.12,WEnab.4,WData.32}
 //tunoutput.32{RData.32}
 `define BUS_MEMIO_width     ((12+4+32)+(32)) // 80
-`define BUS_MEMIO_type      tri  [0:`BUS_MEMIO_width-1]
+`define BUS_MEMIO_type      wire [0:`BUS_MEMIO_width-1]
 `define MEMIO__IN(BUS)      BUS [  0 +: 48 ]
 `define MEMIO__OUT(BUS)     BUS [ 48 +: 32 ]
 `define MEMIO_Addr(         BUS)    BUS [  0 +: 12 ]
@@ -48,7 +48,7 @@
 //tuninput  {DataInValid.1, DataIn.DIw}
 //tunoutput {DataInReady.1}
 `define BUS_ShakeTx_width(DIw)      (1+(DIw)+1)
-`define BUS_ShakeTx_type(DIw)       tri  [1+(DIw)+1 -1:0]
+`define BUS_ShakeTx_type(DIw)       wire [1+(DIw)+1 -1:0]
 `define ShakeTx_tunIN(DIw,BUS)      BUS[1+(DIw)+1 -1:1]
 `define ShakeTx_tunOUT(DIw,BUS)     BUS[1 -1:0]
 `define ShakeTx_DataInValid(DIw,BUS)    BUS[1+(DIw)+1 -1: (DIw)+1]
@@ -58,7 +58,7 @@
 //tuninput  {DataOutReady.1}
 //tunoutput {DataOutValid.1, DataOut.mDW}
 `define BUS_ShakeRx_width(DOw)      (1+1+(DOw))
-`define BUS_ShakeRx_type(DOw)       tri  [1+1+(DOw) -1:        0]
+`define BUS_ShakeRx_type(DOw)       wire [1+1+(DOw) -1:        0]
 `define ShakeRx_tunIN(DOw,BUS)      BUS[1+1+(DOw) -1:  1+(DOw)]
 `define ShakeRx_tunOUT(DOw,BUS)     BUS[  1+(DOw) -1:        0]
 `define ShakeRx_DataOutReady(DOw,BUS)   BUS[1+1+(DOw) -1:  1+(DOw)]

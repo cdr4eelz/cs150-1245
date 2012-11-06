@@ -4,14 +4,14 @@
 
 // CPUGlobal values (driven by CPU, used by innerds)
 module BUS_CPUGlobal_tun    // "tunnel" out multiple values
-( inout `BUS_CPUGlobal_type _BUS_,
+( output `BUS_CPUGlobal_type _BUS_,
     input CLK, RST, STL
 );
     assign `CPUGlobal__IN(_BUS_) = {CLK,RST,STL};
 endmodule
 
 module BUS_CPUGlobal_tap    // "tap" into desired tunneled values
-( inout `BUS_CPUGlobal_type _BUS_,
+( input `BUS_CPUGlobal_type _BUS_,
     output CLK, RST, STL
 );
     assign {CLK,RST,STL} = `CPUGlobal__IN(_BUS_);
