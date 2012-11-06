@@ -21,7 +21,7 @@ module StageM(
     wire   [31: 0] DataWrite = R2Value;// ^^^this too.
     wire   [31: 0] DataRead;
     
-    BUS_MEMIO_tun
+    BUS_MEMIO_tun BUS_MEMIO
     ( ._BUS_(MemoryIO),
         .Addr(AddressRW),
         .WEnab(WriteByteMask),

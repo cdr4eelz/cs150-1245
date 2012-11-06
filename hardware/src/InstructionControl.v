@@ -11,7 +11,6 @@ module InstructionControl #(
 	output `BUS_ICTL_type IControl_,
 	
 	output [ 5:0 ] IPCODE,
-	output [ 4:0 ] BASE,
 	output [ 4:0 ] DEST,
 	output [15:0 ] SOFFSET,
 	output [31:0 ] SIMMED,
@@ -84,7 +83,6 @@ module InstructionControl #(
 	assign isBranch0   = (~|_opcode_[5:3] && ~^_opcode_[2:1]);
 	
 	assign IPCODE	= (isRType) ? _funct_ : (isBGELTZ || NOUNKLE) ? _rt_ : 6`UNKNOWN;
-	assign BASE     = (isMemory || NOUNKLE) ? _rs_ : 5`UNKNOWN;
 	assign DEST	    = (isRType) ? _rd_ : (isMLoad || isIComp) ? _rt_ : 5'd0;
 	assign SOFFSET	= (isMemory || NOUNKLE) ? (SEXT16_32(_immediate_)) : 32`UNKNOWN;
 	assign SIMMED	= SEXT16_32(_immediate_);
