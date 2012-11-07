@@ -43,9 +43,9 @@ module MIPS150 (
     
     // Declare outputs of WF stage
     wire [31: 0] PC_WF_, INST_WF_;
-    wire [15: 0] StepCount;
+    wire [15: 0] StepCount, StallCount;
     StageWF s_WF    // WF STAGE itself
-    (   .CPUGlobal(CPUGlobal), .STEPCOUNT(StepCount),
+    (   .CPUGlobal(CPUGlobal), .STEPCOUNT(StepCount), .STALLCOUNT(StallCount),
         .IMEM_read_addr (IMEM_addrb),   .IMEM_read_data(IMEM_doutb),
     //Inputs
         .DOBranch       (DOBranch_DX_WF_),

@@ -5,7 +5,8 @@
 module StageWF #(
     parameter   [31: 0] bootPC = 32'h10000000   // 2-lsb must be 0, upper nibble ought be 1???
 ) (
-    input  [ 2: 0] CPUGlobal,
+    inout `BUS_CPUGlobal_type CPUGlobal,
+    output reg [15: 0] STEPCOUNT, STALLCOUNT,
     output [11: 0] IMEM_read_addr,
     input  [31: 0] IMEM_read_data,
     
@@ -13,8 +14,7 @@ module StageWF #(
     input  [31: 0] PCBranch,
     
     output [31: 0] PC,
-    output [31: 0] INST,
-    output reg [15: 0] STEPCOUNT
+    output [31: 0] INST
 );
     wire  clk, rst, stl;
     BUS_CPUGlobal_tap BUS_CPUGlobal
@@ -27,6 +27,9 @@ module StageWF #(
         if (rst) begin
             PC_REG = bootPC;
             STEPCOUNT = 0;
+            STALLCOUNT = 0;
+        end else if (stl) begin
+            STALLCOUNT = STALLCOUNT + 1;
         end else begin
             PC_REG = (DOBranch) ? PCBranch : (PC_REG+4);
             STEPCOUNT = STEPCOUNT + 1;
