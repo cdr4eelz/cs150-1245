@@ -1,16 +1,16 @@
+.set noreorder
+
 .section    .text
 .global     _test2
 
 _test2:
 
-.set noreorder
-
-addiu $s7, $0, 0x0
-# Test 1
+addiu $s7, $zero, 0x2
+# Test 2
 
 li $s0, 0x00000020
 addiu $t0, $0, 0x20
-addiu $s7, $s7, 1 # register to hold the test number (in case of failure)
+addiu $s8, $s7, 1 # register to hold the test number (in case of failure)
 bne $t0, $s0, Error
 nop
 j Done

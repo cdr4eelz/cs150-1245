@@ -34,7 +34,8 @@ module MIPS150 (
     */
     
     // Forward declare wires to explicitly feedback to prior stages
-    wire [31: 0] #1 PCNext_DX_WF_;
+    wire         #1 DOBranch_DX_WF_;
+    wire [31: 0] #1 PCBranch_DX_WF_;
     wire [ 4: 0] #1 WBKReg_M_WF_;   // Not sure there really is a "W" stage anywhere!
     wire [31: 0] #1 WBKDat_M_WF_;   // but the concept seems harmless.
     
@@ -47,14 +48,15 @@ module MIPS150 (
     (   .CPUGlobal(CPUGlobal), .STEPCOUNT(StepCount),
         .IMEM_read_addr (IMEM_addrb),   .IMEM_read_data(IMEM_doutb),
     //Inputs
-        .PCNext         (PCNext_DX_WF_),
+        .DOBranch       (DOBranch_DX_WF_),
+        .PCBranch       (PCBranch_DX_WF_),
     //Outputs
         .PC             (PC_WF_),       .INST       (INST_WF_)
     );
     
     // Pipeline border: WF/DX
     wire [31: 0] PC_DX, INST_DX;
-    PipelineRegister #( .Width(32), .PreRegistered(1)   // Registered for us in prior stage
+    PipelineRegister #( .Width(32)
         ) REG_PC_DX         ( .CPUGlobal(CPUGlobal),    .In(PC_WF_),        .Out(PC_DX) );
     PipelineRegister #( .Width(32), .PreRegistered(1)   // Registered for us in prior stage
         ) REG_INST_DX       ( .CPUGlobal(CPUGlobal),    .In(INST_WF_),      .Out(INST_DX) );
@@ -80,7 +82,8 @@ module MIPS150 (
         .R2Value_   (R2ValueDX_),
         .PCPLUS8_   (PCPLUS8DX_),
     //Feedbacks
-        .PCNext_    (PCNext_DX_WF_) // Feedback to WF stage
+        .DOBranch_  (DOBranch_DX_WF_), // Feedback to WF stage
+        .PCBranch_  (PCBranch_DX_WF_) // Feedback to WF stage
     );
     
     // Pipeline border: DX/M
@@ -197,8 +200,8 @@ module MIPS150 (
         if (FWD_1) $display(" *FWD1:       >>%h(%d)", FWD_rd1, FWD_rd1);
         $display(" REG2:R1(%h,%d)=%h(%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
         if (FWD_2) $display(" *FWD2:       >>%h(%d)", FWD_rd2, FWD_rd2);
-        $display("%d]   /WF: %h %h", DBG_cycle, PCNext_DX_WF_, PC_WF_);
-        $display("%d] M/   : R[%h,%d]<=%h(%d)", DBG_cycle, WBKReg_M_WF_, WBKReg_M_WF_, 
+        $display("%d]  /DX: %h %h", DBG_cycle, PC_WF_, INST_WF_);
+        $display("%d] /M  : R[%h,%d]<=%h(%d)", DBG_cycle, WBKReg_M_WF_, WBKReg_M_WF_, 
                                                 WBKDat_M_WF_, WBKDat_M_WF_);
         
         DBG_cycle = DBG_cycle + 1;
@@ -208,6 +211,8 @@ module MIPS150 (
         
         $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
         $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stl, DBG_step);
+        // DOBranch_DX_WF_
+        $display("%d]   /WF: %h *%d", DBG_cycle, PCBranch_DX_WF_, DOBranch_DX_WF_);
         $display("%d] WF/DX: %h %h #%d", DBG_cycle, PC_DX, INST_DX, StepCount);
         $display("%d] DX/M : %h =%h %h", DBG_cycle, PCPLUS8_M-8, ALUOut_M, R2Value_M);
         $display("%d]      : %b", DBG_cycle, IControl_M);

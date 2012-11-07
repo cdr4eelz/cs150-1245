@@ -1,7 +1,7 @@
 .section    .text
-.global     _test2
+.global     _test4
 
-_test2:
+_test4:
 
 addiu $s7, $0, 0x0
 # Test 1

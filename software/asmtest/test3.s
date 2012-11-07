@@ -1,8 +1,9 @@
 .section    .text
-.global     _test2
+.global     _test3
 
-_test2:
+_test3:
 
+addiu	$s7, $0, 0x03
 addiu $t0, $0, 0x0
 addiu $t1, $t0, 1
 addiu $t2, $t1, 1

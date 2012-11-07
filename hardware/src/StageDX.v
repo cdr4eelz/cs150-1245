@@ -19,7 +19,8 @@ module StageDX(
     // Outputs (Execute related computations)
     output [31: 0] ALUOut_,
     output [31: 0] R2Value_,
-    output [31: 0] PCNext_
+    output         DOBranch_,
+    output [31: 0] PCBranch_
 );
     
     wire [ 5: 0] #1 IPCODE;
@@ -69,10 +70,9 @@ module StageDX(
     ( .branchOp(CmpOp), .A(R1), .B(R2), // Always pull from register/forward output
         .doBranch(takeBranch)
     );
-	wire [31: 0] #1 jumpPC;
-	assign jumpPC = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);
     
-	assign PCNext_ = (Jump || takeBranch) ? jumpPC : PCPLUS4;
+	assign DOBranch_ = (Jump || takeBranch);
+	assign PCBranch_ = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);
     assign ALUOut_ = ALUResult;
 	assign R2Value_ = R2;
     assign PCPLUS8_ = PCPLUS8;	
