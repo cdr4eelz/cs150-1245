@@ -1,71 +1,81 @@
 `timescale 1ns/1ps
 
+`ifndef CPUTYPE
+`define CPUTYPE MIPS150
+`endif
+`ifndef MAXCHARS
+`define MAXCHARS 10
+`endif
+`ifndef STALLHALVES
+`define STALLHALVES 0
+`endif
+
 module ASMTestbench;
-
-    reg Clock, Reset;
+    reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
-
+    
     reg   [7:0] DataIn;
     reg         DataInValid;
     wire        DataInReady;
     wire  [7:0] DataOut;
     wire        DataOutValid;
     reg         DataOutReady;
-
+    
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
-
+    parameter MaxChars = `MAXCHARS;
+    parameter StallHalves = `STALLHALVES;
+    
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
-
+    
+    initial Stall = 0;
+    generate if (StallHalves > 0) begin: StallToggle
+        always #(HalfCycle*StallHalves) Stall <= ~Stall;
+    end endgenerate
+    
+    
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    MIPS150 CPU
-    (   .clk(Clock), .rst(Reset), .stall(1'b0),
+    `CPUTYPE CPU
+    (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX)
     );
-
-    UART          #( .ClockFreq(       ClockFreq))
-                  uart( .Clock(           Clock),
-                        .Reset(           Reset),
-                        .DataIn(          DataIn),
-                        .DataInValid(     DataInValid),
-                        .DataInReady(     DataInReady),
-                        .DataOut(         DataOut),
-                        .DataOutValid(    DataOutValid),
-                        .DataOutReady(    DataOutReady),
-                        .SIn(             FPGA_SERIAL_TX),
-                        .SOut(            FPGA_SERIAL_RX));
-
+    
+    UART        #( .ClockFreq(       ClockFreq))
+    uart_tb( .Clock(           Clock),
+        .Reset(           Reset),
+        .DataIn(          DataIn),
+        .DataInValid(     DataInValid),
+        .DataInReady(     DataInReady),
+        .DataOut(         DataOut),
+        .DataOutValid(    DataOutValid),
+        .DataOutReady(    DataOutReady),
+        .SIn(             FPGA_SERIAL_TX),
+        .SOut(            FPGA_SERIAL_RX)
+    );
+    
+    integer finalcountdowneurope = MaxChars;
+    
     initial begin
-      // Reset. Has to be long enough to not be eaten by the debouncer.
-      Reset = 0;
-      DataIn = 8'h7a;
-      DataInValid = 0;
-      DataOutReady = 0;
-      #(100*Cycle)
-
-      Reset = 1;
-      #(30*Cycle)
-      Reset = 0;
-
-      // Wait until transmit is ready
-      while (!DataInReady) #(Cycle);
-      DataInValid = 1'b1;
-      #(Cycle)
-      DataInValid = 1'b0;
-
-      // Wait for something to come back
-      while (!DataOutValid) #(Cycle);
-      $display("Got %d", DataOut);
-
-      // Add more test cases!
-
-
-
-      $finish();
-  end
+        Reset = 0; DataInValid = 0; DataOutReady = 0; #(3*Cycle)
+        
+        Reset = 1; #(6*Cycle)
+        Reset = 0; #1;
+        
+        while (finalcountdowneurope > 0) begin
+            DataOutReady = 1;
+            while (DataOutReady) begin
+                @ (posedge Clock) ;
+                if (DataOutValid) DataOutReady = 0;
+            end
+            $display("Got %b  %h (%d)", DataOut, DataOut, DataOut);
+            #1; finalcountdowneurope = finalcountdowneurope - 1;
+        end
+        $display("Got enough.");
+        $finish();
+    end
 
 endmodule

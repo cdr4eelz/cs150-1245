@@ -31,7 +31,8 @@ module RegFile #(
 //   to two banks and separate asynchronous reads.  Otherwise, we could
 //   mimic this ourselves with duplicate register banks.
 
-(* ram_style = "distributed" *) reg [31:0] R [31:0];
+(* ram_style = "distributed" *) reg [31:0] R [0:31];
+
 // Zero'th not used but seems nicer with warnings to have it.
 initial R[0] = 0; // For cosmetic purposes :)
 
