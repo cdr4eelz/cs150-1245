@@ -14,7 +14,8 @@ module StageM(
     input  [31: 0]  PCPLUS8,
     
     output [ 4: 0]  WBK_Reg_,
-    output [31: 0]  WBK_Val_
+    output [31: 0]  WBK_Val_,
+    output          WBK_CanFWD_
 );
     parameter crap = "tastic";
     wire   [ 3: 0] _TargetMask = (`ICTL_MemWrite(_IControl)) ? 4'b1111 : 4'b0000;
@@ -33,7 +34,8 @@ module StageM(
     );
     
     assign WBK_Reg_ = `ICTL_DestReg(IControl); // Expected to be zero when no writeback
-    assign WBK_Val_ = `ICTL_MemToReg(IControl) ? DataRead : 
+    assign WBK_Val_ = `ICTL_MemToReg(IControl) ? DataRead : // Using DataRead for WB would be sync/sync
                         `ICTL_Link(IControl) ? (PCPLUS8) : RegWValue;
+    assign WBK_CanFWD_ = !`ICTL_MemToReg(IControl) && (WBK_Reg_ != 0);
     
 endmodule

@@ -47,6 +47,7 @@ module MIPS150 (
     wire [31: 0] #1 PCBranch_DX_WF_;
     wire [ 4: 0] #1 WBKReg_M_WF_;   // Not sure there really is a "W" stage anywhere!
     wire [31: 0] #1 WBKDat_M_WF_;   // but the concept seems harmless.
+    wire         #1 WBKCanFWD_M_WF_;// This prevents accidental creation of a slow MDX stage!
     
     assign REG_wa = WBKReg_M_WF_,   REG_wd = WBKDat_M_WF_,  REG_we = !stl;
     
@@ -71,8 +72,9 @@ module MIPS150 (
         ) REG_INST_DX       ( .CPUGlobal(CPUGlobal),    .In(INST_WF_),      .Out(INST_DX) );
     
     // Mini-forwarding calculation
-    wire FWD_1 = (REG_wa>0 && (REG_wa==REG_ra1));
-    wire FWD_2 = (REG_wa>0 && (REG_wa==REG_ra2));
+    wire FWD_Allow = WBKCanFWD_M_WF_;
+    wire FWD_1 = (FWD_Allow && (REG_wa==REG_ra1));
+    wire FWD_2 = (FWD_Allow && (REG_wa==REG_ra2));
     wire [31: 0] FWD_rd1 = (FWD_1) ? REG_wd : REG_rd1;
     wire [31: 0] FWD_rd2 = (FWD_2) ? REG_wd : REG_rd2;
     
@@ -126,7 +128,8 @@ module MIPS150 (
         .PCPLUS8    (PCPLUS8_M),
     //Outputs
     //Feedbacks
-        .WBK_Reg_   (WBKReg_M_WF_),     .WBK_Val_   (WBKDat_M_WF_)
+        .WBK_Reg_   (WBKReg_M_WF_),     .WBK_Val_   (WBKDat_M_WF_),
+        .WBK_CanFWD_(WBKCanFWD_M_WF_)
     );
     
     // Temporarily plugged directly into DMEM & IMEM
@@ -257,7 +260,7 @@ module MIPS150 (
     always@(posedge clk) begin
 //    if (DBG_LogStores) begin
         if (DMEM_wea != 0) begin
-            $display("*STORE* MEM[%h,%d] <= %h(%d) {%b}", DMEM_addra*4, DMEM_addra*4, 
+            $display("** MEM[%h,%d] <= %h(%d) {%b}", DMEM_addra*4, DMEM_addra*4, 
                     DMEM_dina, DMEM_dina, DMEM_wea);
         end
 //    end
