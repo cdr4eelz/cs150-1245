@@ -65,23 +65,25 @@ endmodule
 // TAP/TUN of a Memory/IO access (Memory Stage inputs, CPU/MemController outputs)
 module BUS_MEMIO_tun
 ( inout `BUS_MEMIO_type _BUS_,
-    input   [12-1: 0]   Addr,
-    input   [ 4-1: 0]   WEnab,
-    input   [32-1: 0]   WData,
-    output  [32-1: 0]   RData
+    input   [12 -1: 0]  Addr,
+    input   [ 4 -1: 0]  TMask,
+    input   [ 4 -1: 0]  BMask,
+    input   [32 -1: 0]  WData,
+    output  [32 -1: 0]  RData
 );
-    assign `MEMIO__IN(_BUS_) = {Addr,WEnab,WData};
+    assign `MEMIO__IN(_BUS_) = {Addr,TMask,BMask,WData};
     assign {RData} = `MEMIO__OUT(_BUS_);
 endmodule
 
 module BUS_MEMIO_tap
 ( inout `BUS_MEMIO_type _BUS_,
-    output  [12-1: 0]   Addr,
-    output  [ 4-1: 0]   WEnab,
-    output  [32-1: 0]   WData,
-    input   [32-1: 0]   RData
+    output  [12 -1: 0]  Addr,
+    output  [ 4 -1: 0]  TMask,
+    output  [ 4 -1: 0]  BMask,
+    output  [32 -1: 0]  WData,
+    input   [32 -1: 0]  RData
 );
-    assign {Addr,WEnab,WData} = `MEMIO__IN(_BUS_);
+    assign {Addr,TMask,BMask,WData} = `MEMIO__IN(_BUS_);
     assign `MEMIO__OUT(_BUS_) = {RData};
 endmodule
 

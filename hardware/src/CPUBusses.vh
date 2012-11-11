@@ -33,16 +33,17 @@
 `define ICTL_Link(      BUS)    BUS [ 22 +:  1 ]
 
 
-//tuninput.48 {Addr.12,WEnab.4,WData.32}
+//tuninput.52 {Addr.12,TMask.4,BMask.4,WData.32}
 //tunoutput.32{RData.32}
-`define BUS_MEMIO_width     ((12+4+32)+(32)) // 80
+`define BUS_MEMIO_width     ((12+4+4+32)+(32)) // 84
 `define BUS_MEMIO_type      wire [0:`BUS_MEMIO_width-1]
-`define MEMIO__IN(BUS)      BUS [  0 +: 48 ]
-`define MEMIO__OUT(BUS)     BUS [ 48 +: 32 ]
+`define MEMIO__IN(BUS)      BUS [  0 +: 52 ]
+`define MEMIO__OUT(BUS)     BUS [ 52 +: 32 ]
 `define MEMIO_Addr(         BUS)    BUS [  0 +: 12 ]
-`define MEMIO_WEnab(        BUS)    BUS [ 12 +:  4 ]
-`define MEMIO_WData(        BUS)    BUS [ 16 +: 32 ]
-`define MEMIO_RData(        BUS)    BUS [ 48 +: 32 ]
+`define MEMIO_TMask(        BUS)    BUS [ 12 +:  4 ]
+`define MEMIO_BMask(        BUS)    BUS [ 16 +:  4 ]
+`define MEMIO_WData(        BUS)    BUS [ 20 +: 32 ]
+`define MEMIO_RData(        BUS)    BUS [ 52 +: 32 ]
 
 
 //tuninput  {DataInValid.1, DataIn.DIw}
