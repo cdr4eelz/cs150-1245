@@ -13,5 +13,12 @@ addiu	$3, $2, 0x01
 addu	$4, $2, $2
 addu	$5, $1, $4
 addu	$10, $5, $5
+nop
+li	$15, 4
+sw	$s7, 8($15)
+sw	$4, 4($15)
+lw	$5, 4($15)
+nop
+addiu	$6, $5, 0x100
 j	_test1
 nop

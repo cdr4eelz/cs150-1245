@@ -1,3 +1,4 @@
+DUMPOPTS ?= -D --disassembler-options=reg-names=numeric,no-aliases
 
 SSRCS := $(wildcard *.s)
 SOBJS := $(SSRCS:%.s=%.s.o)
@@ -14,10 +15,10 @@ all: objs bins mifs coes vees dumps
 
 multi: objs
 	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T ld.multi $(SOBJS) -o multi.elf
-	mips-objdump -D multi.elf > multi.dump
+	mips-objdump $(DUMPOPTS) multi.elf > multi.dump
 
 %.dump: %.elf
-	mips-objdump -D $< > $@
+	mips-objdump $(DUMPOPTS) $< > $@
 
 %.ld: %.s
 	sed "s/##ASMNAME##/$$(basename $<)/" < ld.each > $@
