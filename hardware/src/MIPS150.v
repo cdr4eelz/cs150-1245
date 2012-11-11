@@ -22,15 +22,24 @@ module MIPS150 (
     wire [31: 0]    IMEM_dina,  IMEM_doutb,     DMEM_douta, DMEM_dina;
     wire [ 3: 0]    IMEM_wea,                   DMEM_wea;
     
-    /* Naming conventions:
+    /* Naming conventions (might be inconsistent/in-flux though :)
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
         xxxSS_  : Value unstable during given stage (but stable at posedge exit)
                     Typical output of a stage/module (headed to next stage somehow).
-        xxx_SS_ : As with SS_ except is already REGISTER'd at exit of output stage
-                    Output is from an internal component that is synchronous.
-        xxx_SS  : Value stable during entire given stage
+        xxx_SS  : Value stable during entire given stage (explicitly registered by pipeline).
                     Output of a prior stage after being registered by pipeline reg,
                     used as input to a given stage.
+        xxx_SS_ : As with SS_ except is already REGISTER'd at exit of output stage.
+                    OUTPUT is FROM an internal component that is unavoidably synchronous.
+        xxx__SS : Redundant with xxxSS_ except is named relative to the inbound stage.
+                    From this point of view, a stage is peering into it's prior stage's
+                    value, getting a preview of the value before the clock strikes.
+                    INPUT is TO an internal component that is unavoidably synchronous.
+
+        Internal to a stage (and sometimes for input/output interface):
+        _xxx    : Value is "hot" from prior stage (unregistered/passthrough/preview).
+        xxx     : Value was registered prior (either by prior stage or by pipeline reg).
+        ....
     */
     
     // Forward declare wires to explicitly feedback to prior stages
@@ -69,7 +78,7 @@ module MIPS150 (
     
     // Declare outputs of DX stage
     `BUS_ICTL_type IControlDX_;
-    wire [31: 0] ALUOutDX_, R2ValueDX_, PCPLUS8DX_;
+    wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_, PCPLUS8DX_;
     StageDX s_DX
     ( .CPUGlobal(CPUGlobal),
         .REG_R1_    (REG_ra1),          .REG_R2_    (REG_ra2),
@@ -78,35 +87,42 @@ module MIPS150 (
         .PC         (PC_DX),            .INST       (INST_DX),
     //Outputs
         .IControl_  (IControlDX_),
-        .ALUOut_    (ALUOutDX_),
-        .R2Value_   (R2ValueDX_),
+        .MemAddr_   (MemAddrDX_),
+        .MemWValue_ (MemWValueDX_),
+        .RegWValue_ (RegWValueDX_),
         .PCPLUS8_   (PCPLUS8DX_),
     //Feedbacks
-        .DOBranch_  (DOBranch_DX_WF_), // Feedback to WF stage
-        .PCBranch_  (PCBranch_DX_WF_) // Feedback to WF stage
+        .DOBranch_  (DOBranch_DX_WF_),  // Feedback to WF stage
+        .PCBranch_  (PCBranch_DX_WF_)   // Feedback to WF stage
     );
     
     // Pipeline border: DX/M
-    `BUS_ICTL_type IControl_M;
-    wire  [31: 0] ALUOut_M;
-    wire  [31: 0] R2Value_M;
+    `BUS_ICTL_type IControl_M, IControl__M;
+    wire  [31: 0] MemAddr__M;
+    wire  [31: 0] MemWValue__M, RegWValue_M;
     wire  [31: 0] PCPLUS8_M;
     PipelineRegister #( .Width(`BUS_ICTL_width) // Register all controls & let unused get pruned out
-        ) REG_IControl_M    ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M) );
+        ) REG_IControl_M    ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M  ) );
+    PipelineRegister #( .Width(`BUS_ICTL_width), .PreRegistered(1) // Really, it's post-registered!
+        ) REG_IControl__M   ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl__M ) );
+    PipelineRegister #( .Width(32), .PreRegistered(1)
+        ) REG_MemAddr__M    ( .CPUGlobal(CPUGlobal),    .In(MemAddrDX_  ),  .Out(MemAddr__M  ) );
+    PipelineRegister #( .Width(32), .PreRegistered(1)
+        ) REG_MemWValue__M  ( .CPUGlobal(CPUGlobal),    .In(MemWValueDX_),  .Out(MemWValue__M) );
     PipelineRegister #( .Width(32)
-        ) REG_ALUOut_M      ( .CPUGlobal(CPUGlobal),    .In(ALUOutDX_  ),   .Out(ALUOut_M  ) );
+        ) REG_RegWValue_M   ( .CPUGlobal(CPUGlobal),    .In(RegWValueDX_),  .Out(RegWValue_M ) );
     PipelineRegister #( .Width(32)
-        ) REG_R2Value_M     ( .CPUGlobal(CPUGlobal),    .In(R2ValueDX_ ),   .Out(R2Value_M ) );
-    PipelineRegister #( .Width(32)
-        ) REG_PCPLUS8_M     ( .CPUGlobal(CPUGlobal),    .In(PCPLUS8DX_ ),   .Out(PCPLUS8_M ) );
+        ) REG_PCPLUS8_M     ( .CPUGlobal(CPUGlobal),    .In(PCPLUS8DX_ ),   .Out(PCPLUS8_M   ) );
     
     StageM  s_M
     (   .CPUGlobal  (CPUGlobal),
         .MemoryIO   (MemoryIO),
     //Inputs
         .IControl   (IControl_M),
-        .ALUOut     (ALUOut_M),
-        .R2Value    (R2Value_M),
+        ._IControl  (IControl__M),
+        ._MemAddr   (MemAddr__M),
+        ._MemWValue (MemWValue__M),
+        .RegWValue  (RegWValue_M),
         .PCPLUS8    (PCPLUS8_M),
     //Outputs
     //Feedbacks
@@ -116,7 +132,8 @@ module MIPS150 (
     // Temporarily plugged directly into DMEM & IMEM
     BUS_MEMIO_tap BUS_MEMIO_D
     ( ._BUS_(MemoryIO),
-        .Addr(DMEM_addra),  .WEnab(DMEM_wea),   .WData(DMEM_dina),
+        .Addr(DMEM_addra),  .TMask(),
+        .BMask(DMEM_wea),   .WData(DMEM_dina),
         .RData(DMEM_douta)
     );
     assign IMEM_addra=DMEM_addra, IMEM_wea=DMEM_wea, IMEM_dina=DMEM_dina;
@@ -184,10 +201,10 @@ module MIPS150 (
     endtask
     
     always@(rst, stl) begin
-        $display("=============================================");
+        $display("=================================================================");
         $display("CTL-: C %h  R %h  S %h", clk, rst, stl);
         $strobe ("CTL+: C %h  R %h  S %h", clk, rst, stl);
-        $strobe ("+++++++++++++++++++++++++++++++++++++++++++++");
+        $strobe ("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         if (rst) begin
             DBG_cycle = 'bz;  DBG_step = 'bz;
         end else if (DBG_cycle[0] === 1'bz) begin
@@ -200,23 +217,26 @@ module MIPS150 (
         if (FWD_1) $display(" *FWD1:       >>%h(%d)", FWD_rd1, FWD_rd1);
         $display(" REG2:R1(%h,%d)=%h(%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
         if (FWD_2) $display(" *FWD2:       >>%h(%d)", FWD_rd2, FWD_rd2);
-        $display("%d]  /DX: %h %h", DBG_cycle, PC_WF_, INST_WF_);
-        $display("%d] /M  : R[%h,%d]<=%h(%d)", DBG_cycle, WBKReg_M_WF_, WBKReg_M_WF_, 
+        
+        $display("%d]   /DX: %h %h", DBG_cycle, PC_WF_, INST_WF_);
+        $display("%d]  /M  : %h<=%h", DBG_cycle, MemAddr__M, MemWValue__M);
+        $display("%d]  /M  : %b", DBG_cycle, IControl__M);
+        $display("%d] /WF : R[%h,%d]<=%h(%d)", DBG_cycle, WBKReg_M_WF_, WBKReg_M_WF_, 
                                                 WBKDat_M_WF_, WBKDat_M_WF_);
         
         DBG_cycle = DBG_cycle + 1;
         if (!stl) DBG_step = DBG_step + 1;
-        if (DBG_step > (25)) DO_FINISH();
+        if (DBG_step > (35)) DO_FINISH();
         #1;
         
-        $display("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
+        $display("%d]/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\\", DBG_cycle);
         $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stl, DBG_step);
         // DOBranch_DX_WF_
         $display("%d]   /WF: %h *%d", DBG_cycle, PCBranch_DX_WF_, DOBranch_DX_WF_);
         $display("%d] WF/DX: %h %h #%d", DBG_cycle, PC_DX, INST_DX, StepCount);
-        $display("%d] DX/M : %h =%h %h", DBG_cycle, PCPLUS8_M-8, ALUOut_M, R2Value_M);
-        $display("%d]      : %b", DBG_cycle, IControl_M);
-        $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
+        $display("%d] DX/M : %h <=%h", DBG_cycle, PCPLUS8_M-8, RegWValue_M);
+        $display("%d]      : %b", DBG_cycle, IControl_M); // Make a task to break into fields
+        $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
     end
     
 /*    always@* begin
@@ -233,7 +253,16 @@ module MIPS150 (
         end
     end
 */
-  
+    
+    always@(posedge clk) begin
+//    if (DBG_LogStores) begin
+        if (DMEM_wea != 0) begin
+            $display("*STORE* MEM[%h,%d] <= %h(%d) {%b}", DMEM_addra*4, DMEM_addra*4, 
+                    DMEM_dina, DMEM_dina, DMEM_wea);
+        end
+//    end
+    end
+    
 // synthesis translate_on
     
 endmodule

@@ -7,7 +7,7 @@
 */ 
 module	PipelineRegister #(
     parameter   Width=32,
-                PreRegistered = 0,
+                PreRegistered = 0,  // TODO: Rename since "pre/post" is not relevant
                 ClockBlip = 1, OutDelay = 1,
                 ResetValue={Width{1'b0}}
 ) (

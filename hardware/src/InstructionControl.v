@@ -89,8 +89,9 @@ module InstructionControl #(
 	assign UIMMED	= ZEXT16_32(_immediate_);
 	assign SHAMT	= (isRShiftI || NOUNKLE) ? _shamt_ : 5`UNKNOWN; 
 	assign SRC1     = ((!isJType && !isRShiftI) || NOUNKLE) ? _rs_ : 5`UNKNOWN; 
-	assign SRC2     = (isROther || isBranchX || isRShift || isMStore) ? _rt_ 
-	                   : (isBranch0 || NOUNKLE) ? 5'd0 : 5`UNKNOWN;  
+	assign SRC2     = (isBranch0) ? 5'd0 : 
+	                   (isROther || isBranchX || isRShift || isMStore || NOUNKLE)
+	                       ? _rt_ : 5`UNKNOWN;  
 	
 	assign PCTARGET	= (isIJump || NOUNKLE) ? {_pc[31:28], _target_, 2'b00} : 32`UNKNOWN;
 	assign PCBRANCH	= (isBranch || NOUNKLE) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : 32`UNKNOWN;

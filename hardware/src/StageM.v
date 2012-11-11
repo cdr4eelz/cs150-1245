@@ -6,31 +6,34 @@ module StageM(
     inout `BUS_CPUGlobal_type   CPUGlobal,  // Clock not used (others not used yet either)
     inout `BUS_MEMIO_type       MemoryIO,
     
+    input `BUS_ICTL_type        _IControl,
     input `BUS_ICTL_type        IControl,
-    input  [31: 0]  ALUOut,
-    input  [31: 0]  R2Value,    //TODO: Beter name?!?
-    input  [31: 0]  PCPLUS8,    //TODO: Consider changing to PC (if no pre-compute argument holds up)
+    input  [31: 0]  _MemAddr,
+    input  [31: 0]  _MemWValue,
+    input  [31: 0]  RegWValue,
+    input  [31: 0]  PCPLUS8,
     
     output [ 4: 0]  WBK_Reg_,
     output [31: 0]  WBK_Val_
 );
     parameter crap = "tastic";
-    wire   [ 3: 0] WriteByteMask = (`ICTL_MemWrite(IControl)) ? 4'b1111 : 4'b0000;
+    wire   [ 3: 0] _TargetMask = (`ICTL_MemWrite(_IControl)) ? 4'b1111 : 4'b0000;
+    wire   [ 3: 0] _WByteMask = (`ICTL_MemWrite(_IControl)) ? 4'b1111 : 4'b0000;
                     //TODO: ^^^ Temporarily write to all bytes ^^^
-    wire   [11: 0] AddressRW = ALUOut; // TODO: Drive with `Unknown when ~|WriteByteMask
-    wire   [31: 0] DataWrite = R2Value;// ^^^this too.
+    wire   [11: 0] _AddressRW = _MemAddr[13:2]; // TODO: Drive with `Unknown when ~|WriteByteMask
     wire   [31: 0] DataRead;
     
     BUS_MEMIO_tun BUS_MEMIO
     ( ._BUS_(MemoryIO),
-        .Addr(AddressRW),
-        .WEnab(WriteByteMask),
-        .WData(DataWrite),
-        .RData(DataRead)
+        .Addr   (_AddressRW),   // TODO: Drive with `Unknown when ~|WriteByteMask
+        .TMask  (_TargetMask),
+        .BMask  (_WByteMask),
+        .WData  (_MemWValue),   // ^^^these too.
+        .RData  (DataRead)      // This is registered by the memory itself
     );
     
     assign WBK_Reg_ = `ICTL_DestReg(IControl); // Expected to be zero when no writeback
     assign WBK_Val_ = `ICTL_MemToReg(IControl) ? DataRead : 
-                        `ICTL_Link(IControl) ? PCPLUS8 : ALUOut;
+                        `ICTL_Link(IControl) ? (PCPLUS8) : RegWValue;
     
 endmodule

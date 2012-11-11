@@ -17,8 +17,9 @@ module StageDX(
     output [31: 0] PCPLUS8_,
     
     // Outputs (Execute related computations)
-    output [31: 0] ALUOut_,
-    output [31: 0] R2Value_,
+    output [31: 0] MemAddr_,
+    output [31: 0] MemWValue_,
+    output [31: 0] RegWValue_,
     output         DOBranch_,
     output [31: 0] PCBranch_
 );
@@ -71,10 +72,11 @@ module StageDX(
         .doBranch(takeBranch)
     );
     
-	assign DOBranch_ = (Jump || takeBranch);
-	assign PCBranch_ = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);
-    assign ALUOut_ = ALUResult;
-	assign R2Value_ = R2;
-    assign PCPLUS8_ = PCPLUS8;	
+    assign DOBranch_    = (Jump || takeBranch);
+    assign PCBranch_    = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);
+    assign MemAddr_     = ALUResult;
+    assign MemWValue_   = R2;
+    assign RegWValue_   = ALUResult;
+    assign PCPLUS8_     = PCPLUS8;	
     
 endmodule
