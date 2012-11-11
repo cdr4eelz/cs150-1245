@@ -2,7 +2,7 @@ TOP := ml505top
 SRC := src
 TEMPLATES := cfg
 
-TARGETS = all synth xst map par timing bitgen impact report schematic schem ise ngc trans ncd xdl
+TARGETS = all synth xst map par timing bitgen impact report schematic schem ise ngc ncd xdl printenv printvars tf
 
 BUILDDIR := build/$(TOP)
 MAKEFILE := $(BUILDDIR)/Makefile

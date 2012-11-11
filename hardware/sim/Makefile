@@ -1,10 +1,16 @@
 XILINX_BASE ?= /opt/Xilinx/14.1/ISE_DS
+
 MODELSIM_LIBS ?= mti_se/10.1b_2/lin64
 MODELSIM_LIBD ?= $(XILINX_BASE)/ISE/verilog
 MODELSIM_GLBL ?= src/glbl.v
 
+SRC ?= ../src
+PRUNE ?= -type d -path "*_blk_ram" -prune -o
+SRCD ?= $(shell find $(SRC) $(PRUNE) -type d)
+SRCS ?= $(sort $(foreach dir,$(SRCD),$(wildcard $(dir)/*.v)))
+
 VLOG_XOPS ?= +define+DEFMAKE=1
-VLOG_COPS ?= -vopt
+VLOG_COPS ?= -vopt #(not sure about the vopt thing)
 VLOG_OPTS ?= -quiet +acc -source -nocovercells -sfcu -note vlog-2605 $(VLOG_COPS)
 VLOG_SOPS ?= -lint -vlog01compat -pedanticerrors -nodeglitchalways $(VLOG_XOPS)
 VLOG_LOGF ?= $(PWD)/build/comp_src.log
@@ -17,13 +23,12 @@ TESTINPUTS := $(wildcard tests/*.input)
 TRANSCRIPT := $(patsubst tests/%.do,results/%.transcript,$(CASES))
 DOFILES := $(patsubst tests/%.do,build/%.do,$(CASES))
 TESTINPUTSBUILD := $(patsubst tests/%.input,build/%.input,$(TESTINPUTS))
-SRCDIR := ../src
-SRCS := $(shell find $(SRCDIR) -name '*.v' -type f)
-INC := $(shell find $(SRCDIR) -type d -exec echo -n '+incdir+../'{} \;)
+
+INC := $(foreach dir,$(SRCD),$(addprefix +incdir+../,$(dir)))
 STATUS := build/.status
 XILINX_LIB_INC := $(foreach lib,$(XILINX_LIBS),$(addprefix -L ,$(lib)))
 
-BSRC := $(foreach src,$(SRCS),$(addprefix ../,$(src)))
+BSRC := $(foreach dir,$(SRCS),$(addprefix ../,$(dir)))
 
 
 default: all
@@ -82,4 +87,15 @@ $(TRANSCRIPT) : results/%.transcript : build/%.do $(STATUS) $(TESTINPUTSBUILD) |
 clean:
 	rm -rf results build
 
+printenv:
+	set | grep -e '^[[:alnum:]]*='
+
+# Tricks from http://www.cmcrossroads.com/ask-mr-make/6521-dumping-every-makefile-variable
+print-%:
+	echo $* = $($*)
+
+printvars:
+	@$(foreach V,$(sort $(.VARIABLES)), $(warning $V=$($V) ($(value $V))))
+
 .PHONY := all clean results builddir listlibs compile do fresh prep
+

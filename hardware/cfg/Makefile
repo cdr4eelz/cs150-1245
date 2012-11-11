@@ -1,6 +1,11 @@
 # TOP, SRC, TEMPLATES are passed in
 XST_DEFS ?= 
-SRCS := $(shell find $(SRC) -type f -name '*.v')
+PRUNE ?= -type d -path "*_blk_ram" -prune -o
+BMM ?= $(TEMPLATES)/mem.bmm
+
+SRCD ?= $(shell find $(SRC) $(PRUNE) -type d)
+SRCS := $(sort $(foreach dir,$(SRCD),$(wildcard $(dir)/*.v)))
+
 UCF := $(wildcard $(SRC)/$(TOP).ucf)
 
 PART := xc5vlx110t-ff1136-1
@@ -33,12 +38,13 @@ synth xst: $(XST_OUT)
 #NGDBUILD
 NGDBUILD_OUT := $(TOP).ngd
 UCF_FLAG := $(if $(UCF),-uc $(UCF))
-NGC_DIRS := $(shell find $(SRC) -type d -exec echo -n "-sd {} " \;)
+NGC_DIRS := $(foreach dir,$(SRCD),$(addprefix -sd ,$(dir) ))
+NGD_XARG += $(if $(BMM),-bm $(BMM))
 
 $(NGDBUILD_OUT): $(XST_OUT) $(UCF)
-	ngdbuild -bm $(TEMPLATES)/mem.bmm -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) $(XST_OUT) $@
+	ngdbuild $(NGD_XARG) -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) $(XST_OUT) $@
 
-ngc trans: $(NGDBUILD_OUT)
+ngc: $(NGDBUILD_OUT)
 
 
 #MAP
@@ -103,4 +109,14 @@ schematic schem ise:
 
 all: $(BITFILE) timing
 
-.PHONY = all synth xst map par timing bitgen impact report schematic schem ise clean ngc trans ncd xdl
+printenv:
+	set | grep -e '^[[:alnum:]]*='
+
+# Tricks from http://www.cmcrossroads.com/ask-mr-make/6521-dumping-every-makefile-variable
+print-%:
+	echo $* = $($*)
+
+printvars:
+	@$(foreach V,$(sort $(.VARIABLES)), $(warning $V=$($V) ($(value $V))))
+
+.PHONY = all synth xst map par timing bitgen impact report schematic schem ise clean ngc ncd xdl printenv printvars
