@@ -80,7 +80,7 @@ module InstructionControl #(
 	assign isBGELTZ    = (_opcode_ == 6'b000001);
 	assign isBranch    = (isBSimple || isBGELTZ);
 	assign isBranchX   = (_opcode_[5:1] == 5'b00010);
-	assign isBranch0   = (~|_opcode_[5:3] && ~^_opcode_[2:1]);
+	assign isBranch0   = (isBGELTZ || (_opcode_[5:1] == 5'b00011));
 	
 	assign IPCODE	= (isRType) ? _funct_ : (isBGELTZ || NOUNKLE) ? _rt_ : 6`UNKNOWN;
 	assign DEST	    = (isRType) ? _rd_ : (isMLoad || isIComp) ? _rt_ : 5'd0;
