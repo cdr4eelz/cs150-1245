@@ -216,10 +216,10 @@ module MIPS150 (
     end
     
     always@(posedge clk) if (DBG_cycle >= 0) begin:DBG_RUN_POS
-        $display(" REG1:R1(%h,%d)=%h(%d)", REG_ra1, REG_ra1, REG_rd1, REG_rd1);
-        if (FWD_1) $display(" *FWD1:       >>%h(%d)", FWD_rd1, FWD_rd1);
-        $display(" REG2:R1(%h,%d)=%h(%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
-        if (FWD_2) $display(" *FWD2:       >>%h(%d)", FWD_rd2, FWD_rd2);
+        $display(" REG1:R(%h,%d)=%h(%d)", REG_ra1, REG_ra1, REG_rd1, REG_rd1);
+        if (FWD_1) $display(" *FWD1:      >>%h(%d)", FWD_rd1, FWD_rd1);
+        $display(" REG2:R(%h,%d)=%h(%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
+        if (FWD_2) $display(" *FWD2:      >>%h(%d)", FWD_rd2, FWD_rd2);
         
         $display("%d]   /DX: %h %h", DBG_cycle, PC_WF_, INST_WF_);
         $display("%d]  /M  : %h<=%h", DBG_cycle, MemAddr__M, MemWValue__M);
@@ -229,7 +229,7 @@ module MIPS150 (
         
         DBG_cycle = DBG_cycle + 1;
         if (!stl) DBG_step = DBG_step + 1;
-        if (DBG_step > (35)) DO_FINISH();
+        if (DBG_step > (48)) DO_FINISH();
         #1;
         
         $display("%d]/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\\", DBG_cycle);
@@ -258,12 +258,20 @@ module MIPS150 (
 */
     
     always@(posedge clk) begin
-//    if (DBG_LogStores) begin
+        // Plan to log these into a sequential list of critical actions (for stricter testing)
+        if (IMEM_wea != 0) begin
+            $display("** I-MEM[%h,%d] <= %h(%d) {%b}", IMEM_addra*4, IMEM_addra*4, 
+                    IMEM_dina, IMEM_dina, IMEM_wea);
+        end
         if (DMEM_wea != 0) begin
-            $display("** MEM[%h,%d] <= %h(%d) {%b}", DMEM_addra*4, DMEM_addra*4, 
+            $display("** D-MEM[%h,%d] <= %h(%d) {%b}", DMEM_addra*4, DMEM_addra*4, 
                     DMEM_dina, DMEM_dina, DMEM_wea);
         end
-//    end
+        
+        if (`MEMIO_TMask(MemoryIO) != 0) begin
+            $display("* MEM[%h,%d] == %h(%d) {%b}", `MEMIO_Addr(MemoryIO), `MEMIO_Addr(MemoryIO), 
+                    `MEMIO_RData(MemoryIO), `MEMIO_RData(MemoryIO), `MEMIO_TMask(MemoryIO));
+        end
     end
     
 // synthesis translate_on
