@@ -10,6 +10,7 @@
 /plan/CPU.data/wt/
 build/
 *.dump
+*.list
 *~
 *.xxx
 *.tar

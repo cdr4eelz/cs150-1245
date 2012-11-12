@@ -1,5 +1,7 @@
 DUMPOPTS ?= -D --disassembler-options=reg-names=numeric,no-aliases
 
+ASMOPTS = --warn -g -ahlsgm=$(patsubst %.s,%.list,$<)
+
 SSRCS := $(wildcard *.s)
 SOBJS := $(SSRCS:%.s=%.s.o)
 SELFS := $(SSRCS:%.s=%.elf)
@@ -39,7 +41,7 @@ multi: objs
 	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $< $^ -o $@
 
 %.s.o: %.s
-	mips-as $< -o $<.o
+	mips-as $(ASMOPTS) $< -o $<.o
 
 objs: $(SOBJS)
 
@@ -54,5 +56,7 @@ vees: $(SVEES)
 dumps: $(DUMPS)
 
 clean:
-	rm -f *.elf *.bin *.mif *.coe *.v *.o *.ld *.dump
+	rm -f *.elf *.bin *.mif *.coe *.v *.o *.ld *.dump *.list
+
+.PHONY: clean multi all
 
