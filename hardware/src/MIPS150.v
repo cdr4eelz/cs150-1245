@@ -99,8 +99,8 @@ module MIPS150 (
     );
     
     // Pipeline border: DX/M
-    `BUS_ICTL_type IControl_M, IControl__M;
-    wire  [31: 0] MemAddr__M;
+    `BUS_ICTL_type IControl_M,  IControl__M;
+    wire  [31: 0] MemAddr__M,   MemAddr_M;
     wire  [31: 0] MemWValue__M, RegWValue_M;
     wire  [31: 0] PCPLUS8_M;
     PipelineRegister #( .Width(`BUS_ICTL_width) // Register all controls & let unused get pruned out
@@ -109,6 +109,8 @@ module MIPS150 (
         ) REG_IControl__M   ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl__M ) );
     PipelineRegister #( .Width(32), .PreRegistered(1)
         ) REG_MemAddr__M    ( .CPUGlobal(CPUGlobal),    .In(MemAddrDX_  ),  .Out(MemAddr__M  ) );
+    PipelineRegister #( .Width(32)
+        ) REG_MemAddr_M     ( .CPUGlobal(CPUGlobal),    .In(MemAddrDX_  ),  .Out(MemAddr_M   ) );
     PipelineRegister #( .Width(32), .PreRegistered(1)
         ) REG_MemWValue__M  ( .CPUGlobal(CPUGlobal),    .In(MemWValueDX_),  .Out(MemWValue__M) );
     PipelineRegister #( .Width(32)
@@ -120,9 +122,8 @@ module MIPS150 (
     (   .CPUGlobal  (CPUGlobal),
         .MemoryIO   (MemoryIO),
     //Inputs
-        .IControl   (IControl_M),
-        ._IControl  (IControl__M),
-        ._MemAddr   (MemAddr__M),
+        ._IControl  (IControl__M),      .IControl   (IControl_M),
+        ._MemAddr   (MemAddr__M),       .MemAddr    (MemAddr_M),
         ._MemWValue (MemWValue__M),
         .RegWValue  (RegWValue_M),
         .PCPLUS8    (PCPLUS8_M),

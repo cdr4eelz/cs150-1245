@@ -6,11 +6,10 @@ module StageM(
     inout `BUS_CPUGlobal_type   CPUGlobal,  // Clock not used (others not used yet either)
     inout `BUS_MEMIO_type       MemoryIO,
     
-    input `BUS_ICTL_type        _IControl,
-    input `BUS_ICTL_type        IControl,
-    input  [31: 0]  _ALUOut,
+    input `BUS_ICTL_type _IControl, IControl,
+    input  [31: 0]  _MemAddr,   MemAddr,
     input  [31: 0]  _MemWValue,
-    input  [31: 0]  ALUOut,
+    input  [31: 0]  RegWValue,
     input  [31: 0]  PCPLUS8,
     
     output [ 4: 0]  WBK_Reg_,
@@ -18,9 +17,10 @@ module StageM(
     output          WBK_CanFWD_
 );
     parameter crap = "tastic";
-    wire  [ 3: 0] _TargetMask   = _ALUOut[31:28];  // Top nibble to direct target
-    wire  [11: 0] _Address      = _ALUOut[13:2];   // TODO: Drive with `Unknown when ~|WriteByteMask
-    wire  [ 1: 0] _SubAddr      = _ALUOut[1:0];
+    wire  [ 3: 0] _TargetMask   = _MemAddr[31:28];  // Top nibble to direct target
+    wire  [11: 0] _Address      = _MemAddr[13: 2];  // TODO: Drive with `Unknown when ~|WriteByteMask
+    
+    wire  [ 1: 0] _SubAddr      = _MemAddr[ 1: 0];
     wire  [ 1: 0] _SubWidth     = (3 - `ICTL_DataWidth(_IControl));
     wire  [ 3: 0] _WByteMask    = (!`ICTL_MemWrite(_IControl)) ? 4'b0000 :
                                     4'b1111 << _SubWidth >> _SubAddr;
@@ -40,7 +40,7 @@ module StageM(
     //   control signals, ets. (Example, DataWidth for read comes from IControl but
     //   DataWidth for write came from _IControl).
     
-    wire  [ 1: 0] SubAddr   = ALUOut[1:0];
+    wire  [ 1: 0] SubAddr   = MemAddr[ 1: 0];
     wire  [ 1: 0] SubWidth  = (3 - `ICTL_DataWidth(IControl));
     wire  [31: 0] DataLoad  = DataRead << (SubAddr*8) >> (SubWidth*8);
     // ^^ I guess I'm hoping this stuff washes out with optimization! Is nice to have so
@@ -49,7 +49,7 @@ module StageM(
     // Might divorce WBK from FWD stuff more fully to clarify slightly different paths
     assign WBK_Reg_ = `ICTL_DestReg(IControl); // Expected to be zero when no writeback
     assign WBK_Val_ = `ICTL_MemToReg(IControl) ? DataLoad :
-                        `ICTL_Link(IControl) ? (PCPLUS8) : ALUOut;
+                        `ICTL_Link(IControl) ? (PCPLUS8) : RegWValue;
     assign WBK_CanFWD_ = !`ICTL_MemToReg(IControl) && (WBK_Reg_ != 0);
     
 endmodule
