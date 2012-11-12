@@ -32,13 +32,13 @@ module StageDXTestbench;
         .PC         (PC),               .INST       (Inst),
         //Outputs
         .IControl_  (IControlDX_),
-        .ALUOut_    (ALUOut),
-        .R2Value_   (RTValue),
+        .MemAddr_   (),
+        .RegWValue_ (ALUOut),
+        .MemWValue_ (RTValue),
         .PCPLUS8_   (),
         //Feedbacks
-        .PCNext_    (JumpPC) // Feedback to WF stage
+        .DOBranch_  (DoJump),           .PCBranch_  (JumpPC)
     );
-    assign DoJump = (JumpPC != (PC+4));
     
     integer step = 0;
     
