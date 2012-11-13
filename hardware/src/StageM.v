@@ -4,7 +4,7 @@
 
 module StageM(
     inout `BUS_CPUGlobal_type   CPUGlobal,  // Clock not used (others not used yet either)
-    inout `BUS_MEMIO_type       MemoryIO,
+    inout `BUS_MEMIO_type       DMEM, IMEM, IOMAP,
     
     input `BUS_ICTL_type _IControl, IControl,
     input  [31: 0]  _MemAddr,   MemAddr,
@@ -27,12 +27,12 @@ module StageM(
     wire  [31: 0] _WDataMasked  = _MemWValue << (_SubWidth*8) >> (_SubAddr*8);
     
     wire  [31: 0] DataRead;
-    BUS_MEMIO_tun BUS_MEMIO
-    ( ._BUS_(MemoryIO),
+    BUS_MEMIO_tun BUS_DMEM
+    ( ._BUS_(DMEM),
         .Addr   (_Address),     // TODO: Drive with `Unknown when not reading or writing
-        .TMask  (_TargetMask),
-        .BMask  (_WByteMask),
+        .WMask  (_WByteMask),
         .WData  (_WDataMasked), // ^^^these too.
+        .RMask  (4'b1111),
         .RData  (DataRead)      // This is registered by the memory itself
     );
     

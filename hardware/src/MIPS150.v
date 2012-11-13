@@ -9,18 +9,14 @@ module MIPS150 (
 );
     wire stl = stall;   // Just rename so it matches nicely internal to CPU
     `BUS_CPUGlobal_type     CPUGlobal;
-    `BUS_MEMIO_type         MemoryIO;
-    `BUS_ShakeRx_type(8)    UARX;
-    `BUS_ShakeTx_type(8)    UATX;
+    `BUS_MEMIO_type         DMEM, IMEM, IOMAP;
+    wire [11: 0]    IMEM_addrb;
+    wire [31: 0]    IMEM_doutb;
     
-    // Register & Memory busses
+    // Register lines
     wire [ 4: 0] REG_ra1, REG_ra2, REG_wa;
     wire [31: 0] REG_rd1, REG_rd2, REG_wd;
     wire REG_we;
-    
-    wire [11: 0]    IMEM_addra, IMEM_addrb,     DMEM_addra;
-    wire [31: 0]    IMEM_dina,  IMEM_doutb,     DMEM_douta, DMEM_dina;
-    wire [ 3: 0]    IMEM_wea,                   DMEM_wea;
     
     /* Naming conventions (might be inconsistent/in-flux though :)
         SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
@@ -120,7 +116,8 @@ module MIPS150 (
     
     StageM  s_M
     (   .CPUGlobal  (CPUGlobal),
-        .MemoryIO   (MemoryIO),
+        .DMEM       (DMEM),             .IMEM(IMEM),
+        .IOMAP      (IOMAP),
     //Inputs
         ._IControl  (IControl__M),      .IControl   (IControl_M),
         ._MemAddr   (MemAddr__M),       .MemAddr    (MemAddr_M),
@@ -133,14 +130,12 @@ module MIPS150 (
         .WBK_CanFWD_(WBKCanFWD_M_WF_)
     );
     
-    // Temporarily plugged directly into DMEM & IMEM
-    BUS_MEMIO_tap BUS_MEMIO_D
-    ( ._BUS_(MemoryIO),
-        .Addr(DMEM_addra),  .TMask(),
-        .BMask(DMEM_wea),   .WData(DMEM_dina),
-        .RData(DMEM_douta)
+    
+    // Drive CPUGlobals from CPU module inputs
+    BUS_CPUGlobal_tun BUS_CPUGlobal
+    ( ._BUS_(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stl)
     );
-    assign IMEM_addra=DMEM_addra, IMEM_wea=DMEM_wea, IMEM_dina=DMEM_dina;
     
     // Key components indirectly wired elsewhere
     
@@ -153,38 +148,19 @@ module MIPS150 (
         .rd1(REG_rd1),  .rd2(REG_rd2)
     );
     
-    dmem_blk_ram DMEM
-    (   .clka(clk),             // Clocks of a feather
-        .ena    (1'b1),         .addra  (DMEM_addra),   // One DMEM port...
-        .douta  (DMEM_douta),                           //  for data read...
-        .dina   (DMEM_dina),    .wea    (DMEM_wea)      //  & data write
+    dmem_blk_ram bram_dmem
+    (   .clka(clk), .ena    ( |`MEMIO_WMask(DMEM) || |`MEMIO_RMask(DMEM)),
+        .addra  (`MEMIO_Addr(   DMEM)),     .douta  (`MEMIO_RData(  DMEM)),
+        .wea    (`MEMIO_WMask(  DMEM)),     .dina   (`MEMIO_WData(  DMEM))
     );
     
-    imem_blk_ram IMEM
-    (   .clka(clk), .clkb(clk), // Clocks of a feather
-        .ena    (1'b1),         .addra  (IMEM_addra),   // Separate IMEM port...
-        .dina   (IMEM_dina),    .wea    (IMEM_wea),     //  for inst write...
-                                                        // ...VS...
+    imem_blk_ram bram_imem
+    (   .clka(clk), .ena    ( |`MEMIO_WMask(IMEM) /*|| |`MEMIO_RMask(IMEM)*/),
+        .addra  (`MEMIO_Addr(   IMEM)),     /*.douta  (`MEMIO_RData(  IMEM)),*/
+        .wea    (`MEMIO_WMask(  IMEM)),     .dina   (`MEMIO_WData(  IMEM)),
+        
+        .clkb(clk), //enb(1'b1)
         .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
-    );
-    
-    UART uart
-    (   .Clock(clk), .Reset(rst),  // Clocks of a feather
-        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
-        // Transmitter  (handshakes go both in/out)
-        .DataIn(        `ShakeTx_DataIn(        8,UATX)),
-        .DataInValid(   `ShakeTx_DataInValid(   8,UATX)),
-        .DataInReady(   `ShakeTx_DataInReady(   8,UATX)),
-        // Receiver     (handshakes go both in/out)
-        .DataOut(       `ShakeRx_DataOut(       8,UARX)),
-        .DataOutValid(  `ShakeRx_DataOutValid(  8,UARX)),
-        .DataOutReady(  `ShakeRx_DataOutReady(  8,UARX))
-    );
-    
-    // Drive CPUGlobals from CPU module inputs
-    BUS_CPUGlobal_tun BUS_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stl)
     );
     
     
@@ -260,18 +236,17 @@ module MIPS150 (
     
     always@(posedge clk) begin
         // Plan to log these into a sequential list of critical actions (for stricter testing)
-        if (IMEM_wea != 0) begin
-            $display("** I-MEM[%h,%d] <= %h(%d) {%b}", IMEM_addra*4, IMEM_addra*4, 
-                    IMEM_dina, IMEM_dina, IMEM_wea);
+        if (`MEMIO_WMask(IMEM) != 0) begin
+            $display("** I-MEM[%h,%d] <= %h(%d) {%b}", `MEMIO_Addr(IMEM), `MEMIO_Addr(IMEM), 
+                    `MEMIO_WData(IMEM), `MEMIO_WData(IMEM), `MEMIO_WMask(IMEM));
         end
-        if (DMEM_wea != 0) begin
-            $display("** D-MEM[%h,%d] <= %h(%d) {%b}", DMEM_addra*4, DMEM_addra*4, 
-                    DMEM_dina, DMEM_dina, DMEM_wea);
+        if (`MEMIO_WMask(DMEM) != 0) begin
+            $display("** D-MEM[%h,%d] <= %h(%d) {%b}", `MEMIO_Addr(DMEM), `MEMIO_Addr(DMEM), 
+                    `MEMIO_WData(DMEM), `MEMIO_WData(DMEM), `MEMIO_WMask(DMEM));
         end
-        
-        if (`MEMIO_TMask(MemoryIO) != 0) begin
-            $display("* MEM[%h,%d] == %h(%d) {%b}", `MEMIO_Addr(MemoryIO), `MEMIO_Addr(MemoryIO), 
-                    `MEMIO_RData(MemoryIO), `MEMIO_RData(MemoryIO), `MEMIO_TMask(MemoryIO));
+        if (`MEMIO_WMask(IOMAP) != 0) begin
+            $display("** IOMAP[%h,%d] <= %h(%d) {%b}", `MEMIO_Addr(IOMAP), `MEMIO_Addr(IOMAP), 
+                    `MEMIO_WData(IOMAP), `MEMIO_WData(IOMAP), `MEMIO_WMask(IOMAP));
         end
     end
     
