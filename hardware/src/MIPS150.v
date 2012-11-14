@@ -149,13 +149,13 @@ module MIPS150 (
     );
     
     dmem_blk_ram bram_dmem
-    (   .clka(clk), .ena    ( |`MEMIO_WMask(DMEM) || |`MEMIO_RMask(DMEM)),
+    (   .clka(clk), .ena( |`MEMIO_WMask(DMEM) || |`MEMIO_RMask(DMEM)),
         .addra  (`MEMIO_Addr(   DMEM)),     .douta  (`MEMIO_RData(  DMEM)),
         .wea    (`MEMIO_WMask(  DMEM)),     .dina   (`MEMIO_WData(  DMEM))
     );
     
     imem_blk_ram bram_imem
-    (   .clka(clk), .ena    ( |`MEMIO_WMask(IMEM) /*|| |`MEMIO_RMask(IMEM)*/),
+    (   .clka(clk), .ena( |`MEMIO_WMask(IMEM) /*|| |`MEMIO_RMask(IMEM)*/ ),
         .addra  (`MEMIO_Addr(   IMEM)),     /*.douta  (`MEMIO_RData(  IMEM)),*/
         .wea    (`MEMIO_WMask(  IMEM)),     .dina   (`MEMIO_WData(  IMEM)),
         

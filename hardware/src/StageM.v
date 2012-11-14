@@ -2,49 +2,73 @@
 
 `include "CPUBusses.vh"
 
-module StageM(
-    inout `BUS_CPUGlobal_type   CPUGlobal,  // Clock not used (others not used yet either)
-    inout `BUS_MEMIO_type       DMEM, IMEM, IOMAP,
+module StageM #(
+	parameter NOUNKLE = 1
+) (
+    inout `BUS_CPUGlobal_type   CPUGlobal,  // Unused???
+    inout `BUS_MEMIO_type       DMEM, IMEM, IOMAP, // Could be merged & plexed elsewhere
     
-    input `BUS_ICTL_type _IControl, IControl,
-    input  [31: 0]  _MemAddr,   MemAddr,
+    // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
+    input `BUS_ICTL_type _IControl, // Few are used (hopefully tools will prune)
     input  [31: 0]  _MemWValue,
+    input  [31: 0]  _MemAddr,
+    // Inputs held stable during our stage for us
+    input `BUS_ICTL_type IControl,  // Not all are used (hopefully tools will prune)
+    input  [31: 0]  MemAddr,
     input  [31: 0]  RegWValue,
     input  [31: 0]  PCPLUS8,
-    
+    // Outputs fed back to prior stages
     output [ 4: 0]  WBK_Reg_,
     output [31: 0]  WBK_Val_,
     output          WBK_CanFWD_
 );
-    parameter crap = "tastic";
-    wire  [ 3: 0] _TargetMask   = _MemAddr[31:28];  // Top nibble to direct target
-    wire  [11: 0] _Address      = _MemAddr[13: 2];  // TODO: Drive with `Unknown when ~|WriteByteMask
+`define UNKNOWN 'bz
+`define UNK(W,D) ((NOUNKLE) ? (D) : W`UNKNOWN)
+
+    // These are looking more like Functions due to the symmetry & triviality
+    wire  [ 3: 0] _Target   = _MemAddr[31:28],
+                   Target   =  MemAddr[31:28];
+    wire  [11: 0] _Address  = _MemAddr[13: 2],
+                   Address  =  MemAddr[13: 2];
+    wire  [ 1: 0] _SubAddr  = _MemAddr[ 1: 0],
+                   SubAddr  =  MemAddr[ 1: 0];
+    wire  [ 1: 0] _SubShift = (3 - `ICTL_DataWidth(_IControl)),
+                   SubShift = (3 - `ICTL_DataWidth( IControl));
+    wire    _isWrite    = `ICTL_MemWrite(_IControl),
+             isWrite    = `ICTL_MemWrite( IControl);
+    wire    _isRead     = `ICTL_MemToReg(_IControl),
+             isRead     = `ICTL_MemToReg( IControl);
     
-    wire  [ 1: 0] _SubAddr      = _MemAddr[ 1: 0];
-    wire  [ 1: 0] _SubWidth     = (3 - `ICTL_DataWidth(_IControl));
-    wire  [ 3: 0] _WByteMask    = (!`ICTL_MemWrite(_IControl)) ? 4'b0000 :
-                                    4'b1111 << _SubWidth >> _SubAddr;
-    wire  [31: 0] _WDataMasked  = _MemWValue << (_SubWidth*8) >> (_SubAddr*8);
+    // This little compute block could become a nifty primitive!
+    wire  [31: 0] _WDataMasked  = (_MemWValue) << (_SubShift*8) >> (_SubAddr*8);
+    wire  [ 3: 0] _ByteMask     = (   4'b1111) << (_SubShift  ) >> (_SubAddr  );
+    wire  [ 3: 0] _WMask    = (_isWrite) ? _ByteMask : 4'b0000;
+    wire  [ 3: 0] _RMask    = (_isRead ) ? _ByteMask : 4'b0000;
     
-    wire  [31: 0] DataRead;
-    BUS_MEMIO_tun BUS_DMEM
-    ( ._BUS_(DMEM),
-        .Addr   (_Address),     // TODO: Drive with `Unknown when not reading or writing
-        .WMask  (_WByteMask),
-        .WData  (_WDataMasked), // ^^^these too.
-        .RMask  (4'b1111),
-        .RData  (DataRead)      // This is registered by the memory itself
+    // An odd but interesting method of BUS plexing, rather than driving a real BUS in tri-state.
+    `BUS_MEMIO_type LIVE, DEAD;
+    BUS_MEMIO_tun BUS_LIVE( ._BUS_(LIVE),   .RData  (),
+        .WMask  (_WMask),                   .RMask  (_RMask),
+        .Addr   (_Address),                 .WData  (_WDataMasked)
     );
+    BUS_MEMIO_tun BUS_DEAD( ._BUS_(DEAD),   .RData  (),
+        .WMask  (4'b0000),                  .RMask  (4'b0000),
+        .Addr   (`UNK(12,_Address)),        .WData  (`UNK(32,_WDataMasked))
+    );
+    assign DMEM = (!_Target[3] && _Target[0]) ? LIVE : DEAD;    // These two can be active...
+    assign IMEM = (!_Target[3] && _Target[1]) ? LIVE : DEAD;    // ...at the same time, but
+    assign IOMAP = (_Target == 4'b1000) ? LIVE : DEAD;          // ...this one is exclusive.
     
     // Important to note the very cautious use of registered vs passthrough values,
     //   control signals, ets. (Example, DataWidth for read comes from IControl but
-    //   DataWidth for write came from _IControl).
+    //   DataWidth for write came from _IControl).  Though they are usually the same
+    //   value, we don't register it here since the pipeline registers have some extra
+    //   features that we yield to.
     
-    wire  [ 1: 0] SubAddr   = MemAddr[ 1: 0];
-    wire  [ 1: 0] SubWidth  = (3 - `ICTL_DataWidth(IControl));
-    wire  [31: 0] DataLoad  = DataRead << (SubAddr*8) >> (SubWidth*8);
-    // ^^ I guess I'm hoping this stuff washes out with optimization! Is nice to have so
-    //    expanded out like this for debugging/simulation purposes, though :)
+    wire [31: 0] DataRead = (!Target[3] && Target[0]) ? `MEMIO_RData(DMEM)
+                                : (Target == 4'b1000) ? `MEMIO_RData(IOMAP)
+                                    : (NOUNKLE) ? 32'h0000 : 32`UNKNOWN;
+    wire [31: 0] DataLoad = DataRead << (SubAddr*8) >> (SubShift*8);
     
     // Might divorce WBK from FWD stuff more fully to clarify slightly different paths
     assign WBK_Reg_ = `ICTL_DestReg(IControl); // Expected to be zero when no writeback
