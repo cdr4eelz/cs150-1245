@@ -15,8 +15,8 @@ module DumpMEMIOTestbench;
     
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    DumpMEMIOCPU CPU
-    (   .clk(Clock), .rst(Reset), .stall(1'b0),
+    DumpMEMIOCPU #( .DBG_DELAY(1) )
+    CPU (   .clk(Clock), .rst(Reset), .stall(1'b0),
         .FPGA_SERIAL_RX(SERIAL_RX),
         .FPGA_SERIAL_TX(SERIAL_TX)
     );
@@ -47,16 +47,17 @@ module DumpMEMIOTestbench;
         //$monitor("Rx_Ready %b %b %h", iomap_listener.Rx_Ready, iomap_listener.uart.uareceive.HasByte, iomap_listener.rdata);
 
         while (finalcountdowneurope > 0) begin
-            Addr = 12'h001; #1
-            @ (posedge Clock) #1;
+            Addr = 12'h001;
+            @(posedge Clock); @(negedge Clock);
             while (RData[0] !== 1) begin
-                @ (posedge Clock) #1;
+                @(posedge Clock); @(negedge Clock);
             end
             //$display("Stat %b  %h (%d)", RData, RData, RData);
-            Addr = 12'h003; #1
-            @ (posedge Clock) #1;
             
-            $display("Got %b  %h (%d)", RData, RData, RData);
+            Addr = 12'h003;
+            @(posedge Clock); @(negedge Clock);
+            $display("Got %b  %h (%d)", RData[7:0], RData[7:0], RData[7:0]);
+
             #1; finalcountdowneurope = finalcountdowneurope - 1;
         end
         $display("Got enough.");
