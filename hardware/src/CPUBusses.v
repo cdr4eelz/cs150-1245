@@ -26,9 +26,9 @@ module BUS_ICTL_tun         // "tunnel" out multiple values
     input          MemWrite,
     input  [ 1:0 ] DataWidth,
     input          MSigned,
-    input          ALUsrcA,
-    input          ALUsrcB,
-    input  [ 3:0 ] ALUop,
+    input          ALUSrcA,
+    input          ALUSrcB,
+    input  [ 3:0 ] ALUOp,
     input          ISigned,
     input  [ 2:0 ] CmpOp,
     input          Jump,
@@ -37,7 +37,7 @@ module BUS_ICTL_tun         // "tunnel" out multiple values
 );
     assign `ICTL__IN(_BUS_)
         = {MemToReg,DestReg,MemWrite,DataWidth,MSigned,
-            ALUsrcA,ALUsrcB,ALUop,ISigned,CmpOp,Jump,JR,Link};
+            ALUSrcA,ALUSrcB,ALUOp,ISigned,CmpOp,Jump,JR,Link};
 endmodule
 
 module BUS_ICTL_tap         // "tap" into desired tunneled values
@@ -47,9 +47,9 @@ module BUS_ICTL_tap         // "tap" into desired tunneled values
     output         MemWrite,
     output [ 1:0 ] DataWidth,
     output         MSigned,
-    output         ALUsrcA,
-    output         ALUsrcB,
-    output [ 3:0 ] ALUop,
+    output         ALUSrcA,
+    output         ALUSrcB,
+    output [ 3:0 ] ALUOp,
     output         ISigned,
     output [ 2:0 ] CmpOp,
     output         Jump,
@@ -57,7 +57,7 @@ module BUS_ICTL_tap         // "tap" into desired tunneled values
     output         Link
 );
     assign {MemToReg,DestReg,MemWrite,DataWidth,MSigned,
-        ALUsrcA,ALUsrcB,ALUop,ISigned,CmpOp,Jump,JR,Link}
+        ALUSrcA,ALUSrcB,ALUOp,ISigned,CmpOp,Jump,JR,Link}
             = `ICTL__IN(_BUS_);
 endmodule
 

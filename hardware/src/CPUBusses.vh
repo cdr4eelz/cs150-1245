@@ -12,7 +12,7 @@
 `define CPUGlobal_STL(      BUS)    BUS [  2 +:  1 ]
 
 //tuninput.23{MemToReg.1,DestReg.5,MemWrite.1,DataWidth.2,MSigned.1,
-//            ALUsrcA.1,ALUsrcB.1,ALUop.4,ISigned.1,CmpOp.3,Jump.1,JR.1,Link.1}
+//            ALUSrcA.1,ALUSrcB.1,ALUOp.4,ISigned.1,CmpOp.3,Jump.1,JR.1,Link.1}
 //tunoutput.0{}
 `define BUS_ICTL_width  ((1+5+1+2+1+1+1+4+1+3+1+1+1)+(0)) // 23
 `define BUS_ICTL_type   wire [0:`BUS_ICTL_width-1]
@@ -24,8 +24,8 @@
 `define ICTL_DataWidth( BUS)    BUS [  7 +:  2 ]
 `define ICTL_MSigned(   BUS)    BUS [  9 +:  1 ]
 `define ICTL_ALUSrcA(   BUS)    BUS [ 10 +:  1 ]
-`define ICTL_ALLUSrcB(  BUS)    BUS [ 11 +:  1 ]
-`define ICTL_ALUop(     BUS)    BUS [ 12 +:  4 ]
+`define ICTL_ALUSrcB(   BUS)    BUS [ 11 +:  1 ]
+`define ICTL_ALUOp(     BUS)    BUS [ 12 +:  4 ]
 `define ICTL_ISigned(   BUS)    BUS [ 16 +:  1 ]
 `define ICTL_CmpOp(     BUS)    BUS [ 17 +:  3 ]
 `define ICTL_Jump(      BUS)    BUS [ 20 +:  1 ]
