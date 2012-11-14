@@ -17,7 +17,7 @@ int8_t uread_int8(void)
 {
     while (!URECV_CTRL) ;
     int8_t ch = URECV_DATA;
-    if (ch == '\x0d') {
+    if ((ch == '\x0d') || (ch == '\x0a')) {
         uwrite_int8s("\r\n");
     } else {
         uwrite_int8(ch);

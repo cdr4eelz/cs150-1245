@@ -169,6 +169,7 @@ module MIPS150 (
         .IOMAP(IOMAP)
     );
     
+`ifdef DBG
 // synthesis translate_off
 
     reg[8:0] DBG_cycle, DBG_step;
@@ -257,4 +258,6 @@ module MIPS150 (
     
 // synthesis translate_on
     
+`endif
+
 endmodule

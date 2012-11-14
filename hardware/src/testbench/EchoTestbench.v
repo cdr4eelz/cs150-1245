@@ -39,33 +39,62 @@ module EchoTestbench;
                         .SIn(             FPGA_SERIAL_TX),
                         .SOut(            FPGA_SERIAL_RX));
 
+integer count = 0, maxchars = 10;
+event now_listening;
+event now_reset;
+
     initial begin
       // Reset. Has to be long enough to not be eaten by the debouncer.
       Reset = 0;
-      DataIn = 8'h7a;
-      DataInValid = 0;
       DataOutReady = 0;
       #(100*Cycle)
 
       Reset = 1;
       #(30*Cycle)
       Reset = 0;
-
-      // Wait until transmit is ready
-      while (!DataInReady) #(Cycle);
-      DataInValid = 1'b1;
-      #(Cycle)
-      DataInValid = 1'b0;
+      -> now_reset;
+      #(30*Cycle)
 
       // Wait for something to come back
-      while (!DataOutValid) #(Cycle);
-      $display("Got %d", DataOut);
-
-      // Add more test cases!
-
-
+      -> now_listening;
+      while (count < maxchars) begin
+          DataOutReady = 1; #1;
+	  @(posedge Clock);
+          while (!DataOutValid) begin
+		@(posedge Clock);
+          end
+	  DataOutReady = 0; count = count + 1;
+          $display("%d] Got %d", count, DataOut);
+	  #1;
+      end
 
       $finish();
+  end
+
+integer countup;
+  initial begin
+      $display("Booting test");
+      DataIn = 8'h7a;
+      DataInValid = 0;
+	countup = 0;
+
+      @(now_reset);
+      $display("Getting ready to send:");
+//$monitor("R:%b Ready:%b Valid:%b", Reset, DataInReady, DataInValid);
+      @(now_listening);
+
+      $display("Sending...");
+      forever begin // Wait until transmit is ready
+	DataInValid = 1'b1; #1;
+	@(posedge Clock);
+        while (!DataInReady) begin
+		@(posedge Clock);
+	end
+        DataInValid = 1'b0; countup = countup + 1;
+$display("%d] Sent: %h %d %b", countup, DataIn, DataIn, DataIn);
+DataIn = DataIn - 1;
+	#1;
+      end
   end
 
 endmodule
