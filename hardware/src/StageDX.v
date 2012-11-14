@@ -47,22 +47,22 @@ module StageDX(
 	wire [31: 0]   R1      = REG_D1_,  R2      = REG_D2_; // Redeclare here to clarify dependencies
 	
 	// Tap only specific control signals used inside DX
-	wire ISigned, Jump, JR, ALUsrcA, ALUsrcB;
-	wire [ 3: 0] ALUop;
+	wire ISigned, Jump, JR, ALUSrcA, ALUSrcB;
+	wire [ 3: 0] ALUOp;
 	wire [ 2: 0] CmpOp;
 	BUS_ICTL_tap BUS_ICTL
 	( ._BUS_(IControl_),
-        .ALUsrcA(ALUsrcA),  .ALUsrcB(ALUsrcB),  .ALUop(ALUop),
+        .ALUSrcA(ALUSrcA),  .ALUSrcB(ALUSrcB),  .ALUOp(ALUOp),
         .ISigned(ISigned),  .CmpOp(CmpOp),      .Jump(Jump),    .JR(JR), 
         // Unused (explicitly listed to make warnings meaningful)
         .MemToReg(),.DestReg(),.MemWrite(),.DataWidth(),.MSigned(),.Link()
 	);
 	
 	wire [31: 0] #1 A, B, ALUResult;
-	assign A = (ALUsrcA) ? SHAMT : R1;
-	assign B = (ALUsrcB) ? ((ISigned) ? SIMMED : UIMMED) : R2;
+	assign A = (ALUSrcA) ? SHAMT : R1;
+	assign B = (ALUSrcB) ? ((ISigned) ? SIMMED : UIMMED) : R2;
 	ALU alu
-	( .A(A), .B(B), .ALUop(ALUop),
+	( .A(A), .B(B), .ALUop(ALUOp),
 	   .Out(ALUResult)
 	);
     

@@ -26,8 +26,6 @@ module InstructionControl #(
 	
 //	output [15:0 ] FAULT
 );
-`define UNKNOWN 'bz // Can swap out for default value if unknown not desired
-`define DEFAULT 'b0
 
     function [31:0] SEXT16_32;
         input [15:0] in16;
@@ -46,6 +44,7 @@ module InstructionControl #(
     assign isJType  = (_opcode_[5:1] == 5'b00001_);
     assign isIType  = (!isRType && !isJType);
     
+`define UNKNOWN 'bz
     wire [ 4: 0] #1 _rs_, _rt_, _rd_, _shamt_;
     wire [ 5: 0] #1 _funct_;
     wire [15: 0] #1 _immediate_;
@@ -105,20 +104,21 @@ module InstructionControl #(
 	    .ALUop(ALUop)
 	);
     
+`define UNKNOWN2 'b0
 	`BUS_ICTL_type delayIControl;
 	assign #1 IControl_ = delayIControl;
     BUS_ICTL_tun BUS_ICTL
     ( ._BUS_(delayIControl),
         .ISigned(
-            (isMemory) ? 1'b1 : (isIComp) ? !_opcode_[2] : 1`DEFAULT //TODO: Move to isXYZ
+            (isMemory) ? 1'b1 : (isIComp) ? !_opcode_[2] : 1`UNKNOWN2 //TODO: Move to isXYZ
         ),
-        .ALUsrcA(
+        .ALUSrcA(
             isRShiftI
         ),
-        .ALUsrcB(
+        .ALUSrcB(
             isMemory || isIComp
         ),
-        .ALUop(ALUop),
+        .ALUOp(ALUop),
         
         .MemToReg(
             isMLoad
@@ -127,10 +127,10 @@ module InstructionControl #(
             isMStore
         ),
         .DataWidth(
-            (isMemory) ? _opcode_[1:0] : 2`DEFAULT
+            (isMemory) ? _opcode_[1:0] : 2`UNKNOWN2
         ),
         .MSigned(
-            (isMemory && !isMStore && !_opcode_[1]) ? !_opcode_[2] : 1`DEFAULT
+            (isMemory && !isMStore && !_opcode_[1]) ? !_opcode_[2] : 1`UNKNOWN2
         ),
         
         .Jump(
