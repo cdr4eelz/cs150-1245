@@ -3,7 +3,7 @@
 `include "CPUBusses.vh"
 
 module StageWF #(
-    parameter   [31: 0] bootPC = 32'h10000000   // 2-lsb must be 0, upper nibble ought be 1???
+    parameter   [31: 0] bootPC = 32'h40000000   // 2-lsb must be 0, upper nibble ought be 4 for bios
 ) (
     inout `BUS_CPUGlobal_type CPUGlobal,
     output reg [15: 0] STEPCOUNT, STALLCOUNT,

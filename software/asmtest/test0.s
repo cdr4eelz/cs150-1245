@@ -19,3 +19,7 @@ Done:
 j	Done
 nop
 
+.section   .data
+
+strtest:	.asciz		"Test string"
+

@@ -25,4 +25,7 @@ $(TARGET): $(COBJS) $(SOBJS)
 	mips-as $< -o $<.o
 
 clean:
-	rm -f $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).{bin,mif,coe,v}
+	rm -f $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).bin $(TARGET).mif $(TARGET).coe $(TARGET).v
+
+.PHONY: clean
+
