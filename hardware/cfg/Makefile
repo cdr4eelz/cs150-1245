@@ -85,11 +85,15 @@ timing: $(TCRE_OUT)
 
 #BITGEN
 BITFILE := $(TOP).bit
+BITBZIP := $(BITFILE).bz2
 
 $(BITFILE): $(PAR_OUT)
 	bitgen -w -l $< $@ $(TOP).pcf
 
-bitgen: $(BITFILE)
+$(BITBZIP): $(BITFILE)
+	bzip2 --keep --stdout $< > $@
+
+bitgen: $(BITFILE) $(BITBZIP)
 
 #IMPACT
 IMPACT_BATCH := impact.batch
@@ -107,7 +111,7 @@ report:
 schematic schem ise:
 	ise &
 
-all: $(BITFILE) timing
+all: bitgen timing
 
 printenv:
 	set | grep -e '^[[:alnum:]]*='

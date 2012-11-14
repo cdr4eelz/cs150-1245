@@ -6,9 +6,9 @@
 **  Abstraction of inter-stage register'd value.
 */ 
 module	PipelineRegister #(
-    parameter   Width=32,
+    parameter   Width=0,
                 PreRegistered = 0,  // TODO: Rename since "pre/post" is not relevant
-                ClockBlip = 1, OutDelay = 1,
+                ClockBlip = 0, OutDelay = 0,
                 ResetValue={Width{1'b0}}
 ) (
     inout `BUS_CPUGlobal_type CPUGlobal,

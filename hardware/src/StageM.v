@@ -22,7 +22,7 @@ module StageM #(
     output [31: 0]  WBK_Val_,
     output          WBK_CanFWD_
 );
-`define UNKNOWN 'bz
+`define UNKNOWN 'b0
 `define UNK(CONDITION,DEFAULT,WIDTH) (((CONDITION) || NOUNKLE) ? (DEFAULT) : (WIDTH`UNKNOWN))
 
     // These are looking more like Functions due to the symmetry & triviality

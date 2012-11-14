@@ -15,7 +15,7 @@
 //-----------------------------------------------------------------------------
 
 module RegFile #(
-    parameter DBG_LogStores = 1, DBG_DelayRead = 1
+    parameter DBG_LogStores = 0, DBG_DelayRead = 0
 ) (
     input         clk,
     input         we,
