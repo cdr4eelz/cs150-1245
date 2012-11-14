@@ -1,5 +1,3 @@
-`timescale 100ps / 1ps
-
 `include "CPUBusses.vh"
 
 // CPUGlobal values (driven by CPU, used by innerds)

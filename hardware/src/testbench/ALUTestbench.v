@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 //  Module: ALUTestbench
 //  Desc:   32-bit ALU testbench for the MIPS150 Processor
 //  Feel free to edit this testbench to add additional functionality
@@ -8,7 +10,6 @@
 
 // If #1 is in the initial block of your testbench, time advances by
 // 1ns rather than 1ps
-`timescale 1ns / 1ps
 
 `include "Opcode.vh"
 

@@ -1,9 +1,9 @@
-`timescale 1ns / 1ps
+`timescale 1ns/1ps
 
 `include "CPUBusses.vh"
 
 module StageWF #(
-    parameter   [31: 0] bootPC = 32'h40000000   // 2-lsb must be 0, upper nibble ought be 4 for bios
+    parameter   [31: 0] bootPC = 32'h20000000   // 2-lsb must be 0, upper nibble ought be 2 for now
 ) (
     inout `BUS_CPUGlobal_type CPUGlobal,
     output reg [15: 0] STEPCOUNT, STALLCOUNT,

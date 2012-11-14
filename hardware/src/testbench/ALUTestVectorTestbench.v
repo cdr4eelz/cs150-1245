@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 //  Module: ALUTestVectorTestbench
 //  Desc:   Alternative 32-bit ALU testbench for the MIPS150 Processor
 //  Feel free to edit this testbench to add additional functionality
@@ -6,7 +8,6 @@
 //  it doesn't check that you're mux-ing the correct values into the inputs
 //  of the ALU. 
 
-`timescale 1ns / 1ps
 
 module ALUTestVectorTestbench;
 

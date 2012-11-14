@@ -1,6 +1,4 @@
-// If #1 is in the initial block of your testbench, time advances by
-// 1ns rather than 1ps
-`timescale 1ns / 1ps
+`timescale 1ns/1ps
 
 module RegFileTestbench;
 
