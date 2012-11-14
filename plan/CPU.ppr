@@ -12,7 +12,7 @@
 		<Option Name="TargetLanguage" Val="Verilog"/>
 		<Option Name="TargetSimulator" Val="ModelSim"/>
 		<Option Name="Board" Val=""/>
-		<Option Name="SourceMgmtMode" Val="All"/>
+		<Option Name="SourceMgmtMode" Val="DisplayOnly"/>
 		<Option Name="CxlOverwriteLibs" Val="1"/>
 		<Option Name="CxlFuncsim" Val="1"/>
 		<Option Name="CxlTimesim" Val="1"/>
