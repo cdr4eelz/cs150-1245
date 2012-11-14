@@ -23,7 +23,7 @@ module StageM #(
     output          WBK_CanFWD_
 );
 `define UNKNOWN 'bz
-`define UNK(W,D) ((NOUNKLE) ? (D) : W`UNKNOWN)
+`define UNK(CONDITION,DEFAULT,WIDTH) (((CONDITION) || NOUNKLE) ? (DEFAULT) : (WIDTH`UNKNOWN))
 
     // These are looking more like Functions due to the symmetry & triviality
     wire  [ 3: 0] _Target   = _MemAddr[31:28],
@@ -53,11 +53,11 @@ module StageM #(
     );
     BUS_MEMIO_tun BUS_DEAD( ._BUS_(DEAD),   .RData  (),
         .WMask  (4'b0000),                  .RMask  (4'b0000),
-        .Addr   (`UNK(12,_Address)),        .WData  (`UNK(32,_WDataMasked))
+        .Addr   (`UNK(0,_Address,12)),      .WData  (`UNK(0,_WDataMasked,32))
     );
-    assign DMEM = (!_Target[3] && _Target[0]) ? LIVE : DEAD;    // These two can be active...
-    assign IMEM = (!_Target[3] && _Target[1]) ? LIVE : DEAD;    // ...at the same time, but
-    assign IOMAP = (_Target == 4'b1000) ? LIVE : DEAD;          // ...this one is exclusive.
+    assign `MEMIO__IN(DMEM) = (!_Target[3] && _Target[0]) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
+    assign `MEMIO__IN(IMEM) = (!_Target[3] && _Target[1]) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
+    assign `MEMIO__IN(IOMAP)= (_Target == 4'b1000)        ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
     
     // Important to note the very cautious use of registered vs passthrough values,
     //   control signals, ets. (Example, DataWidth for read comes from IControl but
@@ -67,7 +67,7 @@ module StageM #(
     
     wire [31: 0] DataRead = (!Target[3] && Target[0]) ? `MEMIO_RData(DMEM)
                                 : (Target == 4'b1000) ? `MEMIO_RData(IOMAP)
-                                    : (NOUNKLE) ? 32'h0000 : 32`UNKNOWN;
+                                    : `UNK(0,32'h0000,32);
     wire [31: 0] DataLoad = DataRead << (SubAddr*8) >> (SubShift*8);
     
     // Might divorce WBK from FWD stuff more fully to clarify slightly different paths

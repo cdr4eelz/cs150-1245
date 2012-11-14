@@ -45,6 +45,8 @@ module InstructionControl #(
     assign isIType  = (!isRType && !isJType);
     
 `define UNKNOWN 'bz
+`define UNK(CONDITION,DEFAULT,WIDTH) (((CONDITION) || NOUNKLE) ? (DEFAULT) : (WIDTH`UNKNOWN))
+
     wire [ 4: 0] #1 _rs_, _rt_, _rd_, _shamt_;
     wire [ 5: 0] #1 _funct_;
     wire [15: 0] #1 _immediate_;
