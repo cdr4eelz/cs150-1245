@@ -5,7 +5,7 @@
 			Type="DesignSrcs"
 			RelSrcDir="$PSRCDIR/sources_1">
 		<Filter Type="Srcs"/>
-		<File Path="$PPRDIR/../hardware/src/MEMIOPlex.v">
+		<File Path="$PPRDIR/../hardware/src/DumpMemCPU.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -15,7 +15,7 @@
 						Val="1"/>
 			</FileInfo>
 		</File>
-		<File Path="$PPRDIR/../hardware/src/DumpMemCPU.v">
+		<File Path="$PPRDIR/../hardware/src/DumpMEMIOCPU.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -56,16 +56,6 @@
 			</FileInfo>
 		</File>
 		<File Path="$PPRDIR/../hardware/src/IORegister.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/UART.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -116,6 +106,16 @@
 			</FileInfo>
 		</File>
 		<File Path="$PPRDIR/../hardware/src/ALUdec.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/UART.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>
@@ -206,6 +206,16 @@
 			</FileInfo>
 		</File>
 		<File Path="$PPRDIR/../hardware/src/PipelineRegister.v">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="1"/>
+			</FileInfo>
+		</File>
+		<File Path="$PPRDIR/../hardware/src/MEMIOPlex.v">
 			<FileInfo>
 				<Attr Name="UsedInSynthesis"
 						Val="1"/>

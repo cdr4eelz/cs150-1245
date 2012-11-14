@@ -163,6 +163,11 @@ module MIPS150 (
         .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
     );
     
+    MEMIOPlex iomap_uart
+    (   .clk(clk), .rst(rst),
+        .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX),
+        .IOMAP(IOMAP)
+    );
     
 // synthesis translate_off
 
