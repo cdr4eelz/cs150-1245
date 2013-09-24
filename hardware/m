@@ -1,10 +1,1 @@
-#!/bin/bash
-
-echo -e "\n\nMAKE REGULAR: $@\n\n" | tee m_log
-
-make $@ >>m_log 2>m_err &
-
-echo "\n\n*** DONE ***\n\n" | tee m_log
-
-tail -f m_log | grep -n -f sparse.grep
-
+build.sh

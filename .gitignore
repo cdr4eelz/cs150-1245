@@ -4,8 +4,9 @@
 /hardware/src/[di]mem_blk_ram/
 /hardware/sim/results/
 /hardware/sim/modelsim_libs/
-/hardware/[mq]_err
-/hardware/[mq]_log
+/hardware/[mq].err
+/hardware/[mq].out
+/hardware/[mq].pid
 /software/*/*.v
 /plan/tmp/
 /plan/CPU.sim/

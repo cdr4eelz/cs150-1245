@@ -123,4 +123,4 @@ print-%:
 printvars:
 	@$(foreach V,$(sort $(.VARIABLES)), $(warning $V=$($V) ($(value $V))))
 
-.PHONY = all synth xst map par timing bitgen impact report schematic schem ise clean ngc ncd xdl printenv printvars
+.PHONY = all synth xst map par timing bitgen impact report schematic schem ise ngc ncd xdl printenv printvars
