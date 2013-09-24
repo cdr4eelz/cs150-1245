@@ -1,10 +1,27 @@
 #!/bin/bash
 
-echo -e "\n\nMAKE QUICK: $@\n\n" | tee q_log
+if [ -e "q.pid" ]; then
+  echo "ALREADY RUNNING:"
+  cat q.pid
+  exit 1
+fi
 
-make --makefile=q_Makefile $@ >>q_log 2>q_err &
+rm -Rf q.pid #Shouldn't exist
+touch q.pid #Temporary (don't know pid yet)
 
-echo "\n\n*** DONE ***\n\n" | tee m_log
+#Start fresh logs (out & err)
+echo -e "MAKE '$0': $@" |tee q.out q.err
+date |tee -a q.out q.err
+echo -e "\n\n" |tee q.out q.err
 
-tail -f q_log | grep -n -f sparse.grep
+#Run the make itself (as sub-process)
+make -f q_Makefile $@ > >(tee -a q.out | grep -n -f sparse.grep) 2> >(tee -a q.err >&2) &
+PID="$!"
 
+echo "PID: $PID" |tee q.pid #Flag as running (real PID now)
+
+wait $pid
+echo -e "\n\n*** DONE ($PID) ***\n" |tee -a q.out q.err
+rm q.pid
+
+exit 0
