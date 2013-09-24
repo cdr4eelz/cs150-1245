@@ -1,10 +1,1 @@
-#!/bin/bash
-
-echo -e "\n\nMAKE QUICK: $@\n\n" | tee q_log
-
-make --makefile=q_Makefile $@ >>q_log 2>q_err &
-
-echo "\n\n*** DONE ***\n\n" | tee m_log
-
-tail -f q_log | grep -n -f sparse.grep
-
+build.sh

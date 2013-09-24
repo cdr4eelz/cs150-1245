@@ -1,21 +1,26 @@
-TOP := ml505top
-SRC := src
-TEMPLATES := cfg
+#D_BLD ?= /scratch/q_build_$(USER)
+#D_CFG ?= q_cfg
+D_BLD ?= build
+D_CFG ?= cfg
+D_SRC ?= src
+TOP ?= ml505top
 
-TARGETS = all synth xst map par timing bitgen impact report schematic schem ise ngc ncd xdl printenv printvars tf
+BUILDDIR := $(D_BLD)/$(TOP)
 
-BUILDDIR := build/$(TOP)
-MAKEFILE := $(BUILDDIR)/Makefile
-MAKEARGS := TOP=$(TOP) SRC=../../$(SRC) TEMPLATES=../../$(TEMPLATES)
+RSYNC := rsync -EXrLAtg --verbose
+TARGETS = all synth xst map par timing bitgen impact report schematic schem ise ngc ncd xdl printenv printvars
+MAKEARGS := TOP=$(TOP) SRC=./_src TEMPLATES=./_cfg
 
-$(TARGETS): $(MAKEFILE)
-	$(MAKE) $@ -C $(BUILDDIR) $(MAKEARGS)
+$(TARGETS): sync
+	$(MAKE) -C $(BUILDDIR) $(MAKEARGS) $@ | tee -a $(BUILDDIR)/log.out
 
-$(MAKEFILE): cfg/Makefile
-	mkdir -p build/$(TOP)
-	cp $< $@
+sync:
+	mkdir -p $(BUILDDIR)
+	$(RSYNC) --delete $(D_CFG)/ $(BUILDDIR)/_cfg
+	$(RSYNC) --delete $(D_SRC)/ $(BUILDDIR)/_src
+	ln -sf -t $(BUILDDIR) _cfg/Makefile
 
 clean:
-	rm -rf build
+	rm -rf $(BUILDDIR)
 
 .PHONY := $(TARGETS) clean sync
