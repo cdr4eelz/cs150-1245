@@ -28,15 +28,28 @@ touch $F_PID #Temporary (don't know pid yet)
 #Start fresh logs (out & err)
 echo -e "MAKE '$0': $@" |tee $F_OUT $F_ERR
 date |tee -a $F_OUT $F_ERR
+<<<<<<< HEAD
 echo -e "\n\n" |tee -a $F_OUT $F_ERR
+=======
+echo -e "\n\n" |tee $F_OUT $F_ERR
+>>>>>>> aad05fd291c78a372739fdbdc52f8e9dab5a4259
 
 #Run the make itself (as sub-process)
 export D_CFG
 export D_BLD
+<<<<<<< HEAD
 make $@ > >(tee -a $F_OUT | grep -n -f sparse.grep) 2> >(tee -a $F_ERR >&2) #&
 #PID="$!"
 #echo "PID: $PID" |tee $F_PID #Flag as running (real PID now)
 #wait $pid
+=======
+make $@ > >(tee -a $F_OUT | grep -n -f sparse.grep) 2> >(tee -a $F_ERR >&2) &
+PID="$!"
+
+echo "PID: $PID" |tee $F_PID #Flag as running (real PID now)
+
+wait $pid
+>>>>>>> aad05fd291c78a372739fdbdc52f8e9dab5a4259
 
 echo -e "\n\n*** DONE ($PID) ***\n" |tee -a $F_OUT $F_ERR
 date |tee -a $F_OUT $F_ERR
