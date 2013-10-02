@@ -8,9 +8,6 @@
 /hardware/[mq].out
 /hardware/[mq].pid
 /software/*/*.v
-/plan/tmp/
-/plan/CPU.sim/
-/plan/CPU.data/wt/
 build/
 *.dump
 *.list

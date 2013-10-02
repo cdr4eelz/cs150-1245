@@ -6,13 +6,13 @@
 	<Step Id="ngdbuild">
 	</Step>
 	<Step Id="map">
-		<Option Id="EffortLvl11Enum">0</Option>
 		<Option Id="MTBool">0</Option>
+		<Option Id="EffortLvl11Enum">0</Option>
 		<Option Id="FFPackEnum">3</Option>
 	</Step>
 	<Step Id="par">
 		<Option Id="OverallEff11Enum">0</Option>
-		<Option Id="MultiThreadEnum">5</Option>
+		<Option Id="MultiThreadEnum">1</Option>
 	</Step>
 	<Step Id="trce">
 	</Step>
