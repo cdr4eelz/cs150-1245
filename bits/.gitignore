@@ -1,0 +1,4 @@
+_impactbatch.log
+*.bit
+!*.gz
+!*.bz2
