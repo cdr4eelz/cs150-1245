@@ -1,9 +1,12 @@
 <?xml version="1.0"?>
 <Strategy Version="1" Minor="2">
-	<StratHandle Name="PlanAhead Defaults" Flow="XST14">
-		<Desc>PlanAhead Defaults (XST defaults with hierarchy)</Desc>
+	<StratHandle Name="CS150" Flow="XST14">
+		<Desc>From xst in build file</Desc>
 	</StratHandle>
 	<Step Id="xst">
+		<Option Id="NetHierEnum">0</Option>
+		<Option Id="NrGlobClkBufsInt">32</Option>
+		<Option Id="MoreOptsStr"><![CDATA[-async_to_sync NO -bram_utilization_ratio 100 -bus_delimiter <> -case Maintain -cross_clock_analysis NO -decoder_extract YES -dsp_utilization_ratio 100 -fsm_style LUT -glob_opt AllClockNets -hierarchy_separator / -ifmt mixed -iobuf YES -iuc NO -keep_hierarchy No -max_fanout 100000 -mux_style Auto -ofmt NGC -optimize_primitives NO -priority_extract Yes -p xc5vlx110t-1-ff1136 -ram_extract Yes -read_cores YES -reduce_control_sets Off -rom_extract Yes -rom_style Auto -rtlview Yes -safe_implementation No -shift_extract YES -slice_packing YES -slice_utilization_ratio 100 -slice_utilization_ratio_maxmargin 5 -use_clock_enable Auto -use_sync_reset Auto -use_sync_set Auto -verilog2001 YES -write_timing_constraints NO -xor_collapse YES]]></Option>
 	</Step>
 </Strategy>
 

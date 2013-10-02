@@ -5,7 +5,19 @@
 			Type="Constrs"
 			RelSrcDir="$PSRCDIR/constrs_1">
 		<Filter Type=""/>
+		<File Path="$PPRDIR/../hardware/src/ml505top.ucf">
+			<FileInfo>
+				<Attr Name="UsedInSynthesis"
+						Val="1"/>
+				<Attr Name="UsedInImplementation"
+						Val="1"/>
+				<Attr Name="UsedInSimulation"
+						Val="0"/>
+			</FileInfo>
+		</File>
 		<Config>
+			<Option Name="TargetConstrsFile"
+					Val="$PPRDIR/../hardware/src/ml505top.ucf"/>
 			<Option Name="ConstrsType"
 					Val="UCF"/>
 		</Config>
