@@ -2,15 +2,17 @@
 
 PLANDIR=$HOME/team45/plan
 PLANAHD=`which planAhead`
+TMPDIR=/scratch/tmp_plan
 
 echo $PLANAHD
 ls -al $PLANDIR
 
-if [[ -d ~/team45/plan ]]; then
-
-rm -Rf ~/team45/plan/tmp
-mkdir -p ~/team45/plan/tmp
-cd ~/team45/plan/tmp
-$PLANAHD ../CPU.ppr >start.log 2>&1 &
-
+if [[ -e $TMPDIR ]]; then
+  echo "TMPDIR exists: $(TMPDIR)"
+  exit 1
 fi
+
+rm -Rf $TMPDIR
+mkdir -p $TMPDIR
+cd $TMPDIR
+$PLANAHD ../CPU.ppr >start.log 2>&1 &

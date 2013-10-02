@@ -1,6 +1,39 @@
 <?xml version="1.0"?>
 <Runs Version="1" Minor="8">
-	<Run Id="synth_1" Type="Ft3:Synth" SrcSet="sources_1" Part="xc5vlx110tff1136-1" ConstrsSet="constrs_1" Description="PlanAhead Defaults (XST defaults with hierarchy)" State="current"/>
-	<Run Id="impl_1" Type="Ft2:EntireDesign" SynthRun="synth_1" Part="xc5vlx110tff1136-1" ConstrsSet="constrs_1" Description="ISE Defaults, including packing registers in IOs off" State="current"/>
+	<Run Id="synth_1" Type="Ft3:Synth" SrcSet="sources_1" Part="xc5vlx110tff1136-1" LaunchPart="xc5vlx110tff1136-1" ConstrsSet="constrs_1" Description="PlanAhead Defaults (XST defaults with hierarchy)" State="current" Dir="$PRUNDIR/synth_1" LaunchTime="1380689913">
+		<File Type="RUN-SRCS" Name="$PDATADIR/runs/synth_1/sources.xml"/>
+		<File Type="XST-NGC" Name="ml505top.ngc"/>
+		<File Type="RUN-CONSTRS" Name="$PDATADIR/runs/synth_1/constrs_in.xml"/>
+		<File Type="XST-SRP" Name="ml505top.srp"/>
+		<File Type="PA-XST" Name="ml505top.xst"/>
+		<File Type="RUN-STRAT" Name="$PDATADIR/runs/synth_1/synth_1.psg"/>
+		<File Type="PA-XSTPRJ" Name="ml505top.prj"/>
+	</Run>
+	<Run Id="impl_1" Type="Ft2:EntireDesign" SynthRun="synth_1" Part="xc5vlx110tff1136-1" LaunchPart="xc5vlx110tff1136-1" ConstrsSet="constrs_1" Description="ISE Defaults, including packing registers in IOs off" State="current" Dir="$PRUNDIR/impl_1" LaunchTime="1380690014">
+		<File Type="MAP-MRP" Name="ml505top.mrp"/>
+		<File Type="PA-EDIF" Name="ml505top.edf"/>
+		<File Type="MAP-MAP" Name="ml505top.map"/>
+		<File Type="PA-UCF" Name="ml505top.ucf"/>
+		<File Type="MAP-PSR" Name="ml505top.psr"/>
+		<File Type="PAR-NCD" Name="ml505top_routed.ncd"/>
+		<File Type="PAR-PAD" Name="ml505top_routed_pad.txt"/>
+		<File Type="PAR-PAR" Name="ml505top_routed.par"/>
+		<File Type="PAR-UNR" Name="ml505top_routed.unroutes"/>
+		<File Type="PA-CONSTRSDIR" Name=".constrs"/>
+		<File Type="BG-BIT" Name="ml505top.bit"/>
+		<File Type="BG-DRC" Name="ml505top.drc"/>
+		<File Type="BG-BGN" Name="ml505top.bgn"/>
+		<File Type="TRCE-TWR" Name="ml505top.twr"/>
+		<File Type="TRCE-TWX" Name="ml505top.twx"/>
+		<File Type="XDL-XDL" Name="ml505top_routed.xdl"/>
+		<File Type="WBT-USG" Name="usage_statistics_webtalk.html"/>
+		<File Type="WBT-LOG" Name="webtalk.log"/>
+		<File Type="RUN-CONSTRS" Name="$PDATADIR/runs/impl_1/constrs_in.xml"/>
+		<File Type="RUN-STRAT" Name="$PDATADIR/runs/impl_1/impl_1.psg"/>
+		<File Type="NGDB-NGD" Name="ml505top.ngd"/>
+		<File Type="NGDB-BLD" Name="ml505top.bld"/>
+		<File Type="MAP-NCD" Name="ml505top.ncd"/>
+		<File Type="MAP-PCF" Name="ml505top.pcf"/>
+	</Run>
 </Runs>
 

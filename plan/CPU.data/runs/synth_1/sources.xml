@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <DARoots Version="1"
 		Minor="22">
-	<FileSet Name="sources_1"
+	<FileSet Name="sources"
 			Type="DesignSrcs"
 			RelSrcDir="$PSRCDIR/sources_1">
 		<Filter Type="Srcs"/>
@@ -290,8 +290,6 @@
 					Val="RTL"/>
 			<Option Name="TopModule"
 					Val="ml505top"/>
-			<Define Name="CPUTYPE"
-					Val="MIPS150"/>
 		</Config>
 	</FileSet>
 </DARoots>
