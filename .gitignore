@@ -1,5 +1,6 @@
 .nfs*
 /docs/
+/hardware/cfg/mem_bd.bmm
 /hardware/sim/results/
 /hardware/sim/modelsim_libs/
 /hardware/[mq].err

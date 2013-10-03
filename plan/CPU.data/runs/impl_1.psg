@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <Strategy Version="1" Minor="2">
-	<StratHandle Name="CS150" Flow="ISE14">
-		<Desc>From makefile</Desc>
+	<StratHandle Name="ISE Defaults" Flow="ISE14">
+		<Desc>ISE Defaults, including packing registers in IOs off</Desc>
 	</StratHandle>
 	<Step Id="ngdbuild">
-		<Option Id="MoreOptsStr"><![CDATA[-nt timestamp -sd ~/team45/mem -bm ~/team45/mem/mem.bmm]]></Option>
+		<Option Id="MoreOptsStr"><![CDATA[-nt timestamp -bm ../../../hardware/cfg/mem.bmm]]></Option>
 	</Step>
 	<Step Id="map">
 		<Option Id="MTBool">0</Option>

@@ -1,9 +1,10 @@
-# TOP, SRC, TEMPLATES are passed in
+# TOP, SRC, INC, TEMPLATES are passed in
 XST_DEFS ?= 
-PRUNE ?= -type d -path "*_blk_ram" -prune -o
 BMM ?= $(TEMPLATES)/mem.bmm
+PRUNE ?= 
+#PRUNE ?= -type d -path "*_blk_ram" -prune -o
 
-SRCD ?= $(shell find $(SRC) $(PRUNE) -type d)
+SRCD ?= $(shell find $(SRC) $(PRUNE) -type d) $(INC)
 SRCS := $(sort $(foreach dir,$(SRCD),$(wildcard $(dir)/*.v)))
 
 UCF := $(wildcard $(SRC)/$(TOP).ucf)
