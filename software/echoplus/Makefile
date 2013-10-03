@@ -1,3 +1,3 @@
-TARGET := echo
+TARGET := echoplus
 
 include ../Makefile.llvm.in

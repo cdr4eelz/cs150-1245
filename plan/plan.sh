@@ -15,4 +15,4 @@ fi
 rm -Rf $TMPDIR
 mkdir -p $TMPDIR
 cd $TMPDIR
-$PLANAHD ../CPU.ppr >start.log 2>&1 &
+$PLANAHD $PLANDIR/CPU.ppr >start.log 2>&1 &

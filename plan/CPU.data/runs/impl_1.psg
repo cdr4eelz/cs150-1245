@@ -4,7 +4,7 @@
 		<Desc>From makefile</Desc>
 	</StratHandle>
 	<Step Id="ngdbuild">
-		<Option Id="MoreOptsStr"><![CDATA[-dd _ngo -nt timestamp]]></Option>
+		<Option Id="MoreOptsStr"><![CDATA[-nt timestamp -sd ~/team45/mem -bm ~/team45/mem/mem.bmm]]></Option>
 	</Step>
 	<Step Id="map">
 		<Option Id="MTBool">0</Option>
@@ -12,8 +12,8 @@
 		<Option Id="FFPackEnum">3</Option>
 	</Step>
 	<Step Id="par">
-		<Option Id="OverallEff11Enum">1</Option>
 		<Option Id="MultiThreadEnum">1</Option>
+		<Option Id="OverallEff11Enum">1</Option>
 	</Step>
 	<Step Id="trce">
 	</Step>
