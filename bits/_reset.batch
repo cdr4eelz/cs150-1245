@@ -1,0 +1,2 @@
+cleancablelock
+exit
