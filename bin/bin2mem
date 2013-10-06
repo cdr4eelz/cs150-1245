@@ -1,0 +1,40 @@
+#!/usr/bin/python2
+
+import sys
+
+data = sys.stdin.read()
+base = 0
+length = len(data)
+align = 4 # Must be multiple of 4.  We need to match our BlockRAM and auto-adust for platform endienness (of this script)
+pad = (align-(length%align))%align
+data += '\0' * pad
+total = len(data)
+
+print '// MEM style dump (with fake parity added)::'
+print '//   BAS: %08x (%d)' % (base,base)
+print '//   LEN: {}'.format(length)
+print '//   ALN: {}'.format(align)
+print '//   PAD: {}'.format(pad)
+print '//   TOT: {}'.format(total)
+print
+print '// This is suitable for a call such as this:'
+print '//  data2mem -bm mem_bd.bmm -bd mydata.mem tag MipsyMemory.BRAM_INST -bt ml505top.bit'
+print '//    :mydata.mem: output of this script'
+print '//    :MipsyMemory: is ADDRESS_MAP name in the .bmm file'
+print '//    :BRAM_INST: is ADDRESS_SPACE name in the .bmm file (vs. BRAM_DATA)'
+print
+
+print '@%08x' % base
+for i in xrange(0, length, 4): # Deal with entire 32-bit word at a time
+    for j in xrange(0, 4, 1): # Our data lanes fill big-endian (per 32-bit word)
+        bb = ord(data[i+j])
+        ones = ((bb>>0)&0x11) + ((bb>>1)&0x11) + ((bb>>2)&0x11) + ((bb>>3)&0x11)
+        ones = (ones&0x07) + (ones>>4) #Add the separate nibble-sums into one value
+        print '  %01x %02x' % (ones,bb),
+    print
+print
+print '// Pattern is a single bit of parity preceeding each byte encoded, since our memory bus lanes are 8-bits and parity is always 1-bit-per-byte.'
+print '// Wierdness is that the parity occupies a whole nibble preceeding each byte sent (with upper 3 bits ignored), making 3-nibbles per desired byte.'
+print '// Since whitespace is ignored, spaces separate parity nibble from bytes and linebreaks separate 4-byte words (turned into 6 bytes due to 4 extra nibbles)'
+print '// Since upper 3 bits of parity are getting ignored, we output the count of ones, for easier manual checking but equivalent low-bit==parity.'
+

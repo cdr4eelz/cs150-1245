@@ -13,6 +13,7 @@ $(TARGET): $(COBJS) $(SOBJS)
 	mips-objcopy -O binary $(TARGET).elf $(TARGET).bin
 	bin2mif < $(TARGET).bin > $(TARGET).mif
 	bin2coe < $(TARGET).bin > $(TARGET).coe
+	bin2mem < $(TARGET).bin > $(TARGET).mem
 	bin2rom $(TARGET) 0 < $(TARGET).bin > $(TARGET).v
 
 %.c.llvm: %.c
@@ -25,7 +26,7 @@ $(TARGET): $(COBJS) $(SOBJS)
 	mips-as $< -o $<.o
 
 clean:
-	rm -f $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).bin $(TARGET).mif $(TARGET).coe $(TARGET).v
+	rm -f $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).bin $(TARGET).mif $(TARGET).coe $(TARGET).mem $(TARGET).v
 
 .PHONY: clean
 

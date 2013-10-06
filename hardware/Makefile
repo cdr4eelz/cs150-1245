@@ -26,7 +26,11 @@ sync:
 cleaner:
 	rm -rf $(BUILDDIR)
 
-cleanest: cleaner
+cleanest:
 	rm -rf $(D_BLD)
 
-.PHONY := $(TARGETS) sync cleaner cleanest
+cleanerer:
+	-rm -rf build /scratch/*
+	ls ./ /scratch
+
+.PHONY := $(TARGETS) sync cleaner cleanest cleanerer

@@ -1,6 +1,6 @@
 set -tmpdir "xst/tmp"
 set -xsthdpdir "xst"
-run ##XSTDEFINES##
+run -define {BUILDMETHOD=1 ##XSTDEFINES##}
 -ifn ##TOPMODULE##.prj
 -ifmt mixed
 -ofn ##TOPMODULE##

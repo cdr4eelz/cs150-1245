@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ -z "$1" ]
+then
+    echo "usage: $0 <bitfile>"
+    exit 1
+fi
+
+impact -batch /dev/stdin <<EOF
+setMode -bscan
+setCable -port auto
+identify
+assignFile -p 5 -file $1
+program -p 5
+quit
+EOF

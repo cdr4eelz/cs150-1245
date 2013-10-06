@@ -3,11 +3,13 @@ TARGETS ?= $(BINFILES:%.bin=%)
 MIFS ?= $(TARGETS:%=%.mif)
 COES ?= $(TARGETS:%=%.coe)
 VEES ?= $(TARGETS:%=%.v)
+ASMS ?= $(TARGETS:%=%.s)
+MEMS ?= $(TARGETS:%=%.mem)
 
 
 default: all
 
-all: count mifs coes vees
+all: count mifs coes vees asms mems
 
 count: $(BINFILES)
 	ls -al $(BINFILES)
@@ -19,17 +21,27 @@ coes: $(COES)
 
 vees: $(VEES)
 
+asms: $(ASMS)
+
+mems: $(MEMS)
+
 %.mif: %.bin
 	bin2mif < $< > $@
 
 %.coe: %.bin
 	bin2coe < $< > $@
 
+%.mem: %.bin
+	bin2mem < $< > $@
+
 %.v: %.bin
 	bin2rom test 0 < $< > $@
 
-clean:
-	rm -f rm *.coe *.mif *.v
+%.s: %.bin
+	bin2hack test 0 < $< > $@
 
-.phony: clean all count
+clean:
+	rm -f rm *.coe *.mif *.mem *.v *.s
+
+.phony: clean all count mifs coes mems vees asms
 

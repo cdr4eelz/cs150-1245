@@ -1,0 +1,13 @@
+#!/usr/bin/python2
+
+import sys, struct
+
+data = sys.stdin.read()
+
+print 'memory_initialization_radix=16;'
+print 'memory_initialization_vector='
+
+for i in xrange(0, len(data), 4):
+    print '%08x' % struct.unpack('>L', data[i:i+4])[0]
+
+print ';'

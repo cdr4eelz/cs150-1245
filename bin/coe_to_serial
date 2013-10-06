@@ -1,0 +1,69 @@
+#!/bin/bash
+# author: jamesparker@berkeley.edu
+
+if [ -z "$1" ]
+then
+    echo "usage: $0 <coe_file> <address>"
+    exit 1
+fi
+
+FILE=$1
+ADDRESS=$2
+SIZE="0"
+
+# check if the file exists
+if [ -f "$FILE" ];
+then
+   SIZE=$(stat -c%s $FILE)
+   echo -e  "\nFile $FILE is $SIZE bytes"
+else
+   echo -e "\nFile $FILE does not exist"
+   exit 1
+fi
+
+
+# count the bytes to semd
+COUNT=0
+while read LINE
+do
+    if [[ $LINE =~ ^[0-9a-f] ]];
+    then
+       COUNT=$[$COUNT+4]
+   fi
+done < $FILE
+
+echo -e "\n$COUNT bytes will be sent"
+
+#write a newline to clear any input tokens
+echo -ne "\x0d" > /dev/ttyS0
+
+# Send the command one char at a time
+COMMAND="file $ADDRESS $COUNT "
+j=-1;
+while (( j++ < ${#COMMAND} ))
+do
+    echo -n "${COMMAND:j:1}"  > /dev/ttyS0
+done
+
+echo -e "\nIssued command: $COMMAND"
+
+# Write the file out one character at a time
+# We should be able to just cat the bin file, but it doesn't seem to work
+# so the script sends the characters one at a time.
+echo -e "\nWriting $COUNT bytes..."
+SENT=0
+while read LINE
+do
+    if [[ $LINE =~ ^[0-9a-f] ]];
+    then
+       for i in {0..7}
+       do
+           echo -n "${LINE:i:1}" > /dev/ttyS0 
+       done
+      SENT=$[$SENT+4]
+      echo -ne "Sent $SENT/$COUNT\r"
+    fi
+done < $FILE
+
+echo -e  "\n\nFile written."
+

@@ -7,3 +7,5 @@ export MGLS_LICENSE_FILE=1717@license-srv.eecs.berkeley.edu:1717@sunv40z-1.eecs.
 export XILINXD_LICENSE_FILE=/opt/Xilinx.lic:2100@license-srv.eecs.berkeley.edu
 
 alias fpga_editor='DISPLAY=:0 fpga_editor'
+
+export PATH=$HOME/team45/bin:$PATH
