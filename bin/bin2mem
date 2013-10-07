@@ -12,10 +12,10 @@ total = len(data)
 
 print '// MEM style dump (with fake parity added)::'
 print '//   BAS: %08x (%d)' % (base,base)
-print '//   LEN: {}'.format(length)
-print '//   ALN: {}'.format(align)
-print '//   PAD: {}'.format(pad)
-print '//   TOT: {}'.format(total)
+print '//   LEN: %08x (%d)' % (length,length)
+print '//   ALN: %08x (%d)' % (align,align)
+print '//   PAD: %08x (%d)' % (pad,pad)
+print '//   TOT: %08x (%d)' % (total,total)
 print
 print '// This is suitable for a call such as this:'
 print '//  data2mem -bm mem_bd.bmm -bd mydata.mem tag MipsyMemory.BRAM_INST -bt ml505top.bit'

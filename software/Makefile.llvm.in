@@ -6,15 +6,35 @@ SOBJS := $(SSRCS:%.s=%.s.o)
 
 LDSRC := $(TARGET).ld
 
-default: $(TARGET)
+all: inst data
 
-$(TARGET): $(COBJS) $(SOBJS)
-	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $(LDSRC) $^ -o $@.elf
-	mips-objcopy -O binary $(TARGET).elf $(TARGET).bin
-	bin2mif < $(TARGET).bin > $(TARGET).mif
-	bin2coe < $(TARGET).bin > $(TARGET).coe
-	bin2mem < $(TARGET).bin > $(TARGET).mem
-	bin2rom $(TARGET) 0 < $(TARGET).bin > $(TARGET).v
+inst: $(TARGET)_INST.mif $(TARGET)_INST.coe $(TARGET)_INST.mem $(TARGET)_INST.v
+
+data: $(TARGET)_DATA.mif $(TARGET)_DATA.coe $(TARGET)_DATA.mem $(TARGET)_DATA.v
+
+$(TARGET).elf: $(COBJS) $(SOBJS)
+	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $(LDSRC) $^ -o $@
+	chmod -x $@
+
+%_INST.bin: %.elf
+	mips-objcopy -j .text -p -O binary $^ $@
+	chmod -x $@
+
+%_DATA.bin: %.elf
+	mips-objcopy -j .data -p -O binary $^ $@
+	chmod -x $@
+
+%.mif: %.bin
+	bin2mif < $^ > $@
+
+%.coe: %.bin
+	bin2coe < $^ > $@
+
+%.mem: %.bin
+	bin2mem < $^ > $@
+
+%.v: %.bin
+	bin2rom < $^ > $@
 
 %.c.llvm: %.c
 	clang -static -emit-llvm -S -o $<.llvm $<
@@ -26,7 +46,7 @@ $(TARGET): $(COBJS) $(SOBJS)
 	mips-as $< -o $<.o
 
 clean:
-	rm -f $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).bin $(TARGET).mif $(TARGET).coe $(TARGET).mem $(TARGET).v
+	rm -f $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET)_*.bin $(TARGET)_*.mif $(TARGET)_*.coe $(TARGET)_*.mem $(TARGET)_*.v
 
-.PHONY: clean
+.PHONY: all inst data clean
 

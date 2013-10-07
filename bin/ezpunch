@@ -1,10 +1,15 @@
 #!/bin/bash
 
+BIT="$1"
+BMM="$2"
+MEM="$3"
+RAM="$4"
+
 if [ -z "$1" ]
 then
-    echo "usage: $0 <bitfile> <bmmfile> <memfile-with-parity>"
+    echo "usage: $0 <bitfile> <bmmfile> <memfile-with-parity> <blockram-id>"
     exit 1
 fi
 
-data2mem -bm $3 -bd $2 tag MipsyMemory.BRAM_INST -bt $1 -bx ./
+data2mem -bm "$BMM" -bd "$MEM" tag "$RAM" -bt "$BIT" -bx ./
 
