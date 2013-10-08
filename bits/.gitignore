@@ -1,4 +1,6 @@
 _impactbatch.log
+[ID]MEM*.mem
 *.bit
+*.bmm
 !*.gz
 !*.bz2

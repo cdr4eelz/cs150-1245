@@ -1,28 +1,37 @@
-CSRCS := $(wildcard *.c)
-COBJS := $(CSRCS:%.c=%.c.llvm.s.o)
+LDSRC ?= ../datainst.ld
+OUTS ?= mif coe mem v
+SECS ?= data inst
+PSRCS ?= $(wildcard *.p)
+CSRCS ?= $(wildcard *.c)
+SSRCS ?= $(wildcard *.s)
+OBJS ?= $(POBJS) $(COBJS) $(SOBJS)
 
-SSRCS := $(wildcard *.s)
-SOBJS := $(SSRCS:%.s=%.s.o)
+POBJS = $(PSRCS:%.p=%.p.llvm.s.o)
+COBJS = $(CSRCS:%.c=%.c.llvm.s.o)
+SOBJS = $(SSRCS:%.s=%.s.o)
 
-LDSRC := $(TARGET).ld
+all: both $(SECS)
+data: $(OUTS:%=$(TARGET).data.%)
+inst: $(OUTS:%=$(TARGET).inst.%)
+both: $(TARGET).both.mem
 
-all: inst data
+bins: $(SECS:%=$(TARGET).%.bin) #$(TARGET).both.bin
 
-inst: $(TARGET)_INST.mif $(TARGET)_INST.coe $(TARGET)_INST.mem $(TARGET)_INST.v
-
-data: $(TARGET)_DATA.mif $(TARGET)_DATA.coe $(TARGET)_DATA.mem $(TARGET)_DATA.v
-
-$(TARGET).elf: $(COBJS) $(SOBJS)
+$(TARGET).elf: $(OBJS)
 	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $(LDSRC) $^ -o $@
 	chmod -x $@
 
-%_INST.bin: %.elf
-	mips-objcopy -j .text -p -O binary $^ $@
-	chmod -x $@
-
-%_DATA.bin: %.elf
+%.data.bin: %.elf
 	mips-objcopy -j .data -p -O binary $^ $@
 	chmod -x $@
+
+%.inst.bin: %.elf
+	mips-objcopy -j .inst -p -O binary $^ $@
+	chmod -x $@
+
+#%.both.bin: %.data.bin %.inst.bin
+#	truncate -s 16K $@
+#	cat $^ > $@
 
 %.mif: %.bin
 	bin2mif < $^ > $@
@@ -31,7 +40,11 @@ $(TARGET).elf: $(COBJS) $(SOBJS)
 	bin2coe < $^ > $@
 
 %.mem: %.bin
-	bin2mem < $^ > $@
+	bin2mem 0 < $^ > $@
+
+%.both.mem: %.data.bin %.inst.bin
+	bin2mem     0 < $*.data.bin > $@
+	bin2mem 16384 < $*.inst.bin | sed s/^@00000000/@00004000/ >> $@
 
 %.v: %.bin
 	bin2rom < $^ > $@
@@ -46,7 +59,7 @@ $(TARGET).elf: $(COBJS) $(SOBJS)
 	mips-as $< -o $<.o
 
 clean:
-	rm -f $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET)_*.bin $(TARGET)_*.mif $(TARGET)_*.coe $(TARGET)_*.mem $(TARGET)_*.v
+	rm -f $(POBJS) $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).*.bin $(TARGET).*.mif $(TARGET).*.coe $(TARGET).*.mem $(TARGET).*.v
 
-.PHONY: all inst data clean
+.PHONY: clean
 

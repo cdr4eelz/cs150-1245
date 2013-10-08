@@ -11,5 +11,5 @@ then
     exit 1
 fi
 
-data2mem -bm "$BMM" -bd "$MEM" tag "$RAM" -bt "$BIT" -bx ./
+echo data2mem -bm "$BMM" -bd "$MEM" tag "$RAM" -bt "$BIT" -bx ./
 

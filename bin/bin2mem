@@ -30,11 +30,12 @@ for i in xrange(0, length, 4): # Deal with entire 32-bit word at a time
         bb = ord(data[i+j])
         ones = ((bb>>0)&0x11) + ((bb>>1)&0x11) + ((bb>>2)&0x11) + ((bb>>3)&0x11)
         ones = (ones&0x07) + (ones>>4) #Add the separate nibble-sums into one value
-        print '  %01x %02x' % (ones,bb),
+        print '  %01x %02x' % (1,bb),
     print
 print
 print '// Pattern is a single bit of parity preceeding each byte encoded, since our memory bus lanes are 8-bits and parity is always 1-bit-per-byte.'
 print '// Wierdness is that the parity occupies a whole nibble preceeding each byte sent (with upper 3 bits ignored), making 3-nibbles per desired byte.'
 print '// Since whitespace is ignored, spaces separate parity nibble from bytes and linebreaks separate 4-byte words (turned into 6 bytes due to 4 extra nibbles)'
-print '// Since upper 3 bits of parity are getting ignored, we output the count of ones, for easier manual checking but equivalent low-bit==parity.'
+print '// A "1" is output for all parity bits'
+#print '// Since upper 3 bits of parity are getting ignored, we output the count of ones+1, for easier manual checking but equivalent low-bit==parity.'
 
