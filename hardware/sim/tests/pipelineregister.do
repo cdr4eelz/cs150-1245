@@ -1,3 +1,3 @@
 start PipelineRegisterTestbench
 log -r /*
-run 10000us
+run 1000us

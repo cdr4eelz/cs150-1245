@@ -4,7 +4,7 @@ MODELSIM_LIBS ?= mti_se/10.1b_2/lin64
 MODELSIM_LIBD ?= $(XILINX_BASE)/ISE/verilog
 MODELSIM_GLBL ?= src/glbl.v
 
-SRC ?= ../src
+SRC ?= ../src ../inc
 PRUNE ?= -type d -path "*_blk_ram" -prune -o
 SRCD ?= $(shell find $(SRC) $(PRUNE) -type d)
 SRCS ?= $(sort $(foreach dir,$(SRCD),$(wildcard $(dir)/*.v)))
