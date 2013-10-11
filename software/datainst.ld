@@ -2,7 +2,7 @@
    yet place things in convenient contiguous memory for the
    data2mem tool to be happier and the bss file to be cleaner.
    Despite all this, I ended up just having the makefile slap
-   the two separate data/inst segments together manually!
+   the two separate data/text segments together manually!
    (So nothing special is actually needed like demonstrated here!)
 */
 
@@ -23,5 +23,5 @@ SECTIONS
   . = 0x10000000;
   .data : AT ( 0x00000000 ) { *(.rodata.*) *(.data) } >VDATA :PDATA
   . = 0x20000000;
-  .inst : AT ( 0x00004000 ) { *(.start)    *(.text) } >VINST :PINST
+  .text : AT ( 0x00004000 ) { *(.start)    *(.text) } >VINST :PINST
 }

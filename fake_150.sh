@@ -21,11 +21,14 @@ export MASTER=cs150
 export PATH=/usr/local/bin:/usr/sww/bin:/usr/bin:/bin:/usr/ucb:/usr/sfw/bin:/share/b/runas/${ARCH}:/share/b/bin
 
 unset XILINX
-if [[ -d /opt/Xilinx/default ]]; then
+SETTINGS=`cd /opt/Xilinx && PATH="/opt/Xilinx/default/ISE_DS:/opt/Xilinx/14.6/ISE_DS:/opt/Xilinx/14.1/ISE_DS" /usr/bin/which settings64.sh`
+if [[ -f "$SETTINGS" ]]; then
+  . "$SETTINGS"
+elif [[ -d /opt/Xilinx/default/ISE_DS ]]; then
   . /opt/Xilinx/default/ISE_DS/settings64.sh
-elif [[ -d /opt/Xilinx/14.6 ]]; then
+elif [[ -d /opt/Xilinx/14.6/ISE_DS ]]; then
   . /opt/Xilinx/14.6/ISE_DS/settings64.sh
-elif [[ -d /opt/Xilinx/14.1 ]]; then
+elif [[ -d /opt/Xilinx/14.1/ISE_DS ]]; then
   . /opt/Xilinx/14.1/ISE_DS/settings64.sh
 else
   . /opt/Xilinx/14.*/ISE_DS/settings64.sh

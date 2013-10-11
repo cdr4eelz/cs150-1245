@@ -26,7 +26,7 @@ $(TARGET).elf: $(OBJS)
 	chmod -x $@
 
 %.inst.bin: %.elf
-	mips-objcopy -j .inst -p -O binary $^ $@
+	mips-objcopy -j .text -p -O binary $^ $@
 	chmod -x $@
 
 #%.both.bin: %.data.bin %.inst.bin

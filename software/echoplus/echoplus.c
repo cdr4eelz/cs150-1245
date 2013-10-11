@@ -42,12 +42,14 @@ void TRAN_cstr(const char *str)
 }
 
 
+const char greeting[] = "\r\n\r\n### ECHOPLUS ###\r\n\r\n";
+
 int main(void)
 {
 	TRAN_byte('>');
 	unsigned char offset = 0;
 	for ( ; ; ) {
-		TRAN_cstr("\r\n\r\n### ECHOPLUS ###\r\n\r\n");
+		TRAN_cstr(greeting);
 		for ( ; ; ) {
 			unsigned char bb = RECV_byte();
 			if (bb == 0x01) break; // CTRL-A to advance
