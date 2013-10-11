@@ -9,7 +9,7 @@ TOP ?= ml505top
 BUILDDIR := $(D_BLD)/$(TOP)
 
 SHELL := bash
-RSYNC := rsync -EXLAtg --verbose
+RSYNC := rsync -ELAtg --verbose
 TARGETS = all synth xst map par timing bitgen impact report schematic schem ise ngc ncd xdl printenv printvars clean
 MAKEARGS := TOP=$(TOP) SRC=./_src INC=./_inc TEMPLATES=./_cfg
 

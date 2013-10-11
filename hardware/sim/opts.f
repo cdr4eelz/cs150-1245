@@ -1,0 +1,10 @@
+-lib work
+-L xilinxcorelib_ver
+-L unisims_ver
+-L unimacro_ver
+-L secureip
+-pedanticerrors
+-msgmode both
+-displaymsgmode both
+-wlfslim 50M
+-default_radix hex
