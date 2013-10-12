@@ -1,12 +1,5 @@
-# TOP, SRC, INC, TEMPLATES are passed in
-XST_DEFS ?= 
-BMM ?= $(TEMPLATES)/mem.bmm
-PRUNE ?= 
-#PRUNE ?= -type d -path "*_blk_ram" -prune -o
-
-SRCD ?= $(shell find $(SRC) $(PRUNE) -type d) $(INC)
-SRCS := $(sort $(foreach dir,$(SRCD),$(wildcard $(dir)/*.v)))
-
+# TOP, SRC, TEMPLATES are passed in
+SRCS := $(shell find $(SRC) -type f -name '*.v')
 UCF := $(wildcard $(SRC)/$(TOP).ucf)
 
 PART := xc5vlx110t-ff1136-1
@@ -28,7 +21,7 @@ $(XST_TMPDIR):
 	mkdir -p $@
 
 $(XST_BATCH): $(TEMPLATES)/xst.batch $(XST_PRJ)
-	sed -e "s/##TOPMODULE##/$(TOP)/g" -e "s/##XSTDEFINES##/$(XST_DEFS)/g" < $< > $@
+	sed "s/##TOPMODULE##/$(TOP)/g" < $< > $@
 
 $(XST_OUT): $(XST_BATCH)
 	xst -ifn $(TOP).xst -ofn $(TOP).syr
@@ -39,13 +32,11 @@ synth xst: $(XST_OUT)
 #NGDBUILD
 NGDBUILD_OUT := $(TOP).ngd
 UCF_FLAG := $(if $(UCF),-uc $(UCF))
-NGC_DIRS := $(foreach dir,$(SRCD),$(addprefix -sd ,$(dir) ))
-NGD_XARG += $(if $(BMM),-bm $(BMM))
+NGC_DIRS := $(shell find $(SRC) -type d -exec echo -n "-sd {} " \;)
 
 $(NGDBUILD_OUT): $(XST_OUT) $(UCF)
-	ngdbuild $(NGD_XARG) -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) $(XST_OUT) $@
+	ngdbuild -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) $(XST_OUT) $@
 
-ngc: $(NGDBUILD_OUT)
 
 
 #MAP
@@ -59,22 +50,11 @@ map: $(MAP_OUT)
 
 #PAR
 PAR_OUT := $(TOP).ncd
-PAR_OPTS := $(shell cat $(TEMPLATES)/par.opts | tr '\n' ' ')
 
 $(PAR_OUT): $(MAP_OUT)
-	par $(PAR_OPTS) $(MAP_OUT) $@ $(TOP).pcf
+	par -w -ol high -mt off $(MAP_OUT) $@ $(TOP).pcf
 
 par: $(PAR_OUT)
-
-#NCD
-ncd: $(TOP)_map.ncd $(TOP).ncd
-
-#XDL
-xdl: $(TOP)_map.xdl $(TOP).xdl
-
-%.xdl: %.ncd
-	xdl -ncd2xdl $< $@
-
 
 #TRCE
 TCRE_OUT := $(TOP).twr
@@ -86,15 +66,11 @@ timing: $(TCRE_OUT)
 
 #BITGEN
 BITFILE := $(TOP).bit
-BITBZIP := $(BITFILE).bz2
 
 $(BITFILE): $(PAR_OUT)
-	bitgen -w -l $< $@ $(TOP).pcf
+	bitgen -w $< $@ $(TOP).pcf
 
-$(BITBZIP): $(BITFILE)
-	bzip2 --keep --stdout $< > $@
-
-bitgen: $(BITFILE) $(BITBZIP)
+bitgen: $(BITFILE)
 
 #IMPACT
 IMPACT_BATCH := impact.batch
@@ -112,19 +88,6 @@ report:
 schematic schem ise:
 	ise &
 
-all: bitgen timing
+all: $(BITFILE) timing
 
-clean:
-	rm -rf ./*
-
-printenv:
-	set | grep -e '^[[:alnum:]]*='
-
-# Tricks from http://www.cmcrossroads.com/ask-mr-make/6521-dumping-every-makefile-variable
-print-%:
-	echo $* = $($*)
-
-printvars:
-	@$(foreach V,$(sort $(.VARIABLES)), $(warning $V=$($V) ($(value $V))))
-
-.PHONY = all synth xst map par timing bitgen impact report schematic schem ise ngc ncd xdl printenv printvars clean
+.PHONY = all synth xst map par timing bitgen impact report schematic schem ise clean

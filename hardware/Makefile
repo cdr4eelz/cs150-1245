@@ -1,36 +1,21 @@
-#D_BLD ?= /scratch/q_build_$(USER)
-#D_CFG ?= q_cfg
-D_BLD ?= build
-D_CFG ?= cfg
-D_SRC ?= src
-D_INC ?= inc
-TOP ?= ml505top
+TOP := ml505top
+SRC := src
+TEMPLATES := cfg
 
-BUILDDIR := $(D_BLD)/$(TOP)
+TARGETS = all synth xst map par timing bitgen impact report schematic schem ise
 
-SHELL := bash
-RSYNC := rsync -ELAtg --verbose
-TARGETS = all synth xst map par timing bitgen impact report schematic schem ise ngc ncd xdl printenv printvars clean
-MAKEARGS := TOP=$(TOP) SRC=./_src INC=./_inc TEMPLATES=./_cfg
+BUILDDIR := build/$(TOP)
+MAKEFILE := $(BUILDDIR)/Makefile
+MAKEARGS := TOP=$(TOP) SRC=../../$(SRC) TEMPLATES=../../$(TEMPLATES)
 
-$(TARGETS): sync
-	$(MAKE) -C $(BUILDDIR) $(MAKEARGS) $@ > >(tee -a $(BUILDDIR)/log.out) 2> >(tee -a $(BUILDDIR)/log.err)
+$(TARGETS): $(MAKEFILE)
+	$(MAKE) $@ -C $(BUILDDIR) $(MAKEARGS)
 
-sync:
-	mkdir -p $(BUILDDIR)
-	$(RSYNC) --recursive --delete $(D_CFG)/ $(BUILDDIR)/_cfg
-	$(RSYNC) --recursive --delete $(D_SRC)/ $(BUILDDIR)/_src
-	$(RSYNC) --dirs      --delete $(D_INC)/ $(BUILDDIR)/_inc
-	ln -sf -t $(BUILDDIR) _cfg/Makefile
+$(MAKEFILE): cfg/Makefile
+	mkdir -p build/$(TOP)
+	cp $< $@
 
-cleaner:
-	rm -rf $(BUILDDIR)
+clean:
+	rm -rf build
 
-cleanest:
-	rm -rf $(D_BLD)
-
-cleanerer:
-	-rm -rf build /scratch/*
-	ls ./ /scratch
-
-.PHONY := $(TARGETS) sync cleaner cleanest cleanerer
+.PHONY := $(TARGETS) clean
