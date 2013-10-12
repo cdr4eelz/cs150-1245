@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [[ "$1"=="" ]]; then
+  make clean
+fi
+make $1 2>&1 | tee qb.log | grep -f sparse.grep
+clear
+egrep --color build/ml505top/_xmsgs/* -e '"warning"'
+egrep --color build/ml505top/_xmsgs/* -e '"error"'
