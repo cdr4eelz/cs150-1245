@@ -2,52 +2,58 @@
 
 `timescale 1ns/1ps
 
-module MIPS150 (
-    input   clk, rst, stall,
+module MIPS150(
+    input clk,
+    input rst,
 
     // Serial
-    input   FPGA_SERIAL_RX,
-    output  FPGA_SERIAL_TX,
+    input FPGA_SERIAL_RX,
+    output FPGA_SERIAL_TX,
 
-    // Memory system connections
-    output [31: 0]  dcache_addr,
-    output [31: 0]  icache_addr,
-    output [ 3: 0]  dcache_we,
-    output [ 3: 0]  icache_we,
-    output          dcache_re,
-    output          icache_re,
-    output [31: 0]  dcache_din,
-    output [31: 0]  icache_din,
-    input  [31: 0]  dcache_dout,
-    input  [31: 0]  instruction,
+    // Memory system ports
+    output [31:0] dcache_addr,
+    output [31:0] icache_addr,
+    output [3:0] dcache_we,
+    output [3:0] icache_we,
+    output dcache_re,
+    output icache_re,
+    output [31:0] dcache_din,
+    output [31:0] icache_din,
+    input [31:0] dcache_dout,
+    input [31:0] instruction,
+    input stall,
 
-    output [31: 0]  bypass_addr,
-    output [31: 0]  bypass_din,
-    output [ 3: 0]  bypass_we
+    output [31:0] bypass_addr,
+    output [31:0] bypass_din,
+    output [3:0]  bypass_we,
 
-    /*
     // Graphics ports
-    input           filler_ready,
-    input           line_ready,
-    output  [23: 0] filler_color,
-    output          filler_valid,
-    output  [31: 0] line_color,
-    output  [ 9: 0] line_point,
-    output          line_color_valid,
-    output          line_x0_valid,
-    output          line_y0_valid,
-    output          line_x1_valid,
-    output          line_y1_valid,
-    output          line_trigger,
-    */
+    input          filler_ready,
+    input          line_ready,
+    output  [23:0] filler_color,
+    output         filler_valid,
+    output  [31:0] line_color,
+    output  [9:0]  line_point,
+    output         line_color_valid,
+    output         line_x0_valid,
+    output         line_y0_valid,
+    output         line_x1_valid,
+    output         line_y1_valid,
+    output         line_trigger
 );
 
-    // Remove these for CP5.
+`ifndef COLT45_pre2
+`ifndef COLT45_pre3
+    // Remove these for CP5. 
     assign line_color_valid = 0;
     assign line_x0_valid = 0;
     assign line_x1_valid = 0;
     assign line_y0_valid = 0;
     assign line_y1_valid = 0;
+`endif // !COLT45_pre3
+`endif // !COLT45_pre2
+
+// endmodule
 
     wire stl = stall;   // Just rename so it matches nicely internal to CPU
     `BUS_CPUGlobal_type CPUGlobal;
@@ -212,7 +218,8 @@ module MIPS150 (
         .IOMAP(IOMAP)
     );
 
-`ifdef DBG
+
+`ifdef COLT45_DBG
     // synthesis translate_off
 
     reg[8:0] DBG_cycle, DBG_step;
@@ -299,8 +306,7 @@ module MIPS150 (
             `MEMIO_WData(IOMAP), `MEMIO_WData(IOMAP), `MEMIO_WMask(IOMAP));
         end
     end
-
 // synthesis translate_on
-`endif
+`endif //COLT45_DBG
 
 endmodule

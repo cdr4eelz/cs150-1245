@@ -1,1 +1,1 @@
-../cfg/Makefile
+../cfg/Makefile.x

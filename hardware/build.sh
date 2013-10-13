@@ -33,7 +33,7 @@ echo -e "\n\n" |tee -a $F_OUT $F_ERR
 #Run the make itself (as sub-process)
 export D_CFG
 export D_BLD
-make $@ > >(tee -a $F_OUT | grep -n -f sparse.grep) 2> >(tee -a $F_ERR >&2) #&
+make -f Makefile.x $@ > >(tee -a $F_OUT | grep -n -f sparse.grep) 2> >(tee -a $F_ERR >&2) #&
 #PID="$!"
 #echo "PID: $PID" |tee $F_PID #Flag as running (real PID now)
 #wait $pid

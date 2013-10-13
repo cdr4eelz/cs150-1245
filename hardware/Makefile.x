@@ -21,7 +21,7 @@ sync:
 	$(RSYNC) --recursive --delete $(D_CFG)/ $(BUILDDIR)/_cfg
 	$(RSYNC) --recursive --delete $(D_SRC)/ $(BUILDDIR)/_src
 	$(RSYNC) --dirs      --delete $(D_INC)/ $(BUILDDIR)/_inc
-	ln -sf -t $(BUILDDIR) _cfg/Makefile
+	ln -sf _cfg/Makefile $(BUILDDIR)/Makefile
 
 cleaner:
 	rm -rf $(BUILDDIR)

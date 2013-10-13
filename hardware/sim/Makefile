@@ -24,11 +24,11 @@ build/Makefile:
 	(cd build; for file in $(XILINX_LIBS_MAP); do \
 	vmap $$(basename $$file) $$file || exit 1; done)
 	(cd build; \
-	vlog +acc -vopt -source -nocovercells  \
+	vlog +acc -source -nocovercells  \
 	/opt/Xilinx/14.1/ISE_DS/ISE/verilog/src/glbl.v \
 	|| exit 1)
 	(cd build; for file in $(SRCS); do \
-	vlog +acc -vopt -source -nocovercells $(INC) ../$$file || exit 1; done)
+	vlog +acc -source -nocovercells $(INC) ../$$file || exit 1; done)
 	(cd build; vmake > Makefile)
 
 results:
