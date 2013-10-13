@@ -1,0 +1,17 @@
+#!/bin/bash
+
+IN_ELF="$1"
+I_BASE="20002100"
+D_BASE="10003200"
+
+TMP_ELF="_prog.elf"
+
+mips-objdump -x "${IN_ELF}"
+mips-objcopy --change-section-vma ".data=0x${D_BASE}" --change-section-vma ".text=0x${I_BASE}" "${IN_ELF}" "${TMP_ELF}"
+mips-objdump -x "$TMP_ELF"
+mips-objcopy -j .text -O binary "$TMP_ELF" _inst.bin
+mips-objcopy -j .data -O binary "$TMP_ELF" _data.bin
+bin2coe < _inst.bin > _inst.coe
+bin2coe < _data.bin > _data.coe
+echo "coe_to_serial _inst.coe ${I_BASE}"
+echo "coe_to_serial _data.coe ${D_BASE}"

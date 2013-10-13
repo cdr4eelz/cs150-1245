@@ -43,6 +43,7 @@ void TRAN_cstr(const char *str)
 
 
 const char greeting[] = "\r\n\r\n### ECHOPLUS ###\r\n\r\n";
+int max_loops = 2;
 
 int main(void)
 {
@@ -55,7 +56,8 @@ int main(void)
 			if (bb == 0x01) break; // CTRL-A to advance
 			TRAN_byte(bb + offset);
 		}
-		if (++offset > 5) break;
+		if (++offset > max_loops) break;
 	}
+	max_loops++;
 	return 0;
 }
