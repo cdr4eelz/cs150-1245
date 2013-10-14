@@ -109,7 +109,7 @@ module DumpMEMIOCPU #(
     );
     
     MEMIOPlex iomap_uart
-    (   .clk(clk), .rst(rst),
+    (   .CPUGlobal(CPUGlobal),
         .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX),
         .IOMAP(IOMAP)
     );

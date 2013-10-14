@@ -1,7 +1,7 @@
-`timescale 1ns/1ps
+`timescale 10ns/10ps
 
 module DumpMemTestbench;
-    reg Clock, Reset;
+    reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
     
     reg   [7:0] DataIn;
@@ -17,11 +17,13 @@ module DumpMemTestbench;
     
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
-    
+    initial Stall = 0;
+    always @(posedge Clock) Stall <= ~Stall;
+
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
     DumpMemCPU CPU
-    (   .clk(Clock), .rst(Reset), .stall(1'b0),
+    (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX)
     );
@@ -46,7 +48,6 @@ module DumpMemTestbench;
         
         Reset = 1; #(6*Cycle)
         Reset = 0; #1;
-        
         while (finalcountdowneurope > 0) begin
             DataOutReady = 1;
             while (DataOutReady) begin

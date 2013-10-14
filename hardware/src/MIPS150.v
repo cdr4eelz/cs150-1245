@@ -3,12 +3,9 @@
 `timescale 1ns/1ps
 
 module MIPS150(
-    input clk,
-    input rst,
-
-    // Serial
-    input FPGA_SERIAL_RX,
-    output FPGA_SERIAL_TX,
+    input   clk, rst, stall,
+    input   FPGA_SERIAL_RX,
+    output  FPGA_SERIAL_TX,
 
     // Memory system ports
     output [31:0] dcache_addr,
@@ -21,7 +18,6 @@ module MIPS150(
     output [31:0] icache_din,
     input [31:0] dcache_dout,
     input [31:0] instruction,
-    input stall,
 
     output [31:0] bypass_addr,
     output [31:0] bypass_din,
@@ -56,15 +52,15 @@ module MIPS150(
 // endmodule
 
     wire stl = stall;   // Just rename so it matches nicely internal to CPU
-    `BUS_CPUGlobal_type CPUGlobal;
+    `BUS_CPUGlobal_type CPUGlobal; //TODO: Eliminate CPUGlobal since it hides too much about usage
     `BUS_MEMIO_type     DMEM, IMEM, IOMAP;
     wire    [11: 0]     IMEM_addrb;
     wire    [31: 0]     IMEM_doutb;
 
     // Register lines
-    wire    [ 4: 0] REG_ra1, REG_ra2, REG_wa;
-    wire    [31: 0] REG_rd1, REG_rd2, REG_wd;
-    wire            REG_we;
+    wire    [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
+    wire    [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
+    wire            REGFILE_we;
 
 /*  Naming conventions (might be inconsistent/in-flux though :)
     SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
@@ -93,11 +89,13 @@ module MIPS150(
     wire [31: 0] #1 WBKDat_M_WF_;   // but the concept seems harmless.
     wire         #1 WBKCanFWD_M_WF_;// This prevents accidental creation of a slow MDX stage!
 
-    assign REG_wa = WBKReg_M_WF_,   REG_wd = WBKDat_M_WF_,  REG_we = !stl;
+    assign REGFILE_wa = WBKReg_M_WF_,
+            REGFILE_wd = WBKDat_M_WF_,
+            REGFILE_we = !stl; // Avoid premature or double writes during stall
 
     // Declare outputs of WF stage
     wire [31: 0] PC_WF_, INST_WF_;
-    wire [15: 0] StepCount, StallCount;
+    wire [15: 0] StepCount, StallCount; // TODO: How big do these need to be???
     StageWF s_WF    // WF STAGE itself
     (   .CPUGlobal(CPUGlobal), .STEPCOUNT(StepCount), .STALLCOUNT(StallCount),
         .IMEM_read_addr (IMEM_addrb),   .IMEM_read_data(IMEM_doutb),
@@ -117,17 +115,17 @@ module MIPS150(
 
     // Mini-forwarding calculation
     wire FWD_Allow = WBKCanFWD_M_WF_;
-    wire FWD_1 = (FWD_Allow && (REG_wa==REG_ra1));
-    wire FWD_2 = (FWD_Allow && (REG_wa==REG_ra2));
-    wire [31: 0] FWD_rd1 = (FWD_1) ? REG_wd : REG_rd1;
-    wire [31: 0] FWD_rd2 = (FWD_2) ? REG_wd : REG_rd2;
+    wire FWD_1 = (FWD_Allow && (REGFILE_wa==REGFILE_ra1));
+    wire FWD_2 = (FWD_Allow && (REGFILE_wa==REGFILE_ra2));
+    wire [31: 0] FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
+    wire [31: 0] FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 
     // Declare outputs of DX stage
     `BUS_ICTL_type IControlDX_;
     wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_, PCPLUS8DX_;
     StageDX s_DX
-    (   .CPUGlobal(CPUGlobal),
-        .REG_R1_    (REG_ra1),          .REG_R2_    (REG_ra2),
+    (// .CPUGlobal(CPUGlobal),
+        .REG_R1_    (REGFILE_ra1),      .REG_R2_    (REGFILE_ra2),
         .REG_D1_    (FWD_rd1),          .REG_D2_    (FWD_rd2),
         //Inputs
         .PC         (PC_DX),            .INST       (INST_DX),
@@ -163,7 +161,7 @@ module MIPS150(
         REG_PCPLUS8_M   ( .CPUGlobal(CPUGlobal),    .In(PCPLUS8DX_  ),  .Out(PCPLUS8_M   ) );
 
     StageM s_M
-    (   .CPUGlobal  (CPUGlobal),
+    (// .CPUGlobal  (CPUGlobal),
         .DMEM       (DMEM),             .IMEM(IMEM),
         .IOMAP      (IOMAP),
         //Inputs
@@ -191,10 +189,10 @@ module MIPS150(
     RegFile regfile
     (   .clk(clk),
         // Write is synchronous
-        .wa(REG_wa),    .wd(REG_wd),    .we(REG_we),
+        .wa(REGFILE_wa),    .wd(REGFILE_wd),    .we(REGFILE_we),
         // Read is asynchronous
-        .ra1(REG_ra1),  .ra2(REG_ra2),
-        .rd1(REG_rd1),  .rd2(REG_rd2)
+        .ra1(REGFILE_ra1),  .ra2(REGFILE_ra2),
+        .rd1(REGFILE_rd1),  .rd2(REGFILE_rd2)
     );
 
     dmem_blk_ram bram_dmem
@@ -213,7 +211,7 @@ module MIPS150(
     );
 
     MEMIOPlex iomap_uart
-    (   .clk(clk), .rst(rst),
+    (   .CPUGlobal(CPUGlobal),
         .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX),
         .IOMAP(IOMAP)
     );
@@ -249,9 +247,9 @@ module MIPS150(
     end
 
     always@(posedge clk) if (DBG_cycle >= 0) begin:DBG_RUN_POS
-        $display(" REG1:R(%h,%d)=%h(%d)", REG_ra1, REG_ra1, REG_rd1, REG_rd1);
+        $display(" REG1:R(%h,%d)=%h(%d)", REGFILE_ra1, REGFILE_ra1, REGFILE_rd1, REGFILE_rd1);
         if (FWD_1) $display(" *FWD1:      >>%h(%d)", FWD_rd1, FWD_rd1);
-        $display(" REG2:R(%h,%d)=%h(%d)", REG_ra2, REG_ra2, REG_rd2, REG_rd2);
+        $display(" REG2:R(%h,%d)=%h(%d)", REGFILE_ra2, REGFILE_ra2, REGFILE_rd2, REGFILE_rd2);
         if (FWD_2) $display(" *FWD2:      >>%h(%d)", FWD_rd2, FWD_rd2);
 
         $display("%d]   /DX: %h %h", DBG_cycle, PC_WF_, INST_WF_);
@@ -280,13 +278,13 @@ module MIPS150(
         $display(" (%d) CTL DX %b", DBG_cycle, IControlDX_);
     end
     always@* begin
-        if (REG_ra1 >= 0) begin
-        $display(" reg1:%d R1(%h,%d)=%h (%d)", FWD_1, REG_ra1, REG_ra1, REG_rd1, REG_rd1);
+        if (REGFILE_ra1 >= 0) begin
+        $display(" reg1:%d R1(%h,%d)=%h (%d)", FWD_1, REGFILE_ra1, REGFILE_ra1, REGFILE_rd1, REGFILE_rd1);
         end
     end
     always@* begin
-        if (REG_ra2 >= 0) begin
-        $display(" reg2:%d R2(%h,%d)=%h (%d)", FWD_2, REG_ra2, REG_ra2, REG_rd2, REG_rd2);
+        if (REGFILE_ra2 >= 0) begin
+        $display(" reg2:%d R2(%h,%d)=%h (%d)", FWD_2, REGFILE_ra2, REGFILE_ra2, REGFILE_rd2, REGFILE_rd2);
         end
     end
     */

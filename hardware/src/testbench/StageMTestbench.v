@@ -16,7 +16,7 @@ module StageMTestbench;
     wire [ 5:0] WBK_Reg;
     wire [31:0] WBK_Val;
     
-    StageM(
+    StageM M(
         .CPUGlobal(CPUGlobal), .MemoryIO(MemoryIO),
         .IControl(IControl), .ALUOut(ALUOut), .R2Value(R2Value), .PCPLUS8(PC+8),
         .WBK_Reg_(WBK_Reg), .WBK_Val_(WBK_Val)

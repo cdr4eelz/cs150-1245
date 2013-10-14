@@ -12,7 +12,7 @@ TRANSCRIPT := $(patsubst tests/%.do,results/%.transcript,$(CASES))
 DOFILES := $(patsubst tests/%.do,build/%.do,$(CASES))
 TESTINPUTSBUILD := $(patsubst tests/%.input,build/%.input,$(TESTINPUTS))
 
-SRCD := ../inc ../src ../src/testbench
+SRCD := ../src ../src/testbench ../src/dmem_blk_ram ../src/imem_blk_ram
 INCD := $(foreach dir,$(SRCD),$(addprefix +incdir+../,$(dir)))
 SRCS := $(foreach dir,$(SRCD),$(wildcard $(dir)/*.v))
 STATUS := build/.status

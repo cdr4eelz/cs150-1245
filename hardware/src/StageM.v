@@ -5,7 +5,7 @@
 module StageM #(
 	parameter NOUNKLE = 1
 ) (
-    inout `BUS_CPUGlobal_type   CPUGlobal,  // Unused???
+//  inout `BUS_CPUGlobal_type   CPUGlobal,  // Unused!
     inout `BUS_MEMIO_type       DMEM, IMEM, IOMAP, // Could be merged & plexed elsewhere
     
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)

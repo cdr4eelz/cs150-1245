@@ -52,8 +52,8 @@ module DumpMemCPU (
     assign ADDR_NEXT = (ADVANCE_LAST) ? (ADDR + 1) : ADDR;
     assign ADDR_W   = ADDR[13: 2];
     assign ADDR_N   = ADDR[ 1: 0];
-    assign TX_Data  = (ADDR_N[1]) ? ( (ADDR_N[0]) ? DATA_W[ 0 +: 8] : DATA_W[ 8 +: 8])
-                                  : ( (ADDR_N[0]) ? DATA_W[16 +: 8] : DATA_W[24 +: 8]);
+    assign TX_Data  = (ADDR_N[1]) ? ( (ADDR_N[0]) ? DATA_W[ 8 +: 8] : DATA_W[ 0 +: 8])
+                                  : ( (ADDR_N[0]) ? DATA_W[24 +: 8] : DATA_W[16 +: 8]);
     
     PipelineRegister #( .Width(1) )
     ADVANCE_REG ( .CPUGlobal(CPUGlobal),
@@ -92,12 +92,6 @@ module DumpMemCPU (
     dmem_blk_ram bram_dmem
     (   .clka(clk), .ena(1'b1), .addra(ADDR_W), .douta(DATA_W),
         .wea(4'b0000), .dina(32'd0)
-    );
-    
-    imem_blk_ram bram_imem
-    (   .clka(clk), .clkb(clk), .ena(1'b0), //enb(1'b1)
-        .addra(12'h000), .wea(4'b0000), .dina(32'd0),
-        .addrb(ADDR_W), .doutb()
     );
     
     // Test the tun/tap bus stuff...

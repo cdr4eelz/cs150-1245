@@ -1,44 +1,51 @@
 `include "CPUBusses.vh"
+//TODO: Handle stall outside of here (implicit in masks
 
-module MEMIOPlex
-(   input clk, rst,
-    
-    inout `BUS_MEMIO_type   IOMAP,
+module MEMIOPlex //TODO: Set address with parameters (or even config register with param defaults)!
+(
+    inout `BUS_CPUGlobal_type   CPUGlobal,
+    inout `BUS_MEMIO_type       IOMAP,
 
     input   SERIAL_RX,
     output  SERIAL_TX
 );
 
-// Translate Memory Mapped read or write accesses from:
+wire  clk, rst, stl;
+BUS_CPUGlobal_tap BUS_CPUGlobal
+( ._BUS_(CPUGlobal),
+    .CLK(clk), .RST(rst), .STL(stl)
+);
+
+// Translate Memory Mapped read/write actions FROM these MEMIO-style...
 wire [11: 0] addr;
 wire [ 3: 0] rmask, wmask;
 wire [31: 0] wdata;
-reg  [31: 0] rdata; // This is registered here just like a synchronous memory would do.
-// ...to appropriate handshakes with these Tx/Rx UART lines/registers:
+reg  [31: 0] rdata; // Register Mimic synchronous memory behavior
+// ...INTO appropriate handshakes, clock border management and graceful
+//    stall handling with these Tx/Rx UART lines/registers:
 wire         Rx_Valid;
 wire [ 7: 0] Rx_Data;
-wire         Rx_Ready;  // Is reg but current use would allow wire too
+wire         Rx_Ready;
 wire         Tx_Ready;
 reg  [ 7: 0] Tx_Data;
 reg          Tx_Valid;
 
-// This approach attempts to avoid buffering where possible.  Might make setup/hold time fragile.
-// The ideas is to prep this part asynchronously so handshake happens on the clock edge.
-assign Rx_Ready = ((addr==12'h003) && rmask[0]);    // Are we "about to read data in?"
+// TODO: Buffer 1 byte, since the "prep" approach probably imposes unnecessary (or impossible) timing constraints between the two clock realms because we make UART hold the byte until the instant that software is reading a value!
+assign Rx_Ready = ((addr==12'h003) && rmask[0] && !stl);    // Is software now "in the act" of reading the uart data
 
 always@(posedge clk) begin
     rdata = 32'bz;
     if (rst) begin
-        Tx_Valid = 0;       Tx_Data = 7'bz;
+        Tx_Valid = 0;       Tx_Data = 7'bz; //TODO: Only use z for simulation
     end else begin
         if (Tx_Valid && Tx_Ready) begin
-            //$display("MEMIO: Shake");
+            $display("MEMIO: Shake");
             Tx_Valid = 0;   Tx_Data = 7'bz;
         end
         
         case (addr) 
             12'h002: if (wmask[0]) begin   // Avoid accidental zero writes if doing sb or sh near but not on low byte
-                //$display("MEMIO: Write");
+                $display("MEMIO: Write");
                 Tx_Valid = 1;   Tx_Data = wdata[7:0];   // Let software stomp on prior value
             end
         endcase
@@ -63,7 +70,7 @@ BUS_MEMIO_tap BUS_MEMIO_IOMAP
 );
 
 UART uart
-(   .Clock(clk), .Reset(rst),
+(   .Clock(clk), .Reset(rst), // Shield UART from direct stalling knowledge
     //   RECEIVER               //   TRANSMITTER
     .DataOutReady(Rx_Ready),    .DataInReady(Tx_Ready),
     .DataOutValid(Rx_Valid),    .DataInValid(Tx_Valid),

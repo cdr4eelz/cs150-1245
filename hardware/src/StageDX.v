@@ -3,7 +3,7 @@
 `include "CPUBusses.vh"
 
 module StageDX(
-    inout `BUS_CPUGlobal_type CPUGlobal,    // CURRENTLY UNUSED!
+//  inout `BUS_CPUGlobal_type CPUGlobal, // Unused!
     // Asynchronous plugs to shared outer components
     output [ 4: 0] REG_R1_,     REG_R2_,
     input  [31: 0] REG_D1_,     REG_D2_,

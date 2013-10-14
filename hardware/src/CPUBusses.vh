@@ -1,3 +1,5 @@
+//TODO: Rename MEMIOtype --> MEMMAP
+
 `ifndef CPUBUSSES_VH
 `define CPUBUSSES_VH
 

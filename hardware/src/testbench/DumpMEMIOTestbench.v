@@ -3,20 +3,24 @@
 `include "CPUBusses.vh"
 
 module DumpMEMIOTestbench;
-    reg Clock, Reset;
+    reg Clock, Reset, Stall;
     wire SERIAL_RX, SERIAL_TX;
     
+    `BUS_CPUGlobal_type CPUGlobal;
+    BUS_CPUGlobal_tun BUS_CPUGlobal
+    (   ._BUS_(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stl)
+    );
+
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
-    
-    initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
     
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
     DumpMEMIOCPU #( .DBG_DELAY(1) )
-    CPU (   .clk(Clock), .rst(Reset), .stall(1'b0),
+    CPU (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(SERIAL_RX),
         .FPGA_SERIAL_TX(SERIAL_TX)
     );
@@ -31,7 +35,7 @@ module DumpMEMIOTestbench;
     );
     
     MEMIOPlex iomap_listener
-    (   .clk(Clock), .rst(Reset),
+    (   .CPUGlobal(CPUGlobal),
         .SERIAL_RX(SERIAL_TX), .SERIAL_TX(SERIAL_RX),
         .IOMAP(IOLISTEN)
     );
@@ -39,7 +43,7 @@ module DumpMEMIOTestbench;
     integer finalcountdowneurope = 20;
     
     initial begin
-        Reset = 0; #(2*Cycle)
+        Clock = 0; Reset = 0; Stall = 0; #(2*Cycle)
         Reset = 1; #(2*Cycle)
         Addr = 0;  #(2*Cycle)
         Reset = 0; #1;

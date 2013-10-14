@@ -23,7 +23,7 @@ module StageWF #(
     );
     
     reg [31: 0] PC_REG;
-    always @(posedge clk) begin //TODO: stall
+    always @(posedge clk) begin //TODO: Verify stall
         if (rst) begin
             PC_REG = bootPC;
             STEPCOUNT = 0;
@@ -36,8 +36,10 @@ module StageWF #(
         end
     end
     
-    assign IMEM_read_addr[11:0] = PC_REG[13:2];   // Do we worry about illegal addresses?
+    assign IMEM_read_addr[11:0] = PC_REG[13:2]; //TODO: Assert properly aligned accesses
     assign PC   = PC_REG;
     assign INST = IMEM_read_data;
-    
+    //TODO: Detect a halt, a.k.a. a jump-to-self loop (great for software simulation termination)
+    //TODO: Keep small breakpoint table and give debug notification (and maybe trigger self-stall)
+
 endmodule

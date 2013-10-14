@@ -6,6 +6,13 @@ module ml505top
   input        GPIO_SW_S,
   input        USER_CLK,
 
+    // Temporary code for testing checkpoint 2:
+//NET GPIO_COMPLED_S  LOC="AG12";
+//NET GPIO_DIP_0 LOC="U25";
+//NET GPIO_DIP_0 IOSTANDARD="LVCMOS25";
+    output 	GPIO_COMPLED_S,
+    input 	GPIO_DIP_0,
+
   output [7:0] GPIO_LED,
 
   output [12:0] DDR2_A,
@@ -213,7 +220,7 @@ module ml505top
       .bypass_addr(bypass_addr),
       .bypass_we  (bypass_we  ),
       .bypass_din (bypass_din ),
-      .stall      (stall      ),
+      .stall      (mem_stall  ),
       .video      (video      ),
       .video_ready(video_ready),
       .video_valid(video_valid),
@@ -232,7 +239,10 @@ module ml505top
     );
   
   // MIPS 150 CPU
-  MIPS150 CPU(
+`ifndef CPUTYPE
+`define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
+`endif
+  `CPUTYPE CPU(
     .clk(cpu_clk_g),
     .rst(rst || ~init_done),
     .stall(stall),
@@ -292,6 +302,26 @@ module ml505top
     .VideoReady(                video_ready),
     .VideoValid(                video_valid)
   );
+
+    // Manual stalling test (checkpoint 1):
+    reg man_stall;
+    assign GPIO_COMPLED_S = GPIO_DIP_0;
+    always@(posedge cpu_clk_g) begin
+        if(rst) begin
+            man_stall <= 1'b0;
+        end
+    else begin
+        if(0)//(GPIO_DIP_0)
+            man_stall <= ~man_stall;
+        else
+            man_stall <= 1'b0;
+        end
+    end
+`ifndef COLT45_NoManStall
+    assign stall = mem_stall || man_stall;
+`else
+    assign stall = mem_stall;
+`endif
 
   assign GPIO_LED = {5'b0, stall, pll_lock, init_done};
 

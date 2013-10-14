@@ -2,7 +2,7 @@
 
 module EchoTestbench;
 
-    reg Clock, Reset;
+    reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
 
     reg   [7:0] DataIn;
@@ -18,11 +18,12 @@ module EchoTestbench;
 
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
+    initial Stall = 0;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
     MIPS150 CPU
-    (   .clk(Clock), .rst(Reset), .stall(1'b0),
+    (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX)
     );
