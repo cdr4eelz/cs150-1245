@@ -91,7 +91,7 @@ module MIPS150(
 
     assign REGFILE_wa = WBKReg_M_WF_,
             REGFILE_wd = WBKDat_M_WF_,
-            REGFILE_we = !stl; // Avoid premature or double writes during stall
+            REGFILE_we = ~stl; // Avoid premature or double writes during stall
 
     // Declare outputs of WF stage
     wire [31: 0] PC_WF_, INST_WF_;
@@ -218,7 +218,7 @@ module MIPS150(
 
 
 `ifdef COLT45_DBG
-    // synthesis translate_off
+// synthesis translate_off
 
     reg[8:0] DBG_cycle, DBG_step;
     initial begin

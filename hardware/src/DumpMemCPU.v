@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 `include "CPUBusses.vh"
 
 module DumpMemCPU (
@@ -47,13 +49,13 @@ module DumpMemCPU (
     wire [ 7: 0]    TX_Data;
     wire TX_Valid, TX_Ready, ADVANCE, ADVANCE_LAST;
     
-    assign TX_Valid = !stl;
+    assign TX_Valid = ~stl;
     assign ADVANCE  = TX_Valid && TX_Ready;
     assign ADDR_NEXT = (ADVANCE_LAST) ? (ADDR + 1) : ADDR;
     assign ADDR_W   = ADDR[13: 2];
     assign ADDR_N   = ADDR[ 1: 0];
-    assign TX_Data  = (ADDR_N[1]) ? ( (ADDR_N[0]) ? DATA_W[ 8 +: 8] : DATA_W[ 0 +: 8])
-                                  : ( (ADDR_N[0]) ? DATA_W[24 +: 8] : DATA_W[16 +: 8]);
+    assign TX_Data  = (ADDR_N[1]) ? ( (ADDR_N[0]) ? DATA_W[ 0 +: 8] : DATA_W[ 8 +: 8])
+                                  : ( (ADDR_N[0]) ? DATA_W[16 +: 8] : DATA_W[24 +: 8]);
     
     PipelineRegister #( .Width(1) )
     ADVANCE_REG ( .CPUGlobal(CPUGlobal),
@@ -67,17 +69,17 @@ module DumpMemCPU (
         .Out(   ADDR)
     );
     
-    `ifdef SIM
+// synthesis translate_off
     initial begin
         $monitor("M: %h %h %h %h %h %h",
             TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
     end
     always @(posedge clk) begin
-//        $strobe("C: %h %h %h %h %h %h", 
-//            TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
+//        $strobe("C: %b %b %h %h %h %h %h %h", 
+//            rst, stl, TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
         if (ADDR > 9) $finish();
     end
-    `endif
+// synthesis translate_on
     
     
     // Drive CPUGlobals from CPU module inputs

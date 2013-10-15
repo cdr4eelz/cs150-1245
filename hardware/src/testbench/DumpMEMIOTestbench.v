@@ -1,30 +1,79 @@
-`timescale 1ns/1ps
+`timescale 10ns/10ps
 
 `include "CPUBusses.vh"
 
 module DumpMEMIOTestbench;
     reg Clock, Reset, Stall;
-    wire SERIAL_RX, SERIAL_TX;
+    wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
     
     `BUS_CPUGlobal_type CPUGlobal;
     BUS_CPUGlobal_tun BUS_CPUGlobal
     (   ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stl)
+        .CLK(Clock), .RST(Reset), .STL(Stall)
     );
 
+    reg   [7:0] DataIn;
+    reg         DataInValid;
+    wire        DataInReady;
+    wire  [7:0] DataOut;
+    wire        DataOutValid;
+    reg         DataOutReady;
+    
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
-    always #(HalfCycle) Clock <= ~Clock;
     
+    initial Clock = 0;
+    always #(HalfCycle) Clock <= ~Clock;
+    initial Stall = 0;
+    always @(posedge Clock) Stall <= ~Stall;
+
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    DumpMEMIOCPU #( .DBG_DELAY(1) )
-    CPU (   .clk(Clock), .rst(Reset), .stall(Stall),
-        .FPGA_SERIAL_RX(SERIAL_RX),
-        .FPGA_SERIAL_TX(SERIAL_TX)
+    DumpMEMIOCPU CPU
+    (   .clk(Clock), .rst(Reset), .stall(Stall),
+        .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
+        .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .dcache_dout(32'b0), .instruction(32'b0),
+        .filler_ready(0), .line_ready(0)
     );
     
+    UART        #( .ClockFreq(       ClockFreq))
+    uart_tb( .Clock(           Clock),
+        .Reset(           Reset),
+        .DataIn(          DataIn),
+        .DataInValid(     DataInValid),
+        .DataInReady(     DataInReady),
+        .DataOut(         DataOut),
+        .DataOutValid(    DataOutValid),
+        .DataOutReady(    DataOutReady),
+        .SIn(             FPGA_SERIAL_TX),
+        .SOut(            FPGA_SERIAL_RX)
+    );
+    
+    integer finalcountdowneurope = 20;
+    
+    initial begin
+        Reset = 0; DataInValid = 0; DataOutReady = 0; #(3*Cycle)
+        
+        Reset = 1; #(6*Cycle)
+        Reset = 0; #1;
+        while (finalcountdowneurope > 0) begin
+            DataOutReady = 1;
+            while (DataOutReady) begin
+                @ (posedge Clock) ;
+                if (DataOutValid) DataOutReady = 0;
+            end
+            $display("Got %b  %h (%d)", DataOut, DataOut, DataOut);
+            #1; finalcountdowneurope = finalcountdowneurope - 1;
+        end
+        $display("Got enough.");
+        $finish();
+    end
+
+/*
+        $monitor("Rx_Ready %b %b %h", iomap_listener.Rx_Ready, iomap_listener.uart.uareceive.HasByte, iomap_listener.rdata);
+
     `BUS_MEMIO_type IOLISTEN;
     reg  [11:0] Addr;
     wire [31:0] RData;
@@ -39,33 +88,6 @@ module DumpMEMIOTestbench;
         .SERIAL_RX(SERIAL_TX), .SERIAL_TX(SERIAL_RX),
         .IOMAP(IOLISTEN)
     );
+*/
     
-    integer finalcountdowneurope = 20;
-    
-    initial begin
-        Clock = 0; Reset = 0; Stall = 0; #(2*Cycle)
-        Reset = 1; #(2*Cycle)
-        Addr = 0;  #(2*Cycle)
-        Reset = 0; #1;
-        
-        //$monitor("Rx_Ready %b %b %h", iomap_listener.Rx_Ready, iomap_listener.uart.uareceive.HasByte, iomap_listener.rdata);
-
-        while (finalcountdowneurope > 0) begin
-            Addr = 12'h001;
-            @(posedge Clock); @(negedge Clock);
-            while (RData[0] !== 1) begin
-                @(posedge Clock); @(negedge Clock);
-            end
-            //$display("Stat %b  %h (%d)", RData, RData, RData);
-            
-            Addr = 12'h003;
-            @(posedge Clock); @(negedge Clock);
-            $display("Got %b  %h (%d)", RData[7:0], RData[7:0], RData[7:0]);
-
-            #1; finalcountdowneurope = finalcountdowneurope - 1;
-        end
-        $display("Got enough.");
-        $finish();
-    end
-
 endmodule

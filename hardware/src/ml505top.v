@@ -6,12 +6,14 @@ module ml505top
   input        GPIO_SW_S,
   input        USER_CLK,
 
+`ifdef COLT45_StallDIP
     // Temporary code for testing checkpoint 2:
 //NET GPIO_COMPLED_S  LOC="AG12";
 //NET GPIO_DIP_0 LOC="U25";
 //NET GPIO_DIP_0 IOSTANDARD="LVCMOS25";
     output 	GPIO_COMPLED_S,
     input 	GPIO_DIP_0,
+`endif
 
   output [7:0] GPIO_LED,
 
@@ -305,24 +307,28 @@ module ml505top
 
     // Manual stalling test (checkpoint 1):
     reg man_stall;
-    assign GPIO_COMPLED_S = GPIO_DIP_0;
+    wire man_stall_toggle;
     always@(posedge cpu_clk_g) begin
         if(rst) begin
             man_stall <= 1'b0;
-        end
-    else begin
-        if(0)//(GPIO_DIP_0)
-            man_stall <= ~man_stall;
-        else
-            man_stall <= 1'b0;
+        end else begin
+            if(man_stall_toggle) begin
+                man_stall <= ~man_stall;
+            end else begin
+                man_stall <= 1'b0;
+            end
         end
     end
-`ifndef COLT45_NoManStall
-    assign stall = mem_stall || man_stall;
+`ifdef COLT45_StallForce
+    assign man_stall_toggle = 1'b1;
 `else
-    assign stall = mem_stall;
+`ifdef COLT45_StallDIP
+    assign man_stall_toggle = GPIO_DIP_0;
+    assign GPIO_COMPLED_S = GPIO_DIP_0;
+`endif
 `endif
 
+  assign stall = mem_stall || man_stall;
   assign GPIO_LED = {5'b0, stall, pll_lock, init_done};
 
 endmodule

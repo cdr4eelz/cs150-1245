@@ -19,13 +19,16 @@ module EchoTestbench;
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
     initial Stall = 0;
+//    always @(posedge Clock) Stall <= ~Stall;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
     MIPS150 CPU
     (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-        .FPGA_SERIAL_TX(FPGA_SERIAL_TX)
+        .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .dcache_dout(32'b0), .instruction(32'b0),
+        .filler_ready(0), .line_ready(0)
     );
 
     UART          #( .ClockFreq(       ClockFreq))
@@ -40,7 +43,7 @@ module EchoTestbench;
                         .SIn(             FPGA_SERIAL_TX),
                         .SOut(            FPGA_SERIAL_RX));
 
-integer count = 0, maxchars = 10;
+integer count = 0, maxchars = 5;
 event now_listening;
 event now_reset;
 
@@ -65,7 +68,7 @@ event now_reset;
 		@(posedge Clock);
           end
 	  DataOutReady = 0; count = count + 1;
-          $display("%d] Got %d", count, DataOut);
+          $display("[%d Got %d", count, DataOut);
 	  #1;
       end
 

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+md5sum "${1}" && bzip2 "${1}" -c | ssh p380-31 'bunzip2 > x.bit && md5sum x.bit && . ~/team45/fake_150.sh && ezimpact x.bit'

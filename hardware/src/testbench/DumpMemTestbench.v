@@ -1,5 +1,7 @@
 `timescale 10ns/10ps
 
+`include "CPUBusses.vh"
+
 module DumpMemTestbench;
     reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
@@ -25,7 +27,10 @@ module DumpMemTestbench;
     DumpMemCPU CPU
     (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-        .FPGA_SERIAL_TX(FPGA_SERIAL_TX)
+        .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .dcache_dout(32'b0), .instruction(32'b0),
+        .filler_ready(0), .line_ready(0)
+
     );
     
     UART        #( .ClockFreq(       ClockFreq))
