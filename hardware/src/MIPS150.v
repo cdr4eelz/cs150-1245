@@ -51,7 +51,6 @@ module MIPS150(
 
 // endmodule
 
-    wire stl = stall;   // Just rename so it matches nicely internal to CPU
     `BUS_CPUGlobal_type CPUGlobal; //TODO: Eliminate CPUGlobal since it hides too much about usage
     `BUS_MEMIO_type     DMEM, IMEM, IOMAP;
     wire    [11: 0]     IMEM_addrb;
@@ -91,19 +90,19 @@ module MIPS150(
 
     assign REGFILE_wa = WBKReg_M_WF_,
             REGFILE_wd = WBKDat_M_WF_,
-            REGFILE_we = ~stl; // Avoid premature or double writes during stall
+            REGFILE_we = ~stall; // Avoid premature or double writes during stall
 
     // Declare outputs of WF stage
     wire [31: 0] PC_WF_, INST_WF_;
     wire [15: 0] StepCount, StallCount; // TODO: How big do these need to be???
     StageWF s_WF    // WF STAGE itself
     (   .CPUGlobal(CPUGlobal), .STEPCOUNT(StepCount), .STALLCOUNT(StallCount),
-        .IMEM_read_addr (IMEM_addrb),   .IMEM_read_data(IMEM_doutb),
+        .IMEM_read_addr (IMEM_addrb),   .IMEM_read_data (IMEM_doutb),
         //Inputs
         .DOBranch       (DOBranch_DX_WF_),
         .PCBranch       (PCBranch_DX_WF_),
         //Outputs
-        .PC             (PC_WF_),       .INST       (INST_WF_)
+        .PC             (PC_WF_),       .INST           (INST_WF_)
     );
 
     // Pipeline border: WF/DX
@@ -180,7 +179,7 @@ module MIPS150(
     // Drive CPUGlobals from CPU module inputs
     BUS_CPUGlobal_tun BUS_CPUGlobal
     (   ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stl)
+        .CLK(clk), .RST(rst), .STL(stall)
     );
 
 
@@ -217,11 +216,12 @@ module MIPS150(
     );
 
 
-`ifdef COLT45_DBG
+`ifndef COLT45_DBG
 // synthesis translate_off
 
     reg[8:0] DBG_cycle, DBG_step;
     initial begin
+        $display ("%m");
         $display ("-   -   -   -   -   -   -   -   -   -   -   -");
     end
 
@@ -234,10 +234,10 @@ module MIPS150(
     end
     endtask
 
-    always@(rst, stl) begin
+    always@(rst, stall) begin
         $display("=================================================================");
-        $display("CTL-: C %h  R %h  S %h", clk, rst, stl);
-        $strobe ("CTL+: C %h  R %h  S %h", clk, rst, stl);
+        $display("CTL-: C %h  R %h  S %h", clk, rst, stall);
+        $strobe ("CTL+: C %h  R %h  S %h", clk, rst, stall);
         $strobe ("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         if (rst) begin
             DBG_cycle = 'bz;  DBG_step = 'bz;
@@ -259,12 +259,12 @@ module MIPS150(
                             WBKDat_M_WF_, WBKDat_M_WF_);
 
         DBG_cycle = DBG_cycle + 1;
-        if (!stl) DBG_step = DBG_step + 1;
+        if (!stall) DBG_step = DBG_step + 1;
         if (DBG_step > (48)) DO_FINISH();
         #1;
 
         $display("%d]/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\\", DBG_cycle);
-        $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stl, DBG_step);
+        $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stall, DBG_step);
         // DOBranch_DX_WF_
         $display("%d]   /WF: %h *%d", DBG_cycle, PCBranch_DX_WF_, DOBranch_DX_WF_);
         $display("%d] WF/DX: %h %h #%d", DBG_cycle, PC_DX, INST_DX, StepCount);

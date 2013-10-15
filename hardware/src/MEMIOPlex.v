@@ -11,10 +11,10 @@ module MEMIOPlex //TODO: Set address with parameters (or even config register wi
     output  SERIAL_TX
 );
 
-wire  clk, rst, stl;
+wire  clk, rst, stall;
 BUS_CPUGlobal_tap BUS_CPUGlobal
 ( ._BUS_(CPUGlobal),
-    .CLK(clk), .RST(rst), .STL(stl)
+    .CLK(clk), .RST(rst), .STL(stall)
 );
 
 // Translate Memory Mapped read/write actions FROM these MEMIO-style...
@@ -34,33 +34,36 @@ reg          Tx_Valid;  // We are holding valid data for UART to grab
 // TODO: Buffer 1 byte, since the "prep" approach probably imposes unnecessary (or impossible) timing constraints between the two clock realms because we make UART hold the byte until the instant that software is reading a value!
 
 reg inStall; // Distinguish active stall from pending stall
-always@(posedge clk) inStall <= stl;
+always@(posedge clk) inStall <= stall && ~rst;
 
 // Is software now "in the act" of reading the uart data
 assign Rx_Ready = (~inStall && (addr==12'h003) && rmask[0]);
 
 always@(posedge clk) begin
-    rdata = 32'bz;
+    rdata <= 32'bz;
     if (rst) begin
-        Tx_Valid = 0;       Tx_Data = 7'bz;
+        Tx_Valid <= 0;
+        Tx_Data  <= 7'bz;
     end else begin
         if (Tx_Valid && Tx_Ready) begin
             $display("MEMIO: Tx Shake");
-            Tx_Valid = 0;   Tx_Data = 7'bz;
+            Tx_Valid <= 0;
+            Tx_Data <= 7'bz;
         end
         if (~inStall) begin
             case (addr) 
                 12'h002: if (wmask[0]) begin   // Avoid accidental zero writes if doing sb or sh near but not on low byte
                     $display("MEMIO: Write pending");
-                    Tx_Valid = 1;   Tx_Data = wdata[7:0];   // Let software stomp on prior value
+                    Tx_Valid <= 1;
+                    Tx_Data  <= wdata[7:0];   // Let software stomp on prior value
                 end
             endcase
             
             case (addr)     // The rmask check is just to avoid currently non-existent side effects of read
-                12'h000: if (rmask[0]) rdata = {31'b0, Tx_Ready};
-                12'h001: if (rmask[0]) rdata = {31'b0, Rx_Valid};
-                12'h002: if (rmask[0]) rdata = {24'b0, Tx_Data};    // Read back last written value, just for fun
-                12'h003: if (rmask[0]) rdata = {24'b0, Rx_Data};    // Could be bogus if Rx_Valid was floppy or UART's setup time on Rx_Ready was violated
+                12'h000: if (rmask[0]) rdata <= {31'b0, Tx_Ready};
+                12'h001: if (rmask[0]) rdata <= {31'b0, Rx_Valid};
+                12'h002: if (rmask[0]) rdata <= {24'b0, Tx_Data};    // Read back last written value, just for fun
+                12'h003: if (rmask[0]) rdata <= {24'b0, Rx_Data};    // Could be bogus if Rx_Valid was floppy or UART's setup time on Rx_Ready was violated
             endcase
             
             //if (rmask[0]) $display("MEMIO: A=%h, W=%h/%b, R=%h/%b", addr, wdata, wmask, rdata, rmask);

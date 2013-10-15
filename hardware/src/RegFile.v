@@ -39,11 +39,13 @@ module RegFile #(
 initial R[0] = 0; // For cosmetic purposes :)
 
 always @(posedge clk) begin
-    if (we && (wa != 5'd0)) begin
-        if (DBG_LogStores) begin
-            $display("** REG: R[%h,%d] <= %h(%d)  *WAS* %h(%d)", wa, wa, wd, wd, R[wa], R[wa]);
-        end
-        R[wa] <= wd;
+    if (wa != 5'd0) begin
+        if (we) begin
+            if (DBG_LogStores) begin
+                $display("** REG: R[%h,%d] <= %h(%d)  *WAS* %h(%d)", wa, wa, wd, wd, R[wa], R[wa]);
+            end
+            R[wa] <= wd;
+        end else $display("** REG: R[%h,%d] <=** STALLed REG WRITE **", wa, wa);
     end
 end
 
