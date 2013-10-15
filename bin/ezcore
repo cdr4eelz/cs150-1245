@@ -1,13 +1,14 @@
 #!/bin/bash
 
 echo "Generating IP:"
+ls *.xco
 
-rm -f _batch
-cat > _batch <<EOM
+rm -rf tmp
+mkdir tmp
+cat > tmp/_batch <<EOM
 NEWPROJECT .
 SETPROJECT .
 EOM
 
-coregen -intstyle silent -b _batch
-rm -f _batch
+coregen -intstyle silent -b tmp/_batch
 coregen -intstyle silent -p . -b *.xco

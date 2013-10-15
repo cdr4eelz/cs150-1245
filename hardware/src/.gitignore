@@ -1,6 +1,5 @@
-stash_*/
 tmp/
-!imem_blk_ram/stash_/instmem.coe
-!dmem_blk_ram/stash_/datamem.coe
-![di]mem_blk_ram/stash_/[di]mem_blk_ram.mif
-![di]mem_blk_ram/stash_/[di]mem_blk_ram.ngc
+/[di]mem_blk_ram/
+/bios_mem/
+!xco.template
+!stash_*
