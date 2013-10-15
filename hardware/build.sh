@@ -1,12 +1,13 @@
 #!/bin/bash
 
-if [[ "$0" == "./m" ]]; then
+if   [[ "$0" == "./m" ]]; then
   D_BLD="build"
-elif [[ "$0" == "./q" ]]; then
-  D_BLD="/scratch/q_build_$USER"
-else
+elif [[ "$0" == "./n" ]]; then
   D_BLD="$0_bld"
+else
+  D_BLD="/scratch/$0_build_$USER"
 fi
+
 D_CFG="$0_cfg"
 F_PID="$0.pid"
 F_OUT="$0.out"
@@ -14,7 +15,8 @@ F_ERR="$0.err"
 echo "$0: $@"
 echo "  $D_CFG, $F_PID, $F_OUT, $F_ERR"
 echo "  $D_BLD"
-#exit 0
+pause
+# exit 0
 
 if [ -e "$F_PID" ]; then
   echo "ALREADY RUNNING:"
