@@ -90,7 +90,7 @@ module MIPS150(
 
     assign REGFILE_wa = WBKReg_M_WF_,
             REGFILE_wd = WBKDat_M_WF_,
-            REGFILE_we = ~stall; // Avoid premature or double writes during stall
+            REGFILE_we = 1'b1; //NOTE: These signals intentionally sheltered from stalling
 
     // Declare outputs of WF stage
     wire [31: 0] PC_WF_, INST_WF_;
@@ -111,6 +111,7 @@ module MIPS150(
         REG_PC_DX   ( .CPUGlobal(CPUGlobal),  .In(PC_WF_),    .Out(PC_DX) );
     PipelineRegister #( .Width(32), .PreRegistered(1) ) // Registered for us in prior stage
         REG_INST_DX ( .CPUGlobal(CPUGlobal),  .In(INST_WF_),  .Out(INST_DX) );
+    //NOTE: INST_WF_ gets changed early by BRAM (no disable availabe) but INST_DX gets "latched" on stall!
 
     // Mini-forwarding calculation
     wire FWD_Allow = WBKCanFWD_M_WF_;
@@ -183,40 +184,45 @@ module MIPS150(
     );
 
 
-    // Key components indirectly wired elsewhere
+    // Stall related intercepts (Simple patchwork and naming conventions for clarity)
+    wire STALL_REGFILE_we   = ~stall && (REGFILE_we); // Avoid premature write (could be read early, even asynchronously)
+    wire STALL_DMEM_ena     = ~stall && (|`MEMIO_WMask(DMEM)   || |`MEMIO_RMask(DMEM)  );
+    wire STALL_IMEM_ena     = ~stall && (|`MEMIO_WMask(IMEM) /*|| |`MEMIO_RMask(IMEM)*/);
+
+    // Key components indirectly wired elsewhere:
 
     RegFile regfile
     (   .clk(clk),
         // Write is synchronous
-        .wa(REGFILE_wa),    .wd(REGFILE_wd),    .we(REGFILE_we),
+        .wa(REGFILE_wa),    .wd(REGFILE_wd),    .we(STALL_REGFILE_we),
         // Read is asynchronous
         .ra1(REGFILE_ra1),  .ra2(REGFILE_ra2),
         .rd1(REGFILE_rd1),  .rd2(REGFILE_rd2)
     );
 
     dmem_blk_ram bram_dmem
-    (   .clka(clk), .ena( |`MEMIO_WMask(DMEM) || |`MEMIO_RMask(DMEM)),
+    (   .clka(clk), .ena(STALL_DMEM_ena),
         .addra  (`MEMIO_Addr(   DMEM)),     .douta  (`MEMIO_RData(  DMEM)),
         .wea    (`MEMIO_WMask(  DMEM)),     .dina   (`MEMIO_WData(  DMEM))
     );
 
     imem_blk_ram bram_imem
-    (   .clka(clk), .ena( |`MEMIO_WMask(IMEM) /*|| |`MEMIO_RMask(IMEM)*/ ),
-        .addra  (`MEMIO_Addr(   IMEM)),     /*.douta  (`MEMIO_RData(  IMEM)),*/
+    (   .clka(clk), .ena(STALL_IMEM_ena),
+        .addra  (`MEMIO_Addr(   IMEM)),   /*.douta  (`MEMIO_RData(  IMEM)),*/
         .wea    (`MEMIO_WMask(  IMEM)),     .dina   (`MEMIO_WData(  IMEM)),
 
-        .clkb(clk), //enb(1'b1)
+        .clkb(clk), // .enb() is NOT available for stall, is it shared with ena?
         .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
     );
 
     MEMIOPlex iomap_uart
-    (   .CPUGlobal(CPUGlobal),
-        .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX),
-        .IOMAP(IOMAP)
+    (   .clk(clk), .rst(rst),
+        .IOMAP(IOMAP),
+        .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX)
     );
 
 
-`ifndef COLT45_DBG
+`ifdef COLT45_DBG
 // synthesis translate_off
 
     reg[8:0] DBG_cycle, DBG_step;

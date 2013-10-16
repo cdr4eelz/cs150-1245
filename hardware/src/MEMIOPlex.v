@@ -1,76 +1,75 @@
 `include "CPUBusses.vh"
-//TODO: Handle stall outside of here (implicit in masks
-//TODO: Only use z for simulation
 
 module MEMIOPlex //TODO: Set address with parameters (or even config register with param defaults)!
 (
-    inout `BUS_CPUGlobal_type   CPUGlobal,
-    inout `BUS_MEMIO_type       IOMAP,
-
+    input   clk, rst,   // NOTE: Stall handled externally (via MEMIO bus enable lines)
+    inout   `BUS_MEMIO_type IOMAP,
     input   SERIAL_RX,
     output  SERIAL_TX
 );
 
-wire  clk, rst, stall;
-BUS_CPUGlobal_tap BUS_CPUGlobal
-( ._BUS_(CPUGlobal),
-    .CLK(clk), .RST(rst), .STL(stall)
-);
-
-// Translate Memory Mapped read/write actions FROM these MEMIO-style...
+// Translate from Memory Mapped read/write actions into Ready/Valid interactions:
 wire [11: 0] addr;
 wire [ 3: 0] rmask, wmask;
 wire [31: 0] wdata;
-reg  [31: 0] rdata; // Register Mimic synchronous memory behavior
-// ...INTO appropriate handshakes, clock border management and graceful
-//    stall handling with these Tx/Rx UART lines/registers:
-wire         Rx_Valid;
-wire [ 7: 0] Rx_Data;
-wire         Rx_Ready;
-wire         Tx_Ready;  // UART is ready for a byte on the upcoming clock
-reg  [ 7: 0] Tx_Data;   // Both sides consider data xfered only if Ready&&Valid @posedge-clk
-reg          Tx_Valid;  // We are holding valid data for UART to grab
+reg  [31: 0] rdata; // Register to mimic synchronous memory access
 
-// TODO: Buffer 1 byte, since the "prep" approach probably imposes unnecessary (or impossible) timing constraints between the two clock realms because we make UART hold the byte until the instant that software is reading a value!
+// Mini-buffers:
+reg  [ 7: 0]    BUF_TxData, BUF_RxData; // Tiny buffers to ease the xfer
+reg             BUF_TxFull, BUF_RxFull; // Is buffer ocupied?
 
-reg inStall; // Distinguish active stall from pending stall
-always@(posedge clk) inStall <= stall && ~rst;
-
-// Is software now "in the act" of reading the uart data
-assign Rx_Ready = (~inStall && (addr==12'h003) && rmask[0]);
+// Forward patchwork (to UART ready/valid interfaces below):
+wire            Rx_Ready    = !BUF_RxFull;  // Offer to take a byte from UART
+wire            Rx_Valid;                   // UART announcing a byte for us
+wire [ 7: 0]    Rx_Data;                    // Data from UART to us
+wire [ 7: 0]    Tx_Data     = BUF_TxData;   // Data from us to UART
+wire            Tx_Valid    = BUF_TxFull;   // Announce a byte for UART
+wire            Tx_Ready;                   // UART can take a byte from us
 
 always@(posedge clk) begin
-    rdata <= 32'bz;
     if (rst) begin
-        Tx_Valid <= 0;
-        Tx_Data  <= 7'bz;
+        BUF_RxFull  <= 0;
+        BUF_TxFull  <= 0;
+        BUF_RxData  <= 8'h97;   // Arbitrary flag to spot premature receive...
+        BUF_TxData  <= 8'h98;   // ...or xmit
+        rdata <= 32'hFEEBDAED;
     end else begin
-        if (Tx_Valid && Tx_Ready) begin
-            $display("MEMIO: Tx Shake");
-            Tx_Valid <= 0;
-            Tx_Data <= 7'bz;
+        if (Rx_Ready && Rx_Valid) begin
+            $display("MEMIO: Rx Shake (%h)", Rx_Data);
+            BUF_RxData  <= Rx_Data;
+            BUF_RxFull  <= 1;
         end
-        if (~inStall) begin
-            case (addr) 
-                12'h002: if (wmask[0]) begin   // Avoid accidental zero writes if doing sb or sh near but not on low byte
-                    $display("MEMIO: Write pending");
-                    Tx_Valid <= 1;
-                    Tx_Data  <= wdata[7:0];   // Let software stomp on prior value
-                end
-            endcase
-            
-            case (addr)     // The rmask check is just to avoid currently non-existent side effects of read
-                12'h000: if (rmask[0]) rdata <= {31'b0, Tx_Ready};
-                12'h001: if (rmask[0]) rdata <= {31'b0, Rx_Valid};
-                12'h002: if (rmask[0]) rdata <= {24'b0, Tx_Data};    // Read back last written value, just for fun
-                12'h003: if (rmask[0]) rdata <= {24'b0, Rx_Data};    // Could be bogus if Rx_Valid was floppy or UART's setup time on Rx_Ready was violated
-            endcase
-            
-            //if (rmask[0]) $display("MEMIO: A=%h, W=%h/%b, R=%h/%b", addr, wdata, wmask, rdata, rmask);
+
+        if (Tx_Ready && Tx_Valid) begin
+            $display("MEMIO: Tx Shake (%h)", Tx_Data);
+            BUF_TxFull  <= 0;
+            BUF_TxData  <= 8'h99;   // Arbitrary value to spot double xmit errors
         end
+
+        if (rmask[0]) case (addr)   // Could be (|rmask) but we only care about low byte
+            12'h000: rdata <= {31'b0, !BUF_TxFull && Tx_Ready}; // Checking both maybe excessive?
+            12'h001: rdata <= {31'b0, BUF_RxFull};  // TODO: Could we safely OR with real UART rx?
+//          12'h002: rdata <= {24'b0, BUF_TxData};  // Read back last written but unsent value, just for fun
+            12'h003: begin  // Read from our mini-buffer (and indicate that there is room)
+                rdata       <= {24'b0, BUF_RxData};
+                BUF_RxFull  <= 0;
+            end
+        endcase
+        
+        if (wmask[0]) case (addr)   // Avoid zero writes if doing sb or sh near but not ON low byte
+            12'h002: begin
+                $display("MEMIO: Write queued (%h)", wdata);
+                BUF_TxData  <= wdata[7:0];
+                BUF_TxFull  <= 1;   // Don't check if already full, just overwrite with new value
+            end
+        endcase
+        
+        //if (rmask[0]) $display("MEMIO: A=%h, W=%h/%b, R=%h/%b", addr, wdata, wmask, rdata, rmask);
     end
 end
 
+
+// Patch local wires into outer world:
 
 BUS_MEMIO_tap BUS_MEMIO_IOMAP
 ( ._BUS_(IOMAP),
@@ -80,7 +79,7 @@ BUS_MEMIO_tap BUS_MEMIO_IOMAP
 );
 
 UART uart
-(   .Clock(clk), .Reset(rst), // Shield UART from direct stalling knowledge
+(   .Clock(clk), .Reset(rst),
     //   RECEIVER               //   TRANSMITTER
     .DataOutReady(Rx_Ready),    .DataInReady(Tx_Ready),
     .DataOutValid(Rx_Valid),    .DataInValid(Tx_Valid),

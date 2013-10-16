@@ -39,7 +39,6 @@ module DumpMEMIOCPU #(
     output         line_y1_valid,
     output         line_trigger
 );
-    wire stl = stall; // Just friendly rename
     `BUS_CPUGlobal_type     CPUGlobal;
     `BUS_MEMIO_type         IOMAP;
     
@@ -69,7 +68,13 @@ module DumpMEMIOCPU #(
         if (CNT>30) $finish();
     end
 */
-    
+    BUS_MEMIO_tun BUS_IOMAP( ._BUS_(IOMAP),
+        .Addr   ( (STATE == 1) ? 12'h002 : 12'h000 ),
+        .RMask  ( {3'b000, !stall && (STATE == 0)} ),
+        .WMask  ( {3'b000, !stall && (STATE == 1)} ),
+        .RData  ( IOSTATUS ),   .WData  ( {24'b0, TX_Data} )
+    );
+        
     PipelineRegister #( .Width(2) )
     ADVANCE_REG ( .CPUGlobal(CPUGlobal),
         .In(    NEXT_STATE),
@@ -86,34 +91,27 @@ module DumpMEMIOCPU #(
     // Drive CPUGlobals from CPU module inputs
     BUS_CPUGlobal_tun BUS_CPUGlobal
     ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stl)
+        .CLK(clk), .RST(rst), .STL(stall)
     );
     
     
     // Key components indirectly wired elsewhere
 
     dmem_blk_ram bram_dmem
-    (   .clka(clk), .ena(1'b1), .addra(ADDR_W), .douta(DATA_W),
+    (   .clka(clk), .ena(~stall), .addra(ADDR_W), .douta(DATA_W),
         .wea(4'b0000), .dina(32'd0)
     );
-    
+
     imem_blk_ram bram_imem
-    (   .clka(clk), .clkb(clk), .ena(1'b0), //enb(1'b1)
-        .addra(12'h000), .wea(4'b0000), .dina(32'd0),
-        .addrb(ADDR_W), .doutb()
+    (   .clka(clk), .ena(0),
+        .addra(0),  .wea(0),   .dina(0),
+        .clkb(clk), .addrb(0), .doutb()
     );
-    
-    BUS_MEMIO_tun BUS_IOMAP( ._BUS_(IOMAP),
-        .Addr   ( (STATE == 1) ? 12'h002 : 12'h000 ),
-        .RMask  ( (STATE == 1) ? 4'b0000 : 4'b0001 ),
-        .WMask  ( (STATE == 1) ? 4'b0001 : 4'b0000 ),
-        .RData  ( IOSTATUS ),   .WData  ( {24'b0, TX_Data} )
-    );
-    
+
     MEMIOPlex iomap_uart
-    (   .CPUGlobal(CPUGlobal),
-        .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX),
-        .IOMAP(IOMAP)
+    (   .clk(clk), .rst(rst),
+        .IOMAP(IOMAP),
+        .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX)
     );
     
 endmodule

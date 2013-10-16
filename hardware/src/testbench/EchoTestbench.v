@@ -14,47 +14,40 @@ module EchoTestbench;
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
+    parameter StallRingSize = 3;
+    parameter StallRingInit = 'b00000000000000000001;
 
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
 
 //    always @(posedge Clock) Stall <= ~Stall;
-    `define StallRingSize 3
-    `define StallRingInit 'b00000000000000000001
-    reg [`StallRingSize-1:0] StallRing;
+    reg [StallRingSize-1:0] StallRing;
 //    initial begin StallRing = 0; Stall = 0; end
     always @(posedge Clock) begin
         if (Reset) begin
-            StallRing <= `StallRingInit;
+            StallRing <= StallRingInit;
         end else begin
-            StallRing <= {StallRing[`StallRingSize-2:0], StallRing[`StallRingSize-1]};
+            StallRing <= {StallRing[StallRingSize-2:0], StallRing[StallRingSize-1]};
         end
-        Stall <= StallRing[`StallRingSize-1];
+        Stall <= StallRing[StallRingSize-1];
     end
-
-    wire myStall = Stall;
+    wire StallClock = Clock || Stall; // Gated clock for reference/cheating
 
     reg [7:0] Check1, Check2, Check3, Check4, Check5, Check6, Check7;
-    wire StallClock = Clock || myStall; // Gated clock for reference
     always @(posedge Clock)
         Check1 <= (Reset) ? 99 : Check1-1;
-    always @(posedge Clock or posedge myStall)
+    always @(posedge Clock or posedge Stall)
         Check2 <= (Reset) ? 99 : Check2-1;
     always @(posedge StallClock)
         Check3 <= (Reset) ? 99 : Check3-1;
     always @(posedge Clock)
-        Check4 <= (Reset) ? 99 : ((myStall) ? Check4 : Check4-1);
-    wire CheckNext = (myStall) ? Check5 : Check5-1;
+        Check4 <= (Reset) ? 99 : ((Stall) ? Check4 : Check4-1);
+    wire CheckNext = (Stall) ? Check5 : Check5-1;
     always @(posedge Clock)
         Check5 <= (Reset) ? 99 : CheckNext;
     always @(posedge Clock) begin
         if (Reset) Check6 <= 99;
-        else if (!myStall) Check6 <= Check6-1;
-    end
-    always @(posedge Clock) begin
-        if (Reset) Check7 <= 99;
-        else if (!Stall) Check7 <= Check7-1;
-        //Accesses ^^ Stall directly (only breaks if Stall is assigned improperly, like with "=" rather than "<=" above)
+        else if (!Stall) Check6 <= Check6-1;
     end
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
@@ -68,7 +61,7 @@ module EchoTestbench;
     );
     // A shadow CPU using a gated clock
     MIPS150 xCPUx
-    (   .clk(StallClock), .rst(Reset), .stall(1'b0),
+    (   .clk(StallClock), .rst(Reset), .stall(0),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(xFPGA_SERIAL_TXx),
         .dcache_dout(32'b0), .instruction(32'b0),

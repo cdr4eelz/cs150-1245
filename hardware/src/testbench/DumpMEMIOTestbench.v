@@ -22,15 +22,30 @@ module DumpMEMIOTestbench;
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
-    
+    parameter StallRingSize = 3;
+    parameter StallRingInit = 'b00000000000000000001;
+
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
-    initial Stall = 0;
-    always @(posedge Clock) Stall <= ~Stall;
+
+//    always @(posedge Clock) Stall <= ~Stall;
+    reg [StallRingSize-1:0] StallRing;
+//    initial begin StallRing = 0; Stall = 0; end
+    always @(posedge Clock) begin
+        if (Reset) begin
+            StallRing <= StallRingInit;
+        end else begin
+            StallRing <= {StallRing[StallRingSize-2:0], StallRing[StallRingSize-1]};
+        end
+        Stall <= StallRing[StallRingSize-1];
+    end
+    wire StallClock = Clock || Stall; // Gated clock for reference/cheating
+
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
     DumpMEMIOCPU CPU
+//    (   .clk(StallClock), .rst(Reset), .stall(0),
     (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
@@ -84,7 +99,7 @@ module DumpMEMIOTestbench;
     );
     
     MEMIOPlex iomap_listener
-    (   .CPUGlobal(CPUGlobal),
+    (   .clk(Clock), .rst(Reset),
         .SERIAL_RX(SERIAL_TX), .SERIAL_TX(SERIAL_RX),
         .IOMAP(IOLISTEN)
     );
