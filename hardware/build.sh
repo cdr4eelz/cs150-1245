@@ -15,7 +15,6 @@ F_ERR="$0.err"
 echo "$0: $@"
 echo "  $D_CFG, $F_PID, $F_OUT, $F_ERR"
 echo "  $D_BLD"
-pause
 # exit 0
 
 if [ -e "$F_PID" ]; then

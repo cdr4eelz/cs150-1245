@@ -188,6 +188,7 @@ module MIPS150(
     wire STALL_REGFILE_we   = ~stall && (REGFILE_we); // Avoid premature write (could be read early, even asynchronously)
     wire STALL_DMEM_ena     = ~stall && (|`MEMIO_WMask(DMEM)   || |`MEMIO_RMask(DMEM)  );
     wire STALL_IMEM_ena     = ~stall && (|`MEMIO_WMask(IMEM) /*|| |`MEMIO_RMask(IMEM)*/);
+    wire STALL_MEMIO_ena    = ~stall;
 
     // Key components indirectly wired elsewhere:
 
@@ -216,7 +217,7 @@ module MIPS150(
     );
 
     MEMIOPlex iomap_uart
-    (   .clk(clk), .rst(rst),
+    (   .clk(clk), .rst(rst), .ena(STALL_MEMIO_ena),
         .IOMAP(IOMAP),
         .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX)
     );

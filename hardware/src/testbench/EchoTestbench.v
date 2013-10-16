@@ -14,7 +14,7 @@ module EchoTestbench;
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
-    parameter StallRingSize = 3;
+    parameter StallRingSize = 15;
     parameter StallRingInit = 'b00000000000000000001;
 
     initial Clock = 0;
@@ -59,6 +59,7 @@ module EchoTestbench;
         .dcache_dout(32'b0), .instruction(32'b0),
         .filler_ready(0), .line_ready(0)
     );
+/*
     // A shadow CPU using a gated clock
     MIPS150 xCPUx
     (   .clk(StallClock), .rst(Reset), .stall(0),
@@ -68,6 +69,8 @@ module EchoTestbench;
         .filler_ready(0), .line_ready(0)
     );
     assign serialListenTx = (0) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx;
+*/
+    assign serialListenTx = FPGA_SERIAL_TX;
 
     UART          #( .ClockFreq(       ClockFreq))
                   uart( .Clock(           Clock),
@@ -81,7 +84,7 @@ module EchoTestbench;
                         .SIn(             serialListenTx),
                         .SOut(            FPGA_SERIAL_RX));
 
-integer count = 0, maxchars = 5;
+integer count = 0, maxchars = 10;
 event now_listening;
 event now_reset;
 
@@ -135,7 +138,7 @@ initial begin
         DataInValid = 1'b0; countup = countup + 1;
         $display("%d] Sent: %h %d %b", countup, DataIn, DataIn, DataIn);
         DataIn = DataIn - 1;
-        #1; //TODO: Give longer delay since CPU is slow to grab (and data is lost)
+        #100000; //TODO: Give longer delay since CPU is slow to grab (and data is lost)
     end
 end
 

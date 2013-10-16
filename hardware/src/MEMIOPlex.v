@@ -2,7 +2,7 @@
 
 module MEMIOPlex //TODO: Set address with parameters (or even config register with param defaults)!
 (
-    input   clk, rst,   // NOTE: Stall handled externally (via MEMIO bus enable lines)
+    input   clk, rst, ena,
     inout   `BUS_MEMIO_type IOMAP,
     input   SERIAL_RX,
     output  SERIAL_TX
@@ -46,7 +46,7 @@ always@(posedge clk) begin
             BUF_TxData  <= 8'h99;   // Arbitrary value to spot double xmit errors
         end
 
-        if (rmask[0]) case (addr)   // Could be (|rmask) but we only care about low byte
+        if (ena && rmask[0]) case (addr)   // Could be (|rmask) but we only care about low byte
             12'h000: rdata <= {31'b0, !BUF_TxFull && Tx_Ready}; // Checking both maybe excessive?
             12'h001: rdata <= {31'b0, BUF_RxFull};  // TODO: Could we safely OR with real UART rx?
 //          12'h002: rdata <= {24'b0, BUF_TxData};  // Read back last written but unsent value, just for fun
@@ -56,7 +56,7 @@ always@(posedge clk) begin
             end
         endcase
         
-        if (wmask[0]) case (addr)   // Avoid zero writes if doing sb or sh near but not ON low byte
+        if (ena && wmask[0]) case (addr)   // Avoid zero writes if doing sb or sh near but not ON low byte
             12'h002: begin
                 $display("MEMIO: Write queued (%h)", wdata);
                 BUF_TxData  <= wdata[7:0];
