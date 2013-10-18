@@ -14,8 +14,9 @@ module EchoTestbench;
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
-    parameter StallRingSize = 15;
+    parameter StallRingSize = 3;
     parameter StallRingInit = 'b00000000000000000001;
+    parameter StallFreq = ClockFreq * 2/3;
 
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
@@ -57,20 +58,19 @@ module EchoTestbench;
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
         .dcache_dout(32'b0), .instruction(32'b0),
-        .filler_ready(0), .line_ready(0)
+        .filler_ready(1'b0), .line_ready(1'b0)
     );
-/*
+
     // A shadow CPU using a gated clock
-    MIPS150 xCPUx
-    (   .clk(StallClock), .rst(Reset), .stall(0),
+    MIPS150 #(.ClockFreq(StallFreq)) xCPUx
+    (   .clk(StallClock), .rst(Reset), .stall(1'b0),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(xFPGA_SERIAL_TXx),
         .dcache_dout(32'b0), .instruction(32'b0),
-        .filler_ready(0), .line_ready(0)
+        .filler_ready(1'b0), .line_ready(1'b0)
     );
-    assign serialListenTx = (0) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx;
-*/
-    assign serialListenTx = FPGA_SERIAL_TX;
+    assign serialListenTx = (1) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx;
+//  assign serialListenTx = FPGA_SERIAL_TX;
 
     UART          #( .ClockFreq(       ClockFreq))
                   uart( .Clock(           Clock),
@@ -119,7 +119,7 @@ end
 integer countup;
 initial begin
     $display("Booting:");
-    DataIn = 8'h7a;
+    DataIn = 8'h7b;
     DataInValid = 0;
     countup = 0;
 
@@ -138,7 +138,8 @@ initial begin
         DataInValid = 1'b0; countup = countup + 1;
         $display("%d] Sent: %h %d %b", countup, DataIn, DataIn, DataIn);
         DataIn = DataIn - 1;
-        #100000; //TODO: Give longer delay since CPU is slow to grab (and data is lost)
+
+        #1;
     end
 end
 

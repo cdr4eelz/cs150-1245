@@ -5,7 +5,7 @@
 module DumpMEMIOTestbench;
     reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
-    
+
     `BUS_CPUGlobal_type CPUGlobal;
     BUS_CPUGlobal_tun BUS_CPUGlobal
     (   ._BUS_(CPUGlobal),
@@ -18,7 +18,7 @@ module DumpMEMIOTestbench;
     wire  [7:0] DataOut;
     wire        DataOutValid;
     reg         DataOutReady;
-    
+
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
@@ -45,14 +45,14 @@ module DumpMEMIOTestbench;
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
     DumpMEMIOCPU CPU
-//    (   .clk(StallClock), .rst(Reset), .stall(0),
+//  (   .clk(StallClock), .rst(Reset), .stall(1'b0),
     (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
         .dcache_dout(32'b0), .instruction(32'b0),
-        .filler_ready(0), .line_ready(0)
+        .filler_ready(1'b0), .line_ready(1'b0)
     );
-    
+
     UART        #( .ClockFreq(       ClockFreq))
     uart_tb( .Clock(           Clock),
         .Reset(           Reset),
@@ -65,9 +65,9 @@ module DumpMEMIOTestbench;
         .SIn(             FPGA_SERIAL_TX),
         .SOut(            FPGA_SERIAL_RX)
     );
-    
+
     integer finalcountdowneurope = 20;
-    
+
     initial begin
         Reset = 0; DataInValid = 0; DataOutReady = 0; #(3*Cycle)
         
@@ -87,7 +87,7 @@ module DumpMEMIOTestbench;
     end
 
 /*
-        $monitor("Rx_Ready %b %b %h", iomap_listener.Rx_Ready, iomap_listener.uart.uareceive.HasByte, iomap_listener.rdata);
+    $monitor("Rx_Ready %b %b %h", iomap_listener.Rx_Ready, iomap_listener.uart.uareceive.HasByte, iomap_listener.rdata);
 
     `BUS_MEMIO_type IOLISTEN;
     reg  [11:0] Addr;
@@ -97,12 +97,12 @@ module DumpMEMIOTestbench;
         .RMask  (4'b1111),      .RData  (RData),
         .WMask  (4'b0000),      .WData  (32'bz)
     );
-    
+
     MEMIOPlex iomap_listener
     (   .clk(Clock), .rst(Reset),
         .SERIAL_RX(SERIAL_TX), .SERIAL_TX(SERIAL_RX),
         .IOMAP(IOLISTEN)
     );
 */
-    
+
 endmodule

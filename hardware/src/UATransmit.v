@@ -1,59 +1,54 @@
 module UATransmit(
-  input   Clock,
-  input   Reset,
+    input   Clock, Reset,
 
-  input   [7:0] DataIn,
-  input         DataInValid,
-  output        DataInReady,
+    input   [7:0] DataIn,
+    input         DataInValid,
+    output        DataInReady,
 
-  output        SOut
+    output        SOut
 );
-  // for log2 function
-  `include "util.vh"
+    // for log2 function
+    `include "util.vh"
 
-  //--|Parameters|--------------------------------------------------------------
+    //--|Parameters|--------------------------------------------------------------
 
-  parameter   ClockFreq         =   100_000_000;
-  parameter   BaudRate          =   115_200;
+    parameter   ClockFreq         =   100_000_000;
+    parameter   BaudRate          =   115_200;
 
-  // See diagram in the lab guide
-  localparam  SymbolEdgeTime    =   ClockFreq / BaudRate;
-  localparam  ClockCounterWidth =   log2(SymbolEdgeTime);
+    // See diagram in the lab guide
+    localparam  SymbolEdgeTime    =   ClockFreq / BaudRate;
+    localparam  ClockCounterWidth =   log2(SymbolEdgeTime);
 
-  //--|Solution|----------------------------------------------------------------
+    //--|Solution|----------------------------------------------------------------
 
-  reg [3:0] BitCount;
-  reg [ClockCounterWidth-1:0] ClockCounter;
-  reg [9:0] ShiftOut;
+    reg [3:0] BitCount;
+    reg [ClockCounterWidth-1:0] ClockCounter;
+    reg [9:0] ShiftOut;
 
-  wire TXRunning, SymbolEdge, StartTX;
+    wire TXRunning, SymbolEdge, StartTX;
 
-  assign DataInReady = (BitCount == 0); // Use "<= 1" if allowing stop-bit overlap
-  assign SOut = (TXRunning) ? ShiftOut[0] : 1'b1;
+    assign DataInReady = ((BitCount == 0) || ((BitCount == 1) && SymbolEdge));
+    assign SOut = ShiftOut[0]; //(TXRunning) ? ShiftOut[0] : 1'b1;
 
-  assign SymbolEdge = (ClockCounter == SymbolEdgeTime-1);
-  assign TXRunning = (BitCount != 0);
-  assign StartTX = (!TXRunning && DataInValid);
+    assign SymbolEdge = (ClockCounter == SymbolEdgeTime-1);
+    assign TXRunning = (BitCount != 0);
+    assign StartTX = (DataInReady && DataInValid);
 
-  always@(posedge Clock) begin // Manage ClockCounter
-    ClockCounter <= (Reset || SymbolEdge || !TXRunning) ? 0 : ClockCounter + 1;
-  end
-
-  always@(posedge Clock) begin // Manage BitCounter & shifting
-    if (Reset) begin
-      BitCount <= 0;
-      //shiftout <= 8'b0;
-    end else begin
-      if (TXRunning) begin
-        if (SymbolEdge) begin
-          BitCount <= BitCount - 1;
-          ShiftOut <= (ShiftOut >> 1); //{1'b0, ShiftOut[9:1]};
-        end
-      end else if (StartTX) begin // Entering TXRunning "state"
-        BitCount <= 4'd10; // Implicitly de-assert StartTX
-        ShiftOut <= {1'b1, DataIn, 1'b0}; // LSB shifted out first!
-      end // else idling!
+    always@(posedge Clock) begin // Manage ClockCounter
+        ClockCounter <= (Reset || SymbolEdge || !TXRunning) ? 0 : ClockCounter + 1;
     end
-  end
+
+    always@(posedge Clock) begin // Manage BitCounter & shifting
+        if (Reset) begin
+            BitCount <= 0;
+            ShiftOut <= 10'b1111_1111_11;
+        end else if (StartTX) begin // Entering TXRunning "state"
+            BitCount <= 4'd11; // NOTE: extra count to ensure stop bit fully sent
+            ShiftOut <= {DataIn[7:0], 1'b0, 1'b1}; // LSB shifted out first!
+        end else if (TXRunning && SymbolEdge) begin
+            BitCount <= BitCount - 1;
+            ShiftOut <= {1'b1, ShiftOut[9:1]};
+        end
+    end
 
 endmodule

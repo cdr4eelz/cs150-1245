@@ -41,7 +41,7 @@ module DumpMEMIOCPU #(
 );
     `BUS_CPUGlobal_type     CPUGlobal;
     `BUS_MEMIO_type         IOMAP;
-    
+
     wire [13: 0]    ADDR, ADDR_NEXT;
     wire [11: 0]    ADDR_W;
     wire [ 1: 0]    ADDR_N;
@@ -49,16 +49,16 @@ module DumpMEMIOCPU #(
     wire [ 7: 0]    TX_Data;
     wire [ 1: 0]    STATE;
     wire [ 1: 0]    NEXT_STATE;
-    
-    assign #DBG_DELAY ADDR_NEXT = (STATE == 1) ? (ADDR + 1) : ADDR;
+
     assign #DBG_DELAY ADDR_W   = ADDR[13: 2];
     assign #DBG_DELAY ADDR_N   = ADDR[ 1: 0];
     assign #DBG_DELAY TX_Data  = (ADDR_N[1]) 
                 ? ( (ADDR_N[0]) ? DATA_W[ 0 +: 8] : DATA_W[ 8 +: 8])
                 : ( (ADDR_N[0]) ? DATA_W[16 +: 8] : DATA_W[24 +: 8]);
-    
-    assign #DBG_DELAY NEXT_STATE = ((STATE===0) && (IOSTATUS===32'd1)) ? 1 : 0;
-    
+
+    assign #DBG_DELAY NEXT_STATE = ((STATE==1) && (IOSTATUS!=32'd1)) ? STATE : (STATE+1)%4;
+    assign #DBG_DELAY ADDR_NEXT = (STATE == 2) ? (ADDR + 1) : ADDR;
+
 /*
     integer CNT = 0;
     always@(posedge clk) begin
@@ -68,33 +68,34 @@ module DumpMEMIOCPU #(
         if (CNT>30) $finish();
     end
 */
+
     BUS_MEMIO_tun BUS_IOMAP( ._BUS_(IOMAP),
-        .Addr   ( (STATE == 1) ? 12'h002 : 12'h000 ),
-        .RMask  ( {3'b000, !stall && (STATE == 0)} ),
-        .WMask  ( {3'b000, !stall && (STATE == 1)} ),
+        .Addr   ( (STATE == 2) ? 12'h002 : 12'h000 ),
+        .RMask  ( {3'b000, (STATE != 2)} ),
+        .WMask  ( {3'b000, (STATE == 2)} ),
         .RData  ( IOSTATUS ),   .WData  ( {24'b0, TX_Data} )
     );
-        
+
     PipelineRegister #( .Width(2) )
     ADVANCE_REG ( .CPUGlobal(CPUGlobal),
         .In(    NEXT_STATE),
         .Out(   STATE)
     );
-    
+
     PipelineRegister #( .Width(14) )
     ADDR_REG ( .CPUGlobal(CPUGlobal),
         .In(    ADDR_NEXT),
         .Out(   ADDR)
     );
-    
-    
+
+
     // Drive CPUGlobals from CPU module inputs
     BUS_CPUGlobal_tun BUS_CPUGlobal
     ( ._BUS_(CPUGlobal),
         .CLK(clk), .RST(rst), .STL(stall)
     );
-    
-    
+
+
     // Key components indirectly wired elsewhere
 
     dmem_blk_ram bram_dmem
@@ -103,15 +104,15 @@ module DumpMEMIOCPU #(
     );
 
     imem_blk_ram bram_imem
-    (   .clka(clk), .ena(0),
-        .addra(0),  .wea(0),   .dina(0),
-        .clkb(clk), .addrb(0), .doutb()
+    (   .clka(clk), .ena(1'b0),
+        .addra(12'b0),  .wea(4'b0),   .dina(32'b0),
+        .clkb(clk), .addrb(12'b0), .doutb()
     );
 
     MEMIOPlex iomap_uart
-    (   .clk(clk), .rst(rst),
+    (   .clk(clk), .rst(rst), .ena(~stall),
         .IOMAP(IOMAP),
         .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX)
     );
-    
+
 endmodule

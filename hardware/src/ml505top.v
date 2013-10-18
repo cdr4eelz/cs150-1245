@@ -319,7 +319,7 @@ module ml505top
             end
         end
     end
-`ifdef COLT45_StallForce
+`ifndef COLT45_StallSkip
     assign man_stall_toggle = 1'b1;
 `else
 `ifdef COLT45_StallDIP

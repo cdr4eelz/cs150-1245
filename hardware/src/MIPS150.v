@@ -1,6 +1,6 @@
-`include "CPUBusses.vh"
-
 `timescale 1ns/1ps
+
+`include "CPUBusses.vh"
 
 module MIPS150(
     input   clk, rst, stall,
@@ -37,6 +37,7 @@ module MIPS150(
     output         line_y1_valid,
     output         line_trigger
 );
+  parameter ClockFreq = 50_000_000;
 
 `ifndef COLT45_pre2
 `ifndef COLT45_pre3
@@ -49,9 +50,8 @@ module MIPS150(
 `endif // !COLT45_pre3
 `endif // !COLT45_pre2
 
-// endmodule
 
-    `BUS_CPUGlobal_type CPUGlobal; //TODO: Eliminate CPUGlobal since it hides too much about usage
+    `BUS_CPUGlobal_type CPUGlobal;
     `BUS_MEMIO_type     DMEM, IMEM, IOMAP;
     wire    [11: 0]     IMEM_addrb;
     wire    [31: 0]     IMEM_doutb;
@@ -177,18 +177,12 @@ module MIPS150(
     );
 
 
-    // Drive CPUGlobals from CPU module inputs
-    BUS_CPUGlobal_tun BUS_CPUGlobal
-    (   ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
-
-
     // Stall related intercepts (Simple patchwork and naming conventions for clarity)
     wire STALL_REGFILE_we   = ~stall && (REGFILE_we); // Avoid premature write (could be read early, even asynchronously)
     wire STALL_DMEM_ena     = ~stall && (|`MEMIO_WMask(DMEM)   || |`MEMIO_RMask(DMEM)  );
     wire STALL_IMEM_ena     = ~stall && (|`MEMIO_WMask(IMEM) /*|| |`MEMIO_RMask(IMEM)*/);
-    wire STALL_MEMIO_ena    = ~stall;
+    wire STALL_MEMIO_ena    = ~stall && (|`MEMIO_WMask(IOMAP)  || |`MEMIO_RMask(IOMAP) );
+
 
     // Key components indirectly wired elsewhere:
 
@@ -216,12 +210,33 @@ module MIPS150(
         .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
     );
 
+    `BUS_Shake_type(8)  UATX, UARX;
+
     MEMIOPlex iomap_uart
     (   .clk(clk), .rst(rst), .ena(STALL_MEMIO_ena),
         .IOMAP(IOMAP),
-        .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX)
+        .RVA_TX(UATX), .RVA_RX(UARX)
     );
 
+    UART #(.ClockFreq(ClockFreq)) uart
+    (   .Clock(clk), .Reset(rst),
+        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
+        // Transmitter  (handshakes go both in/out)
+        .DataIn(        `Shake_Data(        8,UATX)),
+        .DataInValid(   `Shake_DataValid(   8,UATX)),
+        .DataInReady(   `Shake_DataReady(   8,UATX)),
+        // Receiver     (handshakes go both in/out)
+        .DataOut(       `Shake_Data(        8,UARX)),
+        .DataOutValid(  `Shake_DataValid(   8,UARX)),
+        .DataOutReady(  `Shake_DataReady(   8,UARX))
+    );
+
+
+    // Drive CPUGlobal bus from CPU module inputs
+    BUS_CPUGlobal_tun BUS_CPUGlobal
+    (   ._BUS_(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stall)
+    );
 
 `ifdef COLT45_DBG
 // synthesis translate_off

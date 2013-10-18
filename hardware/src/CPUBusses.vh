@@ -48,24 +48,15 @@
 `define MEMIO_RData(        BUS)    BUS [ 52 +: 32 ]
 
 
-//tuninput  {DataInValid.1, DataIn.DIw}
-//tunoutput {DataInReady.1}
-`define BUS_ShakeTx_width(DIw)      (1+(DIw)+1)
-`define BUS_ShakeTx_type(DIw)       wire [1+(DIw)+1 -1:0]
-`define ShakeTx_tunIN(DIw,BUS)      BUS[1+(DIw)+1 -1:1]
-`define ShakeTx_tunOUT(DIw,BUS)     BUS[1 -1:0]
-`define ShakeTx_DataInValid(DIw,BUS)    BUS[1+(DIw)+1 -1: (DIw)+1]
-`define ShakeTx_DataIn(DIw,BUS)         BUS[  (DIw)+1 -1:       1]
-`define ShakeTx_DataInReady(DIw,BUS)    BUS[        1 -1:       0]
+//tuninput  {DataValid.1, Data.DIw}
+//tunoutput {DataReady.1}
+`define BUS_Shake_width(DIw)    (1+(DIw)+1)
+`define BUS_Shake_type(DIw)     wire [1+(DIw)+1 -1:0]
+`define Shake_tunIN(DIw,BUS)    BUS [1+(DIw)+1 -1:1]
+`define Shake_tunOUT(DIw,BUS)   BUS [1 -1:0]
+`define Shake_DataValid(    DIw,BUS)    BUS[1+(DIw)+1 -1: (DIw)+1]
+`define Shake_Data(         DIw,BUS)    BUS[  (DIw)+1 -1:       1]
+`define Shake_DataReady(    DIw,BUS)    BUS[        1 -1:       0]
 
-//tuninput  {DataOutReady.1}
-//tunoutput {DataOutValid.1, DataOut.mDW}
-`define BUS_ShakeRx_width(DOw)      (1+1+(DOw))
-`define BUS_ShakeRx_type(DOw)       wire [1+1+(DOw) -1:        0]
-`define ShakeRx_tunIN(DOw,BUS)      BUS[1+1+(DOw) -1:  1+(DOw)]
-`define ShakeRx_tunOUT(DOw,BUS)     BUS[  1+(DOw) -1:        0]
-`define ShakeRx_DataOutReady(DOw,BUS)   BUS[1+1+(DOw) -1:  1+(DOw)]
-`define ShakeRx_DataOutValid(DOw,BUS)   BUS[  1+(DOw) -1:    (DOw)]
-`define ShakeRx_DataOut(DOw,BUS)        BUS[    (DOw) -1:        0]
 
 `endif //CPUBUSSES_VH
