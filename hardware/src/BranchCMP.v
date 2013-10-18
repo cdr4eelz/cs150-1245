@@ -1,5 +1,3 @@
-`timescale 1ns/1ps
-
 `include "BranchCMPop.vh"
 
 // Playing with functions to see when they help much.

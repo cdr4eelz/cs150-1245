@@ -1,5 +1,3 @@
-`timescale 1ns/1ps
-
 `include "CPUBusses.vh"
 
 /* (See bottom for comments)

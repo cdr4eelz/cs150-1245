@@ -1,5 +1,3 @@
-`timescale 1ns/1ps
-
 // UC Berkeley CS150
 // Lab 3, Spring 2012
 // Module: ALUdecoder
