@@ -35,7 +35,8 @@ module DumpMemCPU (
     output         line_y1_valid,
     output         line_trigger
 );
-    wire stl = stall; // Just friendly rename
+    parameter ClockFreq = 50_000_000;
+
     `BUS_CPUGlobal_type CPUGlobal;
     `BUS_Shake_type(8)  UARX, UATX;
 
@@ -46,7 +47,7 @@ module DumpMemCPU (
     wire [ 7: 0]    TX_Data;
     wire TX_Valid, TX_Ready, ADVANCE, ADVANCE_LAST;
 
-    assign TX_Valid = ~stl;
+    assign TX_Valid = ~stall;
     assign ADVANCE  = TX_Valid && TX_Ready;
     assign ADDR_NEXT = (ADVANCE_LAST) ? (ADDR + 1) : ADDR;
     assign ADDR_W   = ADDR[13: 2];
@@ -73,7 +74,7 @@ module DumpMemCPU (
     end
     always @(posedge clk) begin
 //        $strobe("C: %b %b %h %h %h %h %h %h", 
-//            rst, stl, TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
+//            rst, stall, TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
         if (ADDR > 9) $finish();
     end
 // synthesis translate_on
@@ -82,7 +83,7 @@ module DumpMemCPU (
     // Drive CPUGlobals from CPU module inputs
     BUS_CPUGlobal_tun BUS_CPUGlobal
     ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stl)
+        .CLK(clk), .RST(rst), .STL(stall)
     );
 
 
@@ -93,16 +94,21 @@ module DumpMemCPU (
         .wea(4'b0000), .dina(32'd0)
     );
 
+    imem_blk_ram bram_imem
+    (   .clka(clk), .ena(1'b0),
+        .addra(12'b0),  .wea(4'b0),   .dina(32'b0),
+        .clkb(clk), .addrb(12'b0), .doutb()
+    );
+
     // Test the tun/tap bus stuff...
-    BUS_ShakeTx_tun #( .InWidth(8) )
+    BUS_Shake_tun #( .InWidth(8) )
     BUS_UATX ( ._BUS_(UATX),
         .Data(      TX_Data),
         .DataValid( TX_Valid),
         .DataReady( TX_Ready)
     );
 
-    // Test the macro based bus stuff...
-    UART uart
+    UART #(.ClockFreq(ClockFreq)) uart
     (   .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
         // Transmitter  (handshakes go both in/out)

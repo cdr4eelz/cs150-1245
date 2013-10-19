@@ -37,6 +37,8 @@ module DumpMEMIOCPU #(
     output         line_y1_valid,
     output         line_trigger
 );
+    parameter ClockFreq = 50_000_000;
+
     `BUS_CPUGlobal_type     CPUGlobal;
     `BUS_MEMIO_type         IOMAP;
 
@@ -107,10 +109,25 @@ module DumpMEMIOCPU #(
         .clkb(clk), .addrb(12'b0), .doutb()
     );
 
+    `BUS_Shake_type(8)  UATX, UARX;
+
     MEMIOPlex iomap_uart
     (   .clk(clk), .rst(rst), .ena(~stall),
         .IOMAP(IOMAP),
-        .SERIAL_RX(FPGA_SERIAL_RX), .SERIAL_TX(FPGA_SERIAL_TX)
+        .RVA_TX(UATX), .RVA_RX(UARX)
+    );
+
+    UART #(.ClockFreq(ClockFreq)) uart
+    (   .Clock(clk), .Reset(rst),
+        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
+        // Transmitter  (handshakes go both in/out)
+        .DataIn(        `Shake_Data(        8,UATX)),
+        .DataInValid(   `Shake_DataValid(   8,UATX)),
+        .DataInReady(   `Shake_DataReady(   8,UATX)),
+        // Receiver     (handshakes go both in/out)
+        .DataOut(       `Shake_Data(        8,UARX)),
+        .DataOutValid(  `Shake_DataValid(   8,UARX)),
+        .DataOutReady(  `Shake_DataReady(   8,UARX))
     );
 
 endmodule

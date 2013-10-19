@@ -12,3 +12,13 @@ EOM
 
 coregen -intstyle silent -b tmp/_batch
 coregen -intstyle silent -p . -b *.xco
+
+echo ""
+ls -al
+echo ""
+
+echo "To make a stash:"
+echo "rm -rf coregen.* tmp/ xlnx_auto_0_xdb/ *.gise *.xise *.txt *.pdf"
+echo "chmod -x * ; chmod go= *"
+echo "tar cvfj stash_xyz ..."
+
