@@ -6,16 +6,14 @@ module ml505top
   input        GPIO_SW_S,
   input        USER_CLK,
 
-`ifdef COLT45_StallDIP
-    // Temporary code for testing checkpoint 2:
+  // Temporary code for testing checkpoint 2:
 //NET GPIO_COMPLED_S  LOC="AG12";
 //NET GPIO_DIP_0 LOC="U25";
 //NET GPIO_DIP_0 IOSTANDARD="LVCMOS25";
-    output 	GPIO_COMPLED_S,
-    input 	GPIO_DIP_0,
-`endif
+  output 	    GPIO_COMPLED_S,
+  input 	    GPIO_DIP_0,
 
-  output [7:0] GPIO_LED,
+  output [7:0]  GPIO_LED,
 
   output [12:0] DDR2_A,
   output [1:0]  DDR2_BA,
@@ -153,6 +151,36 @@ module ml505top
   end
 
 
+// Manual stalling test (checkpoint 1):
+    reg man_stall;
+    wire man_stall_toggle;
+    always@(posedge cpu_clk_g) begin
+        if(rst) begin
+            man_stall <= 1'b0;
+        end else begin
+            if(man_stall_toggle) begin
+                man_stall <= ~man_stall;
+            end else begin
+                man_stall <= 1'b0;
+            end
+        end
+    end
+`ifndef COLT45_StallSkip
+    assign man_stall_toggle = 1'b1;
+`else
+`ifdef COLT45_StallDIP
+    assign man_stall_toggle = GPIO_DIP_0;
+`endif
+`endif
+
+    wire mem_init_done, mem_stall;
+    wire all_init_done = mem_init_done;
+    wire any_stall = mem_stall || man_stall;
+    assign GPIO_COMPLED_S = man_stall_toggle;
+    assign GPIO_LED = {5'b0, any_stall, pll_lock, all_init_done};
+
+
+`ifndef COLT45_pre2
   wire  [31:0] dcache_addr;
   wire  [31:0] icache_addr;
   wire  [3:0]  dcache_we;
@@ -163,7 +191,7 @@ module ml505top
   wire  [31:0] icache_din;
   wire [31:0]  dcache_dout;
   wire [31:0]  instruction;
-  wire         stall;
+//wire         stall;
   wire         video_ready;
   wire         dvi_video_ready;
   wire         video_valid;
@@ -191,9 +219,8 @@ module ml505top
       .clk200_g(clk200_g),
       .clkdiv0_g(clkdiv0_g),
       .clk90_g(clk90_g),
-      .clk50_g(clk50_g),
       .rst(fifo_reset),
-      .init_done(init_done),
+      .init_done(mem_init_done),
       .DDR2_A(DDR2_A),
       .DDR2_BA(DDR2_BA),
       .DDR2_CAS_B(DDR2_CAS_B),
@@ -218,11 +245,13 @@ module ml505top
       .dcache_din (dcache_din ), 
       .icache_din (icache_din ), 
       .dcache_dout(dcache_dout),
-      .icache_dout(instruction),
+      .instruction(instruction),
+
+`ifdef __COLT45_pre3
+      .clk50_g(clk50_g),
       .bypass_addr(bypass_addr),
       .bypass_we  (bypass_we  ),
       .bypass_din (bypass_din ),
-      .stall      (mem_stall  ),
       .video      (video      ),
       .video_ready(video_ready),
       .video_valid(video_valid),
@@ -237,46 +266,15 @@ module ml505top
       .line_y0_valid(line_y0_valid),
       .line_x1_valid(line_x1_valid),
       .line_y1_valid(line_y1_valid),
-      .line_trigger(line_trigger)
-    );
-  
-  // MIPS 150 CPU
-`ifndef CPUTYPE
-`define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
-`endif
-  `CPUTYPE CPU(
-    .clk(cpu_clk_g),
-    .rst(rst || ~init_done),
-    .stall(stall),
-    .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-    .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
-    .dcache_addr (dcache_addr ),
-    .icache_addr (icache_addr ),
-    .dcache_we   (dcache_we   ),
-    .icache_we   (icache_we   ),
-    .dcache_re   (dcache_re   ),
-    .icache_re   (icache_re   ),
-    .dcache_din  (dcache_din  ),
-    .icache_din  (icache_din  ),
-    .dcache_dout (dcache_dout ),
-    .instruction (instruction ),
-    .filler_color(filler_color),
-    .filler_valid(filler_valid),
-    .filler_ready(filler_ready),
-    .line_ready(line_ready),
-    .line_color(line_color),
-    .line_point(line_point),
-    .line_color_valid(line_color_valid),
-    .line_x0_valid(line_x0_valid),
-    .line_y0_valid(line_y0_valid),
-    .line_x1_valid(line_x1_valid),
-    .line_y1_valid(line_y1_valid),
-    .line_trigger(line_trigger),
-    .bypass_addr(bypass_addr),
-    .bypass_we  (bypass_we  ),
-    .bypass_din (bypass_din )
-  );
+      .line_trigger(line_trigger),
+`endif //ifndef COLT45_pre3
 
+      .stall      (mem_stall  )
+    );
+`endif //ifndef COLT45_pre2
+
+
+`ifdef __COLT45_pre3
   DVI #(
     .ClockFreq(                 50000000),
     .Width(                     1040),   
@@ -289,7 +287,7 @@ module ml505top
     .BackV(                     23)      
   ) dvi(         
     .Clock(                     cpu_clk_g),
-    .Reset(                     rst || ~init_done),
+    .Reset(                     rst || ~all_init_done),
     .DVI_D(                     DVI_D),
     .DVI_DE(                    DVI_DE),
     .DVI_H(                     DVI_H),
@@ -304,31 +302,52 @@ module ml505top
     .VideoReady(                video_ready),
     .VideoValid(                video_valid)
   );
+`endif //ifndef COLT45_pre3
 
-    // Manual stalling test (checkpoint 1):
-    reg man_stall;
-    wire man_stall_toggle;
-    always@(posedge cpu_clk_g) begin
-        if(rst) begin
-            man_stall <= 1'b0;
-        end else begin
-            if(man_stall_toggle) begin
-                man_stall <= ~man_stall;
-            end else begin
-                man_stall <= 1'b0;
-            end
-        end
-    end
-`ifndef COLT45_StallSkip
-    assign man_stall_toggle = 1'b1;
-`else
-`ifdef COLT45_StallDIP
-    assign man_stall_toggle = GPIO_DIP_0;
-    assign GPIO_COMPLED_S = GPIO_DIP_0;
-`endif
-`endif
 
-  assign stall = mem_stall || man_stall;
-  assign GPIO_LED = {5'b0, stall, pll_lock, init_done};
+  // MIPS 150 CPU
+`ifndef CPUTYPE
+`define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
+`endif
+  `CPUTYPE CPU(
+    .clk(cpu_clk_g),
+    .rst(rst || ~all_init_done),
+    .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
+    .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+
+`ifndef COLT45_pre2
+    .dcache_addr (dcache_addr ),
+    .icache_addr (icache_addr ),
+    .dcache_we   (dcache_we   ),
+    .icache_we   (icache_we   ),
+    .dcache_re   (dcache_re   ),
+    .icache_re   (icache_re   ),
+    .dcache_din  (dcache_din  ),
+    .icache_din  (icache_din  ),
+    .dcache_dout (dcache_dout ),
+    .instruction (instruction ),
+
+`ifdef __COLT45_pre3
+    .bypass_addr(bypass_addr),
+    .bypass_we  (bypass_we  ),
+    .bypass_din (bypass_din ),
+
+    .filler_color(filler_color),
+    .filler_valid(filler_valid),
+    .filler_ready(filler_ready),
+    .line_ready(line_ready),
+    .line_color(line_color),
+    .line_point(line_point),
+    .line_color_valid(line_color_valid),
+    .line_x0_valid(line_x0_valid),
+    .line_y0_valid(line_y0_valid),
+    .line_x1_valid(line_x1_valid),
+    .line_y1_valid(line_y1_valid),
+    .line_trigger(line_trigger),
+`endif //ifndef COLT45_pre3
+`endif //ifndef COLT45_pre2
+
+    .stall(any_stall)
+  );
 
 endmodule

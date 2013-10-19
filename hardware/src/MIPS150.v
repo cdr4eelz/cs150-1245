@@ -1,11 +1,15 @@
 `include "CPUBusses.vh"
 
 module MIPS150(
-    input   clk, rst, stall,
-    input   FPGA_SERIAL_RX,
-    output  FPGA_SERIAL_TX,
+    input clk,
+    input rst,
 
-    // Memory system ports
+    // Serial
+    input FPGA_SERIAL_RX,
+    output FPGA_SERIAL_TX,
+
+`ifndef COLT45_pre2
+    // Memory system connections
     output [31:0] dcache_addr,
     output [31:0] icache_addr,
     output [3:0] dcache_we,
@@ -17,6 +21,7 @@ module MIPS150(
     input [31:0] dcache_dout,
     input [31:0] instruction,
 
+`ifdef __COLT45_pre3
     output [31:0] bypass_addr,
     output [31:0] bypass_din,
     output [3:0]  bypass_we,
@@ -33,20 +38,20 @@ module MIPS150(
     output         line_y0_valid,
     output         line_x1_valid,
     output         line_y1_valid,
-    output         line_trigger
-);
-  parameter ClockFreq = 50_000_000;
+    output         line_trigger,
+`endif //ifndef COLT45_pre3
+`endif //ifndef COLT45_pre2
 
-`ifndef COLT45_pre2
-`ifndef COLT45_pre3
+    input stall
+);
+    parameter ClockFreq = 50_000_000;
+
     // Remove these for CP5. 
     assign line_color_valid = 0;
     assign line_x0_valid = 0;
     assign line_x1_valid = 0;
     assign line_y0_valid = 0;
     assign line_y1_valid = 0;
-`endif // !COLT45_pre3
-`endif // !COLT45_pre2
 
 
     `BUS_CPUGlobal_type CPUGlobal;

@@ -1,11 +1,15 @@
 `include "CPUBusses.vh"
 
 module DumpMemCPU (
-    input   clk, rst, stall,
-    input   FPGA_SERIAL_RX,
-    output  FPGA_SERIAL_TX,
+    input clk,
+    input rst,
 
-    // Memory system ports
+    // Serial
+    input FPGA_SERIAL_RX,
+    output FPGA_SERIAL_TX,
+
+`ifndef COLT45_pre2
+    // Memory system connections
     output [31:0] dcache_addr,
     output [31:0] icache_addr,
     output [3:0] dcache_we,
@@ -17,6 +21,7 @@ module DumpMemCPU (
     input [31:0] dcache_dout,
     input [31:0] instruction,
 
+`ifdef __COLT45_pre3
     output [31:0] bypass_addr,
     output [31:0] bypass_din,
     output [3:0]  bypass_we,
@@ -33,7 +38,11 @@ module DumpMemCPU (
     output         line_y0_valid,
     output         line_x1_valid,
     output         line_y1_valid,
-    output         line_trigger
+    output         line_trigger,
+`endif //ifndef COLT45_pre3
+`endif //ifndef COLT45_pre2
+
+    input stall
 );
     parameter ClockFreq = 50_000_000;
 
