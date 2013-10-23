@@ -3,17 +3,17 @@ module ml505top
   input        FPGA_SERIAL_RX,
   output       FPGA_SERIAL_TX,
   input        GPIO_SW_C,
-  input        GPIO_SW_S,
+//Net GPIO_SW_C           LOC = AJ6   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2;
   input        USER_CLK,
 
-  // Temporary code for testing checkpoint 2:
-//NET GPIO_COMPLED_S  LOC="AG12";
-//NET GPIO_DIP_0 LOC="U25";
-//NET GPIO_DIP_0 IOSTANDARD="LVCMOS25";
-  output 	    GPIO_COMPLED_S,
-  input 	    GPIO_DIP_0,
-
   output [7:0]  GPIO_LED,
+
+/* Temporary code for testing checkpoint 2: */
+  output 	    GPIO_COMPLED_S,
+//Net GPIO_COMPLED_S      LOC = AG12  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2;
+  input 	    GPIO_DIP_0,
+//Net GPIO_DIP_0          LOC = U25   |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+//  input        GPIO_SW_S,
 
   output [12:0] DDR2_A,
   output [1:0]  DDR2_BA,
@@ -134,7 +134,8 @@ module ml505top
     count_r <= next_count_r;
   end
 
-  assign next_reset_r = {reset_r[2:0], GPIO_SW_C};
+  wire debug_reset, debug_stall;
+  assign next_reset_r = {reset_r[2:0], GPIO_SW_C | debug_reset};
 
   assign rst = (count_r == 26'b1) | ~pll_lock;
 
@@ -175,7 +176,7 @@ module ml505top
 
     wire mem_init_done, mem_stall;
     wire all_init_done = mem_init_done;
-    wire any_stall = mem_stall || man_stall;
+    wire any_stall = mem_stall || man_stall || debug_stall;
     assign GPIO_COMPLED_S = man_stall_toggle;
     assign GPIO_LED = {5'b0, any_stall, pll_lock, all_init_done};
 
@@ -349,5 +350,21 @@ module ml505top
 
     .stall(any_stall)
   );
+
+wire [35:0] CS_CONTROL0;
+wire [7:0] cs_aIN, cs_aOUT;
+chipscope_icon CS_ICON (
+    .CONTROL0(CS_CONTROL0) // INOUT BUS [35:0]
+) /* synthesis syn_noprune =1 */;
+chipscope_vio CS_VIO (
+    .CONTROL(CS_CONTROL0),  .CLK(cpu_clk_g),
+    .ASYNC_IN(cs_aIN),      .ASYNC_OUT(cs_aOUT),    // [7:0]
+    .SYNC_IN(8'b00000000),  .SYNC_OUT()             // [7:0]
+) /* synthesis syn_noprune =1 */;
+
+assign cs_aIN = { rst, any_stall, 1'b0, 1'b0,
+                    GPIO_SW_C, GPIO_DIP_0, 1'b0, 1'b0 };
+assign debug_reset = cs_aOUT[7];
+assign debug_stall = cs_aOUT[6];
 
 endmodule

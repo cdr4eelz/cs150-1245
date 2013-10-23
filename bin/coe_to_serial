@@ -35,14 +35,14 @@ done < $FILE
 echo -e "\n$COUNT bytes will be sent"
 
 #write a newline to clear any input tokens
-echo -ne "\x0d" > /dev/ttyS0
+echo -ne "\x0d" |tee $SERIALTTY >>_coe.log
 
 # Send the command one char at a time
 COMMAND="file $ADDRESS $COUNT "
 j=-1;
 while (( j++ < ${#COMMAND} ))
 do
-    echo -n "${COMMAND:j:1}"  > /dev/ttyS0
+    echo -n "${COMMAND:j:1}"  |tee $SERIALTTY >>_coe.log
 done
 
 echo -e "\nIssued command: $COMMAND"
@@ -58,12 +58,14 @@ do
     then
        for i in {0..7}
        do
-           echo -n "${LINE:i:1}" > /dev/ttyS0 
+           echo -n "${LINE:i:1}" |tee $SERIALTTY >>_coe.log
        done
       SENT=$[$SENT+4]
       echo -ne "Sent $SENT/$COUNT\r"
     fi
 done < $FILE
+
+echo -ne "\x0d" |tee $SERIALTTY >>_coe.log
 
 echo -e  "\n\nFile written."
 

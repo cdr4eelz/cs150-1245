@@ -1,3 +1,27 @@
+Net FPGA_SERIAL_RX      LOC = AG15  |  IOSTANDARD=LVCMOS33;
+Net FPGA_SERIAL_TX      LOC = AG20  |  IOSTANDARD=LVCMOS33;
+#Net FPGA_SERIAL2_RX     LOC = G10   |  IOSTANDARD=LVCMOS33;
+#Net FPGA_SERIAL2_TX     LOC = F10   |  IOSTANDARD=LVCMOS33;
+
+Net GPIO_LED[7]         LOC = AE24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+Net GPIO_LED[6]         LOC = AD24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+Net GPIO_LED[5]         LOC = AD25  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+Net GPIO_LED[4]         LOC = G16   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
+Net GPIO_LED[3]         LOC = AD26  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+Net GPIO_LED[2]         LOC = G15   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
+Net GPIO_LED[1]         LOC = L18   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
+Net GPIO_LED[0]         LOC = H18   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
+Net GPIO_COMPLED_S      LOC = AG12  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2;
+
+Net GPIO_DIP_0          LOC = U25   |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+Net GPIO_SW_C           LOC = AJ6   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2;
+
+
+TIMESPEC TS_USER_CLK = PERIOD sys_clk_pin 10.0 ns HIGH 50%;
+Net USER_CLK    LOC = AH15  |  IOSTANDARD=LVCMOS33;
+Net USER_CLK    TNM_NET = sys_clk_pin;
+
+
 ############################################################################
 ##
 ##  Xilinx, Inc. 2006            www.xilinx.com
@@ -29,8 +53,6 @@
 # NET "u_ddr2_infrastructure/clk200_ibufg" TNM_NET = "SYS_CLK_200";
 # TIMESPEC "TS_SYS_CLK_200" = PERIOD "SYS_CLK_200" 5 ns HIGH 50 %;
 
-NET "USER_CLK" TNM_NET = USER_CLK;
-TIMESPEC TS_USER_CLK = PERIOD "USER_CLK" 10.0 ns HIGH 50%;
 
 ############################################################################
 ########################################################################
@@ -43,25 +65,6 @@ TIMESPEC TS_USER_CLK = PERIOD "USER_CLK" 10.0 ns HIGH 50%;
 ################################################################################
 # I/O STANDARDS
 ################################################################################
-
-NET  "FPGA_SERIAL_RX"                           IOSTANDARD=LVCMOS33;
-NET  "FPGA_SERIAL_TX"                           IOSTANDARD=LVCMOS33;
-
-NET  "GPIO_LED[0]"                              IOSTANDARD=LVCMOS25;
-NET  "GPIO_LED[1]"                              IOSTANDARD=LVCMOS25;
-NET  "GPIO_LED[2]"                              IOSTANDARD=LVCMOS25;
-NET  "GPIO_LED[3]"                              IOSTANDARD=SSTL18_II_DCI;
-NET  "GPIO_LED[4]"                              IOSTANDARD=LVCMOS25;
-NET  "GPIO_LED[5]"                              IOSTANDARD=SSTL18_II_DCI;
-NET  "GPIO_LED[6]"                              IOSTANDARD=SSTL18_II_DCI;
-NET  "GPIO_LED[7]"                              IOSTANDARD=SSTL18_II_DCI;
-
-#NET "GPIO_COMPLED_S"   IOSTANDARD="???";
-NET "GPIO_DIP_0"       IOSTANDARD="LVCMOS25";
-
-NET  "GPIO_SW_C"                                IOSTANDARD=LVCMOS33;
-
-NET  "USER_CLK"                                 IOSTANDARD=LVCMOS33;
 
 NET  "DDR2_D[*]"                                IOSTANDARD = SSTL18_II_DCI;
 NET  "DDR2_A[*]"                                IOSTANDARD = SSTL18_II;
@@ -82,24 +85,6 @@ NET  "DDR2_CLK_N[*]"                            IOSTANDARD = DIFF_SSTL18_II;
 # Location Constraints
 ################################################################################
 #
-NET  "FPGA_SERIAL_TX"                            LOC="AG20";
-NET  "FPGA_SERIAL_RX"                            LOC="AG15";
-
-NET  "GPIO_LED[0]"                               LOC="H18";
-NET  "GPIO_LED[1]"                               LOC="L18";
-NET  "GPIO_LED[2]"                               LOC="G15";
-NET  "GPIO_LED[3]"                               LOC="AD26";
-NET  "GPIO_LED[4]"                               LOC="G16";
-NET  "GPIO_LED[5]"                               LOC="AD25";
-NET  "GPIO_LED[6]"                               LOC="AD24";
-NET  "GPIO_LED[7]"                               LOC="AE24";
-
-NET "GPIO_COMPLED_S"  LOC="AG12";
-NET "GPIO_DIP_0"      LOC="U25";
-
-NET  "GPIO_SW_C"                                 LOC="AJ6";
-
-NET  "USER_CLK"                                  LOC="AH15";
 
 NET  "DDR2_A[0]"                                 LOC = "L30" ;          #Bank
 NET  "DDR2_A[1]"                                 LOC = "M30" ;          #Bank
@@ -262,7 +247,7 @@ TIMESPEC "TS_MC_CAL_RDEN_DLY" = FROM "TNM_CAL_RDEN_DLY" TO FFS
 #the delayed DQS and stage2 flops are clocked by the clk0 clock. Placing a TIG
 #on the DQ IDDR capture flop instance to achieve this is acceptable because timing
 #is guaranteed through the use of separate Predictable IP constraints. These
-#violations are reported when anunconstrained path report is run.	
+#violations are reported when an unconstrained path report is run.	
 ###############################################################################
 INST "*/gen_dq[*].u_iob_dq/gen*.u_iddr_dq" TIG ;
 ###############################################################################
