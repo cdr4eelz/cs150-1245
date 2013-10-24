@@ -8,7 +8,7 @@ module MIPS150(
     input FPGA_SERIAL_RX,
     output FPGA_SERIAL_TX,
 
-`ifndef COLT45_pre2
+// CP2+
     // Memory system connections
     output [31:0] dcache_addr,
     output [31:0] icache_addr,
@@ -21,11 +21,10 @@ module MIPS150(
     input [31:0] dcache_dout,
     input [31:0] instruction,
 
-`ifdef __COLT45_pre3
+// CP3+
     output [31:0] bypass_addr,
     output [31:0] bypass_din,
     output [3:0]  bypass_we,
-
     // Graphics ports
     input          filler_ready,
     input          line_ready,
@@ -39,19 +38,26 @@ module MIPS150(
     output         line_x1_valid,
     output         line_y1_valid,
     output         line_trigger,
-`endif //ifndef COLT45_pre3
-`endif //ifndef COLT45_pre2
 
     input stall
 );
     parameter ClockFreq = 50_000_000;
 
+// CP2+
+    assign dcache_addr=32'd0, dcache_we=4'd0, dcache_re=1'd0, dcache_din=32'd0;
+    assign icache_addr=32'd0, icache_we=4'd0, icache_re=1'd0, icache_din=32'd0;
+
+// CP3+
+    assign bypass_addr=32'd0, bypass_din=32'd0, bypass_we=4'd0;
+    assign filler_color=24'd0, filler_valid=1'b0, line_color=32'd0, line_point=10'd0;
     // Remove these for CP5. 
-    assign line_color_valid = 0;
-    assign line_x0_valid = 0;
-    assign line_x1_valid = 0;
-    assign line_y0_valid = 0;
-    assign line_y1_valid = 0;
+    assign line_color_valid = 1'b0;
+    assign line_x0_valid = 1'b0;
+    assign line_x1_valid = 1'b0;
+    assign line_y0_valid = 1'b0;
+    assign line_y1_valid = 1'b0;
+
+    assign line_trigger=1'b0;
 
 
     `BUS_CPUGlobal_type CPUGlobal;

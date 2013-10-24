@@ -49,8 +49,10 @@ module DumpMEMIOTestbench;
     (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+// CP2+
         .dcache_dout(32'b0), .instruction(32'b0),
-        .filler_ready(1'b0), .line_ready(1'b0)
+// CP3+
+        .filler_ready(1'b0), .line_ready(1'b0),
     );
 
     UART        #( .ClockFreq(       ClockFreq))

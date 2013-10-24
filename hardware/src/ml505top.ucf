@@ -21,6 +21,8 @@ TIMESPEC TS_USER_CLK = PERIOD sys_clk_pin 10.0 ns HIGH 50%;
 Net USER_CLK    LOC = AH15  |  IOSTANDARD=LVCMOS33;
 Net USER_CLK    TNM_NET = sys_clk_pin;
 
+Net USER_RST    TIG;
+Net USER_RST    LOC = E9  |  IOSTANDARD=LVCMOS33  |  PULLUP;
 
 ############################################################################
 ##

@@ -54,20 +54,28 @@ module EchoTestbench;
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
     MIPS150 CPU
-    (   .clk(Clock), .rst(Reset), .stall(Stall),
+    (   .clk(Clock), .rst(Reset),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+// CP2+
         .dcache_dout(32'b0), .instruction(32'b0),
-        .filler_ready(1'b0), .line_ready(1'b0)
+// CP3+
+        .filler_ready(1'b0), .line_ready(1'b0),
+
+        .stall(Stall)
     );
 
     // A shadow CPU using a gated clock
     MIPS150 #(.ClockFreq(StallFreq)) xCPUx
-    (   .clk(StallClock), .rst(Reset), .stall(1'b0),
+    (   .clk(StallClock), .rst(Reset),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(xFPGA_SERIAL_TXx),
+// CP2+
         .dcache_dout(32'b0), .instruction(32'b0),
-        .filler_ready(1'b0), .line_ready(1'b0)
+// CP3+
+        .filler_ready(1'b0), .line_ready(1'b0),
+
+        .stall(1'b0)
     );
     assign serialListenTx = (1) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx;
 //  assign serialListenTx = FPGA_SERIAL_TX;

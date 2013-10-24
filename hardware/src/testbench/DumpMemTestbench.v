@@ -25,14 +25,17 @@ module DumpMemTestbench;
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
     DumpMemCPU CPU
-    (   .clk(Clock), .rst(Reset), .stall(Stall),
+    (   .clk(Clock), .rst(Reset),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+// CP2+
         .dcache_dout(32'b0), .instruction(32'b0),
-        .filler_ready(0), .line_ready(0)
+// CP3+
+        .filler_ready(1'b0), .line_ready(1'b0),
 
+        .stall(Stall)
     );
-    
+
     UART        #( .ClockFreq(       ClockFreq))
     uart_tb( .Clock(           Clock),
         .Reset(           Reset),

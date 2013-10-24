@@ -1,12 +1,28 @@
 module ml505top
 (
   input        FPGA_SERIAL_RX,
+//Net FPGA_SERIAL_RX      LOC = AG15  |  IOSTANDARD=LVCMOS33;
   output       FPGA_SERIAL_TX,
+//Net FPGA_SERIAL_TX      LOC = AG20  |  IOSTANDARD=LVCMOS33;
   input        GPIO_SW_C,
 //Net GPIO_SW_C           LOC = AJ6   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2;
   input        USER_CLK,
+//TIMESPEC TS_USER_CLK = PERIOD sys_clk_pin 10.0 ns HIGH 50%;
+//Net USER_CLK    LOC = AH15  |  IOSTANDARD=LVCMOS33;
+//Net USER_CLK    TNM_NET = sys_clk_pin;
+  input        USER_RST,    // Extra connection added to passthrough to embedded stuff
+//Net USER_RST    TIG;
+//Net USER_RST    LOC = E9  |  IOSTANDARD=LVCMOS33  |  PULLUP;
 
   output [7:0]  GPIO_LED,
+//Net GPIO_LED[7]         LOC = AE24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+//Net GPIO_LED[6]         LOC = AD24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+//Net GPIO_LED[5]         LOC = AD25  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+//Net GPIO_LED[4]         LOC = G16   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
+//Net GPIO_LED[3]         LOC = AD26  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
+//Net GPIO_LED[2]         LOC = G15   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
+//Net GPIO_LED[1]         LOC = L18   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
+//Net GPIO_LED[0]         LOC = H18   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
 
 /* Temporary code for testing checkpoint 2: */
   output 	    GPIO_COMPLED_S,
@@ -180,8 +196,7 @@ module ml505top
     assign GPIO_COMPLED_S = man_stall_toggle;
     assign GPIO_LED = {5'b0, any_stall, pll_lock, all_init_done};
 
-
-`ifndef COLT45_pre2
+// CP2+
   wire  [31:0] dcache_addr;
   wire  [31:0] icache_addr;
   wire  [3:0]  dcache_we;
@@ -193,6 +208,8 @@ module ml505top
   wire [31:0]  dcache_dout;
   wire [31:0]  instruction;
 //wire         stall;
+
+// CP3+
   wire         video_ready;
   wire         dvi_video_ready;
   wire         video_valid;
@@ -213,7 +230,6 @@ module ml505top
   wire [31:0]  bypass_din;
   wire [3:0]   bypass_we;
 
-  
   Memory150 #(.SIM_ONLY(1'b0)) mem_arch(
       .cpu_clk_g(cpu_clk_g),
       .clk0_g(clk0_g),
@@ -268,14 +284,11 @@ module ml505top
       .line_x1_valid(line_x1_valid),
       .line_y1_valid(line_y1_valid),
       .line_trigger(line_trigger),
-`endif //ifndef COLT45_pre3
-
+`endif
       .stall      (mem_stall  )
     );
-`endif //ifndef COLT45_pre2
 
-
-`ifdef __COLT45_pre3
+// CP3+
   DVI #(
     .ClockFreq(                 50000000),
     .Width(                     1040),   
@@ -303,7 +316,6 @@ module ml505top
     .VideoReady(                video_ready),
     .VideoValid(                video_valid)
   );
-`endif //ifndef COLT45_pre3
 
 
   // MIPS 150 CPU
@@ -316,7 +328,7 @@ module ml505top
     .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
     .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
 
-`ifndef COLT45_pre2
+// CP2+
     .dcache_addr (dcache_addr ),
     .icache_addr (icache_addr ),
     .dcache_we   (dcache_we   ),
@@ -328,7 +340,7 @@ module ml505top
     .dcache_dout (dcache_dout ),
     .instruction (instruction ),
 
-`ifdef __COLT45_pre3
+// CP3+
     .bypass_addr(bypass_addr),
     .bypass_we  (bypass_we  ),
     .bypass_din (bypass_din ),
@@ -345,12 +357,11 @@ module ml505top
     .line_x1_valid(line_x1_valid),
     .line_y1_valid(line_y1_valid),
     .line_trigger(line_trigger),
-`endif //ifndef COLT45_pre3
-`endif //ifndef COLT45_pre2
 
     .stall(any_stall)
   );
 
+`ifdef COLT_DEBUG
 wire [35:0] CS_CONTROL0;
 wire [7:0] cs_aIN, cs_aOUT;
 chipscope_icon CS_ICON (
@@ -366,5 +377,9 @@ assign cs_aIN = { rst, any_stall, 1'b0, 1'b0,
                     GPIO_SW_C, GPIO_DIP_0, 1'b0, 1'b0 };
 assign debug_reset = cs_aOUT[7];
 assign debug_stall = cs_aOUT[6];
+`else
+assign debug_reset = 1'b0;
+assign debug_stall = 1'b0;
+`endif
 
 endmodule
