@@ -1,6 +1,16 @@
 *.log
 *.bit
+platgen.opt
+plop.make
+plop_incl.make
 microblaze_0/
 Debug/
 .metadata/
 .settings/
+__xps/
+/data/
+/etc/
+/hdl/
+/implementation/
+/synthesis/
+XpsGuiSessionLock

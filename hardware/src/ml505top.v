@@ -387,6 +387,10 @@ assign debug_reset = 1'b0;
 assign debug_stall = 1'b0;
 `endif
 
+wire [24:31] iic_gpo;
+wire iic_sda, iic_sd;
+wire spi_sck, spi_miso, spi_mosi, spi_ss;
+
 plop PLOP (
     .CLOCK_REF_100GHz   (user_clk_g),   .CLOCK_LOCKED   (),//OUT
     .RESET_BOARD        (USER_RST),     .RESET_AUX      (1'b0),
@@ -394,18 +398,18 @@ plop PLOP (
     .UART_RX    (PLOP_SERIAL_RX),   .UART_TX    (PLOP_SERIAL_TX),//OUT
     .UARTx_RX   (1'b1),             .UARTx_TX   (),//OUT
 // GPIO (32-bits each way)
-    .GPI1(32'd0),   //IN-32
-    .GPO1(),        //OUT-32
+    .GPI1   (32'd0),    //IN-32
+    .GPO1   (),         //OUT-32
 // IIC
-  .IIC0_GPO(),      //OUT[24:31]
-  .IIC0_SDA(),      //INOUT
-  .IIC0_SD(),       //INOUT
+    .IIC0_GPO   (iic_gpo),  //OUT[24:31]
+    .IIC0_SDA   (iic_sda),  //INOUT
+    .IIC0_SD    (iic_sd),   //INOUT
 // SPI
-  .SPI0_SPISEL(1'b0),   //IN
-  .SPI0_SCK(1'b0),      //INOUT
-  .SPI0_MISO(1'b0),     //INOUT
-  .SPI0_MOSI(1'b0),     //INOUT
-  .SPI0_SS(1'b0)        //INOUT
+    .SPI0_SPISEL(1'b0),     //IN
+    .SPI0_SCK   (spi_sck),  //INOUT
+    .SPI0_MISO  (spi_miso), //INOUT
+    .SPI0_MOSI  (spi_mosi), //INOUT
+    .SPI0_SS    (spi_ss)    //INOUT
 ) /* synthesis syn_noprune=1 */;
 
 endmodule
