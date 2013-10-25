@@ -50,7 +50,7 @@ plop.elf.size: plop.elf
 
 plop.elf.elfcheck: plop.elf
 	@echo 'Invoking: Xilinx ELF Check'
-	elfcheck plop.elf -hw ../../plop_hw_platform/system.xml -pe microblaze_0  |tee "plop.elf.elfcheck"
+	elfcheck plop.elf -hw ../../plop_hw_ml505top/system.xml -pe microblaze_0  |tee "plop.elf.elfcheck"
 	@echo 'Finished building: $@'
 	@echo ' '
 

@@ -39,21 +39,21 @@ int main()
 
     print("\r\n[RELAY.x]\n\r");
 	while (1) {
-        if (!XUartLite_IsReceiveEmpty(U_DEBUG)) {
+        while (!XUartLite_IsReceiveEmpty(U_DEBUG) && !XUartLite_IsTransmitFull(XPAR_RS232_UART_2_BASEADDR)) {
             tX[0] = XUartLite_RecvByte(U_DEBUG);
             if (tX[0] == '\n') tX[0] = '\r';
             if (tX[0] != 0) {
-                if (!XUartLite_IsTransmitFull(XPAR_RS232_UART_2_BASEADDR)) {
+                //if (!XUartLite_IsTransmitFull(XPAR_RS232_UART_2_BASEADDR)) {
                     XUartLite_SendByte(XPAR_RS232_UART_2_BASEADDR, tX[0]);
-                }
+                //}
             }
         }
-        if (!XUartLite_IsReceiveEmpty(XPAR_RS232_UART_2_BASEADDR)) {
+        if (!XUartLite_IsReceiveEmpty(XPAR_RS232_UART_2_BASEADDR) && !XUartLite_IsTransmitFull(U_DEBUG)) {
             rX[0] = XUartLite_RecvByte(XPAR_RS232_UART_2_BASEADDR);
             if (rX[0] != 0) {
-                if (!XUartLite_IsTransmitFull(U_DEBUG)) {
+                //if (!XUartLite_IsTransmitFull(U_DEBUG)) {
                     XUartLite_SendByte(U_DEBUG, rX[0]);
-                }
+                //}
             }
         }
 	}

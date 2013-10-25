@@ -18,6 +18,7 @@ export MASTER=cs150
 # Set up local settings
 #for file in ${HOME}/bashrc.d/* ; do [[ -x ${file} ]] && . "${file}"; done
 
+#Clean up the path (WATCH OUT FOR CHANGES!)
 export PATH=/usr/local/bin:/usr/sww/bin:/usr/bin:/bin:/usr/ucb:/usr/sfw/bin:/share/b/runas/${ARCH}:/share/b/bin
 
 unset XILINX
@@ -42,7 +43,8 @@ unalias rm 2>/dev/null
 unalias cp 2>/dev/null
 unalias mv 2>/dev/null
  
-export PATH=${HOME}/team45/bin:${HOME}/bin:/opt/modeltech/bin:$PATH
+export PATH="${HOME}/team45/bin:${HOME}/bin:/opt/modeltech/bin:${PATH}"
+export MANPATH="${HOME}/man:${MANPATH}"
 
 export TERMINFO=~/.terminfo
 

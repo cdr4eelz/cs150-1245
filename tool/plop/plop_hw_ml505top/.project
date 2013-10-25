@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>plop_hw_ml505top</name>
+	<comment>Swapped in CS150 ml505top with embedded MicroBlaze</comment>
+	<projects>
+	</projects>
+	<buildSpec>
+	</buildSpec>
+	<natures>
+		<nature>com.xilinx.sdk.hw.HwProject</nature>
+	</natures>
+</projectDescription>

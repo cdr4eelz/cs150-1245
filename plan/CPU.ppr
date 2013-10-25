@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<Project Version="4" Minor="34">
+<!--Product Version: PlanAhead v14.6 (64-bit)-->
+<Project Version="4" Minor="36">
 	<FileSet Dir="sources_1" File="fileset.xml"/>
 	<FileSet Dir="constrs_1" File="fileset.xml"/>
 	<FileSet Dir="sim_1" File="fileset.xml"/>
@@ -9,10 +10,12 @@
 	<Config>
 		<Option Name="Id" Val="cbf42aa4220f4f9582c043a1774571ff"/>
 		<Option Name="Part" Val="xc5vlx110tff1136-1"/>
+		<Option Name="CompiledLibDir" Val="$PCACHEDIR/compile_simlib"/>
 		<Option Name="TargetLanguage" Val="Verilog"/>
 		<Option Name="TargetSimulator" Val="ModelSim"/>
 		<Option Name="Board" Val=""/>
 		<Option Name="SourceMgmtMode" Val="All"/>
+		<Option Name="ActiveSimSet" Val="sim_1"/>
 		<Option Name="CxlOverwriteLibs" Val="1"/>
 		<Option Name="CxlFuncsim" Val="1"/>
 		<Option Name="CxlTimesim" Val="1"/>

@@ -89,7 +89,7 @@
 							</tool>
 							<tool id="xilinx.gnu.mb.size.debug.962650488" name="MicroBlaze Print Size" superClass="xilinx.gnu.mb.size.debug"/>
 							<tool id="xilinx.elfcheck.mb.debug.90609282" name="Xilinx ELF Check" superClass="xilinx.elfcheck.mb.debug">
-								<option id="xilinx.elfcheck.option.hwspec.2083097611" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../plop_hw_platform/system.xml" valueType="string"/>
+								<option id="xilinx.elfcheck.option.hwspec.2083097611" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../plop_hw_ml505top/system.xml" valueType="string"/>
 								<option id="xilinx.elfcheck.option.procname.297495457" superClass="xilinx.elfcheck.option.procname" value="-pe microblaze_0" valueType="string"/>
 							</tool>
 						</toolChain>
@@ -176,7 +176,7 @@
 							</tool>
 							<tool id="xilinx.gnu.mb.size.release.1716077230" name="MicroBlaze Print Size" superClass="xilinx.gnu.mb.size.release"/>
 							<tool id="xilinx.elfcheck.mb.release.552248327" name="Xilinx ELF Check" superClass="xilinx.elfcheck.mb.release">
-								<option id="xilinx.elfcheck.option.hwspec.1025894578" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../plop_hw_platform/system.xml" valueType="string"/>
+								<option id="xilinx.elfcheck.option.hwspec.1025894578" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../plop_hw_ml505top/system.xml" valueType="string"/>
 								<option id="xilinx.elfcheck.option.procname.1032072496" superClass="xilinx.elfcheck.option.procname" value="-pe microblaze_0" valueType="string"/>
 							</tool>
 						</toolChain>
@@ -205,4 +205,5 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.xilinx.managedbuilder.ui.MBGCCManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="refreshScope"/>
 </cproject>

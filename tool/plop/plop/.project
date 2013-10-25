@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
 	<name>plop</name>
-	<comment>plop_bsp - microblaze_0</comment>
+	<comment></comment>
 	<projects>
 		<project>plop_bsp</project>
 	</projects>

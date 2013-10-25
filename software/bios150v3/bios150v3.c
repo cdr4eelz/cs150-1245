@@ -40,14 +40,18 @@ void store(uint32_t address, uint32_t length)
 
 
 #define BUFFER_LEN 128
+#define VERSION_CHAR '0'
 
 typedef void (*entry_t)(void);
 
 int main(void)
 {
-    uwrite_int8s("\r\n\r\n[Colt45.BROM]\r\n\r\n");
+    uwrite_int8s("\r\n\r\n[COLT45.");
+    uwrite_int8(VERSION_CHAR);
+    uwrite_int8s("]\r\n\r\n");
 
     for ( ; ; ) {
+        uwrite_int8(VERSION_CHAR);
         uwrite_int8('>');
         uwrite_int8(' ');
 

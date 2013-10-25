@@ -401,11 +401,11 @@ plop PLOP (
   .IIC0_SDA(),      //INOUT
   .IIC0_SD(),       //INOUT
 // SPI
-  .SPI0_SPISEL(),   //IN
-  .SPI0_SCK(),      //INOUT
-  .SPI0_MISO(),     //INOUT
-  .SPI0_MOSI(),     //INOUT
-  .SPI0_SS()        //INOUT
+  .SPI0_SPISEL(1'b0),   //IN
+  .SPI0_SCK(1'b0),      //INOUT
+  .SPI0_MISO(1'b0),     //INOUT
+  .SPI0_MOSI(1'b0),     //INOUT
+  .SPI0_SS(1'b0)        //INOUT
 ) /* synthesis syn_noprune=1 */;
 
 endmodule

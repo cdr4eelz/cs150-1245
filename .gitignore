@@ -34,7 +34,7 @@ build/
 *.gise
 *.tcl
 *.swp
-*flist.txti
+*flist.txt
 *gen_readme.txt
 *.elf
 .cyg*

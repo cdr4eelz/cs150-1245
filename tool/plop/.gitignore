@@ -1,0 +1,6 @@
+*.log
+*.bit
+microblaze_0/
+Debug/
+.metadata/
+.settings/

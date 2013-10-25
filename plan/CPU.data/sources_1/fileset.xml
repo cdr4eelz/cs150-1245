@@ -1,297 +1,793 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<DARoots Version="1"
-		Minor="22">
-	<FileSet Name="sources_1"
-			Type="DesignSrcs"
-			RelSrcDir="$PSRCDIR/sources_1">
-		<Filter Type="Srcs"/>
-		<File Path="$PPRDIR/../hardware/src/DumpMemCPU.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/DumpMEMIOCPU.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/util.vh">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/UATransmit.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/UAReceive.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/IORegister.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/CPUBusses.vh">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/CPUBusses.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/Opcode.vh">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/ALUop.vh">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/ALUdec.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/UART.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/InstructionControl.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/BranchCMPop.vh">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/BranchCMP.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/ALU.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/StageWF.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/StageM.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/StageDX.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/RegFile.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/PipelineRegister.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/MEMIOPlex.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/inc/imem_blk_ram.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/inc/imem_blk_ram.ngc">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="0"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/inc/dmem_blk_ram.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/inc/dmem_blk_ram.ngc">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="0"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/MIPS150.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<File Path="$PPRDIR/../hardware/src/ml505top.v">
-			<FileInfo>
-				<Attr Name="UsedInSynthesis"
-						Val="1"/>
-				<Attr Name="UsedInImplementation"
-						Val="1"/>
-				<Attr Name="UsedInSimulation"
-						Val="1"/>
-			</FileInfo>
-		</File>
-		<Config>
-			<Option Name="DesignMode"
-					Val="RTL"/>
-			<Option Name="TopModule"
-					Val="ml505top"/>
-			<Define Name="CPUTYPE"
-					Val="MIPS150"/>
-		</Config>
-	</FileSet>
+<DARoots Version="1" Minor="26">
+  <FileSet Name="sources_1" Type="DesignSrcs" RelSrcDir="$PSRCDIR/sources_1">
+    <Filter Type="Srcs"/>
+    <File Path="$PPRDIR/../hardware/src/CPUBusses.vh">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/CPUBusses.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/Opcode.vh">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/ALUop.vh">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/ALUdec.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/util.vh">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/UATransmit.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/UAReceive.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/IORegister.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/InstructionControl.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/BranchCMPop.vh">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/BranchCMP.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/ALU.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/UART.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/StageWF.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/StageM.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/StageDX.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/RegFile.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/PipelineRegister.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/MEMIOPlex.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/dmem_blk_ram/dmem_blk_ram.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/bios_mem/bios_mem.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/MIPS150.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/ml505top.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/imem_blk_ram/imem_blk_ram.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DumpMemCPU.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DumpMEMIOCPU.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/cache_data_blk_ram/cache_data_blk_ram.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/cache_tag_blk_ram/cache_tag_blk_ram.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/request_fifo/request_fifo.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/pixel_fifo/pixel_fifo.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_wdf/mig_wdf.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_rdf/mig_rdf.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_af/mig_af.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/cache_data_blk_ram/cache_data_blk_ram.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/cache_tag_blk_ram/cache_tag_blk_ram.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/pixel_fifo/pixel_fifo.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_xps_timer_0_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_xps_spi_0_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_xps_intc_0_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_xps_iic_0_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_rs232_uart_2_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_proc_sys_reset_0_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_microblaze_0_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_mdm_0_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_mb_plb_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_lmb_bram_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_iomodule_0_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_ilmb_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_ilmb_cntlr_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_dlmb_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_dlmb_cntlr_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop_clock_generator_0_wrapper.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/minitop.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/chipscope_vio.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/chipscope_icon.ngc">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/ShiftRegister.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/SDR2DDR.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/Register.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/PixelCounter.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/I2CMaster.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/I2CDRAMMaster.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/FIFORegister.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/FIFORegControl.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/FIFOInitial.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/DVIInitial.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/DVIData.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/DVI.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/Counter.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/CountRegion.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/CountCompare.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/DVI/Const.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/mt4htf3264hy.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/mig_v3_61.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_usr_wr.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_usr_top.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_usr_rd.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_usr_addr_fifo.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_top.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_tb_top.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_tb_test_gen.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_tb_test_data_gen.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_tb_test_cmp.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_tb_test_addr_gen.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_phy_write.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_phy_top.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_phy_io.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_phy_init.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_phy_dqs_iob.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_phy_dq_iob.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_phy_dm_iob.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_phy_ctl_io.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_phy_calib.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_model_parameters.vh">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_model.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_mem_if_top.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_infrastructure.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_idelay_ctrl.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_ctrl.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_v3_61/ddr2_chipscope.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/cache.vh">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/PixelFeeder.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/RequestController.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/Cache.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/CacheBypass.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/FrameFiller.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/LineEngine.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/Memory150.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PDATADIR/sources_1/ports.xml">
+      <FileInfo SFType="PortsDb"/>
+    </File>
+    <File Path="$PDATADIR/sources_1/chipscope.xml">
+      <FileInfo SFType="ChipscopeDb"/>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/bios_mem/bios_mem.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/dmem_blk_ram/dmem_blk_ram.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_af/mig_af.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_rdf/mig_rdf.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/mig_wdf/mig_wdf.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/fun/plop.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <File Path="$PPRDIR/../hardware/src/imem_blk_ram/imem_blk_ram.v">
+      <FileInfo>
+        <Attr Name="UsedInSynthesis" Val="1"/>
+        <Attr Name="UsedInImplementation" Val="1"/>
+        <Attr Name="UsedInSimulation" Val="1"/>
+      </FileInfo>
+    </File>
+    <Config>
+      <Option Name="DesignMode" Val="RTL"/>
+      <Option Name="TopModule" Val="ml505top"/>
+      <Define Name="CPUTYPE" Val="MIPS150"/>
+    </Config>
+  </FileSet>
 </DARoots>
