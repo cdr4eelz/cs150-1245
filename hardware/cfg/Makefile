@@ -68,7 +68,7 @@ timing: $(TCRE_OUT)
 BITFILE := $(TOP).bit
 
 $(BITFILE): $(PAR_OUT)
-	bitgen -w $< $@ $(TOP).pcf
+	bitgen -w -f $(TEMPLATES)/bitgen.ut $< $@ $(TOP).pcf
 
 bitgen: $(BITFILE)
 

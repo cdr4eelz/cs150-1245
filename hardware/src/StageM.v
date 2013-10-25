@@ -4,7 +4,7 @@ module StageM #(
 	parameter NOUNKLE = 1
 ) (
 //  inout `BUS_CPUGlobal_type   CPUGlobal,  // Unused!
-    inout `BUS_MEMIO_type       DMEM, IMEM, IOMAP, // Could be merged & plexed elsewhere
+    inout `BUS_MEMIO_type       DMEM, IMEM, BMEM, IOMAP, // Could be merged & plexed elsewhere
     
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
     input `BUS_ICTL_type _IControl, // Few are used (hopefully tools will prune)
@@ -22,6 +22,9 @@ module StageM #(
 );
 `define UNKNOWN 'b0
 `define UNK(CONDITION,DEFAULT,WIDTH) (((CONDITION) || NOUNKLE) ? (DEFAULT) : (WIDTH`UNKNOWN))
+
+//NOTE: Is interesting that memories can read/write simultaneously (involving same address)...
+//      ...perhaps useful for a special instruction like store-compare (for concurrencty).
 
     // These are looking more like Functions due to the symmetry & triviality
     wire  [ 3: 0] _Target   = _MemAddr[31:28],
@@ -53,9 +56,14 @@ module StageM #(
         .WMask  (4'b0000),                  .RMask  (4'b0000),
         .Addr   (`UNK(0,_Address,12)),      .WData  (`UNK(0,_WDataMasked,32))
     );
-    assign `MEMIO__IN(DMEM) = (!_Target[3] && _Target[0]) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
-    assign `MEMIO__IN(IMEM) = (!_Target[3] && _Target[1]) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
-    assign `MEMIO__IN(IOMAP)= (_Target == 4'b1000)        ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
+    wire _hot_DMEM = ( _Target == 4'b0001 || _Target == 4'b0011 );
+    wire _hot_IMEM = ( _Target == 4'b0010 || _Target == 4'b0011 ) && _isWrite && PCPLUS8[30]; // Write-Only & Only if BIOS is running
+    wire _hot_BMEM = ( _Target == 4'b0100 && !_isWrite); // Read-Only
+    wire _hot_IOMAP= ( _Target == 4'b1000 );
+    assign `MEMIO__IN(DMEM) = (_hot_DMEM) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
+    assign `MEMIO__IN(IMEM) = (_hot_IMEM) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
+    assign `MEMIO__IN(BMEM) = (_hot_BMEM) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
+    assign `MEMIO__IN(IOMAP)= (_hot_IOMAP)? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
     
     // Important to note the very cautious use of registered vs passthrough values,
     //   control signals, ets. (Example, DataWidth for read comes from IControl but
@@ -63,9 +71,13 @@ module StageM #(
     //   value, we don't register it here since the pipeline registers have some extra
     //   features that we yield to.
     
-    wire [31: 0] DataRead = (!Target[3] && Target[0]) ? `MEMIO_RData(DMEM)
-                                : (Target == 4'b1000) ? `MEMIO_RData(IOMAP)
-                                    : `UNK(0,32'h0000,32);
+    reg [31: 0] DataRead;
+    always @(*) case (Target) // "Target" (for read data coming out after clock) NOT "_Target"
+        4'b0001, 4'b0011:   DataRead = `MEMIO_RData(DMEM); // Avoiding casex/casez approach
+        4'b0100:            DataRead = `MEMIO_RData(BMEM);
+        4'b1000:            DataRead = `MEMIO_RData(IOMAP);
+        default: DataRead = `UNK(0,32'h0000,32);
+    endcase // CAUTIOUS trapping of EVERY case
     wire [31: 0] DataLoad = DataRead << (SubAddr*8) >> (SubShift*8);
     
     // Might divorce WBK from FWD stuff more fully to clarify slightly different paths

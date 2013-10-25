@@ -1,18 +1,20 @@
 module ml505top
 (
+  input        USER_CLK,
+//TIMESPEC TS_USER_CLK = PERIOD USER_CLK 10.0 ns HIGH 50%;
+//Net USER_CLK    LOC = AH15  |  IOSTANDARD=LVCMOS33;
+//Net USER_CLK    TNM_NET = USER_CLK;
+  input        USER_RST,    // Extra connection added to passthrough to embedded stuff
+//Net USER_RST    TIG;
+//Net USER_RST    LOC = E9  |  IOSTANDARD=LVCMOS33  |  PULLUP;
+
   input        FPGA_SERIAL_RX,
 //Net FPGA_SERIAL_RX      LOC = AG15  |  IOSTANDARD=LVCMOS33;
   output       FPGA_SERIAL_TX,
 //Net FPGA_SERIAL_TX      LOC = AG20  |  IOSTANDARD=LVCMOS33;
+
   input        GPIO_SW_C,
 //Net GPIO_SW_C           LOC = AJ6   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2;
-  input        USER_CLK,
-//TIMESPEC TS_USER_CLK = PERIOD sys_clk_pin 10.0 ns HIGH 50%;
-//Net USER_CLK    LOC = AH15  |  IOSTANDARD=LVCMOS33;
-//Net USER_CLK    TNM_NET = sys_clk_pin;
-  input        USER_RST,    // Extra connection added to passthrough to embedded stuff
-//Net USER_RST    TIG;
-//Net USER_RST    LOC = E9  |  IOSTANDARD=LVCMOS33  |  PULLUP;
 
   output [7:0]  GPIO_LED,
 //Net GPIO_LED[7]         LOC = AE24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
@@ -317,6 +319,9 @@ module ml505top
     .VideoValid(                video_valid)
   );
 
+PULLUP PULLUP_SERIAL_TX ( .O(FPGA_SERIAL_TX) );
+
+wire PLOP_SERIAL_RX, PLOP_SERIAL_TX;
 
   // MIPS 150 CPU
 `ifndef CPUTYPE
@@ -325,8 +330,8 @@ module ml505top
   `CPUTYPE CPU(
     .clk(cpu_clk_g),
     .rst(rst || ~all_init_done),
-    .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-    .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+    .FPGA_SERIAL_RX(PLOP_SERIAL_TX),
+    .FPGA_SERIAL_TX(PLOP_SERIAL_RX),
 
 // CP2+
     .dcache_addr (dcache_addr ),
@@ -381,5 +386,26 @@ assign debug_stall = cs_aOUT[6];
 assign debug_reset = 1'b0;
 assign debug_stall = 1'b0;
 `endif
+
+plop PLOP (
+    .CLOCK_REF_100GHz   (user_clk_g),   .CLOCK_LOCKED   (),//OUT
+    .RESET_BOARD        (USER_RST),     .RESET_AUX      (1'b0),
+    .MB_HALTED  (),                 .RESET_PERIPHERAL   (),//OUT
+    .UART_RX    (PLOP_SERIAL_RX),   .UART_TX    (PLOP_SERIAL_TX),//OUT
+    .UARTx_RX   (1'b1),             .UARTx_TX   (),//OUT
+// GPIO (32-bits each way)
+    .GPI1(32'd0),   //IN-32
+    .GPO1(),        //OUT-32
+// IIC
+  .IIC0_GPO(),      //OUT[24:31]
+  .IIC0_SDA(),      //INOUT
+  .IIC0_SD(),       //INOUT
+// SPI
+  .SPI0_SPISEL(),   //IN
+  .SPI0_SCK(),      //INOUT
+  .SPI0_MISO(),     //INOUT
+  .SPI0_MOSI(),     //INOUT
+  .SPI0_SS()        //INOUT
+) /* synthesis syn_noprune=1 */;
 
 endmodule

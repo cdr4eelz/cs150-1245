@@ -89,7 +89,7 @@ BITFILE := $(TOP).bit
 BITBZIP := $(BITFILE).bz2
 
 $(BITFILE): $(PAR_OUT)
-	bitgen -w -l $< $@ $(TOP).pcf
+	bitgen -w -l -f $(TEMPLATES)/bitgen.ut $< $@ $(TOP).pcf
 
 $(BITBZIP): $(BITFILE)
 	bzip2 --keep --stdout $< > $@

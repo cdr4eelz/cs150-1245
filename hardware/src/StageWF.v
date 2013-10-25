@@ -5,6 +5,7 @@ module StageWF #(
 ) (
     inout `BUS_CPUGlobal_type CPUGlobal,
     output reg [15: 0] STEPCOUNT, STALLCOUNT,
+    output         IMEM_read_bios,
     output [11: 0] IMEM_read_addr,
     input  [31: 0] IMEM_read_data,
     
@@ -34,6 +35,7 @@ module StageWF #(
         end
     end
     
+    assign IMEM_read_bios = ( PC_REG[31:28] == 4'h4 );
     assign IMEM_read_addr[11:0] = PC_REG[13:2]; //TODO: Assert properly aligned accesses
     assign PC   = PC_REG;
     assign INST = IMEM_read_data;

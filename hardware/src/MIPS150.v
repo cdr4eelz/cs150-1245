@@ -61,9 +61,10 @@ module MIPS150(
 
 
     `BUS_CPUGlobal_type CPUGlobal;
-    `BUS_MEMIO_type     DMEM, IMEM, IOMAP;
+    `BUS_MEMIO_type     DMEM, IMEM, BMEM, IOMAP;
+    wire                IMEM_bios;
     wire    [11: 0]     IMEM_addrb;
-    wire    [31: 0]     IMEM_doutb;
+    wire    [31: 0]     IMEM_doutb, BROM_doutb;
 
     // Register lines
     wire    [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
@@ -106,7 +107,8 @@ module MIPS150(
     wire [15: 0] StepCount, StallCount; // TODO: How big do these need to be???
     StageWF s_WF    // WF STAGE itself
     (   .CPUGlobal(CPUGlobal), .STEPCOUNT(StepCount), .STALLCOUNT(StallCount),
-        .IMEM_read_addr (IMEM_addrb),   .IMEM_read_data (IMEM_doutb),
+        .IMEM_read_addr (IMEM_addrb),   .IMEM_read_bios(IMEM_bios),
+        .IMEM_read_data ((IMEM_bios) ? BROM_doutb : IMEM_doutb),
         //Inputs
         .DOBranch       (DOBranch_DX_WF_),
         .PCBranch       (PCBranch_DX_WF_),
@@ -171,8 +173,8 @@ module MIPS150(
 
     StageM s_M
     (// .CPUGlobal  (CPUGlobal),
-        .DMEM       (DMEM),             .IMEM(IMEM),
-        .IOMAP      (IOMAP),
+        .DMEM       (DMEM),             .IMEM       (IMEM),
+        .BMEM       (BMEM),             .IOMAP      (IOMAP),
         //Inputs
         ._IControl  (IControl__M),      .IControl   (IControl_M),
         ._MemAddr   (MemAddr__M),       .MemAddr    (MemAddr_M),
@@ -188,9 +190,10 @@ module MIPS150(
 
     // Stall related intercepts (Simple patchwork and naming conventions for clarity)
     wire STALL_REGFILE_we   = ~stall && (REGFILE_we); // Avoid premature write (could be read early, even asynchronously)
-    wire STALL_DMEM_ena     = ~stall && (|`MEMIO_WMask(DMEM)   || |`MEMIO_RMask(DMEM)  );
-    wire STALL_IMEM_ena     = ~stall && (|`MEMIO_WMask(IMEM) /*|| |`MEMIO_RMask(IMEM)*/);
-    wire STALL_MEMIO_ena    = ~stall && (|`MEMIO_WMask(IOMAP)  || |`MEMIO_RMask(IOMAP) );
+    wire STALL_DMEM_ena     = ~stall && (  |`MEMIO_WMask(DMEM)   ||   |`MEMIO_RMask(DMEM)  );
+    wire STALL_IMEM_ena     = ~stall && (  |`MEMIO_WMask(IMEM) /*||   |`MEMIO_RMask(IMEM)*/);
+    wire STALL_BMEM_ena     = ~stall && (/*|`MEMIO_WMask(BMEM)   ||*/ |`MEMIO_RMask(BMEM)  );
+    wire STALL_MEMIO_ena    = ~stall && (  |`MEMIO_WMask(IOMAP)  ||   |`MEMIO_RMask(IOMAP) );
 
 
     // Key components indirectly wired elsewhere:
@@ -208,16 +211,26 @@ module MIPS150(
     (   .clka(clk), .ena(STALL_DMEM_ena),
         .addra  (`MEMIO_Addr(   DMEM)),     .douta  (`MEMIO_RData(  DMEM)),
         .wea    (`MEMIO_WMask(  DMEM)),     .dina   (`MEMIO_WData(  DMEM))
-    );
+    ) /* synthesis syn_noprune=1 */;
 
     imem_blk_ram bram_imem
     (   .clka(clk), .ena(STALL_IMEM_ena),
         .addra  (`MEMIO_Addr(   IMEM)),   /*.douta  (`MEMIO_RData(  IMEM)),*/
         .wea    (`MEMIO_WMask(  IMEM)),     .dina   (`MEMIO_WData(  IMEM)),
 
-        .clkb(clk), // .enb() is NOT available for stall, is it shared with ena?
-        .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)    //  inst fletch
-    );
+        .clkb(clk), // .enb() missing (is it always enabled or follows ena?)
+        .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)  //  inst fletch
+    ) /* synthesis syn_noprune=1 */;
+
+    bios_mem brom_bios
+    (   .clka(clk), .ena(STALL_BMEM_ena),
+        .addra  (`MEMIO_Addr(   BMEM)),     .douta  (`MEMIO_RData(  BMEM)),
+      /*.wea    (`MEMIO_WMask(  BMEM)),     .dina   (`MEMIO_WData(  BMEM)),*/
+
+        .clkb(clk), .enb(IMEM_bios), //TODO: Does this need stall awareness?
+        .addrb  (IMEM_addrb),   .doutb  (BROM_doutb)
+    ) /* synthesis syn_noprune=1 */;
+
 
     `BUS_Shake_type(8)  UATX, UARX;
 
