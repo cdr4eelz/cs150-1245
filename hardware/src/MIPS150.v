@@ -43,10 +43,6 @@ module MIPS150(
 );
     parameter ClockFreq = 50_000_000;
 
-// CP2+
-    assign dcache_addr=32'd0, dcache_we=4'd0, dcache_re=1'd0, dcache_din=32'd0;
-    assign icache_addr=32'd0, icache_we=4'd0, icache_re=1'd0, icache_din=32'd0;
-
 // CP3+
     assign bypass_addr=32'd0, bypass_din=32'd0, bypass_we=4'd0;
     assign filler_color=24'd0, filler_valid=1'b0, line_color=32'd0, line_point=10'd0;
@@ -61,7 +57,12 @@ module MIPS150(
 
 
     `BUS_CPUGlobal_type CPUGlobal;
-    `BUS_MEMIO_type     DMEM, IMEM, BMEM, IOMAP;
+    BUS_CPUGlobal_tun TUN_CPUGlobal // Drive CPUGlobal bus from CPU module inputs
+    ( ._BUS_(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stall)
+    );
+
+    `BUS_MMAP_type      DMEM, IMEM, BMEM, IOMAP;
     wire                IMEM_bios;
     wire    [11: 0]     IMEM_addrb;
     wire    [31: 0]     IMEM_doutb, BROM_doutb;
@@ -100,7 +101,7 @@ module MIPS150(
 
     assign REGFILE_wa = WBKReg_M_WF_,
             REGFILE_wd = WBKDat_M_WF_,
-            REGFILE_we = 1'b1; //NOTE: These signals intentionally sheltered from stalling
+            REGFILE_we = 1'b1; //NOTE: The trick of write to reg#0 is used for non-write
 
     // Declare outputs of WF stage
     wire [31: 0] PC_WF_, INST_WF_;
@@ -135,7 +136,7 @@ module MIPS150(
     `BUS_ICTL_type IControlDX_;
     wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_, PCPLUS8DX_;
     StageDX s_DX
-    (// .CPUGlobal(CPUGlobal),
+    (//.CPUGlobal(CPUGlobal),
         .REG_R1_    (REGFILE_ra1),      .REG_R2_    (REGFILE_ra2),
         .REG_D1_    (FWD_rd1),          .REG_D2_    (FWD_rd2),
         //Inputs
@@ -172,7 +173,7 @@ module MIPS150(
         REG_PCPLUS8_M   ( .CPUGlobal(CPUGlobal),    .In(PCPLUS8DX_  ),  .Out(PCPLUS8_M   ) );
 
     StageM s_M
-    (// .CPUGlobal  (CPUGlobal),
+    (//.CPUGlobal  (CPUGlobal),
         .DMEM       (DMEM),             .IMEM       (IMEM),
         .BMEM       (BMEM),             .IOMAP      (IOMAP),
         //Inputs
@@ -188,77 +189,84 @@ module MIPS150(
     );
 
 
-    // Stall related intercepts (Simple patchwork and naming conventions for clarity)
-    wire STALL_REGFILE_we   = ~stall && (REGFILE_we); // Avoid premature write (could be read early, even asynchronously)
-    wire STALL_DMEM_ena     = ~stall && (  |`MEMIO_WMask(DMEM)   ||   |`MEMIO_RMask(DMEM)  );
-    wire STALL_IMEM_ena     = ~stall && (  |`MEMIO_WMask(IMEM) /*||   |`MEMIO_RMask(IMEM)*/);
-    wire STALL_BMEM_ena     = ~stall && (/*|`MEMIO_WMask(BMEM)   ||*/ |`MEMIO_RMask(BMEM)  );
-    wire STALL_MEMIO_ena    = ~stall && (  |`MEMIO_WMask(IOMAP)  ||   |`MEMIO_RMask(IOMAP) );
-
-
     // Key components indirectly wired elsewhere:
 
     RegFile regfile
-    (   .clk(clk),
+    ( .clk(clk),
         // Write is synchronous
-        .wa(REGFILE_wa),    .wd(REGFILE_wd),    .we(STALL_REGFILE_we),
-        // Read is asynchronous
+        .wa (REGFILE_wa),    .wd(REGFILE_wd),    .we(~stall && REGFILE_we),
+        // Read is asynchronous & always enabled
         .ra1(REGFILE_ra1),  .ra2(REGFILE_ra2),
         .rd1(REGFILE_rd1),  .rd2(REGFILE_rd2)
     );
 
+//TODO: Use PARAMETER for CP-LEVEL not #define
+//TODO: Add an optional enable on the BUS_MMAP_tap which mutes both masks during the TAP!
+//TODO: Add parameter to the TAP to perform address selection?
+//TODO: Move memories into the MEMIOPLEX housing (or MEMIOPLEX becomes generic instantiator/tapper)
+
+`ifdef _undef_always_
+    BUS_MMAP_tap TAP_DCACHE //TODO:Honor stall via masks (or TAP feature)
+    ( ._BUS_(DMEM),     .Addr(dcache_addr),
+        .RMask(dcache_re),          .RData(dcache_dout),//OUT-32
+        .WMask(dcache_we),          .WData(dcache_din)
+    )
+    wire DMEM_ena = 1'b0;
+`else
+    assign dcache_addr=32'd0, dcache_we=4'd0, dcache_re=1'd0, dcache_din=32'd0; // dcache_dout
+    wire DMEM_ena = ~stall && ( |`MMAP_WMask(DMEM) || |`MMAP_RMask(DMEM) );
+`endif
     dmem_blk_ram bram_dmem
-    (   .clka(clk), .ena(STALL_DMEM_ena),
-        .addra  (`MEMIO_Addr(   DMEM)),     .douta  (`MEMIO_RData(  DMEM)),
-        .wea    (`MEMIO_WMask(  DMEM)),     .dina   (`MEMIO_WData(  DMEM))
+    ( .clka(clk),       .addra(`MMAP_Addr(DMEM)),
+        .ena(DMEM_ena),             .douta(`MMAP_RData(DMEM)),//OUT-32
+        .wea(`MMAP_WMask(DMEM)),    .dina (`MMAP_WData(DMEM))
     ) /* synthesis syn_noprune=1 */;
 
+
+    assign icache_addr=32'd0, icache_we=4'd0, icache_re=1'd0, icache_din=32'd0; // instruction
+    wire IMEM_ena = ~stall && ( |`MMAP_WMask(IMEM) /*|| |`MMAP_RMask(IMEM)*/ );
     imem_blk_ram bram_imem
-    (   .clka(clk), .ena(STALL_IMEM_ena),
-        .addra  (`MEMIO_Addr(   IMEM)),   /*.douta  (`MEMIO_RData(  IMEM)),*/
-        .wea    (`MEMIO_WMask(  IMEM)),     .dina   (`MEMIO_WData(  IMEM)),
-
-        .clkb(clk), // .enb() missing (is it always enabled or follows ena?)
-        .addrb  (IMEM_addrb),   .doutb  (IMEM_doutb)  //  inst fletch
+    ( .clka(clk),       .addra(`MMAP_Addr(IMEM)),
+        .ena(IMEM_ena),           /*.douta(`MMAP_RData(IMEM)),//OUT-32*/
+        .wea(`MMAP_WMask(IMEM)),    .dina (`MMAP_WData(IMEM)),
+    // Instruction reading port (b)
+      .clkb(clk),       .addrb(IMEM_addrb),
+      /*.enb(1'b1)*/        .doutb(IMEM_doutb) // inst fletch
     ) /* synthesis syn_noprune=1 */;
 
+
+    wire BMEM_ena = ~stall && (/*|`MMAP_WMask(BMEM) ||*/ |`MMAP_RMask(BMEM) );
     bios_mem brom_bios
-    (   .clka(clk), .ena(STALL_BMEM_ena),
-        .addra  (`MEMIO_Addr(   BMEM)),     .douta  (`MEMIO_RData(  BMEM)),
-      /*.wea    (`MEMIO_WMask(  BMEM)),     .dina   (`MEMIO_WData(  BMEM)),*/
-
-        .clkb(clk), .enb(IMEM_bios), //TODO: Does this need stall awareness?
-        .addrb  (IMEM_addrb),   .doutb  (BROM_doutb)
+    ( .clka(clk),       .addra(`MMAP_Addr(BMEM)),
+        .ena(BMEM_ena),             .douta(`MMAP_RData(BMEM)),//OUT-32
+      /*.wea(`MMAP_WMask(BMEM)),    .dina (`MMAP_WData(BMEM)),*/
+    // Instruction reading port (b)
+      .clkb(clk),       .addrb(IMEM_addrb),
+        .enb(IMEM_bios),    .doutb(BROM_doutb) //TODO: Enable only when needed (and not !stall)
     ) /* synthesis syn_noprune=1 */;
 
 
-    `BUS_Shake_type(8)  UATX, UARX;
-
+    `BUS_SHAKE_type(8)  UATX, UARX;
+    wire MEMIO_ena = ~stall && ( |`MMAP_WMask(IOMAP) || |`MMAP_RMask(IOMAP) );
     MEMIOPlex iomap_uart
-    (   .clk(clk), .rst(rst), .ena(STALL_MEMIO_ena),
+    ( .clk(clk), .rst(rst), .ena(MEMIO_ena), //TODO: Turn these three back to CPUBus!
         .IOMAP(IOMAP),
         .RVA_TX(UATX), .RVA_RX(UARX)
     );
 
     UART #(.ClockFreq(ClockFreq)) uart
-    (   .Clock(clk), .Reset(rst),
+    ( .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
         // Transmitter  (handshakes go both in/out)
-        .DataIn(        `Shake_Data(        8,UATX)),
-        .DataInValid(   `Shake_DataValid(   8,UATX)),
-        .DataInReady(   `Shake_DataReady(   8,UATX)),
+        .DataIn(        `SHAKE_Data(        8,UATX)),
+        .DataInValid(   `SHAKE_DataValid(   8,UATX)),
+        .DataInReady(   `SHAKE_DataReady(   8,UATX)),
         // Receiver     (handshakes go both in/out)
-        .DataOut(       `Shake_Data(        8,UARX)),
-        .DataOutValid(  `Shake_DataValid(   8,UARX)),
-        .DataOutReady(  `Shake_DataReady(   8,UARX))
+        .DataOut(       `SHAKE_Data(        8,UARX)),
+        .DataOutValid(  `SHAKE_DataValid(   8,UARX)),
+        .DataOutReady(  `SHAKE_DataReady(   8,UARX))
     );
 
-
-    // Drive CPUGlobal bus from CPU module inputs
-    BUS_CPUGlobal_tun BUS_CPUGlobal
-    (   ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
 
 `ifdef COLT45_DBG
 // synthesis translate_off
@@ -335,17 +343,17 @@ module MIPS150(
 
     always@(posedge clk) begin
         // Plan to log these into a sequential list of critical actions (for stricter testing)
-        if (`MEMIO_WMask(IMEM) != 0) begin
-            $display("** I-MEM[%h,%d] <= %h(%d) {%b}", `MEMIO_Addr(IMEM), `MEMIO_Addr(IMEM),
-            `MEMIO_WData(IMEM), `MEMIO_WData(IMEM), `MEMIO_WMask(IMEM));
+        if (`MMAP_WMask(IMEM) != 0) begin
+            $display("** I-MEM[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(IMEM), `MMAP_Addr(IMEM),
+            `MMAP_WData(IMEM), `MMAP_WData(IMEM), `MMAP_WMask(IMEM));
         end
-        if (`MEMIO_WMask(DMEM) != 0) begin
-            $display("** D-MEM[%h,%d] <= %h(%d) {%b}", `MEMIO_Addr(DMEM), `MEMIO_Addr(DMEM),
-            `MEMIO_WData(DMEM), `MEMIO_WData(DMEM), `MEMIO_WMask(DMEM));
+        if (`MMAP_WMask(DMEM) != 0) begin
+            $display("** D-MEM[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(DMEM), `MMAP_Addr(DMEM),
+            `MMAP_WData(DMEM), `MMAP_WData(DMEM), `MMAP_WMask(DMEM));
         end
-        if (`MEMIO_WMask(IOMAP) != 0) begin
-            $display("** IOMAP[%h,%d] <= %h(%d) {%b}", `MEMIO_Addr(IOMAP), `MEMIO_Addr(IOMAP),
-            `MEMIO_WData(IOMAP), `MEMIO_WData(IOMAP), `MEMIO_WMask(IOMAP));
+        if (`MMAP_WMask(IOMAP) != 0) begin
+            $display("** IOMAP[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(IOMAP), `MMAP_Addr(IOMAP),
+            `MMAP_WData(IOMAP), `MMAP_WData(IOMAP), `MMAP_WMask(IOMAP));
         end
     end
 // synthesis translate_on

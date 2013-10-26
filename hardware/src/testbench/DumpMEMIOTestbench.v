@@ -56,7 +56,7 @@ module DumpMEMIOTestbench;
     );
 
     UART        #( .ClockFreq(       ClockFreq))
-    uart_tb( .Clock(           Clock),
+    uart_tb( .Clock(      Clock),
         .Reset(           Reset),
         .DataIn(          DataIn),
         .DataInValid(     DataInValid),
@@ -91,17 +91,17 @@ module DumpMEMIOTestbench;
 /*
     $monitor("Rx_Ready %b %b %h", iomap_listener.Rx_Ready, iomap_listener.uart.uareceive.HasByte, iomap_listener.rdata);
 
-    `BUS_MEMIO_type IOLISTEN;
     reg  [11:0] Addr;
     wire [31:0] RData;
-    BUS_MEMIO_tun BUS_IOMAP( ._BUS_(IOLISTEN),
+    `BUS_MMAP_type IOLISTEN;
+    BUS_MMAP_tun BUS_IOMAP( ._BUS_(IOLISTEN),
         .Addr   (Addr),
         .RMask  (4'b1111),      .RData  (RData),
         .WMask  (4'b0000),      .WData  (32'bz)
     );
 
     MEMIOPlex iomap_listener
-    (   .clk(Clock), .rst(Reset),
+    (   .clk(Clock), .rst(Reset), .ena(~Stall),
         .SERIAL_RX(SERIAL_TX), .SERIAL_TX(SERIAL_RX),
         .IOMAP(IOLISTEN)
     );

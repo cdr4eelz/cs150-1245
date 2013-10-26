@@ -4,7 +4,7 @@ module StageM #(
 	parameter NOUNKLE = 1
 ) (
 //  inout `BUS_CPUGlobal_type   CPUGlobal,  // Unused!
-    inout `BUS_MEMIO_type       DMEM, IMEM, BMEM, IOMAP, // Could be merged & plexed elsewhere
+    inout `BUS_MMAP_type        DMEM, IMEM, BMEM, IOMAP, // Could be merged & plexed elsewhere
     
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
     input `BUS_ICTL_type _IControl, // Few are used (hopefully tools will prune)
@@ -47,12 +47,12 @@ module StageM #(
     wire  [ 3: 0] _RMask    = (_isRead ) ? _ByteMask : 4'b0000;
     
     // An odd but interesting method of BUS plexing, rather than driving a real BUS in tri-state.
-    `BUS_MEMIO_type LIVE, DEAD;
-    BUS_MEMIO_tun BUS_LIVE( ._BUS_(LIVE),   .RData  (),
+    `BUS_MMAP_type LIVE, DEAD;
+    BUS_MMAP_tun BUS_LIVE( ._BUS_(LIVE),    .RData  (),
         .WMask  (_WMask),                   .RMask  (_RMask),
         .Addr   (_Address),                 .WData  (_WDataMasked)
     );
-    BUS_MEMIO_tun BUS_DEAD( ._BUS_(DEAD),   .RData  (),
+    BUS_MMAP_tun BUS_DEAD( ._BUS_(DEAD),    .RData  (),
         .WMask  (4'b0000),                  .RMask  (4'b0000),
         .Addr   (`UNK(0,_Address,12)),      .WData  (`UNK(0,_WDataMasked,32))
     );
@@ -60,10 +60,10 @@ module StageM #(
     wire _hot_IMEM = ( _Target == 4'b0010 || _Target == 4'b0011 ) && _isWrite && PCPLUS8[30]; // Write-Only & Only if BIOS is running
     wire _hot_BMEM = ( _Target == 4'b0100 && !_isWrite); // Read-Only
     wire _hot_IOMAP= ( _Target == 4'b1000 );
-    assign `MEMIO__IN(DMEM) = (_hot_DMEM) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
-    assign `MEMIO__IN(IMEM) = (_hot_IMEM) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
-    assign `MEMIO__IN(BMEM) = (_hot_BMEM) ? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
-    assign `MEMIO__IN(IOMAP)= (_hot_IOMAP)? `MEMIO__IN(LIVE) : `MEMIO__IN(DEAD);
+    assign `MMAP__IN(DMEM) = (_hot_DMEM) ? `MMAP__IN(LIVE) : `MMAP__IN(DEAD);
+    assign `MMAP__IN(IMEM) = (_hot_IMEM) ? `MMAP__IN(LIVE) : `MMAP__IN(DEAD);
+    assign `MMAP__IN(BMEM) = (_hot_BMEM) ? `MMAP__IN(LIVE) : `MMAP__IN(DEAD);
+    assign `MMAP__IN(IOMAP)= (_hot_IOMAP)? `MMAP__IN(LIVE) : `MMAP__IN(DEAD);
     
     // Important to note the very cautious use of registered vs passthrough values,
     //   control signals, ets. (Example, DataWidth for read comes from IControl but
@@ -73,17 +73,17 @@ module StageM #(
     
     reg [31: 0] DataRead;
     always @(*) case (Target) // "Target" (for read data coming out after clock) NOT "_Target"
-        4'b0001, 4'b0011:   DataRead = `MEMIO_RData(DMEM); // Avoiding casex/casez approach
-        4'b0100:            DataRead = `MEMIO_RData(BMEM);
-        4'b1000:            DataRead = `MEMIO_RData(IOMAP);
+        4'b0001, 4'b0011:   DataRead = `MMAP_RData(DMEM); // Avoiding casex/casez approach
+        4'b0100:            DataRead = `MMAP_RData(BMEM);
+        4'b1000:            DataRead = `MMAP_RData(IOMAP);
         default: DataRead = `UNK(0,32'h0000,32);
     endcase // CAUTIOUS trapping of EVERY case
     wire [31: 0] DataLoad = DataRead << (SubAddr*8) >> (SubShift*8);
     
     // Might divorce WBK from FWD stuff more fully to clarify slightly different paths
-    assign WBK_Reg_ = `ICTL_DestReg(IControl); // Expected to be zero when no writeback
+    assign WBK_Reg_ = `ICTL_DestReg( IControl); // Expected to be zero when no writeback
     assign WBK_Val_ = `ICTL_MemToReg(IControl) ? DataLoad :
-                        `ICTL_Link(IControl) ? (PCPLUS8) : RegWValue;
+                          `ICTL_Link(IControl) ? (PCPLUS8) : RegWValue;
     assign WBK_CanFWD_ = !`ICTL_MemToReg(IControl) && (WBK_Reg_ != 0);
     
 endmodule

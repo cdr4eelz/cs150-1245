@@ -44,7 +44,11 @@ module DumpMemCPU (
     parameter ClockFreq = 50_000_000;
 
     `BUS_CPUGlobal_type CPUGlobal;
-    `BUS_Shake_type(8)  UARX, UATX;
+    BUS_CPUGlobal_tun TUN_CPUGlobal
+    ( ._BUS_(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stall)
+    );
+
 
     wire [13: 0]    ADDR, ADDR_NEXT;
     wire [11: 0]    ADDR_W;
@@ -86,45 +90,50 @@ module DumpMemCPU (
 // synthesis translate_on
 
 
-    // Drive CPUGlobals from CPU module inputs
-    BUS_CPUGlobal_tun BUS_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
-
-
     // Key components indirectly wired elsewhere
 
     dmem_blk_ram bram_dmem
-    (   .clka(clk), .ena(1'b1), .addra(ADDR_W), .douta(DATA_W),
-        .wea(4'b0000), .dina(32'd0)
+    ( .clka(clk),   .addra(ADDR_W),
+        .ena(   1'b1),      .douta(DATA_W),
+        .wea(4'b0000),      .dina(32'd0)
     );
 
     imem_blk_ram bram_imem
-    (   .clka(clk), .ena(1'b0),
-        .addra(12'b0),  .wea(4'b0),   .dina(32'b0),
-        .clkb(clk), .addrb(12'b0), .doutb()
+    ( .clka(clk),   .addra(12'b0),
+        .ena(   1'b1),    /*.douta(DATA_W),*/
+        .wea(4'b0000),      .dina(32'b0),
+      .clkb(clk),   .addrb(12'b0),
+        /*.enb(),*/         .doutb()
     );
 
     // Test the tun/tap bus stuff...
-    BUS_Shake_tun #( .InWidth(8) )
-    BUS_UATX ( ._BUS_(UATX),
-        .Data(      TX_Data),
+    `BUS_SHAKE_type(8)  UARX, UATX;
+
+    BUS_SHAKE_tun #( .InWidth(8) )
+    TUN_UATX ( ._BUS_(UATX),
+        .Data(      TX_Data ),
         .DataValid( TX_Valid),
         .DataReady( TX_Ready)
+    );
+
+    BUS_SHAKE_tap #( .InWidth(8) )
+    TAP_UARX ( ._BUS_(UARX),
+        .DataReady( 1'b1), // We were born ready!
+        .DataValid(     ), // (ignore)
+        .Data(          )  // (ignore)
     );
 
     UART #(.ClockFreq(ClockFreq)) uart
     (   .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
         // Transmitter  (handshakes go both in/out)
-        .DataIn(        `Shake_Data(        8,UATX)),
-        .DataInValid(   `Shake_DataValid(   8,UATX)),
-        .DataInReady(   `Shake_DataReady(   8,UATX)),
+        .DataIn(        `SHAKE_Data(        8,UATX)),
+        .DataInValid(   `SHAKE_DataValid(   8,UATX)),
+        .DataInReady(   `SHAKE_DataReady(   8,UATX)),
         // Receiver     (handshakes go both in/out)
-        .DataOut(       `Shake_Data(        8,UARX)),
-        .DataOutValid(  `Shake_DataValid(   8,UARX)),
-        .DataOutReady(  `Shake_DataReady(   8,UARX))
+        .DataOut(       `SHAKE_Data(        8,UARX)),
+        .DataOutValid(  `SHAKE_DataValid(   8,UARX)),
+        .DataOutReady(  `SHAKE_DataReady(   8,UARX))
     );
 
 endmodule

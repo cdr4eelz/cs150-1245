@@ -60,6 +60,9 @@ module ml505top
   inout         IIC_SDA_VIDEO
 );
 
+// For when it is left unconnected
+//PULLUP PULLUP_SERIAL_TX ( .O(FPGA_SERIAL_TX) );
+
   reg [3:0]  reset_r = 4'b0;
   reg [25:0] count_r = 26'b0;
 
@@ -319,52 +322,78 @@ module ml505top
     .VideoValid(                video_valid)
   );
 
-PULLUP PULLUP_SERIAL_TX ( .O(FPGA_SERIAL_TX) );
 
-wire PLOP_SERIAL_RX, PLOP_SERIAL_TX;
+    // "PLOP" MicroBlaze CPU connects
+    wire P_SERIAL_RX,  P_SERIAL_TX; //JTAG-to-SERIAL relay UART
+    wire P_SERIALx_RX, P_SERIALx_TX;//Extra UART
+    wire [31: 0] P_gpi1 = 32'd0;    //IN-to-PLOP
+    wire [31: 0] P_gpo1;            //OUT-from-PLOP
+    wire [24:31] P_iic_gpo;         //OUT-from-PLOP (8-bits, why 24:31?)
+    wire P_iic_sda, P_iic_sd;       //INOUTs
+    wire P_spi_spisel = 1'b0;       //IN-to-PLOP
+    wire P_spi_sck,  P_spi_ss;      //INOUTs
+    wire P_spi_miso, P_spi_mosi;    //INOUTs
 
-  // MIPS 150 CPU
+    // "MIPSY" MIPS150 CPU connects
+    wire M_SERIAL_RX, M_SERIAL_TX;
+
+    wire SERIAL_JTAG = 1'b0; //TODO: Tie to a configuration input
+    assign FPGA_SERIAL_TX = (SERIAL_JTAG) ? P_SERIALx_TX    : M_SERIAL_TX;
+    assign M_SERIAL_RX    = (SERIAL_JTAG) ? P_SERIAL_TX     : FPGA_SERIAL_RX;
+    assign P_SERIAL_RX    = (SERIAL_JTAG) ? M_SERIAL_TX     : P_SERIALx_TX;
+    assign P_SERIALx_RX   = (SERIAL_JTAG) ? FPGA_SERIAL_RX  : P_SERIAL_TX;
+
 `ifndef CPUTYPE
 `define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
 `endif
   `CPUTYPE CPU(
-    .clk(cpu_clk_g),
-    .rst(rst || ~all_init_done),
-    .FPGA_SERIAL_RX(PLOP_SERIAL_TX),
-    .FPGA_SERIAL_TX(PLOP_SERIAL_RX),
-
+    .clk( cpu_clk_g ), .rst( rst || ~all_init_done ),
+    .FPGA_SERIAL_RX(M_SERIAL_RX), .FPGA_SERIAL_TX(M_SERIAL_TX),
 // CP2+
-    .dcache_addr (dcache_addr ),
-    .icache_addr (icache_addr ),
-    .dcache_we   (dcache_we   ),
-    .icache_we   (icache_we   ),
-    .dcache_re   (dcache_re   ),
-    .icache_re   (icache_re   ),
-    .dcache_din  (dcache_din  ),
-    .icache_din  (icache_din  ),
-    .dcache_dout (dcache_dout ),
-    .instruction (instruction ),
-
+    .dcache_addr( dcache_addr ),    .icache_addr( icache_addr ),
+    .dcache_we  ( dcache_we   ),    .icache_we  ( icache_we   ),
+    .dcache_re  ( dcache_re   ),    .icache_re  ( icache_re   ),
+    .dcache_din ( dcache_din  ),    .icache_din ( icache_din  ),
+    .dcache_dout( dcache_dout ),    .instruction( instruction ),
 // CP3+
-    .bypass_addr(bypass_addr),
-    .bypass_we  (bypass_we  ),
-    .bypass_din (bypass_din ),
-
-    .filler_color(filler_color),
-    .filler_valid(filler_valid),
-    .filler_ready(filler_ready),
-    .line_ready(line_ready),
-    .line_color(line_color),
-    .line_point(line_point),
+    .bypass_addr( bypass_addr ),    .bypass_we  ( bypass_we ),
+    .bypass_din ( bypass_din  ),
+    .filler_color   (filler_color),
+    .filler_valid   (filler_valid),
+    .filler_ready   (filler_ready),
+    .line_ready     (line_ready),
+    .line_color     (line_color),
+    .line_point     (line_point),
     .line_color_valid(line_color_valid),
-    .line_x0_valid(line_x0_valid),
-    .line_y0_valid(line_y0_valid),
-    .line_x1_valid(line_x1_valid),
-    .line_y1_valid(line_y1_valid),
-    .line_trigger(line_trigger),
-
+    .line_x0_valid  (line_x0_valid),
+    .line_y0_valid  (line_y0_valid),
+    .line_x1_valid  (line_x1_valid),
+    .line_y1_valid  (line_y1_valid),
+    .line_trigger   (line_trigger),
+// Shared
     .stall(any_stall)
   );
+
+
+  plop PLOP ( // Plop a helper MicroBlaze CPU (relays debugger JTAG-SERIAL link)
+//TODO: Remove LOCKED, rename REF, trim useless IO
+    .CLOCK_REF_100GHz(user_clk_g), .CLOCK_LOCKED(), //OUT
+    .RESET_BOARD(USER_RST), .RESET_AUX(1'b0),
+    .MB_HALTED(), .RESET_PERIPHERAL(), //OUTs
+  // Two UARTs primary from JTAG-to-SERIAL debug link
+    .UART_RX (P_SERIAL_RX ),  .UART_TX (P_SERIAL_TX ),
+    .UARTx_RX(P_SERIALx_RX),  .UARTx_TX(P_SERIALx_TX),
+  // GPIO (32-bits each way)
+    .GPI1(P_gpi1),  .GPO1(P_gpo1),
+  // IIC
+    .IIC0_GPO(P_iic_gpo), //OUT[24:31]
+    .IIC0_SDA(P_iic_sda),   .IIC0_SD(P_iic_sd), //INOUTs
+  // SPI
+    .SPI0_SPISEL(P_spi_spisel), //IN
+    .SPI0_SCK   (P_spi_sck),    .SPI0_SS  (P_spi_ss),  //INOUTs
+    .SPI0_MISO  (P_spi_miso),   .SPI0_MOSI(P_spi_mosi) //INOUTs
+  ) /* synthesis syn_noprune=1 */;
+
 
 `ifdef COLT_DEBUG
 wire [35:0] CS_CONTROL0;
@@ -378,38 +407,13 @@ chipscope_vio CS_VIO (
     .SYNC_IN(8'b00000000),  .SYNC_OUT()             // [7:0]
 ) /* synthesis syn_noprune =1 */;
 
-assign cs_aIN = { rst, any_stall, 1'b0, 1'b0,
+  assign cs_aIN = { rst, any_stall, 1'b0, 1'b0,
                     GPIO_SW_C, GPIO_DIP_0, 1'b0, 1'b0 };
-assign debug_reset = cs_aOUT[7];
-assign debug_stall = cs_aOUT[6];
+  assign debug_reset = cs_aOUT[7];
+  assign debug_stall = cs_aOUT[6];
 `else
-assign debug_reset = 1'b0;
-assign debug_stall = 1'b0;
+  assign debug_reset = 1'b0;
+  assign debug_stall = 1'b0;
 `endif
-
-wire [24:31] iic_gpo;
-wire iic_sda, iic_sd;
-wire spi_sck, spi_miso, spi_mosi, spi_ss;
-
-plop PLOP (
-    .CLOCK_REF_100GHz   (user_clk_g),   .CLOCK_LOCKED   (),//OUT
-    .RESET_BOARD        (USER_RST),     .RESET_AUX      (1'b0),
-    .MB_HALTED  (),                 .RESET_PERIPHERAL   (),//OUT
-    .UART_RX    (PLOP_SERIAL_RX),   .UART_TX    (PLOP_SERIAL_TX),//OUT
-    .UARTx_RX   (1'b1),             .UARTx_TX   (),//OUT
-// GPIO (32-bits each way)
-    .GPI1   (32'd0),    //IN-32
-    .GPO1   (),         //OUT-32
-// IIC
-    .IIC0_GPO   (iic_gpo),  //OUT[24:31]
-    .IIC0_SDA   (iic_sda),  //INOUT
-    .IIC0_SD    (iic_sd),   //INOUT
-// SPI
-    .SPI0_SPISEL(1'b0),     //IN
-    .SPI0_SCK   (spi_sck),  //INOUT
-    .SPI0_MISO  (spi_miso), //INOUT
-    .SPI0_MOSI  (spi_mosi), //INOUT
-    .SPI0_SS    (spi_ss)    //INOUT
-) /* synthesis syn_noprune=1 */;
 
 endmodule

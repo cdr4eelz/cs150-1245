@@ -2,9 +2,9 @@
 
 module MEMIOPlex //TODO: Set address with parameters (or even config register with param defaults)!
 (
-    input   clk, rst, ena,
-    inout   `BUS_MEMIO_type     IOMAP,
-    inout   `BUS_Shake_type(8)  RVA_RX, RVA_TX
+    input   clk, rst, ena,  //TODO: Revert to CPUBus?
+    inout   `BUS_MMAP_type      IOMAP,
+    inout   `BUS_SHAKE_type(8)  RVA_RX, RVA_TX
 );
     parameter BUFSIZE = 0;
 
@@ -121,20 +121,20 @@ end endgenerate
 
     // Patch local wires into outer world:
 
-    BUS_MEMIO_tap BUS_MEMIO_IOMAP
+    BUS_MMAP_tap TAP_MMAP_IOMAP
     ( ._BUS_(IOMAP),
         .Addr(addr),
         .RMask(rmask),          .RData(rdata),
         .WMask(wmask),          .WData(wdata)
     );
 
-    BUS_Shake_tap #(.InWidth(8)) BUS_Shake_Rx
+    BUS_SHAKE_tap #(.InWidth(8)) TAP_SHAKE_Rx
     ( ._BUS_(RVA_RX),
         .DataReady(Rx_Ready),
         .DataValid(Rx_Valid), .Data(Rx_Data)
     );
 
-    BUS_Shake_tun #(.InWidth(8)) BUS_Shake_Tx
+    BUS_SHAKE_tun #(.InWidth(8)) TUN_SHAKE_Tx
     ( ._BUS_(RVA_TX),
         .DataValid(Tx_Valid), .Data(Tx_Data),
         .DataReady(Tx_Ready)
