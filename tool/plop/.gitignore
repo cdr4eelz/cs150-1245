@@ -1,8 +1,10 @@
 *.log
 *.bit
+*.srp
 platgen.opt
 plop.make
 plop_incl.make
+_impact.cmd
 microblaze_0/
 Debug/
 .metadata/
@@ -10,7 +12,9 @@ Debug/
 __xps/
 /data/
 /etc/
-/hdl/
 /implementation/
 /synthesis/
+/xst/
+/hdl/
+/simulation/behavioral
 XpsGuiSessionLock

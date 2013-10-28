@@ -13,7 +13,7 @@ Following a fresh XPS generation (probably best to skip auto EDK launch):
     == cd <cs150-xx>/hardware/fun/
     -- rm plop*.v plop*.ncg
     ++ cp tool/plop/hdl/plop.v .
-    ++ cp tool/plop/implementation/*.ncg .
+    ++ cp tool/plop/implementation/plop_*.ncg .
   Update .bmm file if MB's RAM has changed shape (optional for downstream injection).
   Rebuild team project to standard location.
   Ensure symlinks find bit-file & (optionally) bmm with current PLACE/LOC tags.

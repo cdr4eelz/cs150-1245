@@ -4,11 +4,13 @@
 #define TRAN_CTRL (*((volatile unsigned int*)0x80000000) & 0x01)
 #define TRAN_DATA (*((volatile unsigned int*)0x80000008))
 
-const char someStr[] = "This is just a simple test. Memory contents are echoed to UART constantly. Ideally the values will make it. Reset can be an issue but we shall cee (sic).  ";
+#define DSTR "This is just a simple test. Memory contents are echoed to UART constantly. Ideally the values will make it. Reset can be an issue but we shall cee (sic).  "
+const char rodata[] = "READONLY: " DSTR;
+char data[] = "DATA: " DSTR;
 
 int main(void)
 {
-	const char *cp = someStr;
+	const char *cp = 0x10000000;
 	for ( ; ; ) {
 		while (!TRAN_CTRL) ;
 		TRAN_DATA = *cp++;

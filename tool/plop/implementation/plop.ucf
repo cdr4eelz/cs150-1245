@@ -1,0 +1,4 @@
+Net CLOCK_REF_100MHz TNM_NET = sys_clk_pin;
+TIMESPEC TS_sys_clk_pin = PERIOD sys_clk_pin 10.0 ns HIGH 50%;
+
+Net RESET_BOARD TIG;
