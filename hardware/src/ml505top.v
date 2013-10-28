@@ -1,20 +1,24 @@
 module ml505top
 (
-  input        USER_CLK,
+  input         USER_CLK,
 //TIMESPEC TS_USER_CLK = PERIOD USER_CLK 10.0 ns HIGH 50%;
 //Net USER_CLK    LOC = AH15  |  IOSTANDARD=LVCMOS33;
 //Net USER_CLK    TNM_NET = USER_CLK;
-  input        USER_RST,    // Extra connection added to passthrough to embedded stuff
+  input         USER_RST,    // Extra connection added to passthrough to embedded stuff
 //Net USER_RST    TIG;
 //Net USER_RST    LOC = E9  |  IOSTANDARD=LVCMOS33  |  PULLUP;
 
-  input        FPGA_SERIAL_RX,
+  input         FPGA_SERIAL_RX,
 //Net FPGA_SERIAL_RX      LOC = AG15  |  IOSTANDARD=LVCMOS33;
-  output       FPGA_SERIAL_TX,
+  output        FPGA_SERIAL_TX,
 //Net FPGA_SERIAL_TX      LOC = AG20  |  IOSTANDARD=LVCMOS33;
 
-  input        GPIO_SW_C,
-//Net GPIO_SW_C           LOC = AJ6   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2;
+  input [4:0]   GPIO_COMPPB,
+//Net GPIO_COMPPB[0]      LOC = AJ6   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_COMPPB[1]      LOC = AJ7   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_COMPPB[2]      LOC = V8    |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_COMPPB[3]      LOC = AK7   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_COMPPB[4]      LOC = U8    |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
 
   output [7:0]  GPIO_LED,
 //Net GPIO_LED[7]         LOC = AE24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
@@ -26,12 +30,22 @@ module ml505top
 //Net GPIO_LED[1]         LOC = L18   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
 //Net GPIO_LED[0]         LOC = H18   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
 
-/* Temporary code for testing checkpoint 2: */
-  output 	    GPIO_COMPLED_S,
-//Net GPIO_COMPLED_S      LOC = AG12  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2;
-  input 	    GPIO_DIP_0,
-//Net GPIO_DIP_0          LOC = U25   |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
-//  input        GPIO_SW_S,
+  output [4:0]  GPIO_COMPLED,
+//Net GPIO_COMPLED[0]     LOC = E8    |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_COMPLED[1]     LOC = AF23  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_COMPLED[2]     LOC = AG12  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_COMPLED[3]     LOC = AG23  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_COMPLED[4]     LOC = AF13  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+
+  input [7:0]   GPIO_DIP,
+//Net GPIO_DIP[0]         LOC = U25   |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_DIP[1]         LOC = AG27  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_DIP[2]         LOC = AF25  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_DIP[3]         LOC = AF26  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_DIP[4]         LOC = AE27  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_DIP[5]         LOC = AE26  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_DIP[6]         LOC = AC25  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
+//Net GPIO_DIP[7]         LOC = AC24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
 
   output [12:0] DDR2_A,
   output [1:0]  DDR2_BA,
@@ -60,8 +74,21 @@ module ml505top
   inout         IIC_SDA_VIDEO
 );
 
-// For when it is left unconnected
-//PULLUP PULLUP_SERIAL_TX ( .O(FPGA_SERIAL_TX) );
+    wire button_reset, debug_reset, rst_or_init;
+    wire button_stall, debug_stall, any_stall;
+
+// "MIPSY" MIPS150 CPU inter-connects
+    wire M_SERIAL_RX, M_SERIAL_TX;
+
+// "PLOP" MicroBlaze CPU inter-connects
+    wire P_SERIAL1_RX, P_SERIAL1_TX; //JTAG-to-SERIAL relay UART
+    wire P_SERIAL2_RX, P_SERIAL2_TX; //Extra UART
+    wire [31: 0] P_gpi1 = 32'd0;    //IN-to-PLOP
+    wire [31: 0] P_gpo1;            //OUT-from-PLOP
+
+// Selector for physical serial vs. debug serial (via JTAG UART)
+    wire SERIAL_JTAG = 1'b0; //TODO: Tie to a configuration input
+
 
   reg [3:0]  reset_r = 4'b0;
   reg [25:0] count_r = 26'b0;
@@ -94,36 +121,43 @@ module ml505top
   PLL_BASE
   #(
     .BANDWIDTH("OPTIMIZED"),
-    .CLKFBOUT_MULT(24),
+    .CLKIN_PERIOD(10.0),    // 100 MHz
+    .DIVCLK_DIVIDE(4),      //  / 4
+    .CLKFBOUT_MULT(24),     //  * 24
     .CLKFBOUT_PHASE(0.0),
-    .CLKIN_PERIOD(10.0),
+// --=> 100/4*24 = 600 MHz internal reference
 
+//cpu_clk: 600 / 12 = 50 MHz
     .CLKOUT0_DIVIDE(12),
     .CLKOUT0_DUTY_CYCLE(0.5),
     .CLKOUT0_PHASE(0.0),
 
+//clk200: 600 / 3 => 200 MHz
     .CLKOUT1_DIVIDE(3),
     .CLKOUT1_DUTY_CYCLE(0.5),
     .CLKOUT1_PHASE(0.0),
 
+//clk0: 600 / 3 => 200 MHz 50/50 @0 deg
     .CLKOUT2_DIVIDE(3),
     .CLKOUT2_DUTY_CYCLE(0.5),
     .CLKOUT2_PHASE(0.0),
 
+//clk90: 600 / 3 => 200 MHz 50/50 @90 deg
     .CLKOUT3_DIVIDE(3),
     .CLKOUT3_DUTY_CYCLE(0.5),
     .CLKOUT3_PHASE(90.0),
 
+//clkdiv0: 600 / 6 => 100 MHz 50/50 @0 deg
     .CLKOUT4_DIVIDE(6),
     .CLKOUT4_DUTY_CYCLE(0.5),
     .CLKOUT4_PHASE(0.0),
 
+//clk50: 600 / 12 => 50 MHz 50/50 @0 deg
     .CLKOUT5_DIVIDE(12),
     .CLKOUT5_DUTY_CYCLE(0.5),
     .CLKOUT5_PHASE(0.0),
 
     .COMPENSATION("SYSTEM_SYNCHRONOUS"),
-    .DIVCLK_DIVIDE(4),
     .REF_JITTER(0.100)
   )
   user_clk_pll
@@ -138,16 +172,16 @@ module ml505top
     .LOCKED(pll_lock),
     .CLKFBIN(pll_fb),
     .CLKIN(user_clk_g),
-    .RST(1'b0)
+    .RST(1'b0) // Would it hurt to use USER_RST?
   );
 
   IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
   BUFG  cpu_clk_buf  ( .I(cpu_clk),  .O(cpu_clk_g)  );
-  BUFG  clk200_buf   ( .I(clk200),   .O(clk200_g)   );
   BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );
-  BUFG  clkdiv50_buf ( .I(clk50),    .O(clk50_g)    );
   BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
   BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
+  BUFG  clk200_buf   ( .I(clk200),   .O(clk200_g)   );
+  BUFG  clkdiv50_buf ( .I(clk50),    .O(clk50_g)    );
 
   always @(posedge cpu_clk_g)
   begin
@@ -155,8 +189,7 @@ module ml505top
     count_r <= next_count_r;
   end
 
-  wire debug_reset, debug_stall;
-  assign next_reset_r = {reset_r[2:0], GPIO_SW_C | debug_reset};
+  assign next_reset_r = {reset_r[2:0], button_reset | debug_reset};
 
   assign rst = (count_r == 26'b1) | ~pll_lock;
 
@@ -187,19 +220,7 @@ module ml505top
             end
         end
     end
-`ifndef COLT45_StallSkip
-    assign man_stall_toggle = 1'b1;
-`else
-`ifdef COLT45_StallDIP
-    assign man_stall_toggle = GPIO_DIP_0;
-`endif
-`endif
 
-    wire mem_init_done, mem_stall;
-    wire all_init_done = mem_init_done;
-    wire any_stall = mem_stall || man_stall || debug_stall;
-    assign GPIO_COMPLED_S = man_stall_toggle;
-    assign GPIO_LED = {5'b0, any_stall, pll_lock, all_init_done};
 
 // CP2+
   wire  [31:0] dcache_addr;
@@ -212,9 +233,15 @@ module ml505top
   wire  [31:0] icache_din;
   wire [31:0]  dcache_dout;
   wire [31:0]  instruction;
-//wire         stall;
+  wire         mem_stall;
+  wire         mem_init_done;
+    assign any_stall = mem_stall || man_stall || debug_stall;
+    assign rst_or_init = rst || ~mem_init_done;
 
 // CP3+
+  wire [31:0]  bypass_addr;
+  wire [31:0]  bypass_din;
+  wire [3:0]   bypass_we;
   wire         video_ready;
   wire         dvi_video_ready;
   wire         video_valid;
@@ -231,16 +258,13 @@ module ml505top
   wire         line_x1_valid;
   wire         line_y1_valid;
   wire         line_trigger;
-  wire [31:0]  bypass_addr;
-  wire [31:0]  bypass_din;
-  wire [3:0]   bypass_we;
 
   Memory150 #(.SIM_ONLY(1'b0)) mem_arch(
       .cpu_clk_g(cpu_clk_g),
       .clk0_g(clk0_g),
-      .clk200_g(clk200_g),
-      .clkdiv0_g(clkdiv0_g),
       .clk90_g(clk90_g),
+      .clkdiv0_g(clkdiv0_g),
+      .clk200_g(clk200_g),
       .rst(fifo_reset),
       .init_done(mem_init_done),
       .DDR2_A(DDR2_A),
@@ -270,10 +294,11 @@ module ml505top
       .instruction(instruction),
 
 `ifdef __COLT45_pre3
-      .clk50_g(clk50_g),
       .bypass_addr(bypass_addr),
       .bypass_we  (bypass_we  ),
       .bypass_din (bypass_din ),
+      .clk50_g(clk50_g),
+
       .video      (video      ),
       .video_ready(video_ready),
       .video_valid(video_valid),
@@ -290,12 +315,12 @@ module ml505top
       .line_y1_valid(line_y1_valid),
       .line_trigger(line_trigger),
 `endif
-      .stall      (mem_stall  )
+      .stall(mem_stall)
     );
 
 // CP3+
   DVI #(
-    .ClockFreq(                 50000000),
+    .ClockFreq(                 50_000_000), //50 MHz
     .Width(                     1040),   
     .FrontH(                    56),     
     .PulseH(                    120),    
@@ -306,7 +331,7 @@ module ml505top
     .BackV(                     23)      
   ) dvi(         
     .Clock(                     cpu_clk_g),
-    .Reset(                     rst || ~all_init_done),
+    .Reset(                     rst_or_init),
     .DVI_D(                     DVI_D),
     .DVI_DE(                    DVI_DE),
     .DVI_H(                     DVI_H),
@@ -323,31 +348,11 @@ module ml505top
   );
 
 
-    // "PLOP" MicroBlaze CPU connects
-    wire P_SERIAL_RX,  P_SERIAL_TX; //JTAG-to-SERIAL relay UART
-    wire P_SERIALx_RX, P_SERIALx_TX;//Extra UART
-    wire [31: 0] P_gpi1 = 32'd0;    //IN-to-PLOP
-    wire [31: 0] P_gpo1;            //OUT-from-PLOP
-    wire [24:31] P_iic_gpo;         //OUT-from-PLOP (8-bits, why 24:31?)
-    wire P_iic_sda, P_iic_sd;       //INOUTs
-    wire P_spi_spisel = 1'b0;       //IN-to-PLOP
-    wire P_spi_sck,  P_spi_ss;      //INOUTs
-    wire P_spi_miso, P_spi_mosi;    //INOUTs
-
-    // "MIPSY" MIPS150 CPU connects
-    wire M_SERIAL_RX, M_SERIAL_TX;
-
-    wire SERIAL_JTAG = 1'b0; //TODO: Tie to a configuration input
-    assign FPGA_SERIAL_TX = (SERIAL_JTAG) ? P_SERIALx_TX    : M_SERIAL_TX;
-    assign M_SERIAL_RX    = (SERIAL_JTAG) ? P_SERIAL_TX     : FPGA_SERIAL_RX;
-    assign P_SERIAL_RX    = (SERIAL_JTAG) ? M_SERIAL_TX     : P_SERIALx_TX;
-    assign P_SERIALx_RX   = (SERIAL_JTAG) ? FPGA_SERIAL_RX  : P_SERIAL_TX;
-
 `ifndef CPUTYPE
 `define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
 `endif
   `CPUTYPE CPU(
-    .clk( cpu_clk_g ), .rst( rst || ~all_init_done ),
+    .clk( cpu_clk_g ), .rst( rst_or_init ),
     .FPGA_SERIAL_RX(M_SERIAL_RX), .FPGA_SERIAL_TX(M_SERIAL_TX),
 // CP2+
     .dcache_addr( dcache_addr ),    .icache_addr( icache_addr ),
@@ -375,45 +380,64 @@ module ml505top
   );
 
 
-  plop PLOP ( // Plop a helper MicroBlaze CPU (relays debugger JTAG-SERIAL link)
-//TODO: Remove LOCKED, rename REF, trim useless IO
-    .CLOCK_REF_100GHz(user_clk_g), .CLOCK_LOCKED(), //OUT
-    .RESET_BOARD(USER_RST), .RESET_AUX(1'b0),
-    .MB_HALTED(), .RESET_PERIPHERAL(), //OUTs
-  // Two UARTs primary from JTAG-to-SERIAL debug link
-    .UART_RX (P_SERIAL_RX ),  .UART_TX (P_SERIAL_TX ),
-    .UARTx_RX(P_SERIALx_RX),  .UARTx_TX(P_SERIALx_TX),
-  // GPIO (32-bits each way)
-    .GPI1(P_gpi1),  .GPO1(P_gpo1),
-  // IIC
-    .IIC0_GPO(P_iic_gpo), //OUT[24:31]
-    .IIC0_SDA(P_iic_sda),   .IIC0_SD(P_iic_sd), //INOUTs
-  // SPI
-    .SPI0_SPISEL(P_spi_spisel), //IN
-    .SPI0_SCK   (P_spi_sck),    .SPI0_SS  (P_spi_ss),  //INOUTs
-    .SPI0_MISO  (P_spi_miso),   .SPI0_MOSI(P_spi_mosi) //INOUTs
-  ) /* synthesis syn_noprune=1 */;
-
-
-`ifdef COLT_DEBUG
-wire [35:0] CS_CONTROL0;
-wire [7:0] cs_aIN, cs_aOUT;
-chipscope_icon CS_ICON (
-    .CONTROL0(CS_CONTROL0) // INOUT BUS [35:0]
-) /* synthesis syn_noprune =1 */;
-chipscope_vio CS_VIO (
-    .CONTROL(CS_CONTROL0),  .CLK(cpu_clk_g),
-    .ASYNC_IN(cs_aIN),      .ASYNC_OUT(cs_aOUT),    // [7:0]
-    .SYNC_IN(8'b00000000),  .SYNC_OUT()             // [7:0]
-) /* synthesis syn_noprune =1 */;
-
-  assign cs_aIN = { rst, any_stall, 1'b0, 1'b0,
-                    GPIO_SW_C, GPIO_DIP_0, 1'b0, 1'b0 };
-  assign debug_reset = cs_aOUT[7];
-  assign debug_stall = cs_aOUT[6];
+`ifdef COLT45_PLOP
+    plop PLOP ( // Plop a helper MicroBlaze CPU (relays debugger JTAG-SERIAL link)
+        .CLOCK_REF_100MHz(user_clk_g),
+        .RESET_BOARD(USER_RST), .RESET_AUX(1'b0),
+        .MB_HALTED(), .RESET_PERIPHERAL(), //OUTs
+        // Two UARTs primary from JTAG-to-SERIAL debug link
+        .SERIAL1_RX(P_SERIAL1_RX), .SERIAL1_TX(P_SERIAL1_TX),
+        .SERIAL2_RX(P_SERIAL2_RX), .SERIAL2_TX(P_SERIAL2_TX),
+        // GPIO (32-bits each way)
+        .GPI1(P_gpi1),  .GPO1(P_gpo1)
+    ) /* synthesis syn_noprune=1 */;
 `else
-  assign debug_reset = 1'b0;
-  assign debug_stall = 1'b0;
+    assign P_SERIAL1_TX = 1'b1, P_SERIAL2_TX = 1'b1;
+    assign P_gpo1 = 32'd0;
 `endif
+
+
+`ifdef COLT45_DEBUG
+    wire [35: 0] CS_CONTROL0;
+    wire [ 7: 0] cs_IN, cs_OUT, cs_aIN, cs_aOUT;
+    chipscope_icon CS_ICON (
+        .CONTROL0(CS_CONTROL0) // INOUT BUS [35:0]
+    ) /* synthesis syn_noprune=1 */;
+    chipscope_vio CS_VIO (
+        .CONTROL(CS_CONTROL0),  .CLK(cpu_clk_g),
+        .SYNC_IN( cs_IN ),      .SYNC_OUT( cs_OUT ), // [7:0]
+        .ASYNC_IN(cs_aIN),      .ASYNC_OUT(cs_aOUT) // [7:0]
+    ) /* synthesis syn_noprune=1 */;
+
+    assign cs_aIN = { rst_or_init, any_stall, 1'b0, 1'b1,
+                        button_reset, button_stall, 1'b1, 1'b0 };
+    assign cs_IN = cs_aIN;
+    assign debug_reset = cs_aOUT[7];
+    assign debug_stall = cs_OUT[6];
+`else
+    assign debug_reset = 1'b0;
+    assign debug_stall = 1'b0;
+`endif
+
+
+// Patch course IO into generic IO board pins
+`ifndef COLT45_StallSkip
+    assign man_stall_toggle = 1'b1;
+`else
+`ifdef COLT45_StallDIP
+    assign man_stall_toggle = GPIO_DIP[0];
+`else
+    assign man_stall_toggle = 1'b0;
+`endif
+`endif
+    assign button_reset = GPIO_COMPPB[0];   // Center PushButton on "compass"
+    //assign button_reset = GPIO_COMPPB[2];   // South PushButton on "compass"
+    assign GPIO_COMPLED = {button_reset, 1'b0, man_stall_toggle, 2'b00};
+    assign GPIO_LED = {5'b00000, any_stall, pll_lock, mem_init_done};
+    //if SERIAL_JTAG then MIPSY talks to PLOP UART1 & PLOP UART2 gets physical UART
+    assign FPGA_SERIAL_TX = (SERIAL_JTAG) ? P_SERIAL2_TX    : M_SERIAL_TX;
+    assign M_SERIAL_RX    = (SERIAL_JTAG) ? P_SERIAL1_TX    : FPGA_SERIAL_RX;
+    assign P_SERIAL1_RX   = (SERIAL_JTAG) ? M_SERIAL_TX     : P_SERIAL2_TX;
+    assign P_SERIAL2_RX   = (SERIAL_JTAG) ? FPGA_SERIAL_RX  : P_SERIAL1_TX;
 
 endmodule

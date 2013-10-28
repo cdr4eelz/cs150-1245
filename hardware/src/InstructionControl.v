@@ -1,7 +1,8 @@
 `include "CPUBusses.vh"
 
 module InstructionControl #(
-	parameter strictMode = 0, NOUNKLE = 1
+	parameter strictMode=0,
+    parameter NOUNKLE=1
 )(
 	input [31:0 ] _inst,
 	input [31:0 ] _pc,

@@ -15,8 +15,8 @@
 //-----------------------------------------------------------------------------
 
 module RegFile #(
-    parameter DBG_LogStores = 0, DBG_DelayRead = 0
-) (
+    parameter COLT45_LogStores=0, COLT45_DelayRead=0
+)(
     input         clk,
     input         we,
     input  [4:0]  ra1,
@@ -39,7 +39,7 @@ initial R[0] = 0; // For cosmetic purposes :)
 always @(posedge clk) begin
     if (wa != 5'd0) begin
         if (we) begin
-            if (DBG_LogStores) begin
+            if (COLT45_LogStores) begin
                 $display("** REG: R[%h,%d] <= %h(%d)  *WAS* %h(%d)", wa, wa, wd, wd, R[wa], R[wa]);
             end
             R[wa] <= wd;
@@ -47,8 +47,8 @@ always @(posedge clk) begin
     end
 end
 
-assign #DBG_DelayRead rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
-assign #DBG_DelayRead rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
+assign #COLT45_DelayRead rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
+assign #COLT45_DelayRead rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
 
 task DUMP;
     reg [5:0] r;

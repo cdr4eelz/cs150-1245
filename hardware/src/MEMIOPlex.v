@@ -1,14 +1,14 @@
 `include "CPUBusses.vh"
 
-module MEMIOPlex //TODO: Set address with parameters (or even config register with param defaults)!
-(
-    input   clk, rst, ena,  //TODO: Revert to CPUBus?
+module MEMIOPlex#(
+    parameter BUFSIZE=0
+)( //TODO: Set address with parameters (or even config register with param defaults)!
+    input   clk, rst, stall,
     inout   `BUS_MMAP_type      IOMAP,
     inout   `BUS_SHAKE_type(8)  RVA_RX, RVA_TX
 );
-    parameter BUFSIZE = 0;
 
-    parameter _MAGIC_SANE_ = 15'h7DE3;
+    localparam _MAGIC_SANE_ = 15'h7DE3;
     reg [14:0] MAGIC_SANE_;
     always@(posedge clk) if (rst) MAGIC_SANE_ <= _MAGIC_SANE_;
     wire _SANE_ = (MAGIC_SANE_ == _MAGIC_SANE_);
@@ -29,6 +29,8 @@ module MEMIOPlex //TODO: Set address with parameters (or even config register wi
     wire [ 7: 0]    Tx_Data;    // OUT: Data to UART
     wire            Tx_Valid;   // OUT: We announce a byte
     wire            Tx_Ready;   // IN : UART can take a byte from us
+
+    wire ena = |(rmask | wmask);
 
 generate if (BUFSIZE==0) begin:NOBUFF   // Direct Software-to-UART approach:
 
@@ -122,10 +124,10 @@ end endgenerate
     // Patch local wires into outer world:
 
     BUS_MMAP_tap TAP_MMAP_IOMAP
-    ( ._BUS_(IOMAP),
+    ( ._BUS_(IOMAP), ._STALL_(stall), //TUN side might also apply stall
         .Addr(addr),
-        .RMask(rmask),          .RData(rdata),
-        .WMask(wmask),          .WData(wdata)
+        .RMask(rmask), .RData(rdata),
+        .WMask(wmask), .WData(wdata)
     );
 
     BUS_SHAKE_tap #(.InWidth(8)) TAP_SHAKE_Rx
@@ -139,17 +141,5 @@ end endgenerate
         .DataValid(Tx_Valid), .Data(Tx_Data),
         .DataReady(Tx_Ready)
     );
-
-/*
-    UART uart
-    (   .Clock(clk), .Reset(rst),
-        //   RECEIVER               //   TRANSMITTER
-        .DataOutReady(Rx_Ready),    .DataInReady(Tx_Ready),
-        .DataOutValid(Rx_Valid),    .DataInValid(Tx_Valid),
-        .DataOut     (Rx_Data),     .DataIn     (Tx_Data),
-        
-        .SIn         (SERIAL_RX),   .SOut       (SERIAL_TX)
-    );
-*/
 
 endmodule

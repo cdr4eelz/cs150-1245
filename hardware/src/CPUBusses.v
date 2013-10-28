@@ -65,26 +65,30 @@ endmodule
 
 // TAP/TUN of a Memory/IO access (Memory Stage inputs, CPU/MemController outputs)
 module BUS_MMAP_tun
-( inout `BUS_MMAP_type _BUS_,
+( inout `BUS_MMAP_type _BUS_, input _STALL_,
     input   [12 -1: 0]  Addr,
     input   [ 4 -1: 0]  WMask,
     input   [32 -1: 0]  WData,
     input   [ 4 -1: 0]  RMask,
     output  [32 -1: 0]  RData
 );
-    assign `MMAP__IN(_BUS_) = {Addr,WMask,WData,RMask};
+    wire [3:0] _WMask_, _RMask_;
+    assign {_WMask_,_RMask_} = {WMask & {4{~_STALL_}}, RMask & {4{~_STALL_}}};
+    assign `MMAP__IN(_BUS_) = {Addr,_WMask_,WData,_RMask_};
     assign {RData} = `MMAP__OUT(_BUS_);
 endmodule
 
 module BUS_MMAP_tap
-( inout `BUS_MMAP_type _BUS_,
+( inout `BUS_MMAP_type _BUS_, input _STALL_,
     output  [12 -1: 0]  Addr,
     output  [ 4 -1: 0]  WMask,
     output  [32 -1: 0]  WData,
     output  [ 4 -1: 0]  RMask,
     input   [32 -1: 0]  RData
 );
-    assign {Addr,WMask,WData,RMask} = `MMAP__IN(_BUS_);
+    wire [3:0] _WMask_, _RMask_;
+    assign {Addr,_WMask_,WData,_RMask_} = `MMAP__IN(_BUS_);
+    assign {WMask,RMask} = {_WMask_ & {4{~_STALL_}}, _RMask_ & {4{~_STALL_}}};
     assign `MMAP__OUT(_BUS_) = {RData};
 endmodule
 

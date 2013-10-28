@@ -1,8 +1,9 @@
 `include "CPUBusses.vh"
 
 module DumpMEMIOCPU #(
+    parameter ClockFreq=50_000_000,
     parameter DBG_DELAY=0
-) (
+)(
     input clk,
     input rst,
 
@@ -43,9 +44,8 @@ module DumpMEMIOCPU #(
 
     input stall
 );
-    parameter ClockFreq = 50_000_000;
 
-    `BUS_CPUGlobal_type     CPUGlobal;
+    `BUS_CPUGlobal_type CPUGlobal;
     BUS_CPUGlobal_tun TUN_CPUGlobal
     ( ._BUS_(CPUGlobal),
         .CLK(clk), .RST(rst), .STL(stall)
@@ -78,9 +78,9 @@ module DumpMEMIOCPU #(
     end
 */
 
-    `BUS_MMAP_type MMAP;
-    BUS_MMAP_tun TUN_MMAP
-    ( ._BUS_(MMAP),
+    `BUS_MMAP_type IO2MMAP;
+    BUS_MMAP_tun TUN_IO2MMAP
+    ( ._BUS_(IO2MMAP), ._STALL_(1'b0), //Apply stall at MEMIO
         .Addr   ( (STATE == 2) ? 12'h002 : 12'h000 ),
         .RMask  ( {3'b000, (STATE != 2)} ),
         .WMask  ( {3'b000, (STATE == 2)} ),
@@ -101,26 +101,37 @@ module DumpMEMIOCPU #(
     );
 
 
+    wire [31: 0]    OUT_BRa, OUT_BRb, OUT_DB, OUT_DI;
+    assign DATA_W = OUT_DB;
+
     // Key components indirectly wired elsewhere
 
+    bios_mem brom_bios
+    ( .clka(clk), .addra(ADDR_W),
+        .ena( ~stall), .douta(OUT_BRa),
+      /*.wea(4'b0000), .dina(32'b0),*/
+      .clkb(clk), .addrb(ADDR_W),
+        .enb( ~stall), .doutb(OUT_BRb)
+    );
+
     dmem_blk_ram bram_dmem
-    ( .clka(clk),   .addra(ADDR_W),
-        .ena( ~stall),      .douta(DATA_W),
-        .wea(4'b0000),      .dina (32'd0)
+    ( .clka(clk), .addra(ADDR_W),
+        .ena( ~stall), .douta(OUT_DB),
+        .wea(4'b0000), .dina (32'd0)
     );
 
     imem_blk_ram bram_imem
-    ( .clka(clk),   .addra(12'b0),
-        .ena(   1'b0),    /*.douta(),*/
-        .wea(4'b0000),      .dina(32'b0),
-      .clkb(clk),   .addrb(12'b0),
-      /*.enb(1'b1),*/       .doutb()
+    ( .clka(clk), .addra(12'b0),
+        .ena(   1'b0), /*.douta(),*/
+        .wea(4'b0000), .dina(32'b0),
+      .clkb(clk), .addrb(ADDR_W),
+      /*.enb(1'b1),*/ .doutb(OUT_DI)
     );
 
     `BUS_SHAKE_type(8)  UATX, UARX;
     MEMIOPlex iomap_uart
-    ( .clk(clk), .rst(rst), .ena(~stall),
-        .MMAP   (MMAP),
+    ( .clk(clk), .rst(rst), .stall(stall),
+        .IOMAP  (IO2MMAP),
         .RVA_TX (UATX), .RVA_RX(UARX)
     );
 

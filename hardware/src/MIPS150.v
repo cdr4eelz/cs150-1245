@@ -1,6 +1,8 @@
 `include "CPUBusses.vh"
 
-module MIPS150(
+module MIPS150 #(
+    parameter ClockFreq=50_000_000
+)(
     input clk,
     input rst,
 
@@ -41,7 +43,6 @@ module MIPS150(
 
     input stall
 );
-    parameter ClockFreq = 50_000_000;
 
 // CP3+
     assign bypass_addr=32'd0, bypass_din=32'd0, bypass_we=4'd0;
@@ -55,17 +56,14 @@ module MIPS150(
 
     assign line_trigger=1'b0;
 
-
+    // Global sorts of things
     `BUS_CPUGlobal_type CPUGlobal;
     BUS_CPUGlobal_tun TUN_CPUGlobal // Drive CPUGlobal bus from CPU module inputs
     ( ._BUS_(CPUGlobal),
         .CLK(clk), .RST(rst), .STL(stall)
     );
-
-    `BUS_MMAP_type      DMEM, IMEM, BMEM, IOMAP;
-    wire                IMEM_bios;
-    wire    [11: 0]     IMEM_addrb;
-    wire    [31: 0]     IMEM_doutb, BROM_doutb;
+    `BUS_MMAP_type IO2MMAP, BIOSROM, DACACHE, ITCACHE, DATBRAM, INSBRAM;
+    wire [31:0] INST_ADDR, INST_DATA; //Global, but are sync'd with WF stage mostly
 
     // Register lines
     wire    [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
@@ -104,26 +102,22 @@ module MIPS150(
             REGFILE_we = 1'b1; //NOTE: The trick of write to reg#0 is used for non-write
 
     // Declare outputs of WF stage
-    wire [31: 0] PC_WF_, INST_WF_;
-    wire [15: 0] StepCount, StallCount; // TODO: How big do these need to be???
-    StageWF s_WF    // WF STAGE itself
-    (   .CPUGlobal(CPUGlobal), .STEPCOUNT(StepCount), .STALLCOUNT(StallCount),
-        .IMEM_read_addr (IMEM_addrb),   .IMEM_read_bios(IMEM_bios),
-        .IMEM_read_data ((IMEM_bios) ? BROM_doutb : IMEM_doutb),
-        //Inputs
-        .DOBranch       (DOBranch_DX_WF_),
-        .PCBranch       (PCBranch_DX_WF_),
-        //Outputs
-        .PC             (PC_WF_),       .INST           (INST_WF_)
+    wire [31: 0] StepCount, StallCount;
+    StageWF #(
+        .COUNTERWIDTH(32), .BOOTPC(32'h2_000_0000)
+    ) s_WF ( .CPUGlobal(CPUGlobal),
+        .DOBranch(DOBranch_DX_WF_), .PCBranch(PCBranch_DX_WF_),
+        .INST_ADDR(INST_ADDR), //OUT to prep during this cycle
+        .STEPCOUNT(StepCount), .STALLCOUNT(StallCount)
     );
 
     // Pipeline border: WF/DX
     wire [31: 0] PC_DX, INST_DX;
     PipelineRegister #( .Width(32) )
-        REG_PC_DX   ( .CPUGlobal(CPUGlobal),  .In(PC_WF_),    .Out(PC_DX) );
+        REG_PC_DX   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),    .Out(PC_DX) );
     PipelineRegister #( .Width(32), .PreRegistered(1) ) // Registered for us in prior stage
-        REG_INST_DX ( .CPUGlobal(CPUGlobal),  .In(INST_WF_),  .Out(INST_DX) );
-    //NOTE: INST_WF_ gets changed early by BRAM (no disable availabe) but INST_DX gets "latched" on stall!
+        REG_INST_DX ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),  .Out(INST_DX) );
+    //NOTE: INST_DATA gets changed early by BRAM (no disable availabe) but INST_DX gets "latched" on stall!
 
     // Mini-forwarding calculation
     wire FWD_Allow = WBKCanFWD_M_WF_;
@@ -137,24 +131,21 @@ module MIPS150(
     wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_, PCPLUS8DX_;
     StageDX s_DX
     (//.CPUGlobal(CPUGlobal),
-        .REG_R1_    (REGFILE_ra1),      .REG_R2_    (REGFILE_ra2),
-        .REG_D1_    (FWD_rd1),          .REG_D2_    (FWD_rd2),
+        .REG_R1_(REGFILE_ra1), .REG_D1_(FWD_rd1),
+        .REG_R2_(REGFILE_ra2), .REG_D2_(FWD_rd2),
         //Inputs
-        .PC         (PC_DX),            .INST       (INST_DX),
+        .PC(PC_DX), .INST(INST_DX),
         //Outputs
         .IControl_  (IControlDX_),
-        .MemAddr_   (MemAddrDX_),
-        .MemWValue_ (MemWValueDX_),
-        .RegWValue_ (RegWValueDX_),
-        .PCPLUS8_   (PCPLUS8DX_),
+        .MemAddr_   (MemAddrDX_),   .MemWValue_ (MemWValueDX_),
+        .RegWValue_ (RegWValueDX_), .PCPLUS8_   (PCPLUS8DX_),
         //Feedbacks
-        .DOBranch_  (DOBranch_DX_WF_),  // Feedback to WF stage
-        .PCBranch_  (PCBranch_DX_WF_)   // Feedback to WF stage
+        .DOBranch_(DOBranch_DX_WF_), .PCBranch_(PCBranch_DX_WF_)
     );
 
     // Pipeline border: DX/M
-    `BUS_ICTL_type  IControl_M,   IControl__M;
-    wire  [31: 0]   MemAddr__M,   MemAddr_M;
+    `BUS_ICTL_type IControl_M, IControl__M;
+    wire  [31: 0]   MemAddr__M, MemAddr_M;
     wire  [31: 0]   MemWValue__M, RegWValue_M;
     wire  [31: 0]   PCPLUS8_M;
     PipelineRegister #( .Width(`BUS_ICTL_width) )   // Register all controls & let unused get pruned out
@@ -174,17 +165,17 @@ module MIPS150(
 
     StageM s_M
     (//.CPUGlobal  (CPUGlobal),
-        .DMEM       (DMEM),             .IMEM       (IMEM),
-        .BMEM       (BMEM),             .IOMAP      (IOMAP),
+        .IO2MMAP(IO2MMAP), .BIOSROM(BIOSROM),
+        .DACACHE(DACACHE), .ITCACHE(ITCACHE),
+        .DATBRAM(DATBRAM), .INSBRAM(INSBRAM),
         //Inputs
-        ._IControl  (IControl__M),      .IControl   (IControl_M),
-        ._MemAddr   (MemAddr__M),       .MemAddr    (MemAddr_M),
-        ._MemWValue (MemWValue__M),
-        .RegWValue  (RegWValue_M),
+        ._IControl  (IControl__M),  .IControl   (IControl_M),
+        ._MemAddr   (MemAddr__M),   .MemAddr    (MemAddr_M),
+        ._MemWValue (MemWValue__M), .RegWValue  (RegWValue_M),
         .PCPLUS8    (PCPLUS8_M),
         //Outputs
         //Feedbacks
-        .WBK_Reg_   (WBKReg_M_WF_),     .WBK_Val_   (WBKDat_M_WF_),
+        .WBK_Reg_   (WBKReg_M_WF_), .WBK_Val_   (WBKDat_M_WF_),
         .WBK_CanFWD_(WBKCanFWD_M_WF_)
     );
 
@@ -194,10 +185,10 @@ module MIPS150(
     RegFile regfile
     ( .clk(clk),
         // Write is synchronous
-        .wa (REGFILE_wa),    .wd(REGFILE_wd),    .we(~stall && REGFILE_we),
+        .wa (REGFILE_wa), .wd(REGFILE_wd), .we(~stall && REGFILE_we),
         // Read is asynchronous & always enabled
-        .ra1(REGFILE_ra1),  .ra2(REGFILE_ra2),
-        .rd1(REGFILE_rd1),  .rd2(REGFILE_rd2)
+        .ra1(REGFILE_ra1), .rd1(REGFILE_rd1),
+        .ra2(REGFILE_ra2), .rd2(REGFILE_rd2)
     );
 
 //TODO: Use PARAMETER for CP-LEVEL not #define
@@ -205,54 +196,48 @@ module MIPS150(
 //TODO: Add parameter to the TAP to perform address selection?
 //TODO: Move memories into the MEMIOPLEX housing (or MEMIOPLEX becomes generic instantiator/tapper)
 
-`ifdef _undef_always_
-    BUS_MMAP_tap TAP_DCACHE //TODO:Honor stall via masks (or TAP feature)
-    ( ._BUS_(DMEM),     .Addr(dcache_addr),
-        .RMask(dcache_re),          .RData(dcache_dout),//OUT-32
-        .WMask(dcache_we),          .WData(dcache_din)
-    )
-    wire DMEM_ena = 1'b0;
-`else
-    assign dcache_addr=32'd0, dcache_we=4'd0, dcache_re=1'd0, dcache_din=32'd0; // dcache_dout
-    wire DMEM_ena = ~stall && ( |`MMAP_WMask(DMEM) || |`MMAP_RMask(DMEM) );
-`endif
-    dmem_blk_ram bram_dmem
-    ( .clka(clk),       .addra(`MMAP_Addr(DMEM)),
-        .ena(DMEM_ena),             .douta(`MMAP_RData(DMEM)),//OUT-32
-        .wea(`MMAP_WMask(DMEM)),    .dina (`MMAP_WData(DMEM))
-    ) /* synthesis syn_noprune=1 */;
+    wire INST_bios = (INST_ADDR[31:28] == 4'h4);
+    wire [31:0] INST_BR, INST_IB;
+    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB;
 
-
-    assign icache_addr=32'd0, icache_we=4'd0, icache_re=1'd0, icache_din=32'd0; // instruction
-    wire IMEM_ena = ~stall && ( |`MMAP_WMask(IMEM) /*|| |`MMAP_RMask(IMEM)*/ );
-    imem_blk_ram bram_imem
-    ( .clka(clk),       .addra(`MMAP_Addr(IMEM)),
-        .ena(IMEM_ena),           /*.douta(`MMAP_RData(IMEM)),//OUT-32*/
-        .wea(`MMAP_WMask(IMEM)),    .dina (`MMAP_WData(IMEM)),
-    // Instruction reading port (b)
-      .clkb(clk),       .addrb(IMEM_addrb),
-      /*.enb(1'b1)*/        .doutb(IMEM_doutb) // inst fletch
-    ) /* synthesis syn_noprune=1 */;
-
-
-    wire BMEM_ena = ~stall && (/*|`MMAP_WMask(BMEM) ||*/ |`MMAP_RMask(BMEM) );
-    bios_mem brom_bios
-    ( .clka(clk),       .addra(`MMAP_Addr(BMEM)),
-        .ena(BMEM_ena),             .douta(`MMAP_RData(BMEM)),//OUT-32
-      /*.wea(`MMAP_WMask(BMEM)),    .dina (`MMAP_WData(BMEM)),*/
-    // Instruction reading port (b)
-      .clkb(clk),       .addrb(IMEM_addrb),
-        .enb(IMEM_bios),    .doutb(BROM_doutb) //TODO: Enable only when needed (and not !stall)
-    ) /* synthesis syn_noprune=1 */;
-
-
-    `BUS_SHAKE_type(8)  UATX, UARX;
-    wire MEMIO_ena = ~stall && ( |`MMAP_WMask(IOMAP) || |`MMAP_RMask(IOMAP) );
+    `BUS_SHAKE_type(8) UATX, UARX;
     MEMIOPlex iomap_uart
-    ( .clk(clk), .rst(rst), .ena(MEMIO_ena), //TODO: Turn these three back to CPUBus!
-        .IOMAP(IOMAP),
+    ( .clk(clk), .rst(rst), .stall(stall),
+        .IOMAP(IO2MMAP),
         .RVA_TX(UATX), .RVA_RX(UARX)
     );
+
+    bios_mem brom_bios
+    ( .clka(clk), .addra(`MMAP_Addr(BIOSROM)),
+        .ena(~stall && |(/*`MMAP_WMask(BIOSROM) |*/ `MMAP_RMask(BIOSROM))),
+        .douta(`MMAP_RData(BIOSROM)),//OUT-32
+      /*.wea(`MMAP_WMask(BIOSROM)), .dina(`MMAP_WData(BIOSROM)),*/
+    // Instruction reading port (b)
+      .clkb(clk), .addrb(INST_ADDR[13:2]),
+        .enb(INST_bios), .doutb(INST_BR)
+    ) /* synthesis syn_noprune=1 */;
+
+assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0; // dcache_dout
+assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0; // INST_IC=instruction
+/* icache_addr=(INST_ADDR/DATA_ADDR/NONE) */
+
+    dmem_blk_ram bram_dmem
+    ( .clka(clk), .addra(`MMAP_Addr(DATBRAM)),
+        .ena(~stall && |(`MMAP_WMask(DATBRAM) | `MMAP_RMask(DATBRAM))),
+        .douta(`MMAP_RData(DATBRAM)),//OUT-32
+        .wea(`MMAP_WMask(DATBRAM)), .dina(`MMAP_WData(DATBRAM))
+    ) /* synthesis syn_noprune=1 */;
+
+    imem_blk_ram bram_imem
+    ( .clka(clk), .addra(`MMAP_Addr(INSBRAM)),
+        .ena(~stall && |(`MMAP_WMask(INSBRAM) /*| `MMAP_RMask(INSBRAM)*/)),
+      /*.douta(`MMAP_RData(INSBRAM)),//OUT-32*/
+        .wea(`MMAP_WMask(INSBRAM)), .dina(`MMAP_WData(INSBRAM)),
+    // Instruction reading port (b)
+      .clkb(clk), .addrb(INST_ADDR[13:2]),
+      /*.enb(1'b1)*/ .doutb(INST_IB) // inst fletch
+    ) /* synthesis syn_noprune=1 */;
+
 
     UART #(.ClockFreq(ClockFreq)) uart
     ( .Clock(clk), .Reset(rst),
@@ -304,7 +289,7 @@ module MIPS150(
         $display(" REG2:R(%h,%d)=%h(%d)", REGFILE_ra2, REGFILE_ra2, REGFILE_rd2, REGFILE_rd2);
         if (FWD_2) $display(" *FWD2:      >>%h(%d)", FWD_rd2, FWD_rd2);
 
-        $display("%d]   /DX: %h %h", DBG_cycle, PC_WF_, INST_WF_);
+        $display("%d]   /DX: %h %h", DBG_cycle, INST_ADDR, INST_DATA);
         $display("%d]  /M  : %h<=%h", DBG_cycle, MemAddr__M, MemWValue__M);
         $display("%d]  /M  : %b", DBG_cycle, IControl__M);
         $display("%d] /WF : R[%h,%d]<=%h(%d)", DBG_cycle, WBKReg_M_WF_, WBKReg_M_WF_,
@@ -343,17 +328,25 @@ module MIPS150(
 
     always@(posedge clk) begin
         // Plan to log these into a sequential list of critical actions (for stricter testing)
-        if (`MMAP_WMask(IMEM) != 0) begin
-            $display("** I-MEM[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(IMEM), `MMAP_Addr(IMEM),
-            `MMAP_WData(IMEM), `MMAP_WData(IMEM), `MMAP_WMask(IMEM));
+        if (`MMAP_WMask(IO2MMAP) != 0) begin
+            $display("** IO2MMAP[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(IO2MMAP), `MMAP_Addr(IO2MMAP),
+            `MMAP_WData(IO2MMAP), `MMAP_WData(IO2MMAP), `MMAP_WMask(IO2MMAP));
         end
-        if (`MMAP_WMask(DMEM) != 0) begin
-            $display("** D-MEM[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(DMEM), `MMAP_Addr(DMEM),
-            `MMAP_WData(DMEM), `MMAP_WData(DMEM), `MMAP_WMask(DMEM));
+        if (`MMAP_WMask(ITCACHE) != 0) begin
+            $display("** ITCACHE[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(ITCACHE), `MMAP_Addr(ITCACHE),
+            `MMAP_WData(ITCACHE), `MMAP_WData(ITCACHE), `MMAP_WMask(ITCACHE));
         end
-        if (`MMAP_WMask(IOMAP) != 0) begin
-            $display("** IOMAP[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(IOMAP), `MMAP_Addr(IOMAP),
-            `MMAP_WData(IOMAP), `MMAP_WData(IOMAP), `MMAP_WMask(IOMAP));
+        if (`MMAP_WMask(DACACHE) != 0) begin
+            $display("** DACACHE[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(DACACHE), `MMAP_Addr(DACACHE),
+            `MMAP_WData(DACACHE), `MMAP_WData(DACACHE), `MMAP_WMask(DACACHE));
+        end
+        if (`MMAP_WMask(INSBRAM) != 0) begin
+            $display("** INSBRAM[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(INSBRAM), `MMAP_Addr(INSBRAM),
+            `MMAP_WData(INSBRAM), `MMAP_WData(INSBRAM), `MMAP_WMask(INSBRAM));
+        end
+        if (`MMAP_WMask(DATBRAM) != 0) begin
+            $display("** DATBRAM[%h,%d] <= %h(%d) {%b}", `MMAP_Addr(DATBRAM), `MMAP_Addr(DATBRAM),
+            `MMAP_WData(DATBRAM), `MMAP_WData(DATBRAM), `MMAP_WMask(DATBRAM));
         end
     end
 // synthesis translate_on

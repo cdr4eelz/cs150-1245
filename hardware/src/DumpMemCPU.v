@@ -1,6 +1,8 @@
 `include "CPUBusses.vh"
 
-module DumpMemCPU (
+module DumpMemCPU #(
+    parameter ClockFreq=50_000_000
+)(
     input clk,
     input rst,
 
@@ -41,7 +43,6 @@ module DumpMemCPU (
 
     input stall
 );
-    parameter ClockFreq = 50_000_000;
 
     `BUS_CPUGlobal_type CPUGlobal;
     BUS_CPUGlobal_tun TUN_CPUGlobal
@@ -90,23 +91,34 @@ module DumpMemCPU (
 // synthesis translate_on
 
 
+    wire [31: 0]    OUT_BRa, OUT_BRb, OUT_DB, OUT_DI;
+    assign DATA_W = OUT_DB;
+
     // Key components indirectly wired elsewhere
+
+    bios_mem brom_bios
+    ( .clka(clk),   .addra(ADDR_W),
+        .ena( ~stall),      .douta(OUT_BRa),
+      /*.wea(4'b0000),      .dina(32'b0),*/
+      .clkb(clk),   .addrb(ADDR_W),
+        .enb( ~stall),      .doutb(OUT_BRb)
+    );
 
     dmem_blk_ram bram_dmem
     ( .clka(clk),   .addra(ADDR_W),
-        .ena(   1'b1),      .douta(DATA_W),
-        .wea(4'b0000),      .dina(32'd0)
+        .ena( ~stall),      .douta(OUT_DB),
+        .wea(4'b0000),      .dina (32'd0)
     );
 
     imem_blk_ram bram_imem
     ( .clka(clk),   .addra(12'b0),
-        .ena(   1'b1),    /*.douta(DATA_W),*/
+        .ena(   1'b0),    /*.douta(),*/
         .wea(4'b0000),      .dina(32'b0),
-      .clkb(clk),   .addrb(12'b0),
-        /*.enb(),*/         .doutb()
+      .clkb(clk),   .addrb(ADDR_W),
+      /*.enb(1'b1),*/       .doutb(OUT_DI)
     );
 
-    // Test the tun/tap bus stuff...
+    // Test the ready-valid handshake tun/tap bus stuff too...
     `BUS_SHAKE_type(8)  UARX, UATX;
 
     BUS_SHAKE_tun #( .InWidth(8) )

@@ -1,11 +1,11 @@
 `include "CPUBusses.vh"
 
 module StageM #(
-	parameter NOUNKLE = 1
-) (
+	parameter NOUNKLE=1
+)(
 //  inout `BUS_CPUGlobal_type   CPUGlobal,  // Unused!
-    inout `BUS_MMAP_type        DMEM, IMEM, BMEM, IOMAP, // Could be merged & plexed elsewhere
-    
+    inout `BUS_MMAP_type        IO2MMAP, BIOSROM, DACACHE, ITCACHE, DATBRAM, INSBRAM, //TODO: Merge & plex elsewhere off single BUS
+
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
     input `BUS_ICTL_type _IControl, // Few are used (hopefully tools will prune)
     input  [31: 0]  _MemWValue,
@@ -23,8 +23,6 @@ module StageM #(
 `define UNKNOWN 'b0
 `define UNK(CONDITION,DEFAULT,WIDTH) (((CONDITION) || NOUNKLE) ? (DEFAULT) : (WIDTH`UNKNOWN))
 
-//NOTE: Is interesting that memories can read/write simultaneously (involving same address)...
-//      ...perhaps useful for a special instruction like store-compare (for concurrencty).
 
     // These are looking more like Functions due to the symmetry & triviality
     wire  [ 3: 0] _Target   = _MemAddr[31:28],
@@ -39,51 +37,89 @@ module StageM #(
              isWrite    = `ICTL_MemWrite( IControl);
     wire    _isRead     = `ICTL_MemToReg(_IControl),
              isRead     = `ICTL_MemToReg( IControl);
-    
+
     // This little compute block could become a nifty primitive!
     wire  [31: 0] _WDataMasked  = (_MemWValue) << (_SubShift*8) >> (_SubAddr*8);
     wire  [ 3: 0] _ByteMask     = (   4'b1111) << (_SubShift  ) >> (_SubAddr  );
     wire  [ 3: 0] _WMask    = (_isWrite) ? _ByteMask : 4'b0000;
     wire  [ 3: 0] _RMask    = (_isRead ) ? _ByteMask : 4'b0000;
-    
-    // An odd but interesting method of BUS plexing, rather than driving a real BUS in tri-state.
-    `BUS_MMAP_type LIVE, DEAD;
-    BUS_MMAP_tun BUS_LIVE( ._BUS_(LIVE),    .RData  (),
-        .WMask  (_WMask),                   .RMask  (_RMask),
-        .Addr   (_Address),                 .WData  (_WDataMasked)
+
+// NOTE: Cautious selection of _IControl vs IControl based signals.
+
+//TODO: Convert to PARAMETER that disables/adjusts MEMRANGE as appropriate (or a little submodule or compact BUS-of-enable)
+    wire _hot_IO = ( _Target == 4'b1000 );
+`ifdef COLT45_pre2
+    wire _hot_BR = 1'b0;
+    wire _hot_DC = 1'b0;
+    wire _hot_IC = 1'b0;
+    wire _hot_DB = ( _Target == 4'b0001 || _Target == 4'b0011 );
+    wire _hot_IB = ( _Target == 4'b0010 || _Target == 4'b0011 ) && _isWrite; // W-0 (Write-Only)
+`else
+    wire _hot_BR = ( _Target == 4'b0100 && !_isWrite); // Read-Only as Data (can be "enforced" elsewhere)
+    wire _hot_DC = ( _Target == 4'b0001 || _Target == 4'b0011 );
+    wire _hot_IC = ( _Target == 4'b0010 || _Target == 4'b0011 ) && _isWrite && PCPLUS8[30]; // Write-Only & Bios-Only
+`ifndef COLT45_STRICT
+    wire _hot_DB = ( _Target == 4'b0111 );              //EXTRA: Scratchpad-RAM
+    wire _hot_IB = ( _Target == 4'b0110 ) && _isWrite;  //EXTRA: Scratchpad-EXE
+`endif
+`endif
+
+
+//TODO: RETIRE cluttered multi-bus approach for simpler scheme.
+    wire [31:0] RData_IO, RData_BR, RData_DC, RData_DB; //Read data lines
+    BUS_MMAP_tun BUS_IO( ._BUS_(IO2MMAP), ._STALL_(~_hot_IO),
+        .RData  (RData_IO),
+        .Addr   (_Address),                 .WData  (_WDataMasked),
+        .RMask  (_RMask),                   .WMask  (_WMask)
     );
-    BUS_MMAP_tun BUS_DEAD( ._BUS_(DEAD),    .RData  (),
-        .WMask  (4'b0000),                  .RMask  (4'b0000),
-        .Addr   (`UNK(0,_Address,12)),      .WData  (`UNK(0,_WDataMasked,32))
+    BUS_MMAP_tun BUS_BR( ._BUS_(BIOSROM), ._STALL_(~_hot_BR),
+        .RData  (RData_BR),
+        .Addr   (_Address),                 .WData  (_WDataMasked),
+        .RMask  (_RMask),                   .WMask  (_WMask)
     );
-    wire _hot_DMEM = ( _Target == 4'b0001 || _Target == 4'b0011 );
-    wire _hot_IMEM = ( _Target == 4'b0010 || _Target == 4'b0011 ) && _isWrite && PCPLUS8[30]; // Write-Only & Only if BIOS is running
-    wire _hot_BMEM = ( _Target == 4'b0100 && !_isWrite); // Read-Only
-    wire _hot_IOMAP= ( _Target == 4'b1000 );
-    assign `MMAP__IN(DMEM) = (_hot_DMEM) ? `MMAP__IN(LIVE) : `MMAP__IN(DEAD);
-    assign `MMAP__IN(IMEM) = (_hot_IMEM) ? `MMAP__IN(LIVE) : `MMAP__IN(DEAD);
-    assign `MMAP__IN(BMEM) = (_hot_BMEM) ? `MMAP__IN(LIVE) : `MMAP__IN(DEAD);
-    assign `MMAP__IN(IOMAP)= (_hot_IOMAP)? `MMAP__IN(LIVE) : `MMAP__IN(DEAD);
-    
-    // Important to note the very cautious use of registered vs passthrough values,
-    //   control signals, ets. (Example, DataWidth for read comes from IControl but
-    //   DataWidth for write came from _IControl).  Though they are usually the same
-    //   value, we don't register it here since the pipeline registers have some extra
-    //   features that we yield to.
-    
+    BUS_MMAP_tun BUS_DC( ._BUS_(DACACHE), ._STALL_(~_hot_DC),
+        .RData  (RData_DC),
+        .Addr   (_Address),                 .WData  (_WDataMasked),
+        .RMask  (_RMask),                   .WMask  (_WMask)
+    );
+    BUS_MMAP_tun BUS_IC( ._BUS_(ITCACHE), ._STALL_(~_hot_IC),
+        .RData  (/*RData_IC*/),
+        .Addr   (_Address),                 .WData  (_WDataMasked),
+        .RMask  (_RMask),                   .WMask  (_WMask)
+    );
+    BUS_MMAP_tun BUS_DB( ._BUS_(DATBRAM), ._STALL_(~_hot_DB),
+        .RData  (RData_DB),
+        .Addr   (_Address),                 .WData  (_WDataMasked),
+        .RMask  (_RMask),                   .WMask  (_WMask)
+    );
+    BUS_MMAP_tun BUS_IB( ._BUS_(INSBRAM), ._STALL_(~_hot_IB),
+        .RData  (/*RData_IB*/),
+        .Addr   (_Address),                 .WData  (_WDataMasked),
+        .RMask  (_RMask),                   .WMask  (_WMask)
+    );
+
+
     reg [31: 0] DataRead;
     always @(*) case (Target) // "Target" (for read data coming out after clock) NOT "_Target"
-        4'b0001, 4'b0011:   DataRead = `MMAP_RData(DMEM); // Avoiding casex/casez approach
-        4'b0100:            DataRead = `MMAP_RData(BMEM);
-        4'b1000:            DataRead = `MMAP_RData(IOMAP);
+        4'b1000:            DataRead = RData_IO;
+`ifdef COLT45_pre2
+        4'b0001, 4'b0011:   DataRead = RData_DB;
+`else
+        4'b0100:            DataRead = RData_BR;
+        4'b0001, 4'b0011:   DataRead = RData_DC;
+`ifndef COLT45_STRICT //TODO: Ensure no other references to these if STRICT mode!
+        4'b0110:            DataRead = RData_DB; // Stash old BRAMs as scratchpad-RAM
+`endif
+`endif
         default: DataRead = `UNK(0,32'h0000,32);
     endcase // CAUTIOUS trapping of EVERY case
     wire [31: 0] DataLoad = DataRead << (SubAddr*8) >> (SubShift*8);
-    
+
+
     // Might divorce WBK from FWD stuff more fully to clarify slightly different paths
     assign WBK_Reg_ = `ICTL_DestReg( IControl); // Expected to be zero when no writeback
     assign WBK_Val_ = `ICTL_MemToReg(IControl) ? DataLoad :
                           `ICTL_Link(IControl) ? (PCPLUS8) : RegWValue;
     assign WBK_CanFWD_ = !`ICTL_MemToReg(IControl) && (WBK_Reg_ != 0);
-    
+
 endmodule
