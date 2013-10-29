@@ -10,12 +10,13 @@ POBJS = $(PSRCS:%.p=%.p.llvm.s.o)
 COBJS = $(CSRCS:%.c=%.c.llvm.s.o)
 SOBJS = $(SSRCS:%.s=%.s.o)
 
-all: both $(SECS)
+all: $(SECS)
 data: $(OUTS:%=$(TARGET).data.%)
 inst: $(OUTS:%=$(TARGET).inst.%)
-both: $(TARGET).both.mem
+both: $(OUTS:%=$(TARGET).both.%)
+#both: $(TARGET).both.mem
 
-bins: $(SECS:%=$(TARGET).%.bin) #$(TARGET).both.bin
+bins: $(SECS:%=$(TARGET).%.bin)
 
 $(TARGET).elf: $(OBJS)
 	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $(LDSRC) $^ -o $@
@@ -27,6 +28,10 @@ $(TARGET).elf: $(OBJS)
 
 %.inst.bin: %.elf
 	mips-objcopy -j .text -p -O binary $^ $@
+	chmod -x $@
+
+%.both.bin: %.elf
+	mips-objcopy -j .both -p -O binary $^ $@
 	chmod -x $@
 
 #%.both.bin: %.data.bin %.inst.bin

@@ -14,11 +14,11 @@ build/
 *.bak
 *.xxx
 *.tar
-*.tgz
-*.gz
-*.bz
-*.bz2
-*.tbz
+#*.tgz
+#*.gz
+#*.bz
+#*.bz2
+#*.tbz
 *.coe
 *.mif
 *.bin

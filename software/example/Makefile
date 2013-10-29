@@ -1,3 +1,3 @@
-TARGET := example
+TARGET ?= example
 
 include ../Makefile.gcc.in

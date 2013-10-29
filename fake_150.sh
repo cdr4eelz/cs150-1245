@@ -45,6 +45,7 @@ unalias mv 2>/dev/null
  
 export PATH="${HOME}/team45/bin:${HOME}/bin:/opt/modeltech/bin:${PATH}"
 export MANPATH="${HOME}/man:${MANPATH}"
+export SERIALTTY=/dev/ttyUSB0
 
 export TERMINFO=~/.terminfo
 
