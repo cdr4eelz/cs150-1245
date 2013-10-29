@@ -64,7 +64,7 @@ module EchoTestbench;
 
         .stall(Stall)
     );
-
+/*
     // A shadow CPU using a gated clock
     MIPS150 #(.ClockFreq(StallFreq)) xCPUx
     (   .clk(StallClock), .rst(Reset),
@@ -78,19 +78,19 @@ module EchoTestbench;
         .stall(1'b0)
     );
     assign serialListenTx = (1) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx;
-//  assign serialListenTx = FPGA_SERIAL_TX;
+//*/  assign serialListenTx = FPGA_SERIAL_TX;
 
-    UART          #( .ClockFreq(       ClockFreq))
-                  uart( .Clock(           Clock),
-                        .Reset(           Reset),
-                        .DataIn(          DataIn),
-                        .DataInValid(     DataInValid),
-                        .DataInReady(     DataInReady),
-                        .DataOut(         DataOut),
-                        .DataOutValid(    DataOutValid),
-                        .DataOutReady(    DataOutReady),
-                        .SIn(             serialListenTx),
-                        .SOut(            FPGA_SERIAL_RX));
+    UART #( .ClockFreq(ClockFreq) ) uart
+    ( .Clock(Clock), .Reset(Reset),
+        .DataIn(          DataIn),
+        .DataInValid(     DataInValid),
+        .DataInReady(     DataInReady),
+        .DataOut(         DataOut),
+        .DataOutValid(    DataOutValid),
+        .DataOutReady(    DataOutReady),
+        .SIn(             serialListenTx),
+        .SOut(            FPGA_SERIAL_RX)
+    );
 
 integer count = 0, maxchars = 10;
 event now_listening;
@@ -118,6 +118,7 @@ initial begin
         end
         DataOutReady = 0; count = count + 1;
         $display("[%d Got %d", count, DataOut);
+$stop();
         #1;
     end
 

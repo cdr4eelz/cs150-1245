@@ -2,7 +2,7 @@
 
 module DumpMEMIOCPU #(
     parameter ClockFreq=50_000_000,
-    parameter DBG_DELAY=0
+    parameter DBG_DELAY=0, COLT45_STEPMAX=0
 )(
     input clk,
     input rst,
@@ -68,26 +68,6 @@ module DumpMEMIOCPU #(
     assign #DBG_DELAY NEXT_STATE = ((STATE==1) && (IOSTATUS!=32'd1)) ? STATE : (STATE+1)%4;
     assign #DBG_DELAY ADDR_NEXT = (STATE == 2) ? (ADDR + 1) : ADDR;
 
-/*
-    integer CNT = 0;
-    always@(posedge clk) begin
-        $display("R=%b, Next=%d, State=%d", rst, NEXT_STATE, STATE);
-        $display("Addr=%h, Data=%h, Status=%h", ADDR, TX_Data, IOSTATUS);
-        CNT = CNT + 1;
-        if (CNT>30) $finish();
-    end
-*/
-
-    `BUS_MMAP_type IO2MMAP;
-    BUS_MMAP_tun TUN_IO2MMAP
-    ( ._BUS_(IO2MMAP), ._STALL_(1'b0), //Apply stall at MEMIO
-        .Addr   ( (STATE == 2) ? 12'h002 : 12'h000 ),
-        .RMask  ( {3'b000, (STATE != 2)} ),
-        .WMask  ( {3'b000, (STATE == 2)} ),
-        .RData  ( IOSTATUS ),
-        .WData  ( {24'b0, TX_Data} )
-    );
-
     PipelineRegister #( .Width(2) )
     ADVANCE_REG ( .CPUGlobal(CPUGlobal),
         .In(    NEXT_STATE),
@@ -101,7 +81,7 @@ module DumpMEMIOCPU #(
     );
 
 
-    wire [31: 0]    OUT_BRa, OUT_BRb, OUT_DB, OUT_DI;
+    wire [31: 0] OUT_BRa, OUT_BRb, OUT_DB, OUT_DI;
     assign DATA_W = OUT_DB;
 
     // Key components indirectly wired elsewhere
@@ -130,8 +110,12 @@ module DumpMEMIOCPU #(
 
     `BUS_SHAKE_type(8)  UATX, UARX;
     MEMIOPlex iomap_uart
-    ( .clk(clk), .rst(rst), .stall(stall),
-        .IOMAP  (IO2MMAP),
+    ( .clk(clk), .rst(rst), .ena(~stall),
+        .addra( (STATE == 2) ? 12'h002 : 12'h000 ),
+        .wea  ( {3'b000, (STATE == 2)} ),
+        .dina ( {24'b0, TX_Data} ),
+//      .rmask( {3'b000, (STATE != 2)} ),
+        .douta( IOSTATUS ),
         .RVA_TX (UATX), .RVA_RX(UARX)
     );
 
@@ -147,5 +131,17 @@ module DumpMEMIOCPU #(
         .DataOutValid(  `SHAKE_DataValid(   8,UARX)),
         .DataOutReady(  `SHAKE_DataReady(   8,UARX))
     );
+
+// synthesis translate_off
+generate if (COLT45_STEPMAX > 0) begin:_STEPS_
+    integer DBG_CNT = 0;
+    always@(posedge clk) begin
+        $display("CNT=%d, R=%b, Next=%d, State=%d", DBG_CNT, rst, NEXT_STATE, STATE);
+        $display("Addr=%h, Data=%h, Status=%h", ADDR, TX_Data, IOSTATUS);
+        DBG_CNT = DBG_CNT + 1;
+        if (DBG_CNT >= COLT45_STEPMAX) $stop();
+    end
+end endgenerate
+// synthesis translate_on
 
 endmodule

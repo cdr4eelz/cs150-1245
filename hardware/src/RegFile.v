@@ -15,7 +15,7 @@
 //-----------------------------------------------------------------------------
 
 module RegFile #(
-    parameter COLT45_LogStores=0, COLT45_DelayRead=0
+    parameter COLT45_REGWRITE=0, COLT45_REGSTALL=0, COLT45_DelayRead=0
 )(
     input         clk,
     input         we,
@@ -39,11 +39,11 @@ initial R[0] = 0; // For cosmetic purposes :)
 always @(posedge clk) begin
     if (wa != 5'd0) begin
         if (we) begin
-            if (COLT45_LogStores) begin
+            if (COLT45_REGWRITE) begin
                 $display("** REG: R[%h,%d] <= %h(%d)  *WAS* %h(%d)", wa, wa, wd, wd, R[wa], R[wa]);
             end
             R[wa] <= wd;
-        end else if (0) $display("** REG: R[%h,%d] <=** STALLed REG WRITE **", wa, wa);
+        end else if (COLT45_REGSTALL) $display("** REG: R[%h,%d] <=** STALLed REG WRITE **", wa, wa);
     end
 end
 

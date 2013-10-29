@@ -85,7 +85,7 @@ module DumpMEMIOTestbench;
             #1; finalcountdowneurope = finalcountdowneurope - 1;
         end
         $display("Got enough.");
-        $finish();
+        $stop();
     end
 
 /*

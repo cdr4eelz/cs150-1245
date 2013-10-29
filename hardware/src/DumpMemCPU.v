@@ -1,7 +1,8 @@
 `include "CPUBusses.vh"
 
 module DumpMemCPU #(
-    parameter ClockFreq=50_000_000
+    parameter ClockFreq=50_000_000,
+    parameter COLT45_STEPMAX=9
 )(
     input clk,
     input rst,
@@ -78,18 +79,6 @@ module DumpMemCPU #(
         .Out(   ADDR)
     );
 
-// synthesis translate_off
-    initial begin
-        $monitor("M: %h %h %h %h %h %h",
-            TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
-    end
-    always @(posedge clk) begin
-//        $strobe("C: %b %b %h %h %h %h %h %h", 
-//            rst, stall, TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
-        if (ADDR > 9) $finish();
-    end
-// synthesis translate_on
-
 
     wire [31: 0]    OUT_BRa, OUT_BRb, OUT_DB, OUT_DI;
     assign DATA_W = OUT_DB;
@@ -147,5 +136,19 @@ module DumpMemCPU #(
         .DataOutValid(  `SHAKE_DataValid(   8,UARX)),
         .DataOutReady(  `SHAKE_DataReady(   8,UARX))
     );
+
+// synthesis translate_off
+generate if (COLT45_STEPMAX > 0) begin:_STEPS_
+    initial begin
+        $monitor("M: %h %h %h %h %h %h",
+            TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
+    end
+    always @(posedge clk) begin
+        if (0) $strobe("C: %b %b %h %h %h %h %h %h", 
+            rst, stall, TX_Ready, ADVANCE, ADDR, ADDR_W, ADDR_N, TX_Data);
+        if (ADDR > COLT45_STEPMAX) $stop();
+    end
+end endgenerate
+// synthesis translate_on
 
 endmodule

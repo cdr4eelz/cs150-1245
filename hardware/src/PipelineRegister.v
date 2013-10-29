@@ -9,7 +9,7 @@ module	PipelineRegister #(
     parameter ResetValue={Width{1'b0}},
     parameter ClockBlip=0, OutDelay=0
 )(
-    inout `BUS_CPUGlobal_type CPUGlobal,
+    input `BUS_CPUGlobal_type CPUGlobal,
     input  [Width-1:0] In,
     output [Width-1:0] Out
 );

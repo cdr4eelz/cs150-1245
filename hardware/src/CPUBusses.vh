@@ -39,10 +39,10 @@
 
 //tuninput.52 {Addr.12,WMask.4,WData.32,RMask.4}
 //tunoutput.32{RData.32}
-`define BUS_MMAP_width      ((12+4+32+4)+(32)) // 84
-`define BUS_MMAP_type       wire [0:`BUS_MMAP_width-1]
-`define MMAP__IN(       BUS)BUS [  0 +: 52 ]
-`define MMAP__OUT(      BUS)BUS [ 52 +: 32 ]
+`define xBUS_MMAP_width      ((12+4+32+4)+(32)) // 84
+`define xBUS_MMAP_type       wire [0:`xBUS_MMAP_width-1]
+`define xMMAP__IN(       BUS)BUS [  0 +: 52 ]
+`define xMMAP__OUT(      BUS)BUS [ 52 +: 32 ]
 `define MMAP_Addr(          BUS)    BUS [  0 +: 12 ]
 `define MMAP_WMask(         BUS)    BUS [ 12 +:  4 ]
 `define MMAP_WData(         BUS)    BUS [ 16 +: 32 ]
