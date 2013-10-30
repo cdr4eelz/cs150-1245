@@ -19,7 +19,7 @@
 `define ANDI    6'b001100
 `define ORI     6'b001101
 `define XORI    6'b001110
-`define LUI     6'b001111 
+`define LUI     6'b001111
 
 // Funct (R-type)
 `define SLL     6'b000000

@@ -1,9 +1,6 @@
 `include "CPUBusses.vh"
 
-module InstructionControl #(
-    parameter strictMode=0,
-    parameter NOUNKLE=1
-)(
+module InstructionControl(
     input [31:0 ] _inst,
     input [31:0 ] _pc,
 
@@ -43,20 +40,17 @@ module InstructionControl #(
     assign isJType  = (_opcode_[5:1] == 5'b00001_);
     assign isIType  = (!isRType && !isJType);
 
-`define UNKNOWN(WIDTH) ( {WIDTH{1'b0}} )
-`define UNK(CONDITION,DEFAULT,WIDTH) ( ((CONDITION) || NOUNKLE) ? (DEFAULT) : `UNKNOWN(WIDTH) )
-
     wire [ 4: 0] #1 _rs_, _rt_, _rd_, _shamt_;
     wire [ 5: 0] #1 _funct_;
     wire [15: 0] #1 _immediate_;
     wire [25: 0] #1 _target_;
-    assign _rs_         = (!isJType || NOUNKLE) ? _inst[25:21] : `UNKNOWN(5);
-    assign _rt_         = (!isJType || NOUNKLE) ? _inst[20:16] : `UNKNOWN(5);
-    assign _rd_         = (isRType || NOUNKLE) ? _inst[15:11] : `UNKNOWN(5);
-    assign _shamt_      = (isRType || NOUNKLE) ? _inst[10:6 ] : `UNKNOWN(5);
-    assign _funct_      = (isRType || NOUNKLE) ? _inst[ 5:0 ] : `UNKNOWN(6);
-    assign _immediate_  = (isIType || NOUNKLE) ? _inst[15:0 ] : `UNKNOWN(16);
-    assign _target_     = (isJType || NOUNKLE) ? _inst[25:0 ] : `UNKNOWN(26);
+    assign _rs_         = (!isJType || `NOUNKLE) ? _inst[25:21] : `UNKNOWN(5);
+    assign _rt_         = (!isJType || `NOUNKLE) ? _inst[20:16] : `UNKNOWN(5);
+    assign _rd_         = (isRType || `NOUNKLE) ? _inst[15:11] : `UNKNOWN(5);
+    assign _shamt_      = (isRType || `NOUNKLE) ? _inst[10:6 ] : `UNKNOWN(5);
+    assign _funct_      = (isRType || `NOUNKLE) ? _inst[ 5:0 ] : `UNKNOWN(6);
+    assign _immediate_  = (isIType || `NOUNKLE) ? _inst[15:0 ] : `UNKNOWN(16);
+    assign _target_     = (isJType || `NOUNKLE) ? _inst[25:0 ] : `UNKNOWN(26);
 
     // Pre-computations for clarity (partly distilled out by logic simplification?)
     // These characteristics could come from lookup table
@@ -82,19 +76,19 @@ module InstructionControl #(
     assign isBranchX   = (_opcode_[5:1] == 5'b00010);
     assign isBranch0   = (isBGELTZ || (_opcode_[5:1] == 5'b00011));
 
-    assign IPCODE   = (isRType) ? _funct_ : (isBGELTZ || NOUNKLE) ? _rt_ : `UNKNOWN(6);
+    assign IPCODE   = (isRType) ? _funct_ : (isBGELTZ || `NOUNKLE) ? _rt_ : `UNKNOWN(6);
     assign DEST     = (isRType) ? _rd_ : (isMLoad || isIComp) ? _rt_ : 5'd0;
-    assign SOFFSET  = (isMemory || NOUNKLE) ? (SEXT16_32(_immediate_)) : `UNKNOWN(32);
+    assign SOFFSET  = (isMemory || `NOUNKLE) ? (SEXT16_32(_immediate_)) : `UNKNOWN(32);
     assign SIMMED   = SEXT16_32(_immediate_);
     assign UIMMED   = ZEXT16_32(_immediate_);
-    assign SHAMT    = (isRShiftI || NOUNKLE) ? _shamt_ : `UNKNOWN(5);
-    assign SRC1     = ((!isJType && !isRShiftI) || NOUNKLE) ? _rs_ : `UNKNOWN(5);
+    assign SHAMT    = (isRShiftI || `NOUNKLE) ? _shamt_ : `UNKNOWN(5);
+    assign SRC1     = ((!isJType && !isRShiftI) || `NOUNKLE) ? _rs_ : `UNKNOWN(5);
     assign SRC2     = (isBranch0) ? 5'd0 :
-                       (isROther || isBranchX || isRShift || isMStore || NOUNKLE)
+                       (isROther || isBranchX || isRShift || isMStore || `NOUNKLE)
                            ? _rt_ : `UNKNOWN(5);
 
-    assign PCTARGET = (isIJump || NOUNKLE) ? {_pc[31:28], _target_, 2'b00} : `UNKNOWN(32);
-    assign PCBRANCH = (isBranch || NOUNKLE) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : `UNKNOWN(32);
+    assign PCTARGET = (isIJump || `NOUNKLE) ? {_pc[31:28], _target_, 2'b00} : `UNKNOWN(32);
+    assign PCBRANCH = (isBranch || `NOUNKLE) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : `UNKNOWN(32);
     assign PCPLUS4  = _pc + 4;
     assign PCPLUS8  = _pc + 8;
 
@@ -105,13 +99,12 @@ module InstructionControl #(
         .ALUop(ALUop)
     );
 
-`define UNKNOWN2(WIDTH) ( {WIDTH{1'b0}} )
     `BUS_ICTL_type delayIControl;
     assign #1 IControl_ = delayIControl;
     BUS_ICTL_tun BUS_ICTL
     ( ._BUS_(delayIControl),
         .ISigned(
-            (isMemory) ? 1'b1 : (isIComp) ? !_opcode_[2] : `UNKNOWN2(1) //TODO: Move to isXYZ
+            (isMemory) ? 1'b1 : (isIComp) ? !_opcode_[2] : `UNKNOWN(1) //TODO: Move to isXYZ
         ),
         .ALUSrcA(
             isRShiftI
@@ -128,10 +121,10 @@ module InstructionControl #(
             isMStore
         ),
         .DataWidth(
-            (isMemory) ? _opcode_[1:0] : `UNKNOWN2(2)
+            (isMemory) ? _opcode_[1:0] : `UNKNOWN(2)
         ),
         .MSigned(
-            (isMemory && !isMStore && !_opcode_[1]) ? !_opcode_[2] : `UNKNOWN2(1)
+            (isMemory && !isMStore && !_opcode_[1]) ? !_opcode_[2] : `UNKNOWN(1)
         ),
 
         .Jump(
@@ -141,7 +134,7 @@ module InstructionControl #(
             isJump
         ),
         .JR(
-            (isIJump || isRJump) ? isRJump : `UNKNOWN2(1)
+            (isIJump || isRJump) ? isRJump : `UNKNOWN(1)
         ),
         .CmpOp(
             (isBSimple) ? _opcode_[2:0] : ((isBGELTZ) ? _opcode_[2:0] << _rt_[0] : ((isJump) ? 3'b011 : 3'b000))

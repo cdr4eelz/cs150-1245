@@ -13,17 +13,19 @@ module	PipelineRegister #(
     input  [Width-1:0] In,
     output [Width-1:0] Out
 );
-    wire Clock      = `CPUGlobal_CLK(CPUGlobal);
-    wire Reset      = `CPUGlobal_RST(CPUGlobal);
-    wire Enable     = !`CPUGlobal_STL(CPUGlobal);
+    wire clk, rst, stall;
+    BUS_CPUGlobal_tap BUS_CPUGlobal
+    ( ._BUS_(CPUGlobal),
+        .CLK(clk), .RST(rst), .STL(stall)
+    );
     reg  [Width-1:0] OverOut;
     wire [Width-1:0] #OutDelay _Out_;  // Hang the old value out for a tick
     
     // Make a little Z-BLIP to highlight poopigation through combinational logic based off of static elements
     generate if (ClockBlip) begin:BLIP
         reg Blip;
-        always @ (posedge Clock) begin
-            Blip <= #1 (Enable && !Reset);
+        always @ (posedge clk) begin
+            Blip <= #1 (!stall && !rst);
             Blip <= #2 1'b0;
         end
         assign Out = (Blip) ? 'bz : _Out_;
@@ -37,18 +39,18 @@ module	PipelineRegister #(
         //   but if not overridden, track In live during full cycle.
         // Appropriately hold ambiguous value until reset or enable.
         reg OverRide;
-        always @ (posedge Clock) begin
-            OverRide <= Reset || !Enable;
-            if (Reset)          OverOut <= ResetValue;
+        always @ (posedge clk) begin
+            OverRide <= rst || stall;
+            if (rst) OverOut <= ResetValue;
             else if (!OverRide) OverOut <= In; // Important to use *OLD* !OverRide!
         end
         assign _Out_ = (OverRide) ? OverOut : In;
     end else begin:REGGIEREG
         // Basic register with sync reset & sync enable
         //  where enable locks in prior value when low.
-        always @ (posedge Clock) begin
-            if (Reset)          OverOut <= ResetValue;
-            else if (Enable)    OverOut <= In;
+        always @ (posedge clk) begin
+            if (rst) OverOut <= ResetValue;
+            else if (!stall) OverOut <= In;
         end
         assign _Out_ = OverOut;
     end endgenerate
@@ -58,7 +60,7 @@ endmodule
 ** another synchronous element is doing the actual registering
 ** of the value at hand.  In that case, set PreRegistered=1 so
 ** that this "register" then behaves like a latch.  Note that
-** in this asynchronous latch mode, both Reset and Enable are
+** in this asynchronous latch mode, both Reset and Stall are
 ** considered only on posedge Clock, making them synchronous.
 ** Care is taken not to latch values prematurely, nor repeatedly.
 ** 

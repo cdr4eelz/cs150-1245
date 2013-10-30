@@ -62,7 +62,7 @@ module EchoTestbench;
 // CP3+
         .filler_ready(1'b0), .line_ready(1'b0),
 
-        .stall(Stall)
+        .stall( (0) ? Stall : 1'b0 )
     );
 /*
     // A shadow CPU using a gated clock
@@ -77,8 +77,7 @@ module EchoTestbench;
 
         .stall(1'b0)
     );
-    assign serialListenTx = (1) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx;
-//*/  assign serialListenTx = FPGA_SERIAL_TX;
+*/
 
     UART #( .ClockFreq(ClockFreq) ) uart
     ( .Clock(Clock), .Reset(Reset),
@@ -88,7 +87,8 @@ module EchoTestbench;
         .DataOut(         DataOut),
         .DataOutValid(    DataOutValid),
         .DataOutReady(    DataOutReady),
-        .SIn(             serialListenTx),
+        .SIn(             FPGA_SERIAL_TX),
+//      .SIn(             (1) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx),
         .SOut(            FPGA_SERIAL_RX)
     );
 

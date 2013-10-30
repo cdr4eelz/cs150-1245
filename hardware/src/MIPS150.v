@@ -134,8 +134,8 @@ assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
     // RegFile lines (write driven by write-back lines)
     wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
     wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
-    wire REGFILE_we = ~stall; //TODO: Ensure writeback interacts with stall appropriately
     assign REGFILE_wa = WBKReg_M_WF_, REGFILE_wd = WBKDat_M_WF_;
+    wire REGFILE_we = ~stall && (REGFILE_wd!==0); //TODO: Ensure stall interaction
     RegFile regfile
     ( .clk(clk),
         // Write is synchronous
@@ -147,8 +147,8 @@ assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
 
     // Forwarding calculation
     wire FWD_Allow = WBKCanFWD_M_WF_;
-    wire FWD_1 = (FWD_Allow && (REGFILE_wa==REGFILE_ra1));
-    wire FWD_2 = (FWD_Allow && (REGFILE_wa==REGFILE_ra2));
+    wire FWD_1 = (FWD_Allow===1) && (REGFILE_wa===REGFILE_ra1);
+    wire FWD_2 = (FWD_Allow===1) && (REGFILE_wa===REGFILE_ra2);
     wire [31: 0] FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
     wire [31: 0] FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 

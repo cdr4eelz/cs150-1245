@@ -41,8 +41,8 @@ end endgenerate
 generate if (BUFSIZE==0) begin:NOBUFF   // Direct Software-to-UART approach:
 
     // Set these up before the clock (continuous drive) so UART sees them within setup/detect time
-    assign Rx_Ready = ena && notwrite && (addra==12'h003);
-    assign Tx_Valid = ena && wea[0] && (addra==12'h002);
+    assign Rx_Ready = ena && notwrite && (addra===12'h003);
+    assign Tx_Valid = ena && wea[0] && (addra===12'h002);
     assign Tx_Data  = (Tx_Valid) ? dina[7:0] : PREMATURE_BYTE;
 
     always@(posedge clk) begin
@@ -59,19 +59,17 @@ generate if (BUFSIZE==0) begin:NOBUFF   // Direct Software-to-UART approach:
                     douta  <= {31'b0, Tx_Ready};
                 end
                 12'h001: if (notwrite) begin
-                    if (COLT45_SHAKE && Rx_Valid) begin $display("MEMIO: Poll Rx (%b)", Rx_Valid); $stop(); end
+                    if (COLT45_SHAKE && Rx_Valid) $display("MEMIO: Poll Rx (%b)", Rx_Valid);
                     douta  <= {31'b0, Rx_Valid};
                 end
                 12'h002: if (wea[0]) begin
                     if (COLT45_SHAKE) $display("MEMIO: Tx Shake (%h, %d) CNT: %d", Tx_Data, Tx_Data, CNT_Tx+1);
                     CNT_Tx <= CNT_Tx + 1;
-$stop();
                 end
                 12'h003: if (notwrite) begin
                     if (COLT45_SHAKE) $display("MEMIO: Rx Shake (%h, %d) CNT: %d", Rx_Data, Rx_Data, CNT_Rx+1);
                     CNT_Rx <= CNT_Rx + 1;
                     douta <= {24'b0, Rx_Data};
-$stop();
                 end
             endcase
         end

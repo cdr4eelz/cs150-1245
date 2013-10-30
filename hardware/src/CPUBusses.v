@@ -63,30 +63,6 @@ module BUS_ICTL_tap         // "tap" into desired tunneled values
 endmodule
 
 
-// TAP/TUN of a Memory/IO access (Memory Stage inputs, CPU/MemController outputs)
-module xBUS_MMAP_tun
-( inout `xBUS_MMAP_type _BUS_,
-    input   [32 -1: 2]  AddrW,
-    input   [ 4 -1: 0]  MaskB,
-    input   [32 -1: 0]  WData,
-    output  [32 -1: 0]  RData
-);
-    assign `xMMAP__IN(_BUS_) = {AddrW,MaskB,WData};
-    assign {RData} = `xMMAP__OUT(_BUS_);
-endmodule
-
-module xBUS_MMAP_tap
-( inout `xBUS_MMAP_type _BUS_,
-    output  [32 -1: 2]  AddrW,
-    output  [ 4 -1: 0]  MaskB,
-    output  [32 -1: 0]  WData,
-    input   [32 -1: 0]  RData
-);
-    assign {AddrW,MaskB,WData} = `xMMAP__IN(_BUS_);
-    assign `xMMAP__OUT(_BUS_) = {RData};
-endmodule
-
-
 // TAP/TUN of a DataHandshake Ready/Valid bus
 module BUS_SHAKE_tun #(parameter InWidth=8)
 ( inout `BUS_SHAKE_type(InWidth) _BUS_,

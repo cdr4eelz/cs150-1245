@@ -49,10 +49,9 @@ module StageDX(
     wire [ 3: 0] ALUOp;
     wire [ 2: 0] CmpOp;
     BUS_ICTL_tap BUS_ICTL
-    ( ._BUS_(IControl_),
+    ( ._BUS_(IControl_), // Unused (explicitly listed to make warnings meaningful)
         .ALUOp(ALUOp), .ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB),
         .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR),
-        // Unused (explicitly listed to make warnings meaningful)
         .MemToReg(),.DestReg(),.MemWrite(),.DataWidth(),.MSigned(),.Link()
     );
 

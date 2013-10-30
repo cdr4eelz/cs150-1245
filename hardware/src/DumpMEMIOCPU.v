@@ -65,8 +65,8 @@ module DumpMEMIOCPU #(
                 ? ( (ADDR_N[0]) ? DATA_W[ 0 +: 8] : DATA_W[ 8 +: 8])
                 : ( (ADDR_N[0]) ? DATA_W[16 +: 8] : DATA_W[24 +: 8]);
 
-    assign #DBG_DELAY NEXT_STATE = ((STATE==1) && (IOSTATUS!=32'd1)) ? STATE : (STATE+1)%4;
-    assign #DBG_DELAY ADDR_NEXT = (STATE == 2) ? (ADDR + 1) : ADDR;
+    assign #DBG_DELAY NEXT_STATE = ((STATE === 1) && (IOSTATUS !== 32'd1)) ? STATE : (STATE+1)%4;
+    assign #DBG_DELAY ADDR_NEXT = (STATE === 2) ? (ADDR + 1) : ADDR;
 
     PipelineRegister #( .Width(2) )
     ADVANCE_REG ( .CPUGlobal(CPUGlobal),
@@ -111,10 +111,10 @@ module DumpMEMIOCPU #(
     `BUS_SHAKE_type(8)  UATX, UARX;
     MEMIOPlex iomap_uart
     ( .clk(clk), .rst(rst), .ena(~stall),
-        .addra( (STATE == 2) ? 12'h002 : 12'h000 ),
-        .wea  ( {3'b000, (STATE == 2)} ),
+        .addra( (STATE === 2) ? 12'h002 : 12'h000 ),
+        .wea  ( {3'b000, (STATE === 2)} ),
         .dina ( {24'b0, TX_Data} ),
-//      .rmask( {3'b000, (STATE != 2)} ),
+//      .rmask( {3'b000, (STATE !== 2)} ),
         .douta( IOSTATUS ),
         .RVA_TX (UATX), .RVA_RX(UARX)
     );
