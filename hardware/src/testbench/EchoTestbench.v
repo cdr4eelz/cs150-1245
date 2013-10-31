@@ -1,6 +1,7 @@
 `timescale 1ns/1ps
 
 module EchoTestbench;
+
     reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
 
@@ -17,6 +18,9 @@ module EchoTestbench;
     parameter StallRingSize = 3;
     parameter StallRingInit = 'b00000000000000000001;
     parameter StallFreq = ClockFreq * 2/3;
+
+    parameter XMIT_DELAY_TICKS = -1, //10 * Cycle, // 0 for no-delay, <0 for no-xmit
+                XMIT_STALL_CYCLES = 1000;
 
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
@@ -118,37 +122,51 @@ initial begin
         end
         DataOutReady = 0; count = count + 1;
         $display("[%d Got %d", count, DataOut);
-$stop();
         #1;
     end
 
     $finish();
 end
 
-integer countup;
+integer countup, StallCounter;
 initial begin
-    $display("Booting:");
-    DataIn = 8'h7b;
-    DataInValid = 0;
-    countup = 0;
+    if (XMIT_DELAY_TICKS < 0) begin
+        $display("Xmit] Disabled.");
+    end else begin
+        DataIn = "A";
+        DataInValid = 0;
+        countup = 0;
 
-    @(now_reset);
-    $display("Getting ready to send:");
-    //$monitor("R:%b Ready:%b Valid:%b", Reset, DataInReady, DataInValid);
-    @(now_listening);
+        @(now_reset); // Wait until reset completes
+        $display("Xmit] Getting ready...");
+        //$monitor("R:%b Ready:%b Valid:%b", Reset, DataInReady, DataInValid);
+        @(now_listening); // Wait until listener is listening
 
-    $display("Sending...");
-    forever begin // Wait until transmit is ready
-        DataInValid = 1'b1; #1;
-        @(posedge Clock);
-        while (!DataInReady) begin
+        @(negedge Clock);
+        $display("Xmit] Beginning...");
+        forever begin // Wait until transmit is ready
+            $display("%d] Offering: 0x%h %b '%c' %d  @%t", countup, DataIn, DataIn, DataIn, DataIn, $time);
+            DataInValid = 1'b1;
+            StallCounter = XMIT_STALL_CYCLES; // Max clock cycles to wait
             @(posedge Clock);
+            while (!DataInReady) begin
+                if (StallCounter > 0) begin
+                    StallCounter = StallCounter - 1;
+                    if (StallCounter < 0) begin
+                        $display("Xmit] Stalled (STALL-CYCLES: %d  SENT-PRIOR: %d)", StallCounter, countup);
+                    end
+                end
+                @(posedge Clock);
+            end
+            $display("%d] SENT: 0x%h %b '%c' %d  @%t", countup, DataIn, DataIn, DataIn, DataIn, $time);
+            countup = countup + 1;
+            if (XMIT_DELAY_TICKS > 0) begin
+                DataInValid = 1'b0;
+                #XMIT_DELAY_TICKS;
+                $display("Xmit] Delay done (%d ticks)  @%t", XMIT_DELAY_TICKS, $time);
+            end
+            DataIn = DataIn + 1;
         end
-        DataInValid = 1'b0; countup = countup + 1;
-        $display("%d] Sent: %h %d %b", countup, DataIn, DataIn, DataIn);
-        DataIn = DataIn - 1;
-
-        #1;
     end
 end
 

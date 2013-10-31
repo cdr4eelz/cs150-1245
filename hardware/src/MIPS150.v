@@ -45,6 +45,8 @@ module MIPS150 #(
     input stall
 );
 
+localparam DD=0;
+
 // CP3+
     assign bypass_addr=32'd0, bypass_din=32'd0, bypass_we=4'd0;
     assign filler_color=24'd0, filler_valid=1'b0, line_color=32'd0, line_point=10'd0;
@@ -104,17 +106,17 @@ assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
 */
 
     // Forward declare wires to explicitly feedback to prior stages
-    wire         #1 DOBranch_DX_WF_;
-    wire [31: 0] #1 PCBranch_DX_WF_;
-    wire [ 4: 0] #1 WBKReg_M_WF_;   // Not sure there really is a "W" stage anywhere!
-    wire [31: 0] #1 WBKDat_M_WF_;   // but the concept seems harmless.
-    wire         #1 WBKCanFWD_M_WF_;// This prevents accidental creation of a slow MDX stage!
+    wire         #DD DOBranch_DX_WF_;
+    wire [31: 0] #DD PCBranch_DX_WF_;
+    wire [ 4: 0] #DD WBKReg_M_WF_;   // Not sure there really is a "W" stage anywhere!
+    wire [31: 0] #DD WBKDat_M_WF_;   // but the concept seems harmless.
+    wire         #DD WBKCanFWD_M_WF_;// This prevents accidental creation of a slow MDX stage!
 
     // Declare outputs of WF stage
     wire [31: 0] INST_ADDR, INST_DATA; //Data fetch is sync'd with StageWF
     wire [31: 0] StepCount, StallCount;
     StageWF #(
-        .COUNTERWIDTH(32), .BOOTPC(32'h2_000_0000)
+        .COUNTERWIDTH(32), .BOOTPC(32'h6_000_0000)
     ) s_WF ( .CPUGlobal(CPUGlobal),
         .DOBranch(DOBranch_DX_WF_), .PCBranch(PCBranch_DX_WF_),
         .PC(INST_ADDR),
@@ -135,7 +137,7 @@ assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
     wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
     wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
     assign REGFILE_wa = WBKReg_M_WF_, REGFILE_wd = WBKDat_M_WF_;
-    wire REGFILE_we = ~stall && (REGFILE_wd!==0); //TODO: Ensure stall interaction
+    wire REGFILE_we = ~stall && (REGFILE_wd !== 0); //TODO: Ensure stall interaction
     RegFile regfile
     ( .clk(clk),
         // Write is synchronous
@@ -147,10 +149,10 @@ assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
 
     // Forwarding calculation
     wire FWD_Allow = WBKCanFWD_M_WF_;
-    wire FWD_1 = (FWD_Allow===1) && (REGFILE_wa===REGFILE_ra1);
-    wire FWD_2 = (FWD_Allow===1) && (REGFILE_wa===REGFILE_ra2);
-    wire [31: 0] FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
-    wire [31: 0] FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
+    wire FWD_1 = (FWD_Allow) && (REGFILE_wa === REGFILE_ra1) && (REGFILE_ra1 !== 0);
+    wire FWD_2 = (FWD_Allow) && (REGFILE_wa === REGFILE_ra2) && (REGFILE_ra2 !== 0);
+    wire [31: 0] #DD FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
+    wire [31: 0] #DD FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 
     // Declare outputs of DX stage
     `BUS_ICTL_type IControlDX_;
@@ -262,15 +264,13 @@ generate if (COLT45_STEPMAX > 0) begin:_STEPS_
     end
 end endgenerate
 
-generate if (COLT45_REGREAD) begin:_REGREAD_
-    always@* begin
-        if (REGFILE_ra1 >= 0) begin
-            $display(" reg1:%d R1(%h,%d)=%h (%d)", FWD_1, REGFILE_ra1, REGFILE_ra1, REGFILE_rd1, REGFILE_rd1);
+generate if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "care" at clock edge
+    always@(posedge clk) if (!rst) begin
+        if (REGFILE_ra1 != 0) begin
+            $display(" reg1:FWD=%b R1(%h,%d)=%h (%d)", FWD_1, REGFILE_ra1, REGFILE_ra1, FWD_rd1, FWD_rd1);
         end
-    end
-    always@* begin
-        if (REGFILE_ra2 >= 0) begin
-            $display(" reg2:%d R2(%h,%d)=%h (%d)", FWD_2, REGFILE_ra2, REGFILE_ra2, REGFILE_rd2, REGFILE_rd2);
+        if (REGFILE_ra2 != 0) begin
+            $display(" reg2:FWD=%b R2(%h,%d)=%h (%d)", FWD_2, REGFILE_ra2, REGFILE_ra2, FWD_rd2, FWD_rd2);
         end
     end
 end endgenerate

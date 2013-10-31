@@ -1,7 +1,7 @@
 `include "CPUBusses.vh"
 
 module StageWF #(
-    parameter [31:0] BOOTPC=32'h40000000,
+    parameter [31:0] BOOTPC,
     parameter COUNTERWIDTH=32
 )(
     input `BUS_CPUGlobal_type CPUGlobal,

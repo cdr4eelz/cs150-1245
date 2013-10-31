@@ -1,7 +1,7 @@
 `include "CPUBusses.vh"
 
 module StageM #(
-    parameter COLT45_MEMWRITE=1
+    parameter COLT45_MEMWRITE=0
 )(
     input `BUS_CPUGlobal_type CPUGlobal,
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
@@ -71,7 +71,7 @@ module StageM #(
     wire _hot_DB = ( _Target === 4'b0001 || _Target === 4'b0011 );
     wire _hot_IB = ( _Target === 4'b0010 || _Target === 4'b0011 ) && _isWrite; // W-0 (Write-Only)
 `else
-    wire _hot_BR = ( _Target === 4'b0100 && !_isWrite); // Read-Only as Data (can be "enforced" elsewhere)
+    wire _hot_BR = ( _Target === 4'b0100 && !_isWrite); // Read-Only as Data ("enforced" elsewhere too)
     wire _hot_DC = ( _Target === 4'b0001 || _Target === 4'b0011 );
     wire _hot_IC = ( _Target === 4'b0010 || _Target === 4'b0011 ) && _isWrite && PCPLUS8[30]; // Write-Only & Bios-Only
 `ifdef COLT45_STRICT
@@ -79,7 +79,7 @@ module StageM #(
     wire _hot_IB = 1'b0;
 `else //EXTRA: Scratchpad-RAM
     wire _hot_DB = ( _Target === 4'b0101 || _Target === 4'b0111 );
-    wire _hot_IB = ( _Target === 4'b0110 || _Target === 4'b0111 ) && _isWrite; // W-0 (Write-Only)
+    wire _hot_IB = ( _Target === 4'b0110 || _Target === 4'b0111 ) && _isWrite && PCPLUS8[30]; // Write-Only & Bios-Only
 `endif
 `endif
 
@@ -166,8 +166,8 @@ generate if (COLT45_MEMWRITE) begin:_MEMWRITE_
         // Plan to log these into a sequential list of critical actions (for stricter testing)
         $display("** [%h,%d] <= %h(%d) {%b}",
             _MemAddr, _MemAddr, _WDataMasked, _WDataMasked, _WriteMask);
-        $display("** IO=%b BR=%b IC=%b DB=%b IB=%b",
-            _hot_IO, _hot_BR, _hot_IC, _hot_DB, _hot_IB);
+        $display("** TARG=%h W=%b: IO=%b BR=%b IC=%b DB=%b IB=%b",
+            _Target, _isWrite, _hot_IO, _hot_BR, _hot_IC, _hot_DB, _hot_IB);
     end
 end endgenerate
 // synthesis translate_on

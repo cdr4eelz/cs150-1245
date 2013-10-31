@@ -6,7 +6,7 @@ OUTS ?= mif coe mem dump # "v"
 SECS ?= data inst
 PSRCS ?= $(wildcard *.p)
 CSRCS ?= $(wildcard *.c)
-SSRCS ?= $(wildcard *.s)
+SSRCS ?= $(wildcard *.s) $(START)
 
 OBJS = $(POBJS) $(COBJS) $(SOBJS)
 POBJS = $(PSRCS:%.p=%.p.llvm.s.o)

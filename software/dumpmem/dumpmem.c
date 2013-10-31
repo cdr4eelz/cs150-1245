@@ -8,9 +8,9 @@
 const char rodata[] = "READONLY: " DSTR;
 char data[] = "DATA: " DSTR;
 
-int main(void)
+int main(void) // Could ahve _start pass some basic info
 {
-	const char *cp = 0x10000000;
+	const char *cp = (const char *) data; //0x10000000;
 	for ( ; ; ) {
 		while (!TRAN_CTRL) ;
 		TRAN_DATA = *cp++;

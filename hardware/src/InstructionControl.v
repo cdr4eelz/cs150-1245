@@ -23,6 +23,8 @@ module InstructionControl(
 //  output [15:0 ] FAULT
 );
 
+localparam DD=0;
+
     function [31:0] SEXT16_32;
         input [15:0] in16;
         SEXT16_32 = {{16{in16[15]}}, in16};
@@ -40,10 +42,10 @@ module InstructionControl(
     assign isJType  = (_opcode_[5:1] == 5'b00001_);
     assign isIType  = (!isRType && !isJType);
 
-    wire [ 4: 0] #1 _rs_, _rt_, _rd_, _shamt_;
-    wire [ 5: 0] #1 _funct_;
-    wire [15: 0] #1 _immediate_;
-    wire [25: 0] #1 _target_;
+    wire [ 4: 0] #DD _rs_, _rt_, _rd_, _shamt_;
+    wire [ 5: 0] #DD _funct_;
+    wire [15: 0] #DD _immediate_;
+    wire [25: 0] #DD _target_;
     assign _rs_         = (!isJType || `NOUNKLE) ? _inst[25:21] : `UNKNOWN(5);
     assign _rt_         = (!isJType || `NOUNKLE) ? _inst[20:16] : `UNKNOWN(5);
     assign _rd_         = (isRType || `NOUNKLE) ? _inst[15:11] : `UNKNOWN(5);
@@ -54,53 +56,53 @@ module InstructionControl(
 
     // Pre-computations for clarity (partly distilled out by logic simplification?)
     // These characteristics could come from lookup table
-    wire #1 isMemory, isMStore, isMLoad;
-    assign isMemory    = (_opcode_[5:4] == 2'b10);
-    assign isMLoad     = (_opcode_[5:3] == 3'b100);
-    assign isMStore    = (_opcode_[5:3] == 3'b101);
-    wire #1 isIComp;
-    assign isIComp     = (_opcode_[5:3] == 3'b001);
-    wire #1 isRShift, isRShiftI, isRShiftR, isROther;
-    assign isRShift    = (isRType && (_funct_[5:3] == 3'b000));
-    assign isRShiftI   = (isRShift && (_funct_[2] == 1'b0));
-    assign isRShiftR   = (isRShift && (_funct_[2] == 1'b1));
-    assign isROther    = (isRType && (_funct_[5:4] == 2'b10));
-    wire #1 isJump, isRJump, isIJump;
-    assign isRJump     = (isRType && (_funct_[5:3] == 3'b001));
+    wire #DD isMemory, isMStore, isMLoad;
+    assign isMemory    = (_opcode_[5:4] === 2'b10);
+    assign isMLoad     = (_opcode_[5:3] === 3'b100);
+    assign isMStore    = (_opcode_[5:3] === 3'b101);
+    wire #DD isIComp;
+    assign isIComp     = (_opcode_[5:3] === 3'b001);
+    wire #DD isRShift, isRShiftI, isRShiftR, isROther;
+    assign isRShift    = (isRType && (_funct_[5:3] === 3'b000));
+    assign isRShiftI   = (isRShift && (_funct_[2] === 1'b0));
+    assign isRShiftR   = (isRShift && (_funct_[2] === 1'b1));
+    assign isROther    = (isRType && (_funct_[5:4] === 2'b10));
+    wire #DD isJump, isRJump, isIJump;
+    assign isRJump     = (isRType && (_funct_[5:3] === 3'b001));
     assign isIJump     = isJType;
     assign isJump      = (isIJump || isRJump);
-    wire #1 isBSimple, isBGELTZ, isBranch, isBranchX, isBranch0;
-    assign isBSimple   = (_opcode_[5:2] == 4'b0001);
-    assign isBGELTZ    = (_opcode_ == 6'b000001);
+    wire #DD isBSimple, isBGELTZ, isBranch, isBranchX, isBranch0;
+    assign isBSimple   = (_opcode_[5:2] === 4'b0001);
+    assign isBGELTZ    = (_opcode_ === 6'b000001);
     assign isBranch    = (isBSimple || isBGELTZ);
-    assign isBranchX   = (_opcode_[5:1] == 5'b00010);
-    assign isBranch0   = (isBGELTZ || (_opcode_[5:1] == 5'b00011));
+    assign isBranchX   = (_opcode_[5:1] === 5'b00010);
+    assign isBranch0   = (isBGELTZ || (_opcode_[5:1] === 5'b00011));
 
-    assign IPCODE   = (isRType) ? _funct_ : (isBGELTZ || `NOUNKLE) ? _rt_ : `UNKNOWN(6);
+    assign IPCODE   = (isRType) ? _funct_ : (isBGELTZ) ? _rt_ : `UNKNOWN(6);
     assign DEST     = (isRType) ? _rd_ : (isMLoad || isIComp) ? _rt_ : 5'd0;
-    assign SOFFSET  = (isMemory || `NOUNKLE) ? (SEXT16_32(_immediate_)) : `UNKNOWN(32);
+    assign SOFFSET  = (isMemory) ? (SEXT16_32(_immediate_)) : `UNKNOWN(32);
     assign SIMMED   = SEXT16_32(_immediate_);
     assign UIMMED   = ZEXT16_32(_immediate_);
-    assign SHAMT    = (isRShiftI || `NOUNKLE) ? _shamt_ : `UNKNOWN(5);
-    assign SRC1     = ((!isJType && !isRShiftI) || `NOUNKLE) ? _rs_ : `UNKNOWN(5);
+    assign SHAMT    = (isRShiftI) ? _shamt_ : `UNKNOWN(5);
+    assign SRC1     = (!isJType && !isRShiftI) ? _rs_ : 5'd0;
     assign SRC2     = (isBranch0) ? 5'd0 :
-                       (isROther || isBranchX || isRShift || isMStore || `NOUNKLE)
-                           ? _rt_ : `UNKNOWN(5);
+                       (isROther || isBranchX || isRShift || isMStore)
+                           ? _rt_ : 5'd0;
 
-    assign PCTARGET = (isIJump || `NOUNKLE) ? {_pc[31:28], _target_, 2'b00} : `UNKNOWN(32);
-    assign PCBRANCH = (isBranch || `NOUNKLE) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : `UNKNOWN(32);
+    assign PCTARGET = (isIJump) ? {_pc[31:28], _target_, 2'b00} : `UNKNOWN(32);
+    assign PCBRANCH = (isBranch) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : `UNKNOWN(32);
     assign PCPLUS4  = _pc + 4;
     assign PCPLUS8  = _pc + 8;
 
     // Embed existing ALUDecoder from lab
-    wire [ 3: 0] #1 ALUop;
+    wire [ 3: 0] #DD ALUop;
     ALUdec ALUDecoder(
         .opcode(_opcode_), .funct(_funct_),
         .ALUop(ALUop)
     );
 
     `BUS_ICTL_type delayIControl;
-    assign #1 IControl_ = delayIControl;
+    assign #DD IControl_ = delayIControl;
     BUS_ICTL_tun BUS_ICTL
     ( ._BUS_(delayIControl),
         .ISigned(

@@ -15,7 +15,7 @@
 //-----------------------------------------------------------------------------
 
 module RegFile #(
-    parameter COLT45_REGWRITE=0, COLT45_REGSTALL=0, COLT45_DelayRead=0
+    parameter COLT45_REGWRITE=0, COLT45_REGSTALL=0
 )(
     input         clk,
     input         we,
@@ -26,6 +26,8 @@ module RegFile #(
     output [31:0] rd1,
     output [31:0] rd2
 );
+
+localparam DD=0;
 
 // The dist-ram is already "true dual port", using coordinated writes
 //   to two banks and separate asynchronous reads.  Otherwise, we could
@@ -47,8 +49,8 @@ always @(posedge clk) begin
     end
 end
 
-assign #COLT45_DelayRead rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
-assign #COLT45_DelayRead rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
+assign #DD rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
+assign #DD rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
 
 task DUMP;
     reg [5:0] r;

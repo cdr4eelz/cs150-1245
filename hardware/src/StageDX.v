@@ -22,22 +22,20 @@ module StageDX(
     output         DOBranch_
 );
 
-    wire [ 5: 0] #1 IPCODE;
-    wire [ 4: 0] #1 DEST, SRC1, SRC2;
-    wire [15: 0] #1 SOFFSET;
-    wire [31: 0] #1 SIMMED, UIMMED, SHAMT;
-    wire [31: 0] #1 PCTARGET, PCBRANCH, PCPLUS4, PCPLUS8;
+    wire [ 4: 0] SRC1, SRC2;
+    wire [31: 0] SIMMED, UIMMED, SHAMT, PCTARGET, PCBRANCH, PCPLUS8;
 
     InstructionControl decodeControl(
         ._pc(_PC), ._inst(_INST),
 
         .IControl_(IControl_),
 
-        .IPCODE(IPCODE), .DEST(DEST), .SOFFSET(SOFFSET),
         .SIMMED(SIMMED), .UIMMED(UIMMED),
         .SHAMT(SHAMT), .SRC1(SRC1), .SRC2(SRC2),
         .PCTARGET(PCTARGET), .PCBRANCH(PCBRANCH),
-        .PCPLUS4(PCPLUS4), .PCPLUS8(PCPLUS8)
+        .PCPLUS8(PCPLUS8),
+
+        .SOFFSET(), .IPCODE(), .DEST(), .PCPLUS4()
     );
 
     // Asyncronously plug into outer register component
@@ -55,7 +53,7 @@ module StageDX(
         .MemToReg(),.DestReg(),.MemWrite(),.DataWidth(),.MSigned(),.Link()
     );
 
-    wire [31: 0] #1 A, B, ALUResult;
+    wire [31: 0] A, B, ALUResult;
     assign A = (ALUSrcA) ? SHAMT : R1;
     assign B = (ALUSrcB) ? ((ISigned) ? SIMMED : UIMMED) : R2;
     ALU alu
@@ -64,7 +62,7 @@ module StageDX(
         .Out(ALUResult)
     );
 
-    wire #1 takeBranch;
+    wire takeBranch;
     BranchCMP bcmp
     ( .branchOp(CmpOp),
         .A(R1), .B(R2), // Always pull from register/forward output
@@ -74,7 +72,7 @@ module StageDX(
     assign DOBranch_    = (Jump || takeBranch);
     assign PCBranch_    = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);
     assign MemAddr_     = ALUResult;
-    assign MemWValue_   = R2;
+    assign MemWValue_   = R2; // Good spot for `UNKNOWN
     assign RegWValue_   = ALUResult;
     assign PCPLUS8_     = PCPLUS8;
 
