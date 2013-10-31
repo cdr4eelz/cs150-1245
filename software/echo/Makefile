@@ -1,4 +1,4 @@
 TARGET ?= echo
-SSRCS ?= ../start.s
+LDSTYLE ?= inject_bram
 
 include ../Makefile.llvm.in

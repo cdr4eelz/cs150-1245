@@ -1,22 +1,29 @@
-LDSRC ?= ../datainst.ld
-OUTS ?= mif coe mem v
+LDSTYLE ?= inject_bram
+LDSRC ?= ../$(LDSTYLE).ld
+START ?= ../$(LDSTYLE).s
+
+OUTS ?= mif coe mem dump # "v"
 SECS ?= data inst
 PSRCS ?= $(wildcard *.p)
 CSRCS ?= $(wildcard *.c)
 SSRCS ?= $(wildcard *.s)
-OBJS ?= $(POBJS) $(COBJS) $(SOBJS)
 
+OBJS = $(POBJS) $(COBJS) $(SOBJS)
 POBJS = $(PSRCS:%.p=%.p.llvm.s.o)
 COBJS = $(CSRCS:%.c=%.c.llvm.s.o)
 SOBJS = $(SSRCS:%.s=%.s.o)
 
-all: $(SECS)
+
+all: elf dump $(SECS)
+elf: $(TARGET).elf
+dump: $(TARGET).dump
+
 data: $(OUTS:%=$(TARGET).data.%)
 inst: $(OUTS:%=$(TARGET).inst.%)
-both: $(OUTS:%=$(TARGET).both.%)
+#both: $(OUTS:%=$(TARGET).both.%)
 #both: $(TARGET).both.mem
-
 bins: $(SECS:%=$(TARGET).%.bin)
+
 
 $(TARGET).elf: $(OBJS)
 	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $(LDSRC) $^ -o $@
@@ -30,13 +37,22 @@ $(TARGET).elf: $(OBJS)
 	mips-objcopy -j .text -p -O binary $^ $@
 	chmod -x $@
 
-%.both.bin: %.elf
-	mips-objcopy -j .both -p -O binary $^ $@
-	chmod -x $@
+%.dump: %.elf
+	mips-objdump $^ -xsD >$@
+%.inst.dump: %.elf
+	mips-objdump -j .text $^ -xsD >$@
+%.data.dump: %.elf
+	mips-objdump -j .data $^ -xS >$@
 
+#%.both.bin: %.elf
+#	mips-objcopy -j .both -p -O binary $^ $@
+#	chmod -x $@
 #%.both.bin: %.data.bin %.inst.bin
 #	truncate -s 16K $@
 #	cat $^ > $@
+#%.both.mem: %.data.bin %.inst.bin
+#	bin2mem     0 < $*.data.bin > $@
+#	bin2mem 16384 < $*.inst.bin | sed s/^@00000000/@00004000/ >> $@
 
 %.mif: %.bin
 	bin2mif < $^ > $@
@@ -46,10 +62,6 @@ $(TARGET).elf: $(OBJS)
 
 %.mem: %.bin
 	bin2mem 0 < $^ > $@
-
-%.both.mem: %.data.bin %.inst.bin
-	bin2mem     0 < $*.data.bin > $@
-	bin2mem 16384 < $*.inst.bin | sed s/^@00000000/@00004000/ >> $@
 
 %.v: %.bin
 	bin2rom < $^ > $@
@@ -64,7 +76,7 @@ $(TARGET).elf: $(OBJS)
 	mips-as $< -o $<.o
 
 clean:
-	rm -f $(POBJS) $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).*.bin $(TARGET).*.mif $(TARGET).*.coe $(TARGET).*.mem $(TARGET).*.v
+	rm -f $(POBJS) $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).*.bin $(TARGET).*.mif $(TARGET).*.coe $(TARGET).*.mem $(TARGET).*.v $(TARGET).dump $(TARGET).*.dump *.o
 
 .PHONY: clean
 

@@ -1,5 +1,5 @@
 TARGET ?= bios150v3
-LDSRC ?= $(TARGET).ld
+LDSTYLE ?= as_bios
 
 include ../Makefile.llvm.in
 # include ../Makefile.gcc.in

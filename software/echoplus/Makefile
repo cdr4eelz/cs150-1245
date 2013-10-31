@@ -1,5 +1,4 @@
 TARGET ?= echoplus
-LDSRC ?= ./echoplus.ld
-SSRCS ?= ../in_small_bios.s
+LDSTYLE ?= inject_bram
 
 include ../Makefile.llvm.in

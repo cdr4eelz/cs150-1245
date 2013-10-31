@@ -1,5 +1,4 @@
 TARGET ?= dumpmem
-LDSRC ?= ../as_bios_bram.ld
-SSRCS ?= ../as_bios_bram.s
+LDSTYLE ?= as_scratch
 
 include ../Makefile.llvm.in
