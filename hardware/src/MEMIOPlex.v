@@ -28,15 +28,12 @@ module MEMIOPlex #(
     reg  [15: 0]    CNT_Rx, CNT_Tx;
 
 // Shared across both implementation styles
-    integer has_reset = 0; // For simulation
     always@(posedge clk) begin
         if (rst) begin
-            CNT_Tx <= 0;
-            CNT_Rx <= 0;
-            douta <= 32'hFEEBDAED;
-            if (!has_reset && COLT45_SHAKE) $display("MEMIO: Reset");
-            has_reset <= 1'b1;
-        end else has_reset = 0;
+            CNT_Tx <= 16'd0;
+            CNT_Rx <= 16'd0;
+            if (COLT45_SHAKE) $display("MEMIO: Reset");
+        end
     end
 
 generate if (BUFSIZE==0) begin:NOBUFF   // Direct Software-to-UART approach:
@@ -47,30 +44,25 @@ generate if (BUFSIZE==0) begin:NOBUFF   // Direct Software-to-UART approach:
     assign Tx_Data  = (Tx_Valid) ? dina[7:0] : PREMATURE_BYTE;
 
     always@(posedge clk) begin
-        if (rst) begin
-            // Nothing unique here (generic reset above covers it)
-        end else if (ena) begin
-            douta <= 32'hFFFF_FFFF;
-            case (addra)
-                12'h000: if (notwrite) begin
-                    if (COLT45_SHAKE && Tx_Ready) $display("MEMIO: Poll Tx (%b)   @%t", Tx_Ready, $time);
-                    douta  <= {31'b0, Tx_Ready};
-                end
-                12'h001: if (notwrite) begin
-                    if (COLT45_SHAKE && Rx_Valid) $display("MEMIO: Poll Rx (%b)   @%t", Rx_Valid, $time);
-                    douta  <= {31'b0, Rx_Valid};
-                end
-                12'h002: if (wea[0]) begin
-                    if (COLT45_SHAKE) $display("MEMIO: Tx Shake (%h, %d) CNT: %d   @%t", Tx_Data, Tx_Data, CNT_Tx+1, $time);
-                    CNT_Tx <= CNT_Tx + 1;
-                end
-                12'h003: if (notwrite) begin
-                    if (COLT45_SHAKE) $display("MEMIO: Rx Shake (%h, %d) CNT: %d  @%t", Rx_Data, Rx_Data, CNT_Rx+1, $time);
-                    CNT_Rx <= CNT_Rx + 1;
-                    douta <= {24'b0, Rx_Data};
-                end
-            endcase
-        end
+        if (!rst && ena) case (addra)
+            12'h000: if (notwrite) begin
+                if (COLT45_SHAKE && Tx_Ready) $display("MEMIO: Poll Tx (%b)   @%t", Tx_Ready, $time);
+                douta  <= {31'b0, Tx_Ready};
+            end
+            12'h001: if (notwrite) begin
+                if (COLT45_SHAKE && Rx_Valid) $display("MEMIO: Poll Rx (%b)   @%t", Rx_Valid, $time);
+                douta  <= {31'b0, Rx_Valid};
+            end
+            12'h002: if (wea[0]) begin
+                if (COLT45_SHAKE) $display("MEMIO: Tx Shake (%h, %d) CNT: %d   @%t", Tx_Data, Tx_Data, CNT_Tx+1, $time);
+                CNT_Tx <= CNT_Tx + 1;
+            end
+            12'h003: if (notwrite) begin
+                if (COLT45_SHAKE) $display("MEMIO: Rx Shake (%h, %d) CNT: %d  @%t", Rx_Data, Rx_Data, CNT_Rx+1, $time);
+                CNT_Rx <= CNT_Rx + 1;
+                douta <= {24'b0, Rx_Data};
+            end
+        endcase
     end
 
 end else begin:BUFFY  // Mini-buffers approach:

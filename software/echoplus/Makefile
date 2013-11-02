@@ -1,4 +1,4 @@
 TARGET ?= echoplus
-LDSTYLE ?= inject_bram
+LDSTYLE ?= inject_scratch
 
 include ../Makefile.llvm.in
