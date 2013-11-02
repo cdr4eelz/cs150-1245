@@ -5,6 +5,8 @@
 `define NOUNKLE         1
 `define UNCLEBIT        1'b0
 // synthesis translate_off
+`undef UNCLEBIT
+`undef NOUNKLE
 `define UNCLEBIT        1'bz
 `define NOUNKLE         0
 // synthesis translate_on

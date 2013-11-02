@@ -23,7 +23,7 @@ module InstructionControl(
 //  output [15:0 ] FAULT
 );
 
-localparam DD=0;
+localparam DD=1;
 
     function [31:0] SEXT16_32;
         input [15:0] in16;
@@ -37,22 +37,22 @@ localparam DD=0;
 
     wire [ 5: 0] _opcode_ = _inst[31:26];
     wire isRType, isIType, isJType;
-    // Could use always and casex too
+
     assign isRType  = (_opcode_[5:0] == 6'b000000);
     assign isJType  = (_opcode_[5:1] == 5'b00001_);
-    assign isIType  = (!isRType && !isJType);
+    assign isIType  = (!isRType && !isJType); //(_opcode_[5:0] !== 6'b000000) && (_opcode_[5:1] !== 5'b00001_); //(!isRType && !isJType)
 
-    wire [ 4: 0] #DD _rs_, _rt_, _rd_, _shamt_;
-    wire [ 5: 0] #DD _funct_;
-    wire [15: 0] #DD _immediate_;
-    wire [25: 0] #DD _target_;
-    assign _rs_         = (!isJType || `NOUNKLE) ? _inst[25:21] : `UNKNOWN(5);
-    assign _rt_         = (!isJType || `NOUNKLE) ? _inst[20:16] : `UNKNOWN(5);
-    assign _rd_         = (isRType || `NOUNKLE) ? _inst[15:11] : `UNKNOWN(5);
-    assign _shamt_      = (isRType || `NOUNKLE) ? _inst[10:6 ] : `UNKNOWN(5);
-    assign _funct_      = (isRType || `NOUNKLE) ? _inst[ 5:0 ] : `UNKNOWN(6);
-    assign _immediate_  = (isIType || `NOUNKLE) ? _inst[15:0 ] : `UNKNOWN(16);
-    assign _target_     = (isJType || `NOUNKLE) ? _inst[25:0 ] : `UNKNOWN(26);
+    wire [ 4: 0] _rs_, _rt_, _rd_, _shamt_;
+    wire [ 5: 0] _funct_;
+    wire [15: 0] _immediate_;
+    wire [25: 0] _target_;
+    assign _rs_         = (isRType || isIType) ? _inst[25:21] : `UNKNOWN(5); // !isJType
+    assign _rt_         = (isRType || isIType) ? _inst[20:16] : `UNKNOWN(5);
+    assign _rd_         = (isRType) ? _inst[15:11] : `UNKNOWN(5);
+    assign _shamt_      = (isRType) ? _inst[10:6 ] : `UNKNOWN(5);
+    assign _funct_      = (isRType) ? _inst[ 5:0 ] : `UNKNOWN(6);
+    assign _immediate_  = (isIType) ? _inst[15:0 ] : `UNKNOWN(16);
+    assign _target_     = (isJType) ? _inst[25:0 ] : `UNKNOWN(26);
 
     // Pre-computations for clarity (partly distilled out by logic simplification?)
     // These characteristics could come from lookup table

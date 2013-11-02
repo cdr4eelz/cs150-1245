@@ -1,0 +1,29 @@
+From http://www.csee.umbc.edu/portal/help/VHDL/verilog/system.html
+
+$display("<format>", exp1, exp2, ...);  // formatted write to display
+  format indication %b %B binary
+                    %c %C character (low 8 bits)
+                    %d %D decimal  %0d for minimum width field
+                    %e %E E format floating point %15.7E
+                    %f %F F format floating point %9.7F
+                    %g %G G general format floating point
+                    %h %H hexadecimal
+                    %l %L library binding information
+                    %m %M hierarchical name, no expression
+                    %o %O octal
+                    %s %S string, 8 bits per character, 2´h00 does not print
+                    %t %T simulation time, expression is  $time
+                    %u %U unformatted two value data  0 and 1 
+                    %v %V net signal strength
+                    %z %Z unformatted four value data  0, 1, x, z
+ 
+  escape sequences, quoted characters in strings \n   newline
+                                                 \t   tab
+                                                 \\   backslash
+                                                 \"   quote
+                                                 \ddd octal
+                                                 %%   percent
+
+  any other characters between the quotes are displayed
+  the expressions are taken in order of the format indication
+  ,, in the expression list inserts one space in the output

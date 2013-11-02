@@ -1,7 +1,7 @@
 `include "CPUBusses.vh"
 
 module StageWF #(
-    parameter [31:0] BOOTPC,
+    parameter [31:0] BOOTPC=32'h4_000_0000, // BIOS base address
     parameter COUNTERWIDTH=32
 )(
     input `BUS_CPUGlobal_type CPUGlobal,
@@ -12,6 +12,7 @@ module StageWF #(
 
     output reg [COUNTERWIDTH-1:0] STEPCOUNT, STALLCOUNT
 );
+
     wire clk, rst, stall;
     BUS_CPUGlobal_tap BUS_CPUGlobal
     ( ._BUS_(CPUGlobal),

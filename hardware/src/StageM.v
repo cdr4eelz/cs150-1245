@@ -3,6 +3,7 @@
 module StageM #(
     parameter COLT45_MEMWRITE=0
 )(
+
     input `BUS_CPUGlobal_type CPUGlobal,
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
     input `BUS_ICTL_type _IControl, // Few are used (hopefully tools will prune)
@@ -20,7 +21,9 @@ module StageM #(
     // Passthroughs (not sync'd with StageM)
     input  [31: 0]  INST_ADDR, // StageWF INST fetch
     output [31: 0]  INST_DATA,
-    inout `BUS_SHAKE_type(8) UATX, UARX
+    inout `BUS_SHAKE_type(8) UATX, UARX,
+    // Memory drives
+    output reg _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB
 );
 
     wire clk, rst, stall;
@@ -61,27 +64,37 @@ module StageM #(
 
 // NOTE: Cautious selection of _IControl vs IControl based signals.
 
-//TODO: Convert to PARAMETER that disables/adjusts MEMRANGE as appropriate (or a little submodule or compact BUS-of-enable)
-//TODO: Convert to always@*
-    wire _hot_IO = ( _Target === 4'b1000 );
-`ifdef COLT45_pre2
-    wire _hot_BR = 1'b0;
-    wire _hot_DC = 1'b0;
-    wire _hot_IC = 1'b0;
-    wire _hot_DB = ( _Target === 4'b0001 || _Target === 4'b0011 );
-    wire _hot_IB = ( _Target === 4'b0010 || _Target === 4'b0011 ) && _isWrite; // W-0 (Write-Only)
+
+//TODO: Convert to PARAMETER that disables/adjusts MEMRANGE (or a little submodule)
+always @(*) begin
+    _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0; _hot_IC=1'b0; _hot_DB=1'b0; _hot_IB=1'b0;
+    if (~stall && (_isRead || _isWrite)) case (_Target)
+        4'b1000: _hot_IO = 1'b1;
+        4'b0100: _hot_BR = !_isWrite;
+`ifndef COLT45_pre2
+        4'b0001: _hot_DC = 1'b1;
+        4'b0010: _hot_IC = _isWrite && PCPLUS8[30];
+        4'b0011: begin
+            _hot_DC = 1'b1; _hot_IC = _isWrite && PCPLUS8[30];
+        end
+`ifndef COLT45_STRICT
+//EXTRA: Scratchpad-RAM
+        4'b0101: _hot_DB = 1'b1;
+        4'b0110: _hot_IB = _isWrite && PCPLUS8[30];
+        4'b0111: begin
+            _hot_DB = 1'b1; _hot_IB =  _isWrite && PCPLUS8[30];
+        end
+`endif
 `else
-    wire _hot_BR = ( _Target === 4'b0100 && !_isWrite); // Read-Only as Data ("enforced" elsewhere too)
-    wire _hot_DC = ( _Target === 4'b0001 || _Target === 4'b0011 );
-    wire _hot_IC = ( _Target === 4'b0010 || _Target === 4'b0011 ) && _isWrite && PCPLUS8[30]; // Write-Only & Bios-Only
-`ifdef COLT45_STRICT
-    wire _hot_DB = 1'b0;
-    wire _hot_IB = 1'b0;
-`else //EXTRA: Scratchpad-RAM
-    wire _hot_DB = ( _Target === 4'b0101 || _Target === 4'b0111 );
-    wire _hot_IB = ( _Target === 4'b0110 || _Target === 4'b0111 ) && _isWrite && PCPLUS8[30]; // Write-Only & Bios-Only
+        4'b0001: _hot_DB = 1'b1;
+        4'b0010: _hot_IB = _isWrite;
+        4'b0011: begin
+            _hot_DB = 1'b1; _hot_IB = _isWrite;
+        end
 `endif
-`endif
+    endcase
+end
+
 
     wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
     wire INST_bios = (INST_ADDR[31:28] === 4'h4);
@@ -111,14 +124,14 @@ module StageM #(
 
     // Might divorce WBK from FWD stuff more fully to clarify slightly different paths
     assign WBK_Reg_ = DestReg; // Expected to be zero when no writeback
-    assign WBK_Val_ = (isRead) ? DataLoad : ( (isLink) ? (PCPLUS8) : RegWValue );
+    assign WBK_Val_ = (isRead) ? DataLoad : ( (isLink) ? PCPLUS8 : RegWValue );
     assign WBK_CanFWD_ = !isRead && (DestReg !== 0);
 
 
     // MEMORY & IO ELEMENTS THEMSELVES
 
     MEMIOPlex iomap_uart
-    ( .clk(clk), .rst(rst), .ena(~stall && _hot_IO),
+    ( .clk(clk), .rst(rst), .ena(_hot_IO),
         .addra(_MemAddr[13:2]),
         .douta(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
@@ -126,7 +139,7 @@ module StageM #(
     );
 
     bios_mem brom_bios
-    ( .clka(clk), .ena(~stall && _hot_BR),
+    ( .clka(clk), .ena(_hot_BR),
         .addra(_MemAddr[13:2]),
         .douta(RData_BR),//OUT-32
       /*.wea(_WriteMask), .dina(_WDataMasked),*/
@@ -142,14 +155,14 @@ assign RData_DC = `UNKNOWN(32); //dcache_dout
 // icache_addr=(INST_ADDR/DATA_ADDR/NONE)
 
     dmem_blk_ram bram_dmem
-    ( .clka(clk), .ena(~stall && _hot_DB),
+    ( .clka(clk), .ena(_hot_DB),
         .addra(_MemAddr[13:2]),
         .douta(RData_DB),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked)
     ) /* synthesis syn_noprune=1 */;
 
     imem_blk_ram bram_imem
-    ( .clka(clk), .ena(~stall && _hot_IB),
+    ( .clka(clk), .ena(_hot_IB),
         .addra(_MemAddr[13:2]),
       /*.douta(RData_IB),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),

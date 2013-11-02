@@ -27,7 +27,7 @@ module RegFile #(
     output [31:0] rd2
 );
 
-localparam DD=0;
+localparam DD=1;
 
 // The dist-ram is already "true dual port", using coordinated writes
 //   to two banks and separate asynchronous reads.  Otherwise, we could
