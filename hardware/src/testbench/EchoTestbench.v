@@ -104,13 +104,13 @@ initial begin
     // Reset. Has to be long enough to not be eaten by the debouncer.
     Reset = 0;
     DataOutReady = 0;
-    #(100*Cycle)
+    #(100*Cycle);
 
     Reset = 1;
-    #(30*Cycle)
+    #(30*Cycle);
     Reset = 0;
     -> now_reset;
-    #(30*Cycle)
+    #(30*Cycle);
 
     // Wait for something to come back
     -> now_listening;
@@ -141,6 +141,9 @@ initial begin
         $display("Xmit] Getting ready...");
         //$monitor("R:%b Ready:%b Valid:%b", Reset, DataInReady, DataInValid);
         @(now_listening); // Wait until listener is listening
+
+        $display("Xmit] Delaying start of xmit...");
+        #(500*Cycle);
 
         @(negedge Clock);
         $display("Xmit] Beginning...");

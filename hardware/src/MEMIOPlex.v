@@ -54,11 +54,11 @@ generate if (BUFSIZE==0) begin:NOBUFF   // Direct Software-to-UART approach:
                 douta  <= {31'b0, Rx_Valid};
             end
             12'h002: if (wea[0]) begin
-                if (COLT45_SHAKE) $display("MEMIO: Tx Shake (%h, %d) CNT: %d   @%t", Tx_Data, Tx_Data, CNT_Tx+1, $time);
+                if (COLT45_SHAKE) $display("MEMIO: Tx Shake (0x%h, %d, '%c') CNT: %d   @%t", Tx_Data, Tx_Data, Tx_Data, CNT_Tx+1, $time);
                 CNT_Tx <= CNT_Tx + 1;
             end
             12'h003: if (notwrite) begin
-                if (COLT45_SHAKE) $display("MEMIO: Rx Shake (%h, %d) CNT: %d  @%t", Rx_Data, Rx_Data, CNT_Rx+1, $time);
+                if (COLT45_SHAKE) $display("MEMIO: Rx Shake (0x%h, %d, '%c') CNT: %d  @%t", Rx_Data, Rx_Data, Rx_Data, CNT_Rx+1, $time);
                 CNT_Rx <= CNT_Rx + 1;
                 douta <= {24'b0, Rx_Data};
             end
@@ -83,14 +83,14 @@ end else begin:BUFFY  // Mini-buffers approach:
             BUF_TxData  <= PREMATURE_BYTE; // ...or xmit
         end else begin
             if (Rx_Ready && Rx_Valid) begin
-                if (COLT45_SHAKE) $display("MEMIO: Rx Shake (%h, %d) CNT: %d   @%t", Rx_Data, Rx_Data, CNT_Rx+1, $time);
+                if (COLT45_SHAKE) $display("MEMIO: Rx Shake (0x%h, %d, '%c') CNT: %d   @%t", Rx_Data, Rx_Data, Rx_Data, CNT_Rx+1, $time);
                 BUF_RxData  <= Rx_Data;
                 BUF_RxFull  <= 1;
                 CNT_Rx <= CNT_Rx + 1;
             end
 
             if (Tx_Ready && Tx_Valid) begin
-                if (COLT45_SHAKE) $display("MEMIO: Tx Shake (%h, %d) CNT: %d   @%t", Tx_Data, Tx_Data, CNT_Tx+1, $time);
+                if (COLT45_SHAKE) $display("MEMIO: Tx Shake (0x%h, %d, '%c') CNT: %d   @%t", Tx_Data, Tx_Data, Tx_Data, CNT_Tx+1, $time);
                 BUF_TxFull  <= 0;
                 BUF_TxData  <= PREMATURE_BYTE; // Arbitrary value to spot double xmit errors
                 CNT_Tx <= CNT_Tx + 1;
@@ -108,12 +108,12 @@ end else begin:BUFFY  // Mini-buffers approach:
                         douta <= {31'b0, BUF_RxFull};
                     end
                     12'h002: if (wea[0]) begin
-                        if (COLT45_SHAKE) $display("MEMIO: Enqueue(%h, %d)   @%t", dina, dina, $time);
+                        if (COLT45_SHAKE) $display("MEMIO: Enqueue (0x%h, %d, '%c')   @%t", dina, dina, dina, $time);
                         BUF_TxData  <= dina[7:0];
                         BUF_TxFull  <= 1;   // Don't check if already full, just overwrite with new value
                     end
                     12'h003: if (notwrite) begin
-                        if (COLT45_SHAKE) $display("MEMIO: Dequeue (%h, %d)  @%t", BUF_RxData, BUF_RxData, $time);
+                        if (COLT45_SHAKE) $display("MEMIO: Dequeue (0x%h, %d, '%c')   @%t", BUF_RxData, BUF_RxData, BUF_RxData, $time);
                         douta       <= {24'b0, BUF_RxData};
                         BUF_RxFull  <= 0;
                     end

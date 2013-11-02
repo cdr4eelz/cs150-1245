@@ -116,7 +116,7 @@ assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
     wire [31: 0] INST_ADDR, INST_DATA; //Data fetch is sync'd with StageWF
     wire [31: 0] StepCount, StallCount;
     StageWF #(
-        .COUNTERWIDTH(32), .BOOTPC(32'h6_000_0000) //TODO: Change back to default/BIOS
+        .COUNTERWIDTH(32)//, .BOOTPC(32'h6_000_0000) //TODO: Change back to default/BIOS
     ) s_WF ( .CPUGlobal(CPUGlobal),
         .DOBranch(DOBranch_DX_WF_), .PCBranch(PCBranch_DX_WF_),
         .PC(INST_ADDR),
