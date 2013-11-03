@@ -18,12 +18,11 @@ module StageM #(
     output [ 4: 0]  WBK_Reg_,
     output [31: 0]  WBK_Val_,
     output          WBK_CanFWD_,
-    // Passthroughs (not sync'd with StageM)
-    input  [31: 0]  INST_ADDR, // StageWF INST fetch
-    output [31: 0]  INST_DATA,
-    inout `BUS_SHAKE_type(8) UATX, UARX,
-    // Memory drives
-    output reg _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB
+    // Memory/IO drives
+    output reg _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB,
+    output [ 3: 0] _ByteMask, _WriteMask,
+    output [31: 0] _WDataMasked,
+    input  [31: 0] RData_IO, RData_BR, RData_DC, RData_DB
 );
 
     wire clk, rst, stall;
@@ -33,39 +32,24 @@ module StageM #(
     );
 
 // _IControl & IControl taps
-    wire [1:0] _DataWidth, DataWidth;
-    wire _isWrite, isWrite, _isRead, isRead, isLink;
-    wire [4:0] _DestReg, DestReg;
+    wire [1:0] _DataWidth;
+    wire _isWrite, _isRead;
+    wire [4:0] _DestReg;
     BUS_ICTL_tap TAP__ICTL
     ( ._BUS_(_IControl),    // Explicitly list unused taps (helps warnings)
         .MemWrite(_isWrite), .MemToReg(_isRead), .DestReg(_DestReg),
         .DataWidth(_DataWidth), .Link(_isLink),
         .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.CmpOp(),.Jump(),.JR(),.MSigned()
     );
-    BUS_ICTL_tap TAP_ICTL
-    ( ._BUS_(IControl), // Explicitly list unused taps (helps warnings)
-        .MemWrite(isWrite), .MemToReg(isRead), .DestReg(DestReg),
-        .DataWidth(DataWidth), .Link(isLink),
-        .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.CmpOp(),.Jump(),.JR(),.MSigned()
-    );
-
-// Breakdown some address related parts
-    wire  [ 3: 0] _Target   = _MemAddr[31:28],
-                  Target    = MemAddr [31:28];
-    wire  [ 1: 0] _SubAddr  = _MemAddr[ 1: 0],
-                  SubAddr   = MemAddr [ 1: 0];
-    wire  [ 1: 0] _SubShift = (3 - _DataWidth),
-                  SubShift  = (3 - DataWidth );
+    wire  [ 3: 0] _Target   = _MemAddr[31:28];
+    wire  [ 1: 0] _SubAddr  = _MemAddr[ 1: 0];
+    wire  [ 1: 0] _SubShift = (3 - _DataWidth);
 
 // Compute some mask bytes/bits/values
-    wire  [31: 0] _WDataMasked  = (_MemWValue) << (_SubShift*8) >> (_SubAddr*8);
-    wire  [ 3: 0] _ByteMask     = (   4'b1111) << (_SubShift  ) >> (_SubAddr  );
-    wire  [ 3: 0] _WriteMask    = (_isWrite) ? _ByteMask : 4'b0000;
+    assign _WDataMasked = (_MemWValue) << (_SubShift*8) >> (_SubAddr*8);
+    assign _ByteMask    = (   4'b1111) << (_SubShift  ) >> (_SubAddr  );
+    assign _WriteMask   = (_isWrite) ? _ByteMask : 4'b0000;
 
-// NOTE: Cautious selection of _IControl vs IControl based signals.
-
-
-//TODO: Convert to PARAMETER that disables/adjusts MEMRANGE (or a little submodule)
 always @(*) begin
     _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0; _hot_IC=1'b0; _hot_DB=1'b0; _hot_IB=1'b0;
     if (~stall && (_isRead || _isWrite)) case (_Target)
@@ -96,29 +80,37 @@ always @(*) begin
 end
 
 
-    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
-    wire INST_bios = (INST_ADDR[31:28] === 4'h4);
-    wire [31:0] INST_BR, INST_IB;
-    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB; //TODO: ICACHE
+// NOTE: ABOVE is _IControl and other pre/setup /// BELOW is IControl and other post/fetched
+
+
+// _IControl & IControl taps
+    wire [1:0] DataWidth;
+    wire isWrite, isRead, isLink;
+    wire [4:0] DestReg;
+    BUS_ICTL_tap TAP_ICTL
+    ( ._BUS_(IControl), // Explicitly list unused taps (helps warnings)
+        .MemWrite(isWrite), .MemToReg(isRead), .DestReg(DestReg),
+        .DataWidth(DataWidth), .Link(isLink),
+        .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.CmpOp(),.Jump(),.JR(),.MSigned()
+    );
+    wire  [ 3: 0] Target   = MemAddr[31:28];
+    wire  [ 1: 0] SubAddr  = MemAddr[ 1: 0];
+    wire  [ 1: 0] SubShift = (3 - DataWidth);
 
     reg [31: 0] DataRead; // Registered elsewhere (is just a reg here because of always@*)
     always @(*) case (Target) // "Target" (for read data coming out after clock) NOT "_Target"
-        4'b1000: DataRead = RData_IO;
-`ifdef COLT45_pre2
-        4'b0001,
-        4'b0011: DataRead = RData_DB;
-`else
-        4'b0100: DataRead = RData_BR;
-        4'b0001,
-        4'b0011: DataRead = RData_DC;
+        4'b1000         : DataRead = RData_IO;
+`ifndef COLT45_pre2
+        4'b0100         : DataRead = RData_BR;
+        4'b0001, 4'b0011: DataRead = RData_DC;
 `ifndef COLT45_STRICT //TODO: Ensure no other references to these if STRICT mode!
-        4'b0101,
-        4'b0111: DataRead = RData_DB; // Scratchpad-RAM
+        4'b0101, 4'b0111: DataRead = RData_DB; // Scratchpad-RAM
 `endif
+`else
+        4'b0001, 4'b0011: DataRead = RData_DB;
 `endif
         default: DataRead = `UNKNOWN(32);
     endcase // CAUTIOUS trapping of EVERY case
-
 
     wire [31: 0] DataLoad = DataRead << (SubAddr*8) >> (SubShift*8);
 
@@ -127,50 +119,6 @@ end
     assign WBK_Val_ = (isRead) ? DataLoad : ( (isLink) ? PCPLUS8 : RegWValue );
     assign WBK_CanFWD_ = !isRead && (DestReg !== 0);
 
-
-    // MEMORY & IO ELEMENTS THEMSELVES
-
-    MEMIOPlex iomap_uart
-    ( .clk(clk), .rst(rst), .ena(_hot_IO),
-        .addra(_MemAddr[13:2]),
-        .douta(RData_IO),//OUT-32
-        .wea(_WriteMask), .dina(_WDataMasked),
-        .RVA_RX(UARX), .RVA_TX(UATX)
-    );
-
-    bios_mem brom_bios
-    ( .clka(clk), .ena(_hot_BR),
-        .addra(_MemAddr[13:2]),
-        .douta(RData_BR),//OUT-32
-      /*.wea(_WriteMask), .dina(_WDataMasked),*/
-
-    // Instruction reading port (b)
-      .clkb(clk), .addrb(INST_ADDR[13:2]),
-        .enb(INST_bios), .doutb(INST_BR)
-    ) /* synthesis syn_noprune=1 */;
-
-// Do these fetch half-words & bytes?
-assign RData_DC = `UNKNOWN(32); //dcache_dout
-// INST_IC=instruction
-// icache_addr=(INST_ADDR/DATA_ADDR/NONE)
-
-    dmem_blk_ram bram_dmem
-    ( .clka(clk), .ena(_hot_DB),
-        .addra(_MemAddr[13:2]),
-        .douta(RData_DB),//OUT-32
-        .wea(_WriteMask), .dina(_WDataMasked)
-    ) /* synthesis syn_noprune=1 */;
-
-    imem_blk_ram bram_imem
-    ( .clka(clk), .ena(_hot_IB),
-        .addra(_MemAddr[13:2]),
-      /*.douta(RData_IB),//OUT-32*/
-        .wea(_WriteMask), .dina(_WDataMasked),
-
-    // INSTRUCTION Fletch
-      .clkb(clk), .addrb(INST_ADDR[13:2]),
-      /*.enb(1'b1)*/ .doutb(INST_IB)
-    ) /* synthesis syn_noprune=1 */;
 
 
 // synthesis translate_off

@@ -25,6 +25,7 @@ module MIPS150 #(
     input [31:0] instruction,
 
 // CP3+
+`ifdef __COLT45_pre3
     output [31:0] bypass_addr,
     output [31:0] bypass_din,
     output [3:0]  bypass_we,
@@ -41,6 +42,7 @@ module MIPS150 #(
     output         line_x1_valid,
     output         line_y1_valid,
     output         line_trigger,
+`endif
 
     input stall
 );
@@ -48,6 +50,7 @@ module MIPS150 #(
 localparam DD=1;
 
 // CP3+
+`ifdef __COLT45_pre3
     assign bypass_addr=32'd0, bypass_din=32'd0, bypass_we=4'd0;
     assign filler_color=24'd0, filler_valid=1'b0, line_color=32'd0, line_point=10'd0;
     // Remove these for CP5. 
@@ -58,30 +61,13 @@ localparam DD=1;
     assign line_y1_valid = 1'b0;
 
     assign line_trigger=1'b0;
-
-assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0;
-assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
+`endif
 
     // Global sorts of things
     `BUS_CPUGlobal_type CPUGlobal;
     BUS_CPUGlobal_tun TUN_CPUGlobal // Drive CPUGlobal bus from CPU module inputs
     ( ._BUS_(CPUGlobal),
         .CLK(clk), .RST(rst), .STL(stall)
-    );
-
-    `BUS_SHAKE_type(8) UARX, UATX; // Ready-Valid 
-    UART #(.ClockFreq(ClockFreq)) uart
-    ( .Clock(clk), .Reset(rst),
-        // Receiver     (handshakes go both in/out)
-        .SIn(FPGA_SERIAL_RX),
-        .DataOut(       `SHAKE_Data(        8,UARX)),
-        .DataOutValid(  `SHAKE_DataValid(   8,UARX)),
-        .DataOutReady(  `SHAKE_DataReady(   8,UARX)),
-        // Transmitter  (handshakes go both in/out)
-        .SOut(FPGA_SERIAL_TX),
-        .DataIn(        `SHAKE_Data(        8,UATX)),
-        .DataInValid(   `SHAKE_DataValid(   8,UATX)),
-        .DataInReady(   `SHAKE_DataReady(   8,UATX))
     );
 
 
@@ -192,6 +178,11 @@ assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
     PipelineRegister #( .Width(32) )
         REG_PCPLUS8_M   ( .CPUGlobal(CPUGlobal),    .In(PCPLUS8DX_  ),  .Out(PCPLUS8_M   ) );
 
+    // MEMORY/IO Drives
+    wire _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB;
+    wire [ 3: 0] _ByteMask, _WriteMask;
+    wire [31: 0] _WDataMasked;
+    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
     StageM s_M
     ( .CPUGlobal(CPUGlobal),
         //Inputs
@@ -202,9 +193,79 @@ assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
         //Feedbacks
         .WBK_Reg_   (WBKReg_M_WF_), .WBK_Val_   (WBKDat_M_WF_),
         .WBK_CanFWD_(WBKCanFWD_M_WF_),
-        //Passthrough signals NOT sync'd with StageM
-        .INST_ADDR(INST_ADDR), .INST_DATA(INST_DATA), //Instruction fetch "back-ports"
-        .UARX(UARX), .UATX(UATX) //UART
+        //Memory/IO patchwork
+        ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
+        ._hot_IC(_hot_IC), ._hot_DB(_hot_DB), ._hot_IB(_hot_IB),
+        ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked), ._ByteMask(_ByteMask),
+        .RData_IO(RData_IO), .RData_BR(RData_BR), .RData_DC(RData_DC), .RData_DB(RData_DB)
+    );
+
+    // Instruction fetch selection
+    wire INST_bios = (INST_ADDR[31:28] === 4'h4);
+    wire [31:0] INST_BR, INST_IB;
+    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB; //TODO: ICACHE
+
+    // MEMORY & IO ELEMENTS THEMSELVES
+
+    bios_mem brom_bios
+    ( .clka(clk), .ena(_hot_BR),
+        .addra(MemAddr__M[13:2]),
+        .douta(RData_BR),//OUT-32
+      /*.wea(_WriteMask), .dina(_WDataMasked),*/
+
+    // Instruction reading port (b)
+      .clkb(clk), .addrb(INST_ADDR[13:2]),
+        .enb(INST_bios), .doutb(INST_BR)
+    ) /* synthesis syn_noprune=1 */;
+
+    assign dcache_addr = MemAddr__M,
+        dcache_we = (_hot_DC) ? _WriteMask : 4'b0000, dcache_din = _WDataMasked,
+        dcache_re = _hot_DC && (_WriteMask===4'b0000), RData_DC = dcache_dout
+        /* synthesis syn_noprune=1 */;
+
+// INST_IC=instruction
+// icache_addr=(INST_ADDR/DATA_ADDR/NONE)
+assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
+
+    dmem_blk_ram bram_dmem
+    ( .clka(clk), .ena(_hot_DB),
+        .addra(MemAddr__M[13:2]),
+        .douta(RData_DB),//OUT-32
+        .wea(_WriteMask), .dina(_WDataMasked)
+    ) /* synthesis syn_noprune=1 */;
+
+    imem_blk_ram bram_imem
+    ( .clka(clk), .ena(_hot_IB),
+        .addra(MemAddr__M[13:2]),
+      /*.douta(RData_IB),//OUT-32*/
+        .wea(_WriteMask), .dina(_WDataMasked),
+
+    // INSTRUCTION Fletch
+      .clkb(clk), .addrb(INST_ADDR[13:2]),
+      /*.enb(1'b1)*/ .doutb(INST_IB)
+    ) /* synthesis syn_noprune=1 */;
+
+    `BUS_SHAKE_type(8) UATX, UARX;
+    MEMIOPlex iomap_uart
+    ( .clk(clk), .rst(rst), .ena(_hot_IO),
+        .addra(MemAddr__M[13:2]),
+        .douta(RData_IO),//OUT-32
+        .wea(_WriteMask), .dina(_WDataMasked),
+        .RVA_RX(UARX), .RVA_TX(UATX)
+    );
+
+    UART #(.ClockFreq(ClockFreq)) uart
+    ( .Clock(clk), .Reset(rst),
+        // Receiver     (handshakes go both in/out)
+        .SIn(FPGA_SERIAL_RX),
+        .DataOut(       `SHAKE_Data(        8,UARX)),
+        .DataOutValid(  `SHAKE_DataValid(   8,UARX)),
+        .DataOutReady(  `SHAKE_DataReady(   8,UARX)),
+        // Transmitter  (handshakes go both in/out)
+        .SOut(FPGA_SERIAL_TX),
+        .DataIn(        `SHAKE_Data(        8,UATX)),
+        .DataInValid(   `SHAKE_DataValid(   8,UATX)),
+        .DataInReady(   `SHAKE_DataReady(   8,UATX))
     );
 
 

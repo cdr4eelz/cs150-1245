@@ -32,7 +32,7 @@ module MEMIOPlex #(
         if (rst) begin
             CNT_Tx <= 16'd0;
             CNT_Rx <= 16'd0;
-            if (COLT45_SHAKE) $display("MEMIO: Reset");
+            if (COLT45_SHAKE && 0) $display("MEMIO: Reset");
         end
     end
 
