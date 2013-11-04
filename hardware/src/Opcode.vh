@@ -13,6 +13,7 @@
 `define SH      6'b101001
 `define SW      6'b101011
 // I-type
+`define ADDI    6'b001000 //UNIMP
 `define ADDIU   6'b001001
 `define SLTI    6'b001010
 `define SLTIU   6'b001011
@@ -28,7 +29,11 @@
 `define SLLV    6'b000100
 `define SRLV    6'b000110
 `define SRAV    6'b000111
+`define JR		6'b001000 //JUMP-R
+`define JALR	6'b001001 //JUMP-R
+`define ADD     6'b100000 //UNIMP
 `define ADDU    6'b100001
+`define SUB     6'b100010 //UNIMP
 `define SUBU    6'b100011
 `define AND     6'b100100
 `define OR      6'b100101
@@ -46,7 +51,6 @@
 `define BNE		6'b000101
 `define BLEZ	6'b000110
 `define BGTZ	6'b000111
-`define JR		6'b001000
-`define JALR	6'b001001
+//See JUMP-R R-types above
 
 `endif //OPCODE

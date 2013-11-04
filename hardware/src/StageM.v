@@ -13,7 +13,7 @@ module StageM #(
     input `BUS_ICTL_type IControl,  // Not all are used (hopefully tools will prune)
     input  [31: 0]  MemAddr,
     input  [31: 0]  RegWValue,
-    input  [31: 0]  PCPLUS8,
+    input  [31: 0]  PC,
     // Outputs fed back to prior stages
     output [ 4: 0]  WBK_Reg_,
     output [31: 0]  WBK_Val_,
@@ -34,12 +34,11 @@ module StageM #(
 // _IControl & IControl taps
     wire [1:0] _DataWidth;
     wire _isWrite, _isRead;
-    wire [4:0] _DestReg;
     BUS_ICTL_tap TAP__ICTL
     ( ._BUS_(_IControl),    // Explicitly list unused taps (helps warnings)
-        .MemWrite(_isWrite), .MemToReg(_isRead), .DestReg(_DestReg),
-        .DataWidth(_DataWidth), .Link(_isLink),
-        .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.CmpOp(),.Jump(),.JR(),.MSigned()
+        .MemWrite(_isWrite), .MemToReg(_isRead), .DataWidth(_DataWidth),
+        .DestReg(),.Link(),
+        .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.MSigned(),.CmpOp(),.Jump(),.JR()
     );
     wire  [ 3: 0] _Target   = _MemAddr[31:28];
     wire  [ 1: 0] _SubAddr  = _MemAddr[ 1: 0];
@@ -57,16 +56,16 @@ always @(*) begin
         4'b0100: _hot_BR = !_isWrite;
 `ifndef COLT45_pre2
         4'b0001: _hot_DC = 1'b1;
-        4'b0010: _hot_IC = _isWrite && PCPLUS8[30];
+        4'b0010: _hot_IC = _isWrite && PC[30];
         4'b0011: begin
-            _hot_DC = 1'b1; _hot_IC = _isWrite && PCPLUS8[30];
+            _hot_DC = 1'b1; _hot_IC = _isWrite && PC[30];
         end
 `ifndef COLT45_STRICT
 //EXTRA: Scratchpad-RAM
         4'b0101: _hot_DB = 1'b1;
-        4'b0110: _hot_IB = _isWrite && PCPLUS8[30];
+        4'b0110: _hot_IB = _isWrite && PC[30];
         4'b0111: begin
-            _hot_DB = 1'b1; _hot_IB =  _isWrite && PCPLUS8[30];
+            _hot_DB = 1'b1; _hot_IB =  _isWrite && PC[30];
         end
 `endif
 `else
@@ -89,8 +88,8 @@ end
     wire [4:0] DestReg;
     BUS_ICTL_tap TAP_ICTL
     ( ._BUS_(IControl), // Explicitly list unused taps (helps warnings)
-        .MemWrite(isWrite), .MemToReg(isRead), .DestReg(DestReg),
-        .DataWidth(DataWidth), .Link(isLink),
+        .MemWrite(isWrite), .MemToReg(isRead), .DataWidth(DataWidth),
+        .DestReg(DestReg), .Link(isLink),
         .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.CmpOp(),.Jump(),.JR(),.MSigned()
     );
     wire  [ 3: 0] Target   = MemAddr[31:28];
@@ -116,7 +115,7 @@ end
 
     // Might divorce WBK from FWD stuff more fully to clarify slightly different paths
     assign WBK_Reg_ = DestReg; // Expected to be zero when no writeback
-    assign WBK_Val_ = (isRead) ? DataLoad : ( (isLink) ? PCPLUS8 : RegWValue );
+    assign WBK_Val_ = (isRead) ? DataLoad : RegWValue; //Jump-Link already hijacked RegWValue
     assign WBK_CanFWD_ = !isRead && (DestReg !== 0);
 
 

@@ -64,7 +64,7 @@ module EchoTestbench;
 // CP2+
         .dcache_dout(32'b0), .instruction(32'b0),
 // CP3+
-        .filler_ready(1'b0), .line_ready(1'b0),
+//      .filler_ready(1'b0), .line_ready(1'b0),
 
         .stall( (1) ? Stall : 1'b0 )
     );

@@ -27,14 +27,15 @@ always @(*) begin
             `SLLV:  ALUop = `ALU_SLL;
             `SRLV:  ALUop = `ALU_SRL;
             `SRAV:  ALUop = `ALU_SRA;
-            `ADDU:  ALUop = `ALU_ADDU;
-            `SUBU:  ALUop = `ALU_SUBU;
+            `ADDU:  ALUop = `ALU_ADDU; // No "signed" add/sub,
+            `SUBU:  ALUop = `ALU_SUBU; //   since no exceptions.
             `AND:   ALUop = `ALU_AND;
             `OR:    ALUop = `ALU_OR;
             `XOR:   ALUop = `ALU_XOR;
             `NOR:   ALUop = `ALU_NOR;
             `SLT:   ALUop = `ALU_SLT;
             `SLTU:  ALUop = `ALU_SLTU;
+            `JR, `JALR: ALUop = `ALU_XXX;
             default: $display("Untrapped ALU op: funct=%h  @%t", funct, $time);
         endcase end
 
@@ -43,7 +44,7 @@ always @(*) begin
             ALUop = `ALU_ADDU;
 
         // I-type
-        `ADDIU: ALUop = `ALU_ADDU;
+        `ADDIU: ALUop = `ALU_ADDU; //No ADDI (no exceptions)
         `SLTI:  ALUop = `ALU_SLT;
         `SLTIU: ALUop = `ALU_SLTU;
         `ANDI:  ALUop = `ALU_AND;
@@ -52,7 +53,7 @@ always @(*) begin
         `LUI:   ALUop = `ALU_LUI;
 
         // Jump-types (don't use ALU)
-        `J, `JAL, `JR, `JALR, `BEQ, `BNE, `BLEZ, `BGTZ, `BLTZ:
+        `J, `JAL, `BEQ, `BNE, `BLEZ, `BGTZ, `BLTZ: // See JUMP-R R-types above
             ALUop = `ALU_XXX;
 
         default: $display("Untrapped ALU op: opcode=%h  @%t", opcode, $time);

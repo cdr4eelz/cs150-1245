@@ -361,6 +361,7 @@ module ml505top
     .dcache_din ( dcache_din  ),    .icache_din ( icache_din  ),
     .dcache_dout( dcache_dout ),    .instruction( instruction ),
 // CP3+
+`ifdef __COLT45_pre3
     .bypass_addr( bypass_addr ),    .bypass_we  ( bypass_we ),
     .bypass_din ( bypass_din  ),
     .filler_color   (filler_color),
@@ -375,6 +376,7 @@ module ml505top
     .line_x1_valid  (line_x1_valid),
     .line_y1_valid  (line_y1_valid),
     .line_trigger   (line_trigger),
+`endif
 // Shared
     .stall(any_stall)
   );

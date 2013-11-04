@@ -142,7 +142,7 @@ localparam DD=1;
 
     // Declare outputs of DX stage
     `BUS_ICTL_type IControlDX_;
-    wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_, PCPLUS8DX_;
+    wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_;
     StageDX s_DX
     ( //.CPUGlobal(CPUGlobal),
         .REG_R1_(REGFILE_ra1), .REG_D1_(FWD_rd1),
@@ -152,7 +152,7 @@ localparam DD=1;
         //Outputs
         .IControl_(IControlDX_),
         .MemAddr_(MemAddrDX_), .MemWValue_(MemWValueDX_),
-        .RegWValue_(RegWValueDX_), .PCPLUS8_(PCPLUS8DX_),
+        .RegWValue_(RegWValueDX_),
         //Feedbacks
         .DOBranch_(DOBranch_DX_WF_), .PCBranch_(PCBranch_DX_WF_)
     );
@@ -162,7 +162,7 @@ localparam DD=1;
     `BUS_ICTL_type IControl_M, IControl__M;
     wire  [31: 0]   MemAddr__M, MemAddr_M;
     wire  [31: 0]   MemWValue__M, RegWValue_M;
-    wire  [31: 0]   PCPLUS8_M;
+    wire  [31: 0]   PC_M;
     PipelineRegister #( .Width(`BUS_ICTL_width) )   // Register all controls & let unused get pruned out
         REG_IControl_M  ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M  ) );
     PipelineRegister #( .Width(`BUS_ICTL_width), .PreRegistered(1) )    // Really, it's post-registered!
@@ -176,7 +176,7 @@ localparam DD=1;
     PipelineRegister #( .Width(32) )
         REG_RegWValue_M ( .CPUGlobal(CPUGlobal),    .In(RegWValueDX_),  .Out(RegWValue_M ) );
     PipelineRegister #( .Width(32) )
-        REG_PCPLUS8_M   ( .CPUGlobal(CPUGlobal),    .In(PCPLUS8DX_  ),  .Out(PCPLUS8_M   ) );
+        REG_PC_M        ( .CPUGlobal(CPUGlobal),    .In(PC_DX       ),  .Out(PC_M        ) );
 
     // MEMORY/IO Drives
     wire _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB;
@@ -189,7 +189,7 @@ localparam DD=1;
         ._IControl  (IControl__M),  .IControl   (IControl_M),
         ._MemAddr   (MemAddr__M),   .MemAddr    (MemAddr_M),
         ._MemWValue (MemWValue__M), .RegWValue  (RegWValue_M),
-        .PCPLUS8    (PCPLUS8_M),
+        .PC         (PC_M),
         //Feedbacks
         .WBK_Reg_   (WBKReg_M_WF_), .WBK_Val_   (WBKDat_M_WF_),
         .WBK_CanFWD_(WBKCanFWD_M_WF_),
@@ -202,8 +202,8 @@ localparam DD=1;
 
     // Instruction fetch selection
     wire INST_bios = (INST_ADDR[31:28] === 4'h4);
-    wire [31:0] INST_BR, INST_IB;
-    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB; //TODO: ICACHE
+    wire [31:0] INST_BR, INST_IB, INST_IC;
+    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB; //TODO: INST_IC
 
     // MEMORY & IO ELEMENTS THEMSELVES
 
@@ -218,14 +218,16 @@ localparam DD=1;
         .enb(INST_bios), .doutb(INST_BR)
     ) /* synthesis syn_noprune=1 */;
 
+/*
     assign dcache_addr = MemAddr__M,
         dcache_we = (_hot_DC) ? _WriteMask : 4'b0000, dcache_din = _WDataMasked,
-        dcache_re = _hot_DC && (_WriteMask===4'b0000), RData_DC = dcache_dout
-        /* synthesis syn_noprune=1 */;
+        dcache_re = _hot_DC && (_WriteMask===4'b0000), RData_DC = dcache_dout;
+*/
+    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
 
 // INST_IC=instruction
 // icache_addr=(INST_ADDR/DATA_ADDR/NONE)
-assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0;
+    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
 
     dmem_blk_ram bram_dmem
     ( .clka(clk), .ena(_hot_DB),
@@ -319,7 +321,7 @@ generate if (COLT45_STEPMAX > 0) begin:_STEPS_
         // DOBranch_DX_WF_
         $display("%d]   /WF: %h *%d", DBG_cycle, PCBranch_DX_WF_, DOBranch_DX_WF_);
         $display("%d] WF/DX: %h %h #%d", DBG_cycle, PC_DX, INST_DX, StepCount);
-        $display("%d] DX/M : %h <=%h", DBG_cycle, PCPLUS8_M-8, RegWValue_M);
+        $display("%d] DX/M : %h <=%h", DBG_cycle, PC_M, RegWValue_M);
         $display("%d]      : %b", DBG_cycle, IControl_M); // Make a task to break into fields
         $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
     end

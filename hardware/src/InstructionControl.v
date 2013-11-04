@@ -6,9 +6,6 @@ module InstructionControl(
 
     output `BUS_ICTL_type IControl_,
 
-    output [ 5:0 ] IPCODE,
-    output [ 4:0 ] DEST,
-    output [15:0 ] SOFFSET,
     output [31:0 ] SIMMED,
     output [31:0 ] UIMMED,
     output [31:0 ] SHAMT,
@@ -16,12 +13,16 @@ module InstructionControl(
     output [ 4:0 ] SRC2,
 
     output [31:0 ] PCTARGET,
-    output [31:0 ] PCBRANCH,
-    output [31:0 ] PCPLUS4,
-    output [31:0 ] PCPLUS8
+    output [31:0 ] PCBRANCH
 
 //  output [15:0 ] FAULT
 );
+
+/* OBSOLETE ???
+    output [ 5:0 ] IPCODE,
+    output [15:0 ] SOFFSET,
+    output [ 4:0 ] DEST,
+*/
 
 localparam DD=1;
 
@@ -67,10 +68,11 @@ localparam DD=1;
     assign isRShiftI   = (isRShift && (_funct_[2] === 1'b0));
     assign isRShiftR   = (isRShift && (_funct_[2] === 1'b1));
     assign isROther    = (isRType && (_funct_[5:4] === 2'b10));
-    wire #DD isJump, isRJump, isIJump;
-    assign isRJump     = (isRType && (_funct_[5:3] === 3'b001));
+    wire #DD isIJump, isRJump, isJump, isLink;
     assign isIJump     = isJType;
+    assign isRJump     = (isRType && (_funct_[5:1] === 5'b00100));
     assign isJump      = (isIJump || isRJump);
+    assign isLink      = (isIJump && _opcode_[0]) || (isRJump && _funct_[0]); //JAL/JALR have low-bit==1
     wire #DD isBSimple, isBGELTZ, isBranch, isBranchX, isBranch0;
     assign isBSimple   = (_opcode_[5:2] === 4'b0001);
     assign isBGELTZ    = (_opcode_ === 6'b000001);
@@ -78,9 +80,9 @@ localparam DD=1;
     assign isBranchX   = (_opcode_[5:1] === 5'b00010);
     assign isBranch0   = (isBGELTZ || (_opcode_[5:1] === 5'b00011));
 
-    assign IPCODE   = (isRType) ? _funct_ : (isBGELTZ) ? _rt_ : `UNKNOWN(6);
-    assign DEST     = (isRType) ? _rd_ : (isMLoad || isIComp) ? _rt_ : 5'd0;
-    assign SOFFSET  = (isMemory) ? (SEXT16_32(_immediate_)) : `UNKNOWN(32);
+//  assign IPCODE   = (isRType) ? _funct_ : (isBGELTZ) ? _rt_ : `UNKNOWN(6);
+//  assign DEST     = (isRType) ? _rd_ : (isMLoad || isIComp) ? _rt_ : 5'd0;
+//  assign SOFFSET  = (isMemory) ? (SEXT16_32(_immediate_)) : `UNKNOWN(32);
     assign SIMMED   = SEXT16_32(_immediate_);
     assign UIMMED   = ZEXT16_32(_immediate_);
     assign SHAMT    = (isRShiftI) ? _shamt_ : `UNKNOWN(5);
@@ -91,8 +93,6 @@ localparam DD=1;
 
     assign PCTARGET = (isIJump) ? {_pc[31:28], _target_, 2'b00} : `UNKNOWN(32);
     assign PCBRANCH = (isBranch) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : `UNKNOWN(32);
-    assign PCPLUS4  = _pc + 4;
-    assign PCPLUS8  = _pc + 8;
 
     // Embed existing ALUDecoder from lab
     wire [ 3: 0] #DD ALUop;
@@ -114,7 +114,7 @@ localparam DD=1;
         .ALUSrcB(
             isMemory || isIComp
         ),
-        .ALUOp(ALUop),
+        .ALUOp( ALUop ),
 
         .MemToReg(
             isMLoad
@@ -129,21 +129,14 @@ localparam DD=1;
             (isMemory && !isMStore && !_opcode_[1]) ? !_opcode_[2] : `UNKNOWN(1)
         ),
 
-        .Jump(
-            isJump
-        ),
-        .Link(
-            isJump
-        ),
-        .JR(
-            (isIJump || isRJump) ? isRJump : `UNKNOWN(1)
-        ),
+        .Jump( isJump ), .JR( isRJump ), .Link( isLink ),
         .CmpOp(
-            (isBSimple) ? _opcode_[2:0] : ((isBGELTZ) ? _opcode_[2:0] << _rt_[0] : ((isJump) ? 3'b011 : 3'b000))
+            (isBSimple) ? _opcode_[2:0]
+                        : ((isBGELTZ) ? _opcode_[2:0] << _rt_[0] : ((isJump) ? 3'b011 : 3'b000))
         ),
         .DestReg(
-                (isJump? (_opcode_[0]? 5'b11111 : ((isRType&&_funct_[0])? _rd_ : 5'b00000))
-                                      : (isRType? _rd_ : ((isMLoad||isIComp)? _rt_ : 5'b00000)) )
+            (isJump) ? (isLink ? 5'b11111 : 5'b00000) // JUMP -> $ra / $0
+                     : (isRType? _rd_ : ((isMLoad||isIComp)? _rt_ : 5'b00000))
         )
     );
 

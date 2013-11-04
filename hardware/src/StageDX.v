@@ -12,7 +12,6 @@ module StageDX(
 
     // Outputs (decode / generic instruction cascade)
     output `BUS_ICTL_type IControl_,
-    output [31: 0] PCPLUS8_,
 
     // Outputs (Execute related computations)
     output [31: 0] MemAddr_,
@@ -23,7 +22,7 @@ module StageDX(
 );
 
     wire [ 4: 0] SRC1, SRC2;
-    wire [31: 0] SIMMED, UIMMED, SHAMT, PCTARGET, PCBRANCH, PCPLUS8;
+    wire [31: 0] SIMMED, UIMMED, SHAMT, PCTARGET, PCBRANCH;
 
     InstructionControl decodeControl(
         ._pc(_PC), ._inst(_INST),
@@ -32,10 +31,7 @@ module StageDX(
 
         .SIMMED(SIMMED), .UIMMED(UIMMED),
         .SHAMT(SHAMT), .SRC1(SRC1), .SRC2(SRC2),
-        .PCTARGET(PCTARGET), .PCBRANCH(PCBRANCH),
-        .PCPLUS8(PCPLUS8),
-
-        .SOFFSET(), .IPCODE(), .DEST(), .PCPLUS4()
+        .PCTARGET(PCTARGET), .PCBRANCH(PCBRANCH)
     );
 
     // Asyncronously plug into outer register component
@@ -43,22 +39,21 @@ module StageDX(
     wire [31: 0] R1 = REG_D1_,  R2      = REG_D2_; // Redeclare to clarify dependencies
 
     // Tap only specific control signals used inside DX
-    wire ISigned, Jump, JR, ALUSrcA, ALUSrcB;
+    wire ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link;
     wire [ 3: 0] ALUOp;
     wire [ 2: 0] CmpOp;
     BUS_ICTL_tap BUS_ICTL
     ( ._BUS_(IControl_), // Unused (explicitly listed to make warnings meaningful)
         .ALUOp(ALUOp), .ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB),
-        .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR),
-        .MemToReg(),.DestReg(),.MemWrite(),.DataWidth(),.MSigned(),.Link()
+        .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR), .Link(Link),
+        .MemToReg(),.DestReg(),.MemWrite(),.DataWidth(),.MSigned()
     );
 
-    wire [31: 0] A, B, ALUResult;
-    assign A = (ALUSrcA) ? SHAMT : R1;
-    assign B = (ALUSrcB) ? ((ISigned) ? SIMMED : UIMMED) : R2;
+    wire [31: 0] ALUResult;
     ALU alu
     ( .ALUop(ALUOp),
-        .A(A), .B(B),
+        .A( (ALUSrcA) ? SHAMT : R1 ),
+        .B( (ALUSrcB) ? ((ISigned) ? SIMMED : UIMMED) : R2 ),
         .Out(ALUResult)
     );
 
@@ -69,11 +64,11 @@ module StageDX(
         .doBranch(takeBranch)
     );
 
+//TODO: Good spot for `UNKNOWN
     assign DOBranch_    = (Jump || takeBranch);
-    assign PCBranch_    = (Jump ? (JR ? R1 : PCTARGET) : PCBRANCH);
+    assign PCBranch_    = (Jump) ? (JR ? R1 : PCTARGET) : PCBRANCH;
     assign MemAddr_     = ALUResult;
-    assign MemWValue_   = R2; // Good spot for `UNKNOWN
-    assign RegWValue_   = ALUResult;
-    assign PCPLUS8_     = PCPLUS8;
+    assign MemWValue_   = R2;
+    assign RegWValue_   = (Link) ? (_PC + 8) : ALUResult; //$ra := PC+8 because of trailing instruction
 
 endmodule
