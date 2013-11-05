@@ -43,6 +43,7 @@ module MIPS150 #(
     output         line_y1_valid,
     output         line_trigger,
 `endif
+    output [1023:0] bigflat,
 
     input stall
 );
@@ -156,7 +157,6 @@ localparam DD=1;
         //Feedbacks
         .DOBranch_(DOBranch_DX_WF_), .PCBranch_(PCBranch_DX_WF_)
     );
-
 
     // Pipeline border: DX/M
     `BUS_ICTL_type IControl_M, IControl__M;
@@ -339,5 +339,17 @@ generate if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "ca
 end endgenerate
 
 // synthesis translate_on
+
+//3+5+8+32+32 =80 +176
+//+32+32+4+4+4+x4+32+32+32 =176 +80
+//+32+32+32+32+23+1x+1+1x+6 =160 +96
+//+4+4+32+32+32+32 =136 +120
+assign bigflat = {
+CPUGlobal, StallCount[4:0], StepCount[7:0], INST_ADDR, INST_DATA, 176'd0,
+PC_DX, INST_DX, REGFILE_ra1, REGFILE_ra2, REGFILE_wa, 4'd0, REGFILE_rd1, REGFILE_rd2, REGFILE_wd, 80'd0,
+MemAddrDX_, MemWValueDX_, RegWValueDX_, PCBranch_DX_WF_, IControlDX_,
+    1'd0, DOBranch_DX_WF_, 1'd0, _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB, 96'd0,
+_ByteMask, _WriteMask, RData_IO, RData_BR, RData_DC, RData_DB, 120'd0
+};
 
 endmodule

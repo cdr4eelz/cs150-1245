@@ -347,6 +347,7 @@ module ml505top
     .VideoValid(                video_valid)
   );
 
+wire [1023:0] bigflat;
 
 `ifndef CPUTYPE
 `define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
@@ -378,6 +379,7 @@ module ml505top
     .line_trigger   (line_trigger),
 `endif
 // Shared
+    .bigflat(bigflat),
     .stall(any_stall)
   );
 
@@ -400,22 +402,58 @@ module ml505top
 
 
 `ifdef COLT45_DEBUG
-    wire [35: 0] CS_CONTROL0;
-    wire [ 7: 0] cs_IN, cs_OUT, cs_aIN, cs_aOUT;
-    chipscope_icon CS_ICON (
-        .CONTROL0(CS_CONTROL0) // INOUT BUS [35:0]
+    wire [35: 0] CS_CONTROL0, CS_CONTROL1;
+    wire [ 7: 0] cs_aIN;
+    wire [255: 0] cs_aOUT, cs_OUT;
+    wire [ 7: 0] cs_TRIG;
+    wire [1023:0] cs_DATA;
+
+    chipscope_icon_2 CS_ICON (
+        .CONTROL0(CS_CONTROL0), // INOUT BUS [35:0]
+        .CONTROL1(CS_CONTROL1)  // INOUT BUS [35:0]
     ) /* synthesis syn_noprune=1 */;
-    chipscope_vio CS_VIO (
+    chipscope_vio_512 CS_VIO (
         .CONTROL(CS_CONTROL0),  .CLK(cpu_clk_g),
-        .SYNC_IN( cs_IN ),      .SYNC_OUT( cs_OUT ), // [7:0]
-        .ASYNC_IN(cs_aIN),      .ASYNC_OUT(cs_aOUT) // [7:0]
+        .ASYNC_IN(cs_aIN), // IN BUS [7:0]
+        .ASYNC_OUT(cs_aOUT), // OUT BUS [255:0]
+        .SYNC_OUT(cs_OUT) // OUT BUS [255:0]
     ) /* synthesis syn_noprune=1 */;
+    chipscope_ila_1024 CS_ILA (
+        .CONTROL(CS_CONTROL1),  .CLK(cpu_clk_g),
+        .DATA(cs_DATA), // DATA [1023:0];
+        .TRIG0(cs_TRIG) // IN BUS [7:0] 
+    ) /* synthesis syn_noprune=1 */;
+chipscope_icon_3 YourInstanceName (
+    .CONTROL0(CONTROL0), // INOUT BUS [35:0]
+    .CONTROL1(CONTROL1), // INOUT BUS [35:0]
+    .CONTROL2(CONTROL2) // INOUT BUS [35:0]
+) /* synthesis syn_noprune=1 */;
+chipscope_vio_brk YourInstanceName (
+    .CONTROL(CONTROL), // INOUT BUS [35:0]
+    .CLK(CLK), // IN
+    .ASYNC_IN(ASYNC_IN), // IN BUS [7:0]
+    .ASYNC_OUT(ASYNC_OUT), // OUT BUS [7:0]
+    .SYNC_IN(SYNC_IN), // IN BUS [127:0]
+    .SYNC_OUT(SYNC_OUT) // OUT BUS [127:0]
+) /* synthesis syn_noprune=1 */;
+chipscope_vio_512 YourInstanceName (
+    .CONTROL(CONTROL), // INOUT BUS [35:0]
+    .CLK(CLK), // IN
+    .ASYNC_IN(ASYNC_IN), // IN BUS [255:0]
+    .ASYNC_OUT(ASYNC_OUT), // OUT BUS [1:0]
+    .SYNC_IN(SYNC_IN) // IN BUS [255:0]
+) /* synthesis syn_noprune=1 */;
+chipscope_ila_1024 YourInstanceName (
+    .CONTROL(CONTROL), // INOUT BUS [35:0]
+    .CLK(CLK), // IN
+    .DATA(DATA), // IN BUS [1023:0]
+    .TRIG0(TRIG0) // IN BUS [7:0]
+) /* synthesis syn_noprune=1 */;
 
     assign cs_aIN = { rst_or_init, any_stall, 1'b0, 1'b1,
                         button_reset, button_stall, 1'b1, 1'b0 };
-    assign cs_IN = cs_aIN;
-    assign debug_reset = cs_aOUT[7];
-    assign debug_stall = cs_OUT[6];
+    assign debug_reset = cs_aOUT[0];
+    assign debug_stall = cs_aOUT[1];
 `else
     assign debug_reset = 1'b0;
     assign debug_stall = 1'b0;
