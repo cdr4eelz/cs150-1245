@@ -74,9 +74,12 @@ module ml505top
   inout         IIC_SDA_VIDEO
 );
 
-    wire button_reset, debug_reset, rst_or_init;
-    wire button_stall, debug_stall, any_stall;
-    wire debug_brk, debug_jog;
+    wire button_reset, rst_or_init;
+    wire button_stall, any_stall;
+
+// BRK tap
+    wire debug_reset, debug_stall, debug_brk, debug_jog;
+    wire [0:1023] debug_trace;
 
 // "MIPSY" MIPS150 CPU inter-connects
     wire M_SERIAL_RX, M_SERIAL_TX;
@@ -173,7 +176,7 @@ module ml505top
     .LOCKED(pll_lock),
     .CLKFBIN(pll_fb),
     .CLKIN(user_clk_g),
-    .RST(1'b0) // Would it hurt to use USER_RST?
+    .RST(USR_RST) //WAS: 1'b0 (does it hurt to use USER_RST?)
   );
 
   IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
@@ -364,7 +367,6 @@ assign video_valid = 1'b0, video = 32'd0;
     .VideoValid(                video_valid)
   );
 
-wire [0:1023] bigflat /* synthesis syn_noprune=1 */;
 
 `ifndef CPUTYPE
 `define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
@@ -395,8 +397,11 @@ wire [0:1023] bigflat /* synthesis syn_noprune=1 */;
     .line_y1_valid  (line_y1_valid),
     .line_trigger   (line_trigger),
 `endif
+
+//BRK tap
+    .brk(debug_brk), .trace(debug_trace),
+
 // Shared
-    .bigflat(bigflat),
     .stall(any_stall)
   );
 
@@ -452,6 +457,35 @@ function automatic [0:31] GET_DATUM (
     end
 endfunction
 
+/*  BRK coordinator:
+
+    Intercept/Trace relative to BRK (towards CPU):
+        debug_reset-o1
+        debug_stall-o1
+        debug_brk-o1
+        debug_jog-o1
+        trace-i1024
+    { If need to tap elements outside CPU, perhaps arrange passthrough or tap? }
+
+    Control/Reporting relative to BRK (towards Monitor):
+        action-i8:
+        status-o8:
+        enable-i8:
+        hit-o8:
+        trace-o1024: (interrogated with dsel-i5/dval-o32 or ssel-i2/sval-o256)
+        match-i256: (first 4 words simple equality w/trace; ideal allows fancier masking/edges)
+        record-oBRAM: (accumulated traces or watched items at real-speed, expose full BRAM?)
+    Convenient to pack action/enable/msel/dsel/ssel/rsel/ser into one 32-bit input!
+    { Can we accumulate snapshots at "real time" big/filtered enough to be useful (or just use CS)? }
+    { Is realistic to dump trace(s) as serial like I2C? }
+    { Little from enclosing environment, perhaps DDR/DVI and SW/LED stuff? }
+    Layout "trace" as 4 segments (256-bit) x 8 words (32-bit): (current is loosly Global/WF|DX|M|rare)
+        seg0: Global/Inter-Stage
+        seg1: StageWF
+        seg2: StageDX
+        seg3: StageM
+*/
+
 `ifndef __COLT45_SCOPE
     wire [35: 0] CS0, CS1; //, CS2;
     chipscope_icon_2 CS_ICON (
@@ -463,32 +497,32 @@ endfunction
     wire [0:255] BRK_MATCH, BRK_WATCH /* synthesis syn_noprune=1 */;
 
     wire [ 7: 0] BRK_DSEL; // Ignores high 3-bits
-    reg [ 0:31] BRK_DVAL;
+    reg  [ 0:31] BRK_DVAL;
     chipscope_vio_brk CS_VIO_BRK ( .CONTROL(CS0),  .CLK(cpu_clk_g),
-        .ASYNC_OUT( {BRK_DSEL[7:0], BRK_EN[7:0], BRK_ACTION[7:0]} ),   // OUT BUS [23:0]
-        .ASYNC_IN(  {BRK_DVAL[0:31], BRK_HIT[7:0], BRK_STATUS[7:0]} ),  // IN BUS [47:0]
-        .SYNC_OUT(  BRK_MATCH[0:255] ),                        // OUT BUS [255:0]
-        .SYNC_IN(   BRK_WATCH[0:255] )                         // IN BUS [255:0]
+        .ASYNC_OUT( {BRK_DSEL[7:0], BRK_EN[7:0], BRK_ACTION[7:0]} ),  // OUT BUS [23:0]
+        .ASYNC_IN( {BRK_DVAL[0:31], BRK_HIT[7:0], BRK_STATUS[7:0]} ), // IN BUS [47:0]
+        .SYNC_OUT(  BRK_MATCH[0:255] ), // OUT BUS [255:0]
+        .SYNC_IN(   BRK_WATCH[0:255] )  // IN BUS [255:0]
     ) /* synthesis syn_noprune=1 */;
-    always @(*) BRK_DVAL = GET_DATUM(BRK_DSEL[2:0], GET_SEGMENT(BRK_DSEL[4:3], bigflat));
+    always @(*) BRK_DVAL = GET_DATUM(BRK_DSEL[2:0], GET_SEGMENT(BRK_DSEL[4:3], debug_trace));
 
     wire [ 1: 0] BRK_SSEL;
-    reg [0:255] BRK_SVAL;
+    reg  [0:255] BRK_SVAL;
     chipscope_vio_256 CS_VIO_256 ( .CONTROL(CS1),
         .ASYNC_OUT( BRK_SSEL[1:0] ), // OUT BUS [1:0]
-        .ASYNC_IN(  BRK_SVAL[0:255] )  // IN BUS [255:0]
+        .ASYNC_IN( BRK_SVAL[0:255] ) // IN BUS [255:0]
     ) /* synthesis syn_noprune=1 */;
-    always @(*) BRK_SVAL = GET_SEGMENT(BRK_SSEL, bigflat);
+    always @(*) BRK_SVAL = GET_SEGMENT(BRK_SSEL, debug_trace);
 
 // Having constraint trouble when attempting ILA inclusion (maybe DDR2 conflict? maybe size issue?)
 //  chipscope_ila_1024 CS_ILA ( .CONTROL(CS2),  .CLK(cpu_clk_g),
-//      .DATA(  bigflat ),          // IN BUS [1023:0]
-//      .TRIG0( bigflat[248+:8] ),  // IN BUS [7:0]  (basic state)
-//      .TRIG1( bigflat[80+:16] ),  // IN BUS [15:0] (stepcount[15:0])
-//      .TRIG2( bigflat[32+:32] )   // IN BUS [31:0] (opcode)
+//      .DATA(  debug_trace ),          // IN BUS [1023:0]
+//      .TRIG0( debug_trace[248+:8] ),  // IN BUS [7:0]  (basic state)
+//      .TRIG1( debug_trace[80+:16] ),  // IN BUS [15:0] (stepcount[15:0])
+//      .TRIG2( debug_trace[32+:32] )   // IN BUS [31:0] (opcode)
 //  ) /* synthesis syn_noprune=1 */;
 
-    assign BRK_WATCH = bigflat[0:255];
+    assign BRK_WATCH = debug_trace[0:255];
     assign BRK_HIT[0] = (BRK_MATCH[(0<<5)+:32]==BRK_WATCH[(0<<5)+:32]);
     assign BRK_HIT[1] = (BRK_MATCH[(1<<5)+:32]==BRK_WATCH[(1<<5)+:32]);
     assign BRK_HIT[2] = (BRK_MATCH[(2<<5)+:32]==BRK_WATCH[(2<<5)+:32]);

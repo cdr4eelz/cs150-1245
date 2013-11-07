@@ -20,12 +20,23 @@
  PORT RESET_PERIPHERAL = sys_periph_reset, DIR = O, SIGIS = RST
  PORT CLOCK_REF_100MHz = net_CLOCK_REF_100MHz, DIR = I, SIGIS = CLK, CLK_FREQ = 100000000
  PORT MB_HALTED = microblaze_0_MB_Halted, DIR = O
- PORT GPO1 = iomodule_0_GPO1, DIR = O, VEC = [31:0]
- PORT GPI1 = iomodule_0_GPI1, DIR = I, VEC = [31:0]
  PORT SERIAL1_RX = Uart_1_RX, DIR = I
  PORT SERIAL1_TX = Uart_1_TX, DIR = O
  PORT SERIAL2_RX = Uart_2_RX, DIR = I
  PORT SERIAL2_TX = Uart_2_TX, DIR = O
+ PORT MB_DBGSTOP = microblaze_0_DBG_STOP, DIR = I
+ PORT GPO1 = iomodule_0_GPO1, DIR = O, VEC = [31:0]
+ PORT GPI1 = iomodule_0_GPI1, DIR = I, VEC = [31:0]
+ PORT GPO2 = iomodule_0_GPO2, DIR = O, VEC = [31:0]
+ PORT GPO3 = iomodule_0_GPO3, DIR = O, VEC = [31:0]
+ PORT GPO4 = iomodule_0_GPO4, DIR = O, VEC = [31:0]
+ PORT GPI2 = iomodule_0_GPI2, DIR = I, VEC = [31:0]
+ PORT GPI3 = iomodule_0_GPI3, DIR = I, VEC = [31:0]
+ PORT GPI4 = iomodule_0_GPI4, DIR = I, VEC = [31:0]
+ PORT RESET_MDM = Debug_SYS_Rst, DIR = O, SIGIS = RST
+ PORT IIC0_GPO = xps_iic_0_Gpo, DIR = O, VEC = [0:7]
+ PORT IIC0_SDA = xps_iic_0_Sda, DIR = IO
+ PORT IIC0_SCL = xps_iic_0_Scl, DIR = IO
 
 
 BEGIN microblaze
@@ -62,6 +73,7 @@ BEGIN microblaze
  BUS_INTERFACE ILMB = ilmb
  PORT MB_RESET = mb_reset
  PORT MB_Halted = microblaze_0_MB_Halted
+ PORT DBG_STOP = microblaze_0_DBG_STOP
 END
 
 BEGIN plb_v46
@@ -181,18 +193,30 @@ BEGIN iomodule
  PARAMETER C_USE_PIT3 = 1
  PARAMETER C_PIT3_PRESCALER = 3
  PARAMETER C_PIT3_INTERRUPT = 1
- PARAMETER C_USE_GPO1 = 1
- PARAMETER C_USE_GPI1 = 1
- PARAMETER C_GPI1_INTERRUPT = 1
  PARAMETER C_BASEADDR = 0x85000000
- PARAMETER C_HIGHADDR = 0x85000FFF
+ PARAMETER C_HIGHADDR = 0x8500FFFF
+ PARAMETER C_USE_GPO1 = 1
+ PARAMETER C_USE_GPO2 = 1
+ PARAMETER C_USE_GPO3 = 1
+ PARAMETER C_USE_GPO4 = 1
+ PARAMETER C_USE_GPI1 = 1
+ PARAMETER C_USE_GPI2 = 1
+ PARAMETER C_USE_GPI3 = 1
+ PARAMETER C_USE_GPI4 = 1
+ PARAMETER C_GPI1_INTERRUPT = 1
  BUS_INTERFACE SLMB = dlmb
  BUS_INTERFACE INTERRUPT = iomodule_0_INTERRUPT
- PORT GPO1 = iomodule_0_GPO1
- PORT GPI1 = iomodule_0_GPI1
  PORT CLK = clk_125_0000MHz
  PORT Rst = sys_periph_reset
- PORT INTC_Interrupt = xps_uartlite_1_Interrupt & xps_uartlite_2_Interrupt & mdm_0_Interrupt
+ PORT INTC_Interrupt = xps_uartlite_1_Interrupt & xps_uartlite_2_Interrupt & xps_iic_0_IIC2INTC_Irpt & mdm_0_Interrupt
+ PORT GPO1 = iomodule_0_GPO1
+ PORT GPI1 = iomodule_0_GPI1
+ PORT GPO2 = iomodule_0_GPO2
+ PORT GPO3 = iomodule_0_GPO3
+ PORT GPO4 = iomodule_0_GPO4
+ PORT GPI2 = iomodule_0_GPI2
+ PORT GPI3 = iomodule_0_GPI3
+ PORT GPI4 = iomodule_0_GPI4
 END
 
 BEGIN xps_uartlite
@@ -222,5 +246,19 @@ BEGIN xps_uartlite
  PORT RX = Uart_2_RX
  PORT TX = Uart_2_TX
  PORT Interrupt = xps_uartlite_2_Interrupt
+END
+
+BEGIN xps_iic
+ PARAMETER INSTANCE = xps_iic_0
+ PARAMETER HW_VER = 2.03.a
+ PARAMETER C_TEN_BIT_ADR = 1
+ PARAMETER C_GPO_WIDTH = 8
+ PARAMETER C_BASEADDR = 0x88000000
+ PARAMETER C_HIGHADDR = 0x8800FFFF
+ BUS_INTERFACE SPLB = mb_plb
+ PORT IIC2INTC_Irpt = xps_iic_0_IIC2INTC_Irpt
+ PORT Gpo = xps_iic_0_Gpo
+ PORT Sda = xps_iic_0_Sda
+ PORT Scl = xps_iic_0_Scl
 END
 

@@ -43,7 +43,10 @@ module MIPS150 #(
     output         line_y1_valid,
     output         line_trigger,
 `endif
-    output [0:1023] bigflat,
+
+//BRK tap (will become internal instead)
+    input brk,
+    output [0:1023] trace,
 
     input stall
 );
@@ -273,14 +276,13 @@ localparam DD=1;
     );
 
 
-wire brk = 1'b0;
-assign bigflat = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
+assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
     PC_DX,              INST_DX,            StepCount,          PCBranch_DX_WF_,
     FWD_rd1,            FWD_rd2,            REGFILE_wd,
         {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
             REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
-            _hot_IO,_hot_BR,_hot_IC,_hot_DC,(_hot_IB||_hot_DB),brk,rst,stall},
+            _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,~rst,stall},
 
     RData_IO,           RData_BR,           RData_DC,           RData_DB,
     MemAddr_M,          MemAddr__M,         _WDataMasked,

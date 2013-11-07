@@ -37,6 +37,7 @@
 `define SHAKE_tunIN(    DIw,BUS)BUS [1+(DIw)+1 -1:1]
 `define SHAKE_tunOUT(   DIw,BUS)BUS [1 -1:0]
 
+//TODO: Remove these and insist on tun/tap access only
 `define SHAKE_DataValid(    DIw,BUS)    BUS[1+(DIw)+1 -1: (DIw)+1]
 `define SHAKE_Data(         DIw,BUS)    BUS[  (DIw)+1 -1:       1]
 `define SHAKE_DataReady(    DIw,BUS)    BUS[        1 -1:       0]
