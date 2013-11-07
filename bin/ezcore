@@ -13,12 +13,15 @@ EOM
 coregen -intstyle silent -b tmp/_batch
 coregen -intstyle silent -p . -b *.xco
 
+echo "Removing unneeded project/temp files."
+rm -rf coregen.* *.gise *.xise *.txt *.pdf tmp/ xlnx_auto_0_xdb/ 
+chmod u=rw,go= *
+
 echo ""
 ls -al
 echo ""
 
-echo "To make a stash:"
-echo "rm -rf coregen.* tmp/ xlnx_auto_0_xdb/ *.gise *.xise *.txt *.pdf"
-echo "chmod -x * ; chmod go= *"
-echo "tar cvfj stash_xyz ..."
+
+echo "To make a stash just make bzip2 tarball:"
+echo "tar cvfj stash_xyz.tar.bz2 ..."
 

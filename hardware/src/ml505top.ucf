@@ -1,6 +1,6 @@
 Net USER_CLK            LOC = AH15  |  IOSTANDARD=LVCMOS33;
-Net USER_CLK    TNM_NET = sys_clk_pin;
-TIMESPEC TS_sys_clk_pin = PERIOD sys_clk_pin 10.0 ns HIGH 50%;
+NET "USER_CLK" TNM_NET = USER_CLK;
+TIMESPEC TS_USER_CLK = PERIOD "USER_CLK" 10.0 ns HIGH 50%;
 
 Net USER_RST    TIG;
 Net USER_RST            LOC = E9    |  IOSTANDARD=LVCMOS33  |  PULLUP;
@@ -76,6 +76,8 @@ Net GPIO_DIP[7]         LOC = AC24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRI
 # NET "u_ddr2_infrastructure/clk200_ibufg" TNM_NET = "SYS_CLK_200";
 # TIMESPEC "TS_SYS_CLK_200" = PERIOD "SYS_CLK_200" 5 ns HIGH 50 %;
 
+# NET "USER_CLK" TNM_NET = USER_CLK;
+# TIMESPEC TS_USER_CLK = PERIOD "USER_CLK" 10.0 ns HIGH 50%;
 
 ############################################################################
 ########################################################################
@@ -270,7 +272,7 @@ TIMESPEC "TS_MC_CAL_RDEN_DLY" = FROM "TNM_CAL_RDEN_DLY" TO FFS
 #the delayed DQS and stage2 flops are clocked by the clk0 clock. Placing a TIG
 #on the DQ IDDR capture flop instance to achieve this is acceptable because timing
 #is guaranteed through the use of separate Predictable IP constraints. These
-#violations are reported when an unconstrained path report is run.	
+#violations are reported when anunconstrained path report is run.	
 ###############################################################################
 INST "*/gen_dq[*].u_iob_dq/gen*.u_iddr_dq" TIG ;
 ###############################################################################
@@ -353,4 +355,3 @@ NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 850 ps;
 INST "*/gen_dqs[*].u_iob_dqs/u_iddr_dq_ce" TNM = "TNM_DQ_CE_IDDR";
 INST "*/gen_dq[*].u_iob_dq/gen_stg2_*.u_iddr_dq" TNM = "TNM_DQS_FLOPS";
 TIMESPEC "TS_DQ_CE" = FROM "TNM_DQ_CE_IDDR" TO "TNM_DQS_FLOPS" 2.4 ns;
-

@@ -76,6 +76,7 @@ module ml505top
 
     wire button_reset, debug_reset, rst_or_init;
     wire button_stall, debug_stall, any_stall;
+    wire debug_brk, debug_jog;
 
 // "MIPSY" MIPS150 CPU inter-connects
     wire M_SERIAL_RX, M_SERIAL_TX;
@@ -87,7 +88,7 @@ module ml505top
     wire [31: 0] P_gpo1;            //OUT-from-PLOP
 
 // Selector for physical serial vs. debug serial (via JTAG UART)
-    wire SERIAL_JTAG = 1'b0; //TODO: Tie to a configuration input
+    wire SERIAL_JTAG;
 
 
   reg [3:0]  reset_r = 4'b0;
@@ -221,6 +222,17 @@ module ml505top
         end
     end
 
+// Debug stall with one-shot "jog"
+    reg debug_jog_fired;
+    always @(posedge cpu_clk_g) begin
+        if (rst_or_init || ~debug_jog)
+            debug_jog_fired <= 1'd0;
+        else if (~any_stall)
+            debug_jog_fired <= 1'd1;
+        // else hold value
+    end
+    wire debug_stall_not_jog = ((debug_stall && !debug_jog) || debug_jog_fired);
+
 
 // CP2+
   wire  [31:0] dcache_addr;
@@ -235,8 +247,9 @@ module ml505top
   wire [31:0]  instruction;
   wire         mem_stall;
   wire         mem_init_done;
-    assign any_stall = mem_stall || man_stall || debug_stall;
+
     assign rst_or_init = rst || ~mem_init_done;
+    assign any_stall = mem_stall || man_stall || debug_stall_not_jog;
 
 // CP3+
   wire [31:0]  bypass_addr;
@@ -318,6 +331,10 @@ module ml505top
       .stall(mem_stall)
     );
 
+`ifndef __COLT45_pre3
+assign video_valid = 1'b0, video = 32'd0;
+`endif
+
 // CP3+
   DVI #(
     .ClockFreq(                 50_000_000), //50 MHz
@@ -347,7 +364,7 @@ module ml505top
     .VideoValid(                video_valid)
   );
 
-wire [1023:0] bigflat;
+wire [0:1023] bigflat /* synthesis syn_noprune=1 */;
 
 `ifndef CPUTYPE
 `define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
@@ -384,6 +401,8 @@ wire [1023:0] bigflat;
   );
 
 
+//TODO: Move all/most debug,BRK,PLOP into MIPSY & re-standardize ml505top.v
+
 `ifdef COLT45_PLOP
     plop PLOP ( // Plop a helper MicroBlaze CPU (relays debugger JTAG-SERIAL link)
         .CLOCK_REF_100MHz(user_clk_g),
@@ -400,68 +419,105 @@ wire [1023:0] bigflat;
     assign P_gpo1 = 32'd0;
 `endif
 
+//TODO:Overcome trouble with bitvector selection,address-order,big-case,or something
+function automatic [0:255] GET_SEGMENT (
+    input [1:0] ssel,
+    input [0:1023] allbits
+);
+    begin
+        case (ssel)
+            2'd3: GET_SEGMENT = allbits[768:1023];
+            2'd2: GET_SEGMENT = allbits[512: 767];
+            2'd1: GET_SEGMENT = allbits[256: 511];
+            default: GET_SEGMENT = allbits[0:255];
+        endcase
+    end
+endfunction
 
-`ifdef COLT45_DEBUG
-    wire [35: 0] CS_CONTROL0, CS_CONTROL1;
-    wire [ 7: 0] cs_aIN;
-    wire [255: 0] cs_aOUT, cs_OUT;
-    wire [ 7: 0] cs_TRIG;
-    wire [1023:0] cs_DATA;
+function automatic [0:31] GET_DATUM (
+    input [2:0] dsel,
+    input [0:255] segbits
+);
+    begin
+        case (dsel)
+            3'd7: GET_DATUM = segbits[224:255];
+            3'd6: GET_DATUM = segbits[192:223];
+            3'd5: GET_DATUM = segbits[160:191];
+            3'd4: GET_DATUM = segbits[128:159];
+            3'd3: GET_DATUM = segbits[ 96:127];
+            3'd2: GET_DATUM = segbits[ 64: 95];
+            3'd1: GET_DATUM = segbits[ 32: 63];
+            default: GET_DATUM = segbits[0:31];
+        endcase
+    end
+endfunction
 
+`ifndef __COLT45_SCOPE
+    wire [35: 0] CS0, CS1; //, CS2;
     chipscope_icon_2 CS_ICON (
-        .CONTROL0(CS_CONTROL0), // INOUT BUS [35:0]
-        .CONTROL1(CS_CONTROL1)  // INOUT BUS [35:0]
+        .CONTROL0(CS0), .CONTROL1(CS1)//, .CONTROL2(CS2) // INOUT BUS [35:0]
     ) /* synthesis syn_noprune=1 */;
-    chipscope_vio_512 CS_VIO (
-        .CONTROL(CS_CONTROL0),  .CLK(cpu_clk_g),
-        .ASYNC_IN(cs_aIN), // IN BUS [7:0]
-        .ASYNC_OUT(cs_aOUT), // OUT BUS [255:0]
-        .SYNC_OUT(cs_OUT) // OUT BUS [255:0]
-    ) /* synthesis syn_noprune=1 */;
-    chipscope_ila_1024 CS_ILA (
-        .CONTROL(CS_CONTROL1),  .CLK(cpu_clk_g),
-        .DATA(cs_DATA), // DATA [1023:0];
-        .TRIG0(cs_TRIG) // IN BUS [7:0] 
-    ) /* synthesis syn_noprune=1 */;
-chipscope_icon_3 YourInstanceName (
-    .CONTROL0(CONTROL0), // INOUT BUS [35:0]
-    .CONTROL1(CONTROL1), // INOUT BUS [35:0]
-    .CONTROL2(CONTROL2) // INOUT BUS [35:0]
-) /* synthesis syn_noprune=1 */;
-chipscope_vio_brk YourInstanceName (
-    .CONTROL(CONTROL), // INOUT BUS [35:0]
-    .CLK(CLK), // IN
-    .ASYNC_IN(ASYNC_IN), // IN BUS [7:0]
-    .ASYNC_OUT(ASYNC_OUT), // OUT BUS [7:0]
-    .SYNC_IN(SYNC_IN), // IN BUS [127:0]
-    .SYNC_OUT(SYNC_OUT) // OUT BUS [127:0]
-) /* synthesis syn_noprune=1 */;
-chipscope_vio_512 YourInstanceName (
-    .CONTROL(CONTROL), // INOUT BUS [35:0]
-    .CLK(CLK), // IN
-    .ASYNC_IN(ASYNC_IN), // IN BUS [255:0]
-    .ASYNC_OUT(ASYNC_OUT), // OUT BUS [1:0]
-    .SYNC_IN(SYNC_IN) // IN BUS [255:0]
-) /* synthesis syn_noprune=1 */;
-chipscope_ila_1024 YourInstanceName (
-    .CONTROL(CONTROL), // INOUT BUS [35:0]
-    .CLK(CLK), // IN
-    .DATA(DATA), // IN BUS [1023:0]
-    .TRIG0(TRIG0) // IN BUS [7:0]
-) /* synthesis syn_noprune=1 */;
 
-    assign cs_aIN = { rst_or_init, any_stall, 1'b0, 1'b1,
-                        button_reset, button_stall, 1'b1, 1'b0 };
-    assign debug_reset = cs_aOUT[0];
-    assign debug_stall = cs_aOUT[1];
+    wire [ 7: 0] BRK_ACTION, BRK_EN /* synthesis syn_noprune=1 */;
+    wire [ 7: 0] BRK_STATUS, BRK_HIT /* synthesis syn_noprune=1 */;
+    wire [0:255] BRK_MATCH, BRK_WATCH /* synthesis syn_noprune=1 */;
+
+    wire [ 7: 0] BRK_DSEL; // Ignores high 3-bits
+    reg [ 0:31] BRK_DVAL;
+    chipscope_vio_brk CS_VIO_BRK ( .CONTROL(CS0),  .CLK(cpu_clk_g),
+        .ASYNC_OUT( {BRK_DSEL[7:0], BRK_EN[7:0], BRK_ACTION[7:0]} ),   // OUT BUS [23:0]
+        .ASYNC_IN(  {BRK_DVAL[0:31], BRK_HIT[7:0], BRK_STATUS[7:0]} ),  // IN BUS [47:0]
+        .SYNC_OUT(  BRK_MATCH[0:255] ),                        // OUT BUS [255:0]
+        .SYNC_IN(   BRK_WATCH[0:255] )                         // IN BUS [255:0]
+    ) /* synthesis syn_noprune=1 */;
+    always @(*) BRK_DVAL = GET_DATUM(BRK_DSEL[2:0], GET_SEGMENT(BRK_DSEL[4:3], bigflat));
+
+    wire [ 1: 0] BRK_SSEL;
+    reg [0:255] BRK_SVAL;
+    chipscope_vio_256 CS_VIO_256 ( .CONTROL(CS1),
+        .ASYNC_OUT( BRK_SSEL[1:0] ), // OUT BUS [1:0]
+        .ASYNC_IN(  BRK_SVAL[0:255] )  // IN BUS [255:0]
+    ) /* synthesis syn_noprune=1 */;
+    always @(*) BRK_SVAL = GET_SEGMENT(BRK_SSEL, bigflat);
+
+// Having constraint trouble when attempting ILA inclusion (maybe DDR2 conflict? maybe size issue?)
+//  chipscope_ila_1024 CS_ILA ( .CONTROL(CS2),  .CLK(cpu_clk_g),
+//      .DATA(  bigflat ),          // IN BUS [1023:0]
+//      .TRIG0( bigflat[248+:8] ),  // IN BUS [7:0]  (basic state)
+//      .TRIG1( bigflat[80+:16] ),  // IN BUS [15:0] (stepcount[15:0])
+//      .TRIG2( bigflat[32+:32] )   // IN BUS [31:0] (opcode)
+//  ) /* synthesis syn_noprune=1 */;
+
+    assign BRK_WATCH = bigflat[0:255];
+    assign BRK_HIT[0] = (BRK_MATCH[(0<<5)+:32]==BRK_WATCH[(0<<5)+:32]);
+    assign BRK_HIT[1] = (BRK_MATCH[(1<<5)+:32]==BRK_WATCH[(1<<5)+:32]);
+    assign BRK_HIT[2] = (BRK_MATCH[(2<<5)+:32]==BRK_WATCH[(2<<5)+:32]);
+    assign BRK_HIT[3] = (BRK_MATCH[(3<<5)+:32]==BRK_WATCH[(3<<5)+:32]);
+        //TODO:DOBranch_DX_WF_ (use for branch-match), skip rd1/2 & coopt as masks
+    assign BRK_HIT[4] = 1'b0;
+    assign BRK_HIT[5] = 1'b0;
+    assign BRK_HIT[6] = 1'b0;
+    assign BRK_HIT[7] = 1'b0;
+    wire BRK_isEN = |BRK_EN;
+    wire BRK_isHIT = |(BRK_HIT & BRK_EN);
+
+    assign BRK_STATUS[7:0] = { rst_or_init, any_stall, button_reset, button_stall,
+                                debug_brk, debug_jog, BRK_isEN, BRK_isHIT };
+
+    assign debug_reset = BRK_ACTION[7];
+    assign debug_stall = (BRK_ACTION[6] || BRK_isHIT);
+    assign debug_brk = BRK_ACTION[5];
+    assign debug_jog = BRK_ACTION[4];
+    assign SERIAL_JTAG = BRK_ACTION[1];
+    assign BRK_MASTER = BRK_ACTION[0];
 `else
-    assign debug_reset = 1'b0;
-    assign debug_stall = 1'b0;
+    assign {debug_reset,debug_stall,debug_brk,debug_jog} = 4'b0000;
+    assign {BRK_MASTER,SERIAL_JTAG} = 2'b00;
 `endif
 
 
 // Patch course IO into generic IO board pins
-`ifndef COLT45_StallSkip
+`ifdef COLT45_StallFORCE
     assign man_stall_toggle = 1'b1;
 `else
 `ifdef COLT45_StallDIP

@@ -2,7 +2,7 @@
 
 module MEMIOPlex #(
     parameter BUFSIZE=0,
-    parameter PREMATURE_BYTE=8'h33, COLT45_SHAKE=1
+    parameter PREMATURE_BYTE=8'h33, COLT45_SHAKE=0
 )( //TODO: Set address with parameters (or even config register with param defaults)!
     input clk, rst, ena,
     // DAS BUS

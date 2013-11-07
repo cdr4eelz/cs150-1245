@@ -1,5 +1,7 @@
 tmp/
 /[di]mem_blk_ram/
 /bios_mem/
+/fun/
+!*.xco
 !xco.template
 !stash_*
