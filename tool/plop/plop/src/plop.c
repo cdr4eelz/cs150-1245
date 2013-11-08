@@ -13,8 +13,8 @@
 
 #define U_DEFAULT   STDIN_BASEADDRESS
 #define U_DEBUG     XPAR_MDM_0_BASEADDR
-//#define U_CABLE     XPAR_RS232_UART_1_BASEADDR
-#define U_MIPSY     XPAR_RS232_UART_2_BASEADDR
+#define U_CABLE     XPAR_XPS_UARTLITE_1_BASEADDR
+#define U_MIPSY     XPAR_XPS_UARTLITE_2_BASEADDR
 
 /*
 inline u32 pumpBytes_raw(int u_RX, int u_TX, u8 nl2cr, u16 maxBurst)
