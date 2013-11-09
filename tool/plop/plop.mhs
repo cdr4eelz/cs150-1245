@@ -1,10 +1,17 @@
 
+# EJR: Adjusted to  xc5vlx110t  rather than  xc5vlx50t
+# EJR: Hand/GUI edited (XPS)
+# Constants allowed at global level (except as signals): Watch for these markers
+# FREQ_REF   100000000
+# FREQ_MIPSY 50000000
+# FREQ_PLOP  125000000
+# FREQ_BRK   50000000
+# FREQ_DVI   75000000
 # ##############################################################################
-# Created by Base System Builder Wizard for Xilinx EDK 14.6 Build EDK_P.68d
-# Wed Oct 23 14:51:29 2013
-# Target Board:  Xilinx Virtex 5 ML505 Evaluation Platform Rev 1
+# BASED on Base System Builder Wizard for Xilinx EDK 14.6 Build EDK_P.68d
+# Target Board:  Xilinx Virtex 5 ML505 Evaluation Platform (CS150-CORY125)
 # Family:    virtex5
-# Device:    xc5vlx50t
+# Device:    xc5vlx110t
 # Package:   ff1136
 # Speed Grade:  -1
 # Processor number: 1
@@ -15,53 +22,60 @@
  PARAMETER VERSION = 2.1.0
 
 
- PORT CLOCK_REF_100MHz = net_CLOCK_REF_100MHz, DIR = I, SIGIS = CLK, CLK_FREQ = 100000000
- PORT BIOS_RST = bios_cntrl_BRAM_Rst, DIR = O, SIGIS = RST, RST_POLARITY = 1
- PORT BIOS_CLK = bios_cntrl_BRAM_Clk, DIR = O, SIGIS = CLK
- PORT BIOS_EN = bios_cntrl_BRAM_EN, DIR = O
- PORT BIOS_WEN = bios_cntrl_BRAM_WEN, DIR = O, VEC = [0:3]
- PORT BIOS_ADDR = bios_cntrl_BRAM_Addr, DIR = O, VEC = [0:31]
- PORT BIOS_DIN = bios_cntrl_BRAM_Din, DIR = I, VEC = [0:31]
- PORT BIOS_DOUT = bios_cntrl_BRAM_Dout, DIR = O, VEC = [0:31]
- PORT DCR_ACK = plbv46_dcr_bridge_0_DCR_plbAck, DIR = I
- PORT DCR_DRBUS = plbv46_dcr_bridge_0_DCR_plbDBusIn, DIR = I, VEC = [0:31]
- PORT DCR_READ = plbv46_dcr_bridge_0_PLB_dcrRead, DIR = O
- PORT DCR_WRITE = plbv46_dcr_bridge_0_PLB_dcrWrite, DIR = O
- PORT DCR_ABUS = plbv46_dcr_bridge_0_PLB_dcrABus, DIR = O, VEC = [0:9]
- PORT DCR_DWBUS = plbv46_dcr_bridge_0_PLB_dcrDBusOut, DIR = O, VEC = [0:31]
- PORT DCR_CLK = plbv46_dcr_bridge_0_PLB_dcrClk, DIR = O, SIGIS = CLK
- PORT DCR_RST = plbv46_dcr_bridge_0_PLB_dcrRst, DIR = O, SIGIS = RST, RST_POLARITY = 1
- PORT GPI1 = iomodule_0_GPI1, DIR = I, VEC = [31:0]
- PORT GPI2 = iomodule_0_GPI2, DIR = I, VEC = [31:0]
- PORT GPI3 = iomodule_0_GPI3, DIR = I, VEC = [31:0]
- PORT GPI4 = iomodule_0_GPI4, DIR = I, VEC = [31:0]
- PORT GPO1 = iomodule_0_GPO1, DIR = O, VEC = [31:0]
- PORT GPO2 = iomodule_0_GPO2, DIR = O, VEC = [31:0]
- PORT GPO3 = iomodule_0_GPO3, DIR = O, VEC = [31:0]
- PORT GPO4 = iomodule_0_GPO4, DIR = O, VEC = [31:0]
- PORT MB_DBGSTOP = microblaze_0_DBG_STOP, DIR = I
- PORT MB_ERROR = microblaze_0_MB_Error, DIR = O
- PORT MB_HALTED = microblaze_0_MB_Halted, DIR = O
- PORT MB_INTERRUPT = external_interrupt, DIR = I, SIGIS = INTERRUPT, SENSITIVITY = EDGE_RISING
- PORT RESET_AUX = sys_aux_reset, DIR = I, SIGIS = RST, RST_POLARITY = 1
- PORT RESET_BOARD = sys_rst_s, DIR = I, SIGIS = RST, RST_POLARITY = 0
- PORT RESET_PERIPHERAL = sys_periph_reset, DIR = O, SIGIS = RST, RST_POLARITY = 1
- PORT SERIAL1_RX = Uart_1_RX, DIR = I
- PORT SERIAL1_TX = Uart_1_TX, DIR = O
- PORT SERIAL2_RX = Uart_2_RX, DIR = I
- PORT SERIAL2_TX = Uart_2_TX, DIR = O
- PORT SPI_SPISEL = xps_spi_0_SPISEL, DIR = I
- PORT SPI_SCK = xps_spi_0_SCK, DIR = IO
- PORT SPI_MISO = xps_spi_0_MISO, DIR = IO
- PORT SPI_MOSI = xps_spi_0_MOSI, DIR = IO
- PORT SPI_SS = xps_spi_0_SS, DIR = IO, VEC = [0:1]
- PORT XRAM_ADDR = x_bram_BRAM_Addr_B, DIR = I, VEC = [0:31]
- PORT XRAM_CLK = x_bram_BRAM_Clk_B, DIR = I, SIGIS = CLK
- PORT XRAM_DIN = x_bram_BRAM_Din_B, DIR = O, VEC = [0:31]
- PORT XRAM_DOUT = x_bram_BRAM_Dout_B, DIR = I, VEC = [0:31]
- PORT XRAM_EN = x_bram_BRAM_EN_B, DIR = I
- PORT XRAM_RST = x_bram_BRAM_Rst_B, DIR = I, SIGIS = RST, RST_POLARITY = 1
- PORT XRAM_WEN = x_bram_BRAM_WEN_B, DIR = I, VEC = [0:3]
+# FREQ_MIPSY
+ PORT CLK_MIPSY = net_clk_mipsy, DIR = I, SIGIS = CLK, CLK_FREQ = 50000000
+# FREQ_PLOP
+ PORT CLK_PLOP = net_clk_0, DIR = I, SIGIS = CLK, CLK_FREQ = 125000000
+ PORT CLK_Locked = net_clk_locked, DIR = I
+ PORT RST_PHY_LO = net_rst_phy_s, DIR = I, SIGIS = RST, RST_POLARITY = 0
+ PORT RST_AUX_HI = net_rst_aux, DIR = I, SIGIS = RST, RST_POLARITY = 1
+ PORT RST_Periph_HI = net_rst_periph, DIR = O, SIGIS = RST, RST_POLARITY = 1
+ PORT MB0_IRQ0 = ext_mb0_irq0, DIR = I, SIGIS = INTERRUPT, SENSITIVITY = EDGE_RISING
+ PORT MB0_IRQ1 = ext_mb0_irq1, DIR = I, SIGIS = INTERRUPT, SENSITIVITY = EDGE_RISING
+ PORT MB0_Error = microblaze_0_error, DIR = O
+ PORT MB0_Halted = microblaze_0_halted, DIR = O
+# ## MIPSY BIOS backdoor ##
+ PORT BIOS_BRAM_Rst = bram_bios_Rst_A, DIR = O, SIGIS = RST, RST_POLARITY = 1
+# FREQ_PLOP
+ PORT BIOS_BRAM_Clk = bram_bios_Clk_A, DIR = O, SIGIS = CLK, CLK_FREQ = 125000000
+ PORT BIOS_BRAM_En = bram_bios_EN_A, DIR = O
+ PORT BIOS_BRAM_Wen = bram_bios_WEN_A, DIR = O, VEC = [0:3]
+ PORT BIOS_BRAM_Addr = bram_bios_Addr_A, DIR = O, VEC = [0:31]
+ PORT BIOS_BRAM_Dout = bram_bios_Dout_A, DIR = O, VEC = [0:31]
+ PORT BIOS_BRAM_DIN = bram_bios_Din_A, DIR = I, VEC = [0:31]
+# ## BRK control/traces via shared memory ##
+ PORT BRK_BRAM_RST = bram_brk_BRAM_Rst_B, DIR = I, SIGIS = RST, RST_POLARITY = 1
+# FREQ_BRK
+ PORT BRK_BRAM_CLK = bram_brk_BRAM_Clk_B, DIR = I, SIGIS = CLK, CLK_FREQ = 50000000
+ PORT BRK_BRAM_EN = bram_brk_BRAM_EN_B, DIR = I
+ PORT BRK_BRAM_WEN = bram_brk_BRAM_WEN_B, DIR = I, VEC = [0:3]
+ PORT BRK_BRAM_ADDR = bram_brk_BRAM_Addr_B, DIR = I, VEC = [0:31]
+ PORT BRK_BRAM_DOUT = bram_brk_BRAM_Dout_B, DIR = I, VEC = [0:31]
+ PORT BRK_BRAM_Din = bram_brk_BRAM_Din_B, DIR = O, VEC = [0:31]
+# ## BRK registers via DCR ##
+ PORT BRK_DCR_Rst = mipsy_dcr_PLB_dcrRst, DIR = O, SIGIS = RST, RST_POLARITY = 1
+# FREQ_PLOP
+ PORT BRK_DCR_Clk = mipsy_dcr_PLB_dcrClk, DIR = O, SIGIS = CLK, CLK_FREQ = 125000000
+ PORT BRK_DCR_Read = mipsy_dcr_PLB_dcrRead, DIR = O
+ PORT BRK_DCR_Write = mipsy_dcr_PLB_dcrWrite, DIR = O
+ PORT BRK_DCR_ABus = mipsy_dcr_PLB_dcrABus, DIR = O, VEC = [0:9]
+ PORT BRK_DCR_DWBus = mipsy_dcr_PLB_dcrDBusOut, DIR = O, VEC = [0:31]
+ PORT BRK_DCR_DRBUS = mipsy_dcr_DCR_plbDBusIn, DIR = I, VEC = [0:31]
+ PORT BRK_DCR_ACK = mipsy_dcr_DCR_plbAck, DIR = I
+# ## GPIO ##
+ PORT GPI1_32 = iomodule_0_GPI1, DIR = I, VEC = [31:0]
+ PORT GPI2_32 = iomodule_0_GPI2, DIR = I, VEC = [31:0]
+ PORT GPI3_32 = iomodule_0_GPI3, DIR = I, VEC = [31:0]
+ PORT GPI4_32 = iomodule_0_GPI4, DIR = I, VEC = [31:0]
+ PORT GPo1_32 = iomodule_0_GPO1, DIR = O, VEC = [31:0]
+ PORT GPo2_32 = iomodule_0_GPO2, DIR = O, VEC = [31:0]
+ PORT GPo3_32 = iomodule_0_GPO3, DIR = O, VEC = [31:0]
+ PORT GPo4_32 = iomodule_0_GPO4, DIR = O, VEC = [31:0]
+# ## UARTs ##
+ PORT UART_PHY_RX = Uart_1_RX, DIR = I
+ PORT UART_PHY_Tx = Uart_1_TX, DIR = O
+ PORT UART_MIPSY_RX = Uart_2_RX, DIR = I
+ PORT UART_MIPSY_Tx = Uart_2_TX, DIR = O
 
 
 BEGIN microblaze
@@ -88,17 +102,17 @@ BEGIN microblaze
  PARAMETER C_DCACHE_HIGHADDR = 0x2FFFFFFF
  PARAMETER C_DCACHE_USE_WRITEBACK = 0
  PARAMETER C_USE_BRANCH_TARGET_CACHE = 1
- PARAMETER C_FSL_LINKS = 4
+ PARAMETER C_FSL_LINKS = 2
  PARAMETER C_USE_HW_MUL = 1
  PARAMETER C_USE_DIV = 1
  PARAMETER C_USE_EXTENDED_FSL_INSTR = 1
  PARAMETER C_BRANCH_TARGET_CACHE_SIZE = 0
- PARAMETER C_DIV_ZERO_EXCEPTION = 0
+ PARAMETER C_DIV_ZERO_EXCEPTION = 1
  PARAMETER C_IPLB_BUS_EXCEPTION = 0
  PARAMETER C_DPLB_BUS_EXCEPTION = 0
- PARAMETER C_ILL_OPCODE_EXCEPTION = 0
+ PARAMETER C_ILL_OPCODE_EXCEPTION = 1
  PARAMETER C_OPCODE_0x0_ILLEGAL = 0
- PARAMETER C_UNALIGNED_EXCEPTIONS = 0
+ PARAMETER C_UNALIGNED_EXCEPTIONS = 1
  PARAMETER C_PVR = 0
  PARAMETER C_USE_MMU = 0
  PARAMETER C_ICACHE_LINE_LEN = 8
@@ -106,42 +120,41 @@ BEGIN microblaze
  BUS_INTERFACE DPLB = mb_plb
  BUS_INTERFACE IPLB = mb_plb
  BUS_INTERFACE DEBUG = microblaze_0_mdm_bus
- BUS_INTERFACE INTERRUPT = iomodule_0_INTERRUPT
  BUS_INTERFACE DLMB = dlmb
  BUS_INTERFACE ILMB = ilmb
- PORT MB_RESET = mb_reset
- PORT MB_Halted = microblaze_0_MB_Halted
- PORT DBG_STOP = microblaze_0_DBG_STOP
- PORT MB_Error = microblaze_0_MB_Error
+ BUS_INTERFACE INTERRUPT = mipsy_iomodule_INTERRUPT
+ PORT MB_Error = microblaze_0_error
+ PORT MB_Halted = microblaze_0_halted
+ PORT MB_RESET = sys_rst_mb
 END
 
 BEGIN plb_v46
  PARAMETER INSTANCE = mb_plb
  PARAMETER HW_VER = 1.05.a
- PORT PLB_Clk = clk_125MHz
- PORT SYS_Rst = proc_sys_reset_0_Bus_Struct_Reset
+ PORT PLB_Clk = net_clk_0
+ PORT SYS_Rst = net_rst_bus
  PORT Bus_Error_Det = mb_plb_Bus_Error_Det
 END
 
 BEGIN lmb_v10
  PARAMETER INSTANCE = ilmb
  PARAMETER HW_VER = 2.00.b
- PORT LMB_Clk = clk_125MHz
- PORT SYS_Rst = proc_sys_reset_0_Bus_Struct_Reset
+ PORT LMB_Clk = net_clk_0
+ PORT SYS_Rst = net_rst_bus
 END
 
 BEGIN lmb_v10
  PARAMETER INSTANCE = dlmb
  PARAMETER HW_VER = 2.00.b
- PORT LMB_Clk = clk_125MHz
- PORT SYS_Rst = proc_sys_reset_0_Bus_Struct_Reset
+ PORT LMB_Clk = net_clk_0
+ PORT SYS_Rst = net_rst_bus
 END
 
 BEGIN lmb_bram_if_cntlr
  PARAMETER INSTANCE = dlmb_cntlr
  PARAMETER HW_VER = 3.10.c
  PARAMETER C_BASEADDR = 0x00000000
- PARAMETER C_HIGHADDR = 0x00007FFF
+ PARAMETER C_HIGHADDR = 0x00003FFF
  PARAMETER C_NUM_LMB = 1
  BUS_INTERFACE SLMB = dlmb
  BUS_INTERFACE BRAM_PORT = dlmb_port
@@ -151,7 +164,7 @@ BEGIN lmb_bram_if_cntlr
  PARAMETER INSTANCE = ilmb_cntlr
  PARAMETER HW_VER = 3.10.c
  PARAMETER C_BASEADDR = 0x00000000
- PARAMETER C_HIGHADDR = 0x00007FFF
+ PARAMETER C_HIGHADDR = 0x00003FFF
  BUS_INTERFACE SLMB = ilmb
  BUS_INTERFACE BRAM_PORT = ilmb_port
 END
@@ -163,40 +176,19 @@ BEGIN bram_block
  BUS_INTERFACE PORTB = dlmb_port
 END
 
-BEGIN clock_generator
- PARAMETER INSTANCE = clock_generator_0
- PARAMETER C_CLKIN_FREQ = 100000000
- PARAMETER C_CLKOUT0_FREQ = 125000000
- PARAMETER C_CLKOUT0_PHASE = 0
- PARAMETER C_CLKOUT0_GROUP = NONE
- PARAMETER C_CLKOUT0_BUF = TRUE
- PARAMETER C_CLKFBIN_FREQ = 125000000
- PARAMETER C_CLKFBOUT_FREQ = 125000000
- PARAMETER C_CLKFBOUT_BUF = TRUE
- PARAMETER C_EXT_RESET_HIGH = 0
- PARAMETER HW_VER = 4.03.a
- PARAMETER C_CLKOUT1_FREQ = 0
- PORT CLKOUT0 = clk_125MHz
- PORT CLKFBOUT = SRAM_CLK_OUT_s
- PORT LOCKED = Dcm_all_locked
- PORT CLKFBIN = SRAM_CLK_OUT_s
- PORT RST = sys_rst_s
- PORT CLKIN = net_CLOCK_REF_100MHz
-END
-
 BEGIN proc_sys_reset
  PARAMETER INSTANCE = proc_sys_reset_0
  PARAMETER C_EXT_RESET_HIGH = 0
  PARAMETER HW_VER = 3.00.a
  PARAMETER C_NUM_BUS_RST = 1
- PORT Slowest_sync_clk = net_CLOCK_REF_100MHz
- PORT MB_Debug_Sys_Rst = Debug_SYS_Rst
- PORT Dcm_locked = Dcm_all_locked
- PORT MB_Reset = mb_reset
- PORT Peripheral_Reset = sys_periph_reset
- PORT Aux_Reset_In = sys_aux_reset
- PORT Ext_Reset_In = sys_rst_s
- PORT Bus_Struct_Reset = proc_sys_reset_0_Bus_Struct_Reset
+ PORT Slowest_sync_clk = net_clk_mipsy
+ PORT MB_Debug_Sys_Rst = mdm_0_Debug_SYS_Rst
+ PORT Dcm_locked = net_clk_locked
+ PORT MB_RESET = sys_rst_mb
+ PORT Peripheral_Reset = net_rst_periph
+ PORT Aux_Reset_In = net_rst_aux
+ PORT Ext_Reset_In = net_rst_phy_s
+ PORT Bus_Struct_Reset = net_rst_bus
 END
 
 BEGIN mdm
@@ -208,12 +200,22 @@ BEGIN mdm
  PARAMETER C_HIGHADDR = 0x8440ffff
  BUS_INTERFACE SPLB = mb_plb
  BUS_INTERFACE MBDEBUG_0 = microblaze_0_mdm_bus
- PORT Debug_SYS_Rst = Debug_SYS_Rst
+ PORT Debug_SYS_Rst = mdm_0_Debug_SYS_Rst
  PORT Interrupt = mdm_0_Interrupt
 END
 
+BEGIN xps_intc
+ PARAMETER INSTANCE = xps_intc_0
+ PARAMETER HW_VER = 2.01.a
+ PARAMETER C_BASEADDR = 0x81000000
+ PARAMETER C_HIGHADDR = 0x8100FFFF
+ BUS_INTERFACE SPLB = mb_plb
+ PORT Intr = ext_mb0_irq1 & xps_uartlite_1_Interrupt & xps_uartlite_2_Interrupt & mipsy_iomodule_GPI1_Interrupt & mipsy_iomodule_PIT1_Interrupt & mipsy_iomodule_PIT2_Interrupt & mipsy_iomodule_PIT3_Interrupt & mipsy_iomodule_FIT3_Interrupt & ext_mb0_irq0 & mb_plb_Bus_Error_Det & mdm_0_Interrupt
+ PORT Irq = xps_intc_0_Irq
+END
+
 BEGIN iomodule
- PARAMETER INSTANCE = iomodule_0
+ PARAMETER INSTANCE = mipsy_iomodule
  PARAMETER HW_VER = 1.03.a
  PARAMETER C_USE_IO_BUS = 0
  PARAMETER C_USE_UART_RX = 0
@@ -246,10 +248,9 @@ BEGIN iomodule
  PARAMETER C_USE_GPI4 = 1
  PARAMETER C_GPI1_INTERRUPT = 1
  BUS_INTERFACE SLMB = dlmb
- BUS_INTERFACE INTERRUPT = iomodule_0_INTERRUPT
- PORT CLK = clk_125MHz
- PORT Rst = sys_periph_reset
- PORT INTC_Interrupt = external_interrupt & xps_uartlite_2_Interrupt & xps_uartlite_1_Interrupt & xps_spi_0_IP2INTC_Irpt & mdm_0_Interrupt
+ BUS_INTERFACE INTERRUPT = mipsy_iomodule_INTERRUPT
+ PORT CLK = net_clk_0
+ PORT Rst = net_rst_periph
  PORT GPO1 = iomodule_0_GPO1
  PORT GPI1 = iomodule_0_GPI1
  PORT GPO2 = iomodule_0_GPO2
@@ -258,10 +259,16 @@ BEGIN iomodule
  PORT GPI2 = iomodule_0_GPI2
  PORT GPI3 = iomodule_0_GPI3
  PORT GPI4 = iomodule_0_GPI4
+ PORT FIT3_Interrupt = mipsy_iomodule_FIT3_Interrupt
+ PORT PIT1_Interrupt = mipsy_iomodule_PIT1_Interrupt
+ PORT PIT2_Interrupt = mipsy_iomodule_PIT2_Interrupt
+ PORT PIT3_Interrupt = mipsy_iomodule_PIT3_Interrupt
+ PORT GPI1_Interrupt = mipsy_iomodule_GPI1_Interrupt
+ PORT INTC_Interrupt = xps_intc_0_Irq
 END
 
 BEGIN xps_uartlite
- PARAMETER INSTANCE = xps_uartlite_1
+ PARAMETER INSTANCE = xps_uartlite_phy
  PARAMETER HW_VER = 1.02.a
  PARAMETER C_BAUDRATE = 115200
  PARAMETER C_USE_PARITY = 0
@@ -275,7 +282,7 @@ BEGIN xps_uartlite
 END
 
 BEGIN xps_uartlite
- PARAMETER INSTANCE = xps_uartlite_2
+ PARAMETER INSTANCE = xps_uartlite_mipsy
  PARAMETER HW_VER = 1.02.a
  PARAMETER C_BAUDRATE = 115200
  PARAMETER C_DATA_BITS = 8
@@ -289,76 +296,56 @@ BEGIN xps_uartlite
  PORT Interrupt = xps_uartlite_2_Interrupt
 END
 
-BEGIN xps_spi
- PARAMETER INSTANCE = xps_spi_0
- PARAMETER HW_VER = 2.02.a
- PARAMETER C_BASEADDR = 0x88000000
- PARAMETER C_HIGHADDR = 0x8800FFFF
- PARAMETER C_NUM_TRANSFER_BITS = 32
- PARAMETER C_NUM_SS_BITS = 2
- BUS_INTERFACE SPLB = mb_plb
- PORT IP2INTC_Irpt = xps_spi_0_IP2INTC_Irpt
- PORT SPISEL = xps_spi_0_SPISEL
- PORT SCK = xps_spi_0_SCK
- PORT MISO = xps_spi_0_MISO
- PORT MOSI = xps_spi_0_MOSI
- PORT SS = xps_spi_0_SS
-END
-
 BEGIN plbv46_dcr_bridge
- PARAMETER INSTANCE = plbv46_dcr_bridge_0
+ PARAMETER INSTANCE = mipsy_dcr_bridge
  PARAMETER HW_VER = 1.01.a
- PARAMETER C_BASEADDR = 0x87E00000
- PARAMETER C_HIGHADDR = 0x87E0FFFF
+ PARAMETER C_BASEADDR = 0x89000000
+ PARAMETER C_HIGHADDR = 0x89000FFF
  BUS_INTERFACE SPLB = mb_plb
- PORT DCR_plbAck = plbv46_dcr_bridge_0_DCR_plbAck
- PORT DCR_plbDBusIn = plbv46_dcr_bridge_0_DCR_plbDBusIn
- PORT PLB_dcrRead = plbv46_dcr_bridge_0_PLB_dcrRead
- PORT PLB_dcrWrite = plbv46_dcr_bridge_0_PLB_dcrWrite
- PORT PLB_dcrABus = plbv46_dcr_bridge_0_PLB_dcrABus
- PORT PLB_dcrDBusOut = plbv46_dcr_bridge_0_PLB_dcrDBusOut
- PORT PLB_dcrClk = plbv46_dcr_bridge_0_PLB_dcrClk
- PORT PLB_dcrRst = plbv46_dcr_bridge_0_PLB_dcrRst
+ PORT DCR_plbAck = mipsy_dcr_DCR_plbAck
+ PORT DCR_plbDBusIn = mipsy_dcr_DCR_plbDBusIn
+ PORT PLB_dcrRead = mipsy_dcr_PLB_dcrRead
+ PORT PLB_dcrWrite = mipsy_dcr_PLB_dcrWrite
+ PORT PLB_dcrABus = mipsy_dcr_PLB_dcrABus
+ PORT PLB_dcrDBusOut = mipsy_dcr_PLB_dcrDBusOut
+ PORT PLB_dcrClk = mipsy_dcr_PLB_dcrClk
+ PORT PLB_dcrRst = mipsy_dcr_PLB_dcrRst
 END
 
-BEGIN xps_bram_if_cntlr
- PARAMETER INSTANCE = bios_cntrl
- PARAMETER HW_VER = 1.00.b
- PARAMETER C_BASEADDR = 0x90000000
- PARAMETER C_HIGHADDR = 0x9000FFFF
- PARAMETER C_SPLB_NATIVE_DWIDTH = 32
- PARAMETER C_SPLB_SUPPORT_BURSTS = 0
- BUS_INTERFACE SPLB = mb_plb
- PORT BRAM_Rst = bios_cntrl_BRAM_Rst
- PORT BRAM_Clk = bios_cntrl_BRAM_Clk
- PORT BRAM_EN = bios_cntrl_BRAM_EN
- PORT BRAM_WEN = bios_cntrl_BRAM_WEN
- PORT BRAM_Addr = bios_cntrl_BRAM_Addr
- PORT BRAM_Din = bios_cntrl_BRAM_Din
- PORT BRAM_Dout = bios_cntrl_BRAM_Dout
+BEGIN lmb_bram_if_cntlr
+ PARAMETER INSTANCE = brk_cntlr
+ PARAMETER HW_VER = 3.10.c
+ PARAMETER C_BASEADDR = 0x70000000
+ PARAMETER C_HIGHADDR = 0x70007FFF
+ BUS_INTERFACE SLMB = dlmb
+ BUS_INTERFACE BRAM_PORT = brk_port
 END
 
 BEGIN bram_block
- PARAMETER INSTANCE = x_bram
+ PARAMETER INSTANCE = brk_bram
  PARAMETER HW_VER = 1.00.a
- BUS_INTERFACE PORTA = x_cntrl_PORTA
- PORT BRAM_Rst_B = x_bram_BRAM_Rst_B
- PORT BRAM_Clk_B = x_bram_BRAM_Clk_B
- PORT BRAM_EN_B = x_bram_BRAM_EN_B
- PORT BRAM_WEN_B = x_bram_BRAM_WEN_B
- PORT BRAM_Addr_B = x_bram_BRAM_Addr_B
- PORT BRAM_Din_B = x_bram_BRAM_Din_B
- PORT BRAM_Dout_B = x_bram_BRAM_Dout_B
+ BUS_INTERFACE PORTA = brk_port
+ PORT BRAM_Rst_B = bram_brk_BRAM_Rst_B
+ PORT BRAM_Clk_B = bram_brk_BRAM_Clk_B
+ PORT BRAM_EN_B = bram_brk_BRAM_EN_B
+ PORT BRAM_WEN_B = bram_brk_BRAM_WEN_B
+ PORT BRAM_Addr_B = bram_brk_BRAM_Addr_B
+ PORT BRAM_Din_B = bram_brk_BRAM_Din_B
+ PORT BRAM_Dout_B = bram_brk_BRAM_Dout_B
 END
 
-BEGIN xps_bram_if_cntlr
- PARAMETER INSTANCE = x_cntrl
- PARAMETER HW_VER = 1.00.b
- PARAMETER C_BASEADDR = 0x91000000
- PARAMETER C_HIGHADDR = 0x9100FFFF
- PARAMETER C_SPLB_NATIVE_DWIDTH = 32
- PARAMETER C_SPLB_SUPPORT_BURSTS = 0
- BUS_INTERFACE SPLB = mb_plb
- BUS_INTERFACE PORTA = x_cntrl_PORTA
+BEGIN lmb_bram_if_cntlr
+ PARAMETER INSTANCE = mipsy_bios_cntlr
+ PARAMETER HW_VER = 3.10.c
+ PARAMETER C_BASEADDR = 0x71000000
+ PARAMETER C_HIGHADDR = 0x71003FFF
+ BUS_INTERFACE SLMB = dlmb
+ PORT BRAM_Rst_A = bram_bios_Rst_A
+ PORT BRAM_Clk_A = bram_bios_Clk_A
+ PORT BRAM_EN_A = bram_bios_EN_A
+ PORT BRAM_WEN_A = bram_bios_WEN_A
+ PORT BRAM_Addr_A = bram_bios_Addr_A
+ PORT BRAM_Din_A = bram_bios_Din_A
+ PORT BRAM_Dout_A = bram_bios_Dout_A
 END
 

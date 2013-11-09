@@ -81,14 +81,10 @@ module ml505top
     wire debug_reset, debug_stall, debug_brk, debug_jog;
     wire [0:1023] debug_trace;
 
-// "MIPSY" MIPS150 CPU inter-connects
+// UART crosswork
     wire M_SERIAL_RX, M_SERIAL_TX;
-
-// "PLOP" MicroBlaze CPU inter-connects
-    wire P_SERIAL1_RX, P_SERIAL1_TX; //JTAG-to-SERIAL relay UART
-    wire P_SERIAL2_RX, P_SERIAL2_TX; //Extra UART
-    wire [31: 0] P_gpi1 = 32'd0;    //IN-to-PLOP
-    wire [31: 0] P_gpo1;            //OUT-from-PLOP
+    wire P_SERIAL1_RX, P_SERIAL1_TX;
+    wire P_SERIAL2_RX, P_SERIAL2_TX;
 
 // Selector for physical serial vs. debug serial (via JTAG UART)
     wire SERIAL_JTAG;
@@ -408,21 +404,100 @@ assign video_valid = 1'b0, video = 32'd0;
 
 //TODO: Move all/most debug,BRK,PLOP into MIPSY & re-standardize ml505top.v
 
-`ifdef COLT45_PLOP
-    plop PLOP ( // Plop a helper MicroBlaze CPU (relays debugger JTAG-SERIAL link)
-        .CLOCK_REF_100MHz(user_clk_g),
-        .RESET_BOARD(USER_RST), .RESET_AUX(1'b0),
-        .MB_HALTED(), .RESET_PERIPHERAL(), //OUTs
-        // Two UARTs primary from JTAG-to-SERIAL debug link
-        .SERIAL1_RX(P_SERIAL1_RX), .SERIAL1_TX(P_SERIAL1_TX),
-        .SERIAL2_RX(P_SERIAL2_RX), .SERIAL2_TX(P_SERIAL2_TX),
-        // GPIO (32-bits each way)
-        .GPI1(P_gpi1),  .GPO1(P_gpo1)
+`ifndef __COLT45_PLOP
+    // PLOP lines
+    wire PLOP_RST_AUX, PLOP_RST_Periph;
+    wire MM0_IRQ0, MB0_IRQ1, MB0_Error, MB0_Halted;
+    wire BIOS_BRAM_Clk, BIOS_BRAM_En;
+    wire [0:3]  BIOS_BRAM_Wen;
+    wire [0:31] BIOS_BRAM_Addr;
+    wire [0:31] BIOS_BRAM_Dout, BIOS_BRAM_DIN;
+    wire BRK_BRAM_RST, BRK_BRAM_CLK, BRK_BRAM_EN;
+    wire [0: 3] BRK_BRAM_WEN;
+    wire [0:31] BRK_BRAM_ADDR;
+    wire [0:31] BRK_BRAM_DOUT, BRK_BRAM_Din;
+    wire BRK_DCR_Rst, BRK_DCR_Clk, BRK_DCR_Read, BRK_DCR_Write, BRK_DCR_ACK;
+    wire [0: 9] BRK_DCR_ABus;
+    wire [0:31] BRK_DCR_DWBus, BRK_DCR_DRBUS;
+    wire [31:0] GPI1_32, GPI2_32, GPI3_32, GPI4_32;
+    wire [31:0] GPo1_32, GPo2_32, GPo3_32, GPo4_32;
+    wire UART_PHY_RX, UART_PHY_Tx, UART_MIPSY_RX, UART_MIPSY_Tx;
+
+    plop PLOP ( // Plop in helper MicroBlaze (JTAG-SERIAL relay & BRK monitor)
+        .CLK_REF_100MHz ( user_clk_g ), //IN
+        .CLK_MIPSY      ( cpu_clk_g ), //IN
+//        .CLK_PLOP       ( plop_clk_g ), //IN
+//        .CLK_LOCKED     ( pll_lock ), //IN
+        .RST_PHY_LO     ( USER_RST ), //IN
+        .RST_AUX_HI     ( PLOP_RST_AUX ), //IN
+        .RST_Periph_HI  ( PLOP_RST_Periph ), //OUT
+
+        // PLOP microblaze_0 state
+        .MB0_IRQ0       ( MB0_IRQ0 ), //IN
+        .MB0_IRQ1       ( MB0_IRQ1 ), //IN
+        .MB0_Error      ( MB0_Error ), //OUT
+        .MB0_Halted     ( MB0_Halted ), //OUT
+
+        // Give PLOP back-door access to our BIOS ROM (BRAM)
+        .BIOS_BRAM_Clk  ( BIOS_BRAM_Clk ), //OUT
+        .BIOS_BRAM_En   ( BIOS_BRAM_En ), //OUT
+        .BIOS_BRAM_Wen  ( BIOS_BRAM_Wen ), //output [0:3]
+        .BIOS_BRAM_Addr ( BIOS_BRAM_Addr ), //output [0:31]
+        .BIOS_BRAM_DIN  ( BIOS_BRAM_DIN ), //input [0:31]
+        .BIOS_BRAM_Dout ( BIOS_BRAM_Dout ), //output [0:31]
+
+        // Memory-Map BRK registers, traces, etc.
+        .BRK_BRAM_RST   ( BRK_BRAM_RST ), //IN
+        .BRK_BRAM_CLK   ( BRK_BRAM_CLK ), //IN
+        .BRK_BRAM_EN    ( BRK_BRAM_EN ), //IN
+        .BRK_BRAM_WEN   ( BRK_BRAM_WEN ), //input [0:3]
+        .BRK_BRAM_ADDR  ( BRK_BRAM_ADDR ), //input [0:31]
+        .BRK_BRAM_Din   ( BRK_BRAM_Din ), //output [0:31]
+        .BRK_BRAM_DOUT  ( BRK_BRAM_DOUT ), //input [0:31]
+
+        // Expose BRK registers via BRK_DCR
+        .BRK_DCR_ACK    ( BRK_DCR_ACK ), //OUT
+        .BRK_DCR_DRBUS  ( BRK_DCR_DRBUS ), //input [0:31]
+        .BRK_DCR_Read   ( BRK_DCR_Read ), //OUT
+        .BRK_DCR_Write  ( BRK_DCR_Write ), //OUT
+        .BRK_DCR_ABus   ( BRK_DCR_ABus ), //output [0:9]
+        .BRK_DCR_DWBus  ( BRK_DCR_DWBus ), //output [0:31]
+        .BRK_DCR_Clk    ( BRK_DCR_Clk ), //OUT
+        .BRK_DCR_Rst    ( BRK_DCR_Rst ), //OUT
+
+         //GPIO: input/output [31:0]
+        .GPI1_32(GPI1_32), .GPI2_32(GPI2_32), .GPI3_32(GPI3_32), .GPI4_32(GPI4_32),
+        .GPo1_32(GPo1_32), .GPo2_32(GPo2_32), .GPo3_32(GPo3_32), .GPo4_32(GPo4_32),
+
+        // UARTs
+        .UART_PHY_RX      ( UART_PHY_RX ), //IN
+        .UART_PHY_Tx      ( UART_PHY_Tx ), //OUT
+        .UART_MIPSY_RX    ( UART_MIPSY_RX ), //IN
+        .UART_MIPSY_Tx    ( UART_MIPSY_Tx ) //OUT
     ) /* synthesis syn_noprune=1 */;
+
+    // PLOP patchwork
+    assign PLOP_RST_AUX = 1'b0,
+            MB0_IRQ0 = 1'b0,
+            MB0_IRQ1 = 1'b0; // PLOP_RST_Periph, MB0_Error, MB0_Halted
+    assign BIOS_BRAM_DIN = 32'd0; // ,,,
+    assign BRK_BRAM_RST = USER_RST, //TODO: Becomes our internal reset/init_done
+            BRK_BRAM_CLK = cpu_clk_g, //TODO: Consider faster clock
+            BRK_BRAM_EN = 1'b0,
+            BRK_BRAM_WEN = 4'b0000,
+            BRK_BRAM_ADDR = 32'h00000000,
+            BRK_BRAM_DOUT = 32'd0; // BRK_BRAM_Din
+    assign BRK_DCR_DRBUS = 32'd0; // ,,,
+    assign GPI1_32 = 32'd0, GPI2_32 = 32'd0, GPI3_32 = 32'd0, GPI4_32 = 32'd0; // GPo<n>_32
+
+    assign P_SERIAL1_RX = UART_PHY_Tx,
+            UART_PHY_RX = P_SERIAL1_TX,
+            P_SERIAL2_TX = UART_MIPSY_Tx,
+            UART_MIPSY_RX = P_SERIAL2_RX;
 `else
     assign P_SERIAL1_TX = 1'b1, P_SERIAL2_TX = 1'b1;
-    assign P_gpo1 = 32'd0;
 `endif
+
 
 //TODO:Overcome trouble with bitvector selection,address-order,big-case,or something
 function automatic [0:255] GET_SEGMENT (

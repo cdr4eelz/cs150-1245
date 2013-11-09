@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -buxE
 
 if   [[ "$0" == "./m" ]]; then
   D_BLD="build"
