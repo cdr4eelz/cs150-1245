@@ -41,8 +41,9 @@ localparam DD=1;
 
     assign isRType  = (_opcode_[5:0] == 6'b000000);
     assign isJType  = (_opcode_[5:1] == 5'b00001_);
-    assign isIType  = (!isRType && !isJType); //(_opcode_[5:0] !== 6'b000000) && (_opcode_[5:1] !== 5'b00001_); //(!isRType && !isJType)
+    assign isIType  = (!isRType && !isJType);
 
+    //TODO: Utilize the `TVALID(valid-expr,value) optional concat/unknown trick
     wire [ 4: 0] _rs_, _rt_, _rd_, _shamt_;
     wire [ 5: 0] _funct_;
     wire [15: 0] _immediate_;
@@ -57,28 +58,27 @@ localparam DD=1;
 
     // Pre-computations for clarity (partly distilled out by logic simplification?)
     // These characteristics could come from lookup table
-    wire #DD isMemory, isMStore, isMLoad;
-    assign isMemory    = (_opcode_[5:4] === 2'b10);
-    assign isMLoad     = (_opcode_[5:3] === 3'b100);
-    assign isMStore    = (_opcode_[5:3] === 3'b101);
-    wire #DD isIComp;
-    assign isIComp     = (_opcode_[5:3] === 3'b001);
+    wire #DD isMemory, isMStore, isMLoad, isIComp;
+    assign isMemory    = (_opcode_[5:4] == 2'b10);
+    assign isMLoad     = (_opcode_[5:3] == 3'b100);
+    assign isMStore    = (_opcode_[5:3] == 3'b101);
+    assign isIComp     = (_opcode_[5:3] == 3'b001);
     wire #DD isRShift, isRShiftI, isRShiftR, isROther;
-    assign isRShift    = (isRType && (_funct_[5:3] === 3'b000));
-    assign isRShiftI   = (isRShift && (_funct_[2] === 1'b0));
-    assign isRShiftR   = (isRShift && (_funct_[2] === 1'b1));
-    assign isROther    = (isRType && (_funct_[5:4] === 2'b10));
+    assign isRShift    = (isRType && (_funct_[5:3] == 3'b000));
+    assign isRShiftI   = (isRShift && (_funct_[2] == 1'b0));
+    assign isRShiftR   = (isRShift && (_funct_[2] == 1'b1));
+    assign isROther    = (isRType && (_funct_[5:4] == 2'b10));
     wire #DD isIJump, isRJump, isJump, isLink;
     assign isIJump     = isJType;
-    assign isRJump     = (isRType && (_funct_[5:1] === 5'b00100));
+    assign isRJump     = (isRType && (_funct_[5:1] == 5'b00100));
     assign isJump      = (isIJump || isRJump);
     assign isLink      = (isIJump && _opcode_[0]) || (isRJump && _funct_[0]); //JAL/JALR have low-bit==1
     wire #DD isBSimple, isBGELTZ, isBranch, isBranchX, isBranch0;
-    assign isBSimple   = (_opcode_[5:2] === 4'b0001);
-    assign isBGELTZ    = (_opcode_ === 6'b000001);
+    assign isBSimple   = (_opcode_[5:2] == 4'b0001);
+    assign isBGELTZ    = (_opcode_ == 6'b000001);
     assign isBranch    = (isBSimple || isBGELTZ);
-    assign isBranchX   = (_opcode_[5:1] === 5'b00010);
-    assign isBranch0   = (isBGELTZ || (_opcode_[5:1] === 5'b00011));
+    assign isBranchX   = (_opcode_[5:1] == 5'b00010);
+    assign isBranch0   = (isBGELTZ || (_opcode_[5:1] == 5'b00011));
 
 //  assign IPCODE   = (isRType) ? _funct_ : (isBGELTZ) ? _rt_ : `UNKNOWN(6);
 //  assign DEST     = (isRType) ? _rd_ : (isMLoad || isIComp) ? _rt_ : 5'd0;

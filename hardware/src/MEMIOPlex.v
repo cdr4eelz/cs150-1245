@@ -39,8 +39,8 @@ module MEMIOPlex #(
 generate if (BUFSIZE==0) begin:NOBUFF   // Direct Software-to-UART approach:
 
     // Set these up before the clock (continuous drive) so UART sees them within setup/detect time
-    assign Rx_Ready = ena && notwrite && (addra===12'h003);
-    assign Tx_Valid = ena && wea[0] && (addra===12'h002);
+    assign Rx_Ready = ena && notwrite && (addra==12'h003);
+    assign Tx_Valid = ena && wea[0] && (addra==12'h002);
     assign Tx_Data  = (Tx_Valid) ? dina[7:0] : PREMATURE_BYTE;
 
     always@(posedge clk) begin

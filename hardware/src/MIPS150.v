@@ -120,7 +120,7 @@ localparam DD=1;
     wire [31: 0] INST_DX;
     PipelineRegister #( .Width(32) )
         REG_PC_DX   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX) );
-    PipelineRegister #( .Width(32), .PreRegistered(1) ) // Registered for us in prior stage
+    PipelineRegister #( .Width(32), .LatchOnly(1) ) // Registered for us in prior stage
         REG_INST_DX ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX) );
     //NOTE: INST_DATA gets changed early by BRAM (no disable availabe) but INST_DX gets "latched" on stall!
 
@@ -128,7 +128,7 @@ localparam DD=1;
     wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
     wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
     assign REGFILE_wa = WBKReg_M_WF_, REGFILE_wd = WBKDat_M_WF_;
-    wire REGFILE_we = ~stall && (REGFILE_wd !== 0); //NOTE: wd===0 check is redundant
+    wire REGFILE_we = ~stall && (REGFILE_wd != 0); // Mute "we" if "wd"==0 for signal clarity
     RegFile regfile
     ( .clk(clk),
         // Write is synchronous
@@ -139,9 +139,9 @@ localparam DD=1;
     );
 
     // Forwarding calculation
-    wire FWD_Allow = WBKCanFWD_M_WF_;
-    wire FWD_1 = (FWD_Allow) && (REGFILE_wa === REGFILE_ra1) && (REGFILE_ra1 !== 0);
-    wire FWD_2 = (FWD_Allow) && (REGFILE_wa === REGFILE_ra2) && (REGFILE_ra2 !== 0);
+    wire FWD_Allow = WBKCanFWD_M_WF_; // Has already checked for "wa"==0 elsewhere
+    wire FWD_1 = (FWD_Allow) ? (REGFILE_wa == REGFILE_ra1) : 1'b0;
+    wire FWD_2 = (FWD_Allow) ? (REGFILE_wa == REGFILE_ra2) : 1'b0;
     wire [31: 0] #DD FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
     wire [31: 0] #DD FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 
@@ -170,13 +170,13 @@ localparam DD=1;
     wire  [31: 0]   PC_M;
     PipelineRegister #( .Width(`BUS_ICTL_width) )   // Register all controls & let unused get pruned out
         REG_IControl_M  ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M  ) );
-    PipelineRegister #( .Width(`BUS_ICTL_width), .PreRegistered(1) )    // Really, it's post-registered!
+    PipelineRegister #( .Width(`BUS_ICTL_width), .LatchOnly(1) )
         REG_IControl__M ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl__M ) );
-    PipelineRegister #( .Width(32), .PreRegistered(1) )
+    PipelineRegister #( .Width(32), .LatchOnly(1) )
         REG_MemAddr__M  ( .CPUGlobal(CPUGlobal),    .In(MemAddrDX_  ),  .Out(MemAddr__M  ) );
     PipelineRegister #( .Width(32) )
         REG_MemAddr_M   ( .CPUGlobal(CPUGlobal),    .In(MemAddrDX_  ),  .Out(MemAddr_M   ) );
-    PipelineRegister #( .Width(32), .PreRegistered(1) )
+    PipelineRegister #( .Width(32), .LatchOnly(1) )
         REG_MemWValue__M( .CPUGlobal(CPUGlobal),    .In(MemWValueDX_),  .Out(MemWValue__M) );
     PipelineRegister #( .Width(32) )
         REG_RegWValue_M ( .CPUGlobal(CPUGlobal),    .In(RegWValueDX_),  .Out(RegWValue_M ) );
@@ -206,7 +206,7 @@ localparam DD=1;
     );
 
     // Instruction fetch selection
-    wire INST_bios = (INST_ADDR[31:28] === 4'h4);
+    wire INST_bios = (INST_ADDR[31:28] == 4'h4);
     wire [31:0] INST_BR, INST_IB, INST_IC;
     assign INST_DATA = (INST_bios) ? INST_BR : INST_IB; //TODO: INST_IC
 
@@ -224,9 +224,9 @@ localparam DD=1;
     ) /* synthesis syn_noprune=1 */;
 
     assign dcache_addr = MemAddr__M,
-        dcache_we = (~stall && _hot_DC) ? _WriteMask : 4'b0000,
+        dcache_we = (~stall && _hot_DC) ? (_WriteMask) : 4'b0000,
         dcache_din = _WDataMasked,
-        dcache_re = ~stall && _hot_DC && (_WriteMask===4'b0000),
+        dcache_re = (~stall && _hot_DC) ? (_WriteMask == 4'b0000) : 1'b0,
         RData_DC = dcache_dout;
 //  assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
 
@@ -252,6 +252,7 @@ localparam DD=1;
       /*.enb(1'b1)*/ .doutb(INST_IB)
     ) /* synthesis syn_noprune=1 */;
 
+    //TODO: Split MEMIOPlex into separate RX vs TX RVA's (parameter based?)
     `BUS_SHAKE_type(8) UATX, UARX;
     MEMIOPlex iomap_uart
     ( .clk(clk), .rst(rst), .ena(~stall && _hot_IO),
@@ -261,18 +262,27 @@ localparam DD=1;
         .RVA_RX(UARX), .RVA_TX(UATX)
     );
 
+    //TODO: Make UART wrapper that takes two RVA's
+    wire Rx_Ready, Rx_Valid, Tx_Valid, Tx_Ready;
+    wire [7:0] Rx_Data, Tx_Data;
+    BUS_SHAKE_tun #(.InWidth(8)) TUN_SHAKE_Rx
+    ( ._BUS_(UARX),
+        .DataReady(Rx_Ready),
+        .DataValid(Rx_Valid), .Data(Rx_Data)
+    );
+    BUS_SHAKE_tap #(.InWidth(8)) TAP_SHAKE_Tx
+    ( ._BUS_(UATX),
+        .DataValid(Tx_Valid), .Data(Tx_Data),
+        .DataReady(Tx_Ready)
+    );
     UART #(.ClockFreq(ClockFreq)) uart
     ( .Clock(clk), .Reset(rst),
         // Receiver     (handshakes go both in/out)
         .SIn(FPGA_SERIAL_RX),
-        .DataOut(       `SHAKE_Data(        8,UARX)),
-        .DataOutValid(  `SHAKE_DataValid(   8,UARX)),
-        .DataOutReady(  `SHAKE_DataReady(   8,UARX)),
+        .DataOut(Rx_Data), .DataOutValid(Rx_Valid), .DataOutReady(Rx_Ready),
         // Transmitter  (handshakes go both in/out)
         .SOut(FPGA_SERIAL_TX),
-        .DataIn(        `SHAKE_Data(        8,UATX)),
-        .DataInValid(   `SHAKE_DataValid(   8,UATX)),
-        .DataInReady(   `SHAKE_DataReady(   8,UATX))
+        .DataIn(Tx_Data), .DataInValid(Tx_Valid), .DataInReady(Tx_Ready)
     );
 
 

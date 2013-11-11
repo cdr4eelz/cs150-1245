@@ -22,11 +22,8 @@
  PARAMETER VERSION = 2.1.0
 
 
-# FREQ_MIPSY
- PORT CLK_MIPSY = net_clk_mipsy, DIR = I, SIGIS = CLK, CLK_FREQ = 50000000
-# FREQ_PLOP
- PORT CLK_PLOP = net_clk_0, DIR = I, SIGIS = CLK, CLK_FREQ = 125000000
- PORT CLK_Locked = net_clk_locked, DIR = I
+# FREQ_REF
+ PORT CLK_REF = net_clk_ref, DIR = I, SIGIS = CLK, CLK_FREQ = 100000000
  PORT RST_PHY_LO = net_rst_phy_s, DIR = I, SIGIS = RST, RST_POLARITY = 0
  PORT RST_AUX_HI = net_rst_aux, DIR = I, SIGIS = RST, RST_POLARITY = 1
  PORT RST_Periph_HI = net_rst_periph, DIR = O, SIGIS = RST, RST_POLARITY = 1
@@ -72,11 +69,43 @@
  PORT GPo3_32 = iomodule_0_GPO3, DIR = O, VEC = [31:0]
  PORT GPo4_32 = iomodule_0_GPO4, DIR = O, VEC = [31:0]
 # ## UARTs ##
- PORT UART_PHY_RX = Uart_1_RX, DIR = I
- PORT UART_PHY_Tx = Uart_1_TX, DIR = O
- PORT UART_MIPSY_RX = Uart_2_RX, DIR = I
- PORT UART_MIPSY_Tx = Uart_2_TX, DIR = O
+ PORT UART_MIPSY_RX = Uart_1_RX, DIR = I
+ PORT UART_MIPSY_Tx = Uart_1_TX, DIR = O
+ PORT UART_PHY_RX = Uart_2_RX, DIR = I
+ PORT UART_PHY_Tx = Uart_2_TX, DIR = O
 
+
+BEGIN clock_generator
+ PARAMETER INSTANCE = clock_generator_0
+ PARAMETER C_CLKIN_FREQ = 100000000
+ PARAMETER C_CLKOUT0_FREQ = 125000000
+ PARAMETER C_CLKOUT0_PHASE = 0
+ PARAMETER C_CLKFBIN_FREQ = 125000000
+ PARAMETER C_CLKFBOUT_FREQ = 125000000
+ PARAMETER C_EXT_RESET_HIGH = 0
+ PARAMETER HW_VER = 4.03.a
+ PORT CLKIN = net_clk_ref
+ PORT CLKOUT0 = net_clk_0
+ PORT CLKFBIN = net_clock_fb
+ PORT CLKFBOUT = net_clock_fb
+ PORT RST = net_rst_phy_s
+ PORT LOCKED = Dcm_all_locked
+END
+
+BEGIN proc_sys_reset
+ PARAMETER INSTANCE = proc_sys_reset_0
+ PARAMETER C_EXT_RESET_HIGH = 0
+ PARAMETER HW_VER = 3.00.a
+ PARAMETER C_NUM_BUS_RST = 1
+ PORT Slowest_sync_clk = net_clk_0
+ PORT MB_Debug_Sys_Rst = mdm_0_Debug_SYS_Rst
+ PORT Dcm_locked = Dcm_all_locked
+ PORT MB_RESET = net_mb_reset
+ PORT Peripheral_Reset = net_rst_periph
+ PORT Aux_Reset_In = net_rst_aux
+ PORT Ext_Reset_In = net_rst_phy_s
+ PORT Bus_Struct_Reset = net_rst_bus
+END
 
 BEGIN microblaze
  PARAMETER INSTANCE = microblaze_0
@@ -125,7 +154,7 @@ BEGIN microblaze
  BUS_INTERFACE INTERRUPT = mipsy_iomodule_INTERRUPT
  PORT MB_Error = microblaze_0_error
  PORT MB_Halted = microblaze_0_halted
- PORT MB_RESET = sys_rst_mb
+ PORT MB_RESET = net_mb_reset
 END
 
 BEGIN plb_v46
@@ -174,21 +203,6 @@ BEGIN bram_block
  PARAMETER HW_VER = 1.00.a
  BUS_INTERFACE PORTA = ilmb_port
  BUS_INTERFACE PORTB = dlmb_port
-END
-
-BEGIN proc_sys_reset
- PARAMETER INSTANCE = proc_sys_reset_0
- PARAMETER C_EXT_RESET_HIGH = 0
- PARAMETER HW_VER = 3.00.a
- PARAMETER C_NUM_BUS_RST = 1
- PORT Slowest_sync_clk = net_clk_mipsy
- PORT MB_Debug_Sys_Rst = mdm_0_Debug_SYS_Rst
- PORT Dcm_locked = net_clk_locked
- PORT MB_RESET = sys_rst_mb
- PORT Peripheral_Reset = net_rst_periph
- PORT Aux_Reset_In = net_rst_aux
- PORT Ext_Reset_In = net_rst_phy_s
- PORT Bus_Struct_Reset = net_rst_bus
 END
 
 BEGIN mdm
@@ -268,9 +282,10 @@ BEGIN iomodule
 END
 
 BEGIN xps_uartlite
- PARAMETER INSTANCE = xps_uartlite_phy
+ PARAMETER INSTANCE = xps_uartlite_mipsy
  PARAMETER HW_VER = 1.02.a
  PARAMETER C_BAUDRATE = 115200
+ PARAMETER C_DATA_BITS = 8
  PARAMETER C_USE_PARITY = 0
  PARAMETER C_ODD_PARITY = 0
  PARAMETER C_BASEADDR = 0x84410000
@@ -282,10 +297,9 @@ BEGIN xps_uartlite
 END
 
 BEGIN xps_uartlite
- PARAMETER INSTANCE = xps_uartlite_mipsy
+ PARAMETER INSTANCE = xps_uartlite_phy
  PARAMETER HW_VER = 1.02.a
  PARAMETER C_BAUDRATE = 115200
- PARAMETER C_DATA_BITS = 8
  PARAMETER C_USE_PARITY = 0
  PARAMETER C_ODD_PARITY = 0
  PARAMETER C_BASEADDR = 0x84420000

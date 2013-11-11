@@ -107,34 +107,15 @@ module DumpMemCPU #(
       /*.enb(1'b1),*/       .doutb(OUT_DI)
     );
 
-    // Test the ready-valid handshake tun/tap bus stuff too...
-    `BUS_SHAKE_type(8)  UARX, UATX;
-
-    BUS_SHAKE_tun #( .InWidth(8) )
-    TUN_UATX ( ._BUS_(UATX),
-        .Data(      TX_Data ),
-        .DataValid( TX_Valid),
-        .DataReady( TX_Ready)
-    );
-
-    BUS_SHAKE_tap #( .InWidth(8) )
-    TAP_UARX ( ._BUS_(UARX),
-        .DataReady( 1'b1), // We were born ready!
-        .DataValid(     ), // (ignore)
-        .Data(          )  // (ignore)
-    );
-
     UART #(.ClockFreq(ClockFreq)) uart
     (   .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
         // Transmitter  (handshakes go both in/out)
-        .DataIn(        `SHAKE_Data(        8,UATX)),
-        .DataInValid(   `SHAKE_DataValid(   8,UATX)),
-        .DataInReady(   `SHAKE_DataReady(   8,UATX)),
+        .DataInReady(TX_Ready),
+        .DataInValid(TX_Valid), .DataIn(TX_Data),
         // Receiver     (handshakes go both in/out)
-        .DataOut(       `SHAKE_Data(        8,UARX)),
-        .DataOutValid(  `SHAKE_DataValid(   8,UARX)),
-        .DataOutReady(  `SHAKE_DataReady(   8,UARX))
+        .DataOutReady(1'b1), // We were *born* ready!
+        .DataOutValid(  ), .DataOut(  ) // ...but insolent :(
     );
 
 // synthesis translate_off

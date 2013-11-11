@@ -7,16 +7,16 @@ module PipelineRegisterTestbench;
     reg [3:0] in;
     wire [3:0] outA, outB;
     `BUS_CPUGlobal_type CPUGlobal;
-    
-    PipelineRegister    #( .PreRegistered(0), .Width(4), .ResetValue(4'hE)
+
+    PipelineRegister    #( .LatchOnly(0), .Width(4), .ResetValue(4'hE)
     ) DUT_REGGIE        ( .CPUGlobal(CPUGlobal),
         .In(in),    .Out(outA)
     );
-    PipelineRegister    #( .PreRegistered(1), .Width(4), .ResetValue(4'h3)
+    PipelineRegister    #( .LatchOnly(1), .Width(4), .ResetValue(4'h3)
     ) DUT_LATCHY        ( .CPUGlobal(CPUGlobal),
         .In(in),    .Out(outB)
     );
-    
+
     integer testnum;
     initial testnum=0;
 
@@ -30,7 +30,7 @@ module PipelineRegisterTestbench;
         end
         testnum = testnum + 1;
     end endtask
-    
+
     initial begin
         #1; WANT(   4'bx,   4'bx    );
         clk = 0;
@@ -90,10 +90,10 @@ module PipelineRegisterTestbench;
 
         $finish();
     end
-    
+
     BUS_CPUGlobal_tun BUS_CPUGlobal
     ( ._BUS_(CPUGlobal),
         .CLK(clk), .RST(rst), .STL(stl)
     );
-    
+
 endmodule

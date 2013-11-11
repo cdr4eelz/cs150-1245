@@ -74,7 +74,7 @@ module ml505top
   inout         IIC_SDA_VIDEO
 );
 
-    wire button_reset, rst_or_init;
+    wire button_reset, rst_or_init, rst;
     wire button_stall, any_stall;
 
 // BRK tap
@@ -87,7 +87,7 @@ module ml505top
     wire P_SERIAL2_RX, P_SERIAL2_TX;
 
 // Selector for physical serial vs. debug serial (via JTAG UART)
-    wire SERIAL_JTAG;
+    wire SERIAL_JTAG, BRK_MASTER;
 
 
   reg [3:0]  reset_r = 4'b0;
@@ -96,92 +96,10 @@ module ml505top
   wire [3:0]  next_reset_r;
   wire [25:0] next_count_r;
 
-  wire user_clk_g;
-
-  wire cpu_clk;
-  wire cpu_clk_g;
-
-  wire clk0;
-  wire clk0_g;
-
-  wire clk90;
-  wire clk90_g;
-
-  wire clkdiv0;
-  wire clkdiv0_g;
-
-  wire clk200;
-  wire clk200_g;
-
-  wire pll_lock;
-
-  wire clk50;
-  wire clk50_g;
-
-  PLL_BASE
-  #(
-    .BANDWIDTH("OPTIMIZED"),
-    .CLKIN_PERIOD(10.0),    // 100 MHz
-    .DIVCLK_DIVIDE(4),      //  / 4
-    .CLKFBOUT_MULT(24),     //  * 24
-    .CLKFBOUT_PHASE(0.0),
-// --=> 100/4*24 = 600 MHz internal reference
-
-//cpu_clk: 600 / 12 = 50 MHz
-    .CLKOUT0_DIVIDE(12),
-    .CLKOUT0_DUTY_CYCLE(0.5),
-    .CLKOUT0_PHASE(0.0),
-
-//clk200: 600 / 3 => 200 MHz
-    .CLKOUT1_DIVIDE(3),
-    .CLKOUT1_DUTY_CYCLE(0.5),
-    .CLKOUT1_PHASE(0.0),
-
-//clk0: 600 / 3 => 200 MHz 50/50 @0 deg
-    .CLKOUT2_DIVIDE(3),
-    .CLKOUT2_DUTY_CYCLE(0.5),
-    .CLKOUT2_PHASE(0.0),
-
-//clk90: 600 / 3 => 200 MHz 50/50 @90 deg
-    .CLKOUT3_DIVIDE(3),
-    .CLKOUT3_DUTY_CYCLE(0.5),
-    .CLKOUT3_PHASE(90.0),
-
-//clkdiv0: 600 / 6 => 100 MHz 50/50 @0 deg
-    .CLKOUT4_DIVIDE(6),
-    .CLKOUT4_DUTY_CYCLE(0.5),
-    .CLKOUT4_PHASE(0.0),
-
-//clk50: 600 / 12 => 50 MHz 50/50 @0 deg
-    .CLKOUT5_DIVIDE(12),
-    .CLKOUT5_DUTY_CYCLE(0.5),
-    .CLKOUT5_PHASE(0.0),
-
-    .COMPENSATION("SYSTEM_SYNCHRONOUS"),
-    .REF_JITTER(0.100)
-  )
-  user_clk_pll
-  (
-    .CLKFBOUT(pll_fb),
-    .CLKOUT0(cpu_clk),
-    .CLKOUT1(clk200),
-    .CLKOUT2(clk0),
-    .CLKOUT3(clk90),
-    .CLKOUT4(clkdiv0),
-    .CLKOUT5(clk50),
-    .LOCKED(pll_lock),
-    .CLKFBIN(pll_fb),
-    .CLKIN(user_clk_g),
-    .RST(USR_RST) //WAS: 1'b0 (does it hurt to use USER_RST?)
-  );
-
-  IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
-  BUFG  cpu_clk_buf  ( .I(cpu_clk),  .O(cpu_clk_g)  );
-  BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );
-  BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
-  BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
-  BUFG  clk200_buf   ( .I(clk200),   .O(clk200_g)   );
-  BUFG  clkdiv50_buf ( .I(clk50),    .O(clk50_g)    );
+    // Global clock lines (use the _g since are buffered)
+    wire user_clk_g, pll_lock;
+    wire clk0_g, clk90_g, clkdiv0_g, clk200_g, clk50_g;
+    wire cpu_clk_g, plop_clk_g; //For the MIPSY & PLOP
 
   always @(posedge cpu_clk_g)
   begin
@@ -405,7 +323,7 @@ assign video_valid = 1'b0, video = 32'd0;
 //TODO: Move all/most debug,BRK,PLOP into MIPSY & re-standardize ml505top.v
 
 `ifndef __COLT45_PLOP
-    // PLOP lines
+    // Global PLOP lines
     wire PLOP_RST_AUX, PLOP_RST_Periph;
     wire MM0_IRQ0, MB0_IRQ1, MB0_Error, MB0_Halted;
     wire BIOS_BRAM_Clk, BIOS_BRAM_En;
@@ -424,10 +342,10 @@ assign video_valid = 1'b0, video = 32'd0;
     wire UART_PHY_RX, UART_PHY_Tx, UART_MIPSY_RX, UART_MIPSY_Tx;
 
     plop PLOP ( // Plop in helper MicroBlaze (JTAG-SERIAL relay & BRK monitor)
-        .CLK_REF_100MHz ( user_clk_g ), //IN
+//      .CLK_REF_100MHz ( user_clk_g ), //IN
         .CLK_MIPSY      ( cpu_clk_g ), //IN
-//        .CLK_PLOP       ( plop_clk_g ), //IN
-//        .CLK_LOCKED     ( pll_lock ), //IN
+        .CLK_PLOP       ( plop_clk_g ), //IN
+        .CLK_Locked     ( pll_lock ), //IN
         .RST_PHY_LO     ( USER_RST ), //IN
         .RST_AUX_HI     ( PLOP_RST_AUX ), //IN
         .RST_Periph_HI  ( PLOP_RST_Periph ), //OUT
@@ -476,13 +394,15 @@ assign video_valid = 1'b0, video = 32'd0;
         .UART_MIPSY_Tx    ( UART_MIPSY_Tx ) //OUT
     ) /* synthesis syn_noprune=1 */;
 
+
+
     // PLOP patchwork
     assign PLOP_RST_AUX = 1'b0,
             MB0_IRQ0 = 1'b0,
             MB0_IRQ1 = 1'b0; // PLOP_RST_Periph, MB0_Error, MB0_Halted
     assign BIOS_BRAM_DIN = 32'd0; // ,,,
     assign BRK_BRAM_RST = USER_RST, //TODO: Becomes our internal reset/init_done
-            BRK_BRAM_CLK = cpu_clk_g, //TODO: Consider faster clock
+            BRK_BRAM_CLK = cpu_clk_g, //TODO: Consider faster clock just for BRK
             BRK_BRAM_EN = 1'b0,
             BRK_BRAM_WEN = 4'b0000,
             BRK_BRAM_ADDR = 32'h00000000,
@@ -490,14 +410,44 @@ assign video_valid = 1'b0, video = 32'd0;
     assign BRK_DCR_DRBUS = 32'd0; // ,,,
     assign GPI1_32 = 32'd0, GPI2_32 = 32'd0, GPI3_32 = 32'd0, GPI4_32 = 32'd0; // GPo<n>_32
 
-    assign P_SERIAL1_RX = UART_PHY_Tx,
-            UART_PHY_RX = P_SERIAL1_TX,
-            P_SERIAL2_TX = UART_MIPSY_Tx,
-            UART_MIPSY_RX = P_SERIAL2_RX;
+    // Simple renaming/passthrough for ml505top names (appropriate for sex of connection)
+    assign  UART_MIPSY_RX = P_SERIAL1_RX,
+            P_SERIAL1_TX  = UART_MIPSY_Tx,
+            UART_PHY_RX   = P_SERIAL2_RX,
+            P_SERIAL2_TX = UART_PHY_Tx;
 `else
     assign P_SERIAL1_TX = 1'b1, P_SERIAL2_TX = 1'b1;
 `endif
 
+
+/*  BRK coordinator:
+
+    Intercept/Trace relative to BRK (towards CPU):
+        debug_reset-o1
+        debug_stall-o1
+        debug_brk-o1
+        debug_jog-o1
+        trace-i1024
+    { If need to tap elements outside CPU, perhaps arrange passthrough or tap? }
+
+    Control/Reporting relative to BRK (towards Monitor):
+        action-i8:
+        status-o8:
+        enable-i8:
+        hit-o8:
+        trace-o1024: (interrogated with dsel-i5/dval-o32 or ssel-i2/sval-o256)
+        match-i256: (first 4 words simple equality w/trace; ideal allows fancier masking/edges)
+        record-oBRAM: (accumulated traces or watched items at real-speed, expose full BRAM?)
+    Convenient to pack action/enable/msel/dsel/ssel/rsel/ser into one 32-bit input!
+    { Can we accumulate snapshots at "real time" big/filtered enough to be useful (or just use CS)? }
+    { Is realistic to dump trace(s) as serial like I2C? }
+    { Little from enclosing environment, perhaps DDR/DVI and SW/LED stuff? }
+    Layout "trace" as 4 segments (256-bit) x 8 words (32-bit): (current is loosly Global/WF|DX|M|rare)
+        seg0: Global/Inter-Stage
+        seg1: StageWF
+        seg2: StageDX
+        seg3: StageM
+*/
 
 //TODO:Overcome trouble with bitvector selection,address-order,big-case,or something
 function automatic [0:255] GET_SEGMENT (
@@ -531,35 +481,6 @@ function automatic [0:31] GET_DATUM (
         endcase
     end
 endfunction
-
-/*  BRK coordinator:
-
-    Intercept/Trace relative to BRK (towards CPU):
-        debug_reset-o1
-        debug_stall-o1
-        debug_brk-o1
-        debug_jog-o1
-        trace-i1024
-    { If need to tap elements outside CPU, perhaps arrange passthrough or tap? }
-
-    Control/Reporting relative to BRK (towards Monitor):
-        action-i8:
-        status-o8:
-        enable-i8:
-        hit-o8:
-        trace-o1024: (interrogated with dsel-i5/dval-o32 or ssel-i2/sval-o256)
-        match-i256: (first 4 words simple equality w/trace; ideal allows fancier masking/edges)
-        record-oBRAM: (accumulated traces or watched items at real-speed, expose full BRAM?)
-    Convenient to pack action/enable/msel/dsel/ssel/rsel/ser into one 32-bit input!
-    { Can we accumulate snapshots at "real time" big/filtered enough to be useful (or just use CS)? }
-    { Is realistic to dump trace(s) as serial like I2C? }
-    { Little from enclosing environment, perhaps DDR/DVI and SW/LED stuff? }
-    Layout "trace" as 4 segments (256-bit) x 8 words (32-bit): (current is loosly Global/WF|DX|M|rare)
-        seg0: Global/Inter-Stage
-        seg1: StageWF
-        seg2: StageDX
-        seg3: StageM
-*/
 
 `ifndef __COLT45_SCOPE
     wire [35: 0] CS0, CS1; //, CS2;
@@ -644,5 +565,45 @@ endfunction
     assign M_SERIAL_RX    = (SERIAL_JTAG) ? P_SERIAL1_TX    : FPGA_SERIAL_RX;
     assign P_SERIAL1_RX   = (SERIAL_JTAG) ? M_SERIAL_TX     : P_SERIAL2_TX;
     assign P_SERIAL2_RX   = (SERIAL_JTAG) ? FPGA_SERIAL_RX  : P_SERIAL1_TX;
+    //NOTE: Because we are AT the border between external and internal UART
+    //      connections, the FPGA_SERIAL_xx names appear flipped.
+
+
+    // Raw clock lines (unbuffered, don't use elsewhere)
+    wire pll_fb, clk50, clk0, clk90, clkdiv0, clk200, clk125;
+    PLL_BASE #(
+        .BANDWIDTH("OPTIMIZED"), .CLKIN_PERIOD(10.0), //Input Freq 100MHz
+        .DIVCLK_DIVIDE(2), .CLKFBOUT_MULT(20), .CLKFBOUT_PHASE(0.0),
+        //INTERNAL REFERENCE: --=> 100 / 2 * 20 = 1000 MHz (basis for each below):
+
+        .CLKOUT0_DIVIDE(20), .CLKOUT0_DUTY_CYCLE(0.5), .CLKOUT0_PHASE(0.0),
+        //clk50/cpu_clk: 1000 / 20 = 50 MHz
+        .CLKOUT1_DIVIDE(5), .CLKOUT1_DUTY_CYCLE(0.5), .CLKOUT1_PHASE(0.0),
+        //clk200: 1000 / 5 => 200 MHz
+        .CLKOUT2_DIVIDE(5), .CLKOUT2_DUTY_CYCLE(0.5), .CLKOUT2_PHASE(0.0),
+        //clk0: 1000 / 5 => 200 MHz 50/50 @0 deg
+        .CLKOUT3_DIVIDE(5), .CLKOUT3_DUTY_CYCLE(0.5), .CLKOUT3_PHASE(90.0),
+        //clk90: 1000 / 5 => 200 MHz 50/50 @90 deg
+        .CLKOUT4_DIVIDE(10), .CLKOUT4_DUTY_CYCLE(0.5), .CLKOUT4_PHASE(0.0),
+        //clkdiv0: 1000 / 10 => 100 MHz 50/50 @0 deg
+        .CLKOUT5_DIVIDE(8), .CLKOUT5_DUTY_CYCLE(0.5), .CLKOUT5_PHASE(90.0),
+        //clk125: 1000 / 8 => 125 MHz 50/50 @90 deg
+        .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
+    ) user_clk_pll (
+        .CLKIN(user_clk_g), .RST(USER_RST), //WAS: 1'b0
+        .CLKOUT0(clk50), .CLKOUT1(clk200), .CLKOUT2(clk0),
+        .CLKOUT3(clk90), .CLKOUT4(clkdiv0), .CLKOUT5(clk125),
+        .CLKFBIN(pll_fb), .CLKFBOUT(pll_fb), .LOCKED(pll_lock)
+    );
+
+    // Buffer reset/clocks for general use
+    IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
+    BUFG  cpu_clk_buf  ( .I(clk50),    .O(cpu_clk_g)  );
+    BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );
+    BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
+    BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
+    BUFG  clk200_buf   ( .I(clk200),   .O(clk200_g)   );
+    BUFG  clkdiv50_buf ( .I(clk50),    .O(clk50_g)    );
+    BUFG  clk125_buf   ( .I(clk125),   .O(plop_clk_g)   );
 
 endmodule

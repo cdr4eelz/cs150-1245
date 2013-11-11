@@ -1,5 +1,9 @@
+//TODO: Rename this to generic "globals" to be included everywhere that matters!
+
 `ifndef CPUBUSSES_VH
 `define CPUBUSSES_VH
+
+//TODO: Tack on "valid" bit to key control lines/values instead/in-addition-to `UNKNOWN trick.
 
 // Useful for tagging signals (especially bus borne signals) with a foul state in simulation
 `define NOUNKLE         1
@@ -36,10 +40,5 @@
 `define BUS_SHAKE_type( DIw)    wire [1+(DIw)+1 -1:0]
 `define SHAKE_tunIN(    DIw,BUS)BUS [1+(DIw)+1 -1:1]
 `define SHAKE_tunOUT(   DIw,BUS)BUS [1 -1:0]
-
-//TODO: Remove these and insist on tun/tap access only
-`define SHAKE_DataValid(    DIw,BUS)    BUS[1+(DIw)+1 -1: (DIw)+1]
-`define SHAKE_Data(         DIw,BUS)    BUS[  (DIw)+1 -1:       1]
-`define SHAKE_DataReady(    DIw,BUS)    BUS[        1 -1:       0]
 
 `endif //CPUBUSSES_VH

@@ -30,12 +30,12 @@ module StageM (
 */
 // _IControl & IControl taps
     wire [1:0] _DataWidth;
-    wire _isWrite, _isRead;
+    wire _isMemWrite, _isMemRead;
     BUS_ICTL_tap TAP__ICTL
     ( ._BUS_(_IControl),    // Explicitly list unused taps (helps warnings)
-        .MemWrite(_isWrite), .MemToReg(_isRead), .DataWidth(_DataWidth),
-        .DestReg(),.Link(),
-        .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.MSigned(),.CmpOp(),.Jump(),.JR()
+        .MemToReg(_isMemRead), .DataWidth(_DataWidth),
+        .MemWrite(_isMemWrite), .DestReg(),
+        .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.MSigned(),.CmpOp(),.Jump(),.JR(),.Link()
     );
     wire  [ 3: 0] _Target   = _MemAddr[31:28];
     wire  [ 1: 0] _SubAddr  = _MemAddr[ 1: 0];
@@ -44,32 +44,32 @@ module StageM (
 // Compute some mask bytes/bits/values
     assign _WDataMasked = (_MemWValue) << (_SubShift*8) >> (_SubAddr*8);
     assign _ByteMask    = (   4'b1111) << (_SubShift  ) >> (_SubAddr  );
-    assign _WriteMask   = (_isWrite) ? _ByteMask : 4'b0000;
+    assign _WriteMask   = (_isMemWrite) ? _ByteMask : 4'b0000;
 
 always @(*) begin
     _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0; _hot_IC=1'b0; _hot_DB=1'b0; _hot_IB=1'b0;
-    if (_isRead || _isWrite) case (_Target)
+    if (_isMemRead || _isMemWrite) case (_Target)
         4'b1000: _hot_IO = 1'b1;
-        4'b0100: _hot_BR = !_isWrite;
+        4'b0100: _hot_BR = !_isMemWrite;
 `ifndef COLT45_pre2
         4'b0001: _hot_DC = 1'b1;
-        4'b0010: _hot_IC = _isWrite && PC[30];
+        4'b0010: _hot_IC = _isMemWrite && PC[30];
         4'b0011: begin
-            _hot_DC = 1'b1; _hot_IC = _isWrite && PC[30];
+            _hot_DC = 1'b1; _hot_IC = _isMemWrite && PC[30];
         end
 `ifndef COLT45_STRICT
 //EXTRA: Scratchpad-RAM
         4'b0101: _hot_DB = 1'b1;
-        4'b0110: _hot_IB = _isWrite && PC[30];
+        4'b0110: _hot_IB = _isMemWrite && PC[30];
         4'b0111: begin
-            _hot_DB = 1'b1; _hot_IB =  _isWrite && PC[30];
+            _hot_DB = 1'b1; _hot_IB =  _isMemWrite && PC[30];
         end
 `endif
 `else
         4'b0001: _hot_DB = 1'b1;
-        4'b0010: _hot_IB = _isWrite;
+        4'b0010: _hot_IB = _isMemWrite;
         4'b0011: begin
-            _hot_DB = 1'b1; _hot_IB = _isWrite;
+            _hot_DB = 1'b1; _hot_IB = _isMemWrite;
         end
 `endif
     endcase
@@ -81,13 +81,13 @@ end
 
 // _IControl & IControl taps
     wire [1:0] DataWidth;
-    wire isWrite, isRead;
+    wire isMemRead;
     wire [4:0] DestReg;
     BUS_ICTL_tap TAP_ICTL
     ( ._BUS_(IControl), // Explicitly list unused taps (helps warnings)
-        .MemWrite(isWrite), .MemToReg(isRead), .DataWidth(DataWidth),
-        .DestReg(DestReg), .Link(),
-        .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.CmpOp(),.Jump(),.JR(),.MSigned()
+        .MemToReg(isMemRead), .DataWidth(DataWidth),
+        .MemWrite(), .DestReg(DestReg),
+      .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.CmpOp(),.Jump(),.JR(),.MSigned(),.Link()
     );
     wire  [ 3: 0] Target   = MemAddr[31:28];
     wire  [ 1: 0] SubAddr  = MemAddr[ 1: 0];
@@ -108,13 +108,15 @@ end
         default: DataRead = `UNKNOWN(32);
     endcase // CAUTIOUS trapping of EVERY case
 
-    wire [31: 0] DataLoad = DataRead << (SubAddr*8) >> (SubShift*8);
+    wire [31: 0] DataLoad = DataRead << (SubAddr*8) >> (SubShift*8); //TODO: Use simpler masking
 
-    // Might divorce WBK from FWD stuff more fully to clarify slightly different paths
-    assign WBK_Reg_ = DestReg; // Expected to be zero when no writeback
-    assign WBK_Val_ = (isRead) ? DataLoad : RegWValue; //Jump-Link already hijacked RegWValue
-    assign WBK_CanFWD_ = !isRead && (DestReg !== 0);
-
-
+    //TODO: Maybe divorce WBK from FWD stuff more fully to clarify slightly different paths
+    assign WBK_Reg_     = DestReg; // Expected to be zero when no writeback is happening
+    assign WBK_Val_     = (WBK_Reg_ != 5'd0)
+                            ? ( (isMemRead) ? DataLoad : RegWValue )
+                            : `UNKNOWN(32); // Jump-Link could inject RegWValue
+    assign WBK_CanFWD_  = (WBK_Reg_ != 5'd0)
+                            ? ( !isMemRead )
+                            : `UNKNOWN(32); // 
 
 endmodule

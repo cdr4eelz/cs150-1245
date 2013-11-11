@@ -119,18 +119,29 @@ module DumpMEMIOCPU #(
         .RVA_TX (UATX), .RVA_RX(UARX)
     );
 
+    //TODO: Use UART wrapper that takes two RVA's
+    wire Rx_Ready, Rx_Valid, Tx_Valid, Tx_Ready;
+    wire [7:0] Rx_Data, Tx_Data;
+    BUS_SHAKE_tun #(.InWidth(8)) TUN_SHAKE_Rx
+    ( ._BUS_(UARX),
+        .DataReady(Rx_Ready),
+        .DataValid(Rx_Valid), .Data(Rx_Data)
+    );
+    BUS_SHAKE_tap #(.InWidth(8)) TAP_SHAKE_Tx
+    ( ._BUS_(UATX),
+        .DataValid(Tx_Valid), .Data(Tx_Data),
+        .DataReady(Tx_Ready)
+    );
     UART #(.ClockFreq(ClockFreq)) uart
     ( .Clock(clk), .Reset(rst),
-        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
-        // Transmitter  (handshakes go both in/out)
-        .DataIn(        `SHAKE_Data(        8,UATX)),
-        .DataInValid(   `SHAKE_DataValid(   8,UATX)),
-        .DataInReady(   `SHAKE_DataReady(   8,UATX)),
         // Receiver     (handshakes go both in/out)
-        .DataOut(       `SHAKE_Data(        8,UARX)),
-        .DataOutValid(  `SHAKE_DataValid(   8,UARX)),
-        .DataOutReady(  `SHAKE_DataReady(   8,UARX))
+        .SIn(FPGA_SERIAL_RX),
+        .DataOut(Rx_Data), .DataOutValid(Rx_Valid), .DataOutReady(Rx_Ready),
+        // Transmitter  (handshakes go both in/out)
+        .SOut(FPGA_SERIAL_TX),
+        .DataIn(Tx_Data), .DataInValid(Tx_Valid), .DataInReady(Tx_Ready)
     );
+
 
 // synthesis translate_off
 generate if (COLT45_STEPMAX > 0) begin:_STEPS_

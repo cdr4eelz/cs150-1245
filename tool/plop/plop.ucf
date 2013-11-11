@@ -1,0 +1,33 @@
+
+## Clock comains related to the PLOP ##
+#
+# PORT CLK_REF   = net_clk_ref, DIR = I, SIGIS = CLK, CLK_FREQ = 100000000
+# PORT CLK_MIPSY = net_clk_ref, DIR = I, SIGIS = CLK, CLK_FREQ =  50000000
+# PORT CLK_PLOP  = net_clk_ref, DIR = I, SIGIS = CLK, CLK_FREQ = 125000000
+#
+#Net CLK_REF                 TNM_NET= ref_clk_tnm;
+#TIMESPEC TS_ref_clk_tnm     =PERIOD  ref_clk_tnm    10 ns   HIGH 50%;
+#Net CLK_MIPSY               TNM_NET= mipsy_clk_tnm;
+#TIMESPEC TS_mipsy_clk_tnm   =PERIOD  mipsy_clk_tnm  TS_ref_clk_tmn / 2;
+#Net CLK_PLOP                TNM_NET= plop_clk_tnm;
+#TIMESPEC TS_plop_clk_tnm    =PERIOD  plop_clk_tnm  TS_ref_clk_tmn * 1.25;
+
+# Bus timings coming in/out
+# PORT BIOS_BRAM_Clk = bram_bios_Clk_A,      DIR = O, SIGIS = CLK, CLK_FREQ = 125000000
+# PORT BRK_BRAM_CLK  = bram_brk_BRAM_Clk_B,  DIR = I, SIGIS = CLK, CLK_FREQ = 50000000
+# PORT BRK_DCR_Clk   = mipsy_dcr_PLB_dcrClk, DIR = O, SIGIS = CLK, CLK_FREQ = 125000000
+#
+# Do these belong directly IN the driving net rather than simply having related timing???
+#Net BIOS_BRAM_Clk   TNM_NET = biosbr_clk_tnm;
+#Net BRK_BRAM_CLK    TNM_NET = brkbr_clk_tnm;
+#Net BRK_DCR_Clk     TNM_NET = brkdcr_clk_tnm;
+#TIMESPEC TS_biosbr_clk_tnm  = PERIOD biosbr_clk_tnm TS_plop_clk_tnm;
+#TIMESPEC TS_brkbr_clk_tnm   = PERIOD brkbr_clk_tnm  TS_mipsy_clk_tnm;
+#TIMESPEC TS_brkdcr_clk_tnm  = PERIOD brkdcr_clk_tnm TS_plop_clk_tnm;
+
+
+## Resets fed to the PLOP ##
+#
+Net RST_PHY_LO TIG;    Net RST_AUX_HI TIG;       Net MB0_IRQ0 TIG;
+Net MB0_IRQ1 TIG;      Net BIOS_BRAM_Rst TIG;    Net BRK_BRAM_RST TIG;
+Net BRK_DCR_Rst TIG;      ## Put UARTS into TIG???

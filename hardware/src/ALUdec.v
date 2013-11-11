@@ -18,7 +18,7 @@ module ALUdec(
 // ALU_LUI,ALU_SLL,ALU_SRL,ALU_SRA,ALU_NOR,ALU_XXX
 always @(*) begin
     ALUop = `ALU_XXX;
-    if (opcode !== 6'bz && opcode !== 6'bx) case (opcode)
+    case (opcode)
         // R-type (use funct)
         `RTYPE: begin case(funct)
             `SLL:   ALUop = `ALU_SLL;
@@ -56,7 +56,8 @@ always @(*) begin
         `J, `JAL, `BEQ, `BNE, `BLEZ, `BGTZ, `BLTZ: // See JUMP-R R-types above
             ALUop = `ALU_XXX;
 
-        default: $display("Untrapped ALU op: opcode=%h  @%t", opcode, $time);
+        default:
+            $display("Untrapped ALU op: opcode=%h  @%t", opcode, $time);
     endcase
 end
 

@@ -1,6 +1,7 @@
 -w
 -logic_opt off
--ol std
+-timing
+-ol high
 -t 1
 -register_duplication off
 -global_opt off
@@ -10,4 +11,3 @@
 -pr off
 -lc off
 -power off
-
