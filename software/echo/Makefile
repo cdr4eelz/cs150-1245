@@ -1,4 +1,4 @@
 TARGET ?= echo
-LDSTYLE ?= inject_bram
+LDSTYLE ?= as_bios
 
 include ../Makefile.llvm.in

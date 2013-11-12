@@ -6,14 +6,33 @@
 
 #define DSTR "This is just a simple test. Memory contents are echoed to UART constantly. Ideally the values will make it. Reset can be an issue but we shall cee (sic).  "
 const char rodata[] = "READONLY: " DSTR;
-char data[] = "DATA: " DSTR;
+char data[] = "xyz";
+
+void send(char ch);
+void copy(char *dest, const char*source);
+
 
 int main(void) // Could ahve _start pass some basic info
 {
-	const char *cp = (const char *) data; //0x10000000;
-	for ( ; ; ) {
-		while (!TRAN_CTRL) ;
-		TRAN_DATA = *cp++;
-	}
+	const *cp = (const char *)data;
+
+	do {
+		send(']'); send('[');
+	} while (1);
+	copy(data, rodata);
+	
+	for ( ; ; ) send(*cp++);
+
 	return 0;
+}
+
+void send(char ch)
+{
+	while (!TRAN_CTRL);
+	TRAN_DATA = (unsigned char)ch;
+}
+
+void copy(char *dp, const char *sp)
+{
+	for ( ; (*dp++ = *sp++) != 0 ; );
 }
