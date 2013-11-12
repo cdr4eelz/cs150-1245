@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>plop_bsp</name>
+	<name>plop505top_bsp</name>
 	<comment></comment>
 	<projects>
-		<project>plop_hw_ml505top</project>
+		<project>plop505top_hw</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
@@ -24,10 +24,6 @@
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.build.command</key>
 					<value>make</value>
-				</dictionary>
-				<dictionary>
-					<key>org.eclipse.cdt.make.core.build.location</key>
-					<value></value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.build.target.auto</key>

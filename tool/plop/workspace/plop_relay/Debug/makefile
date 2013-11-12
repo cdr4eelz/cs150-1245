@@ -25,38 +25,38 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 ELFSIZE += \
-plop.elf.size \
+plop_relay.elf.size \
 
 ELFCHECK += \
-plop.elf.elfcheck \
+plop_relay.elf.elfcheck \
 
 
 # All Target
-all: plop.elf secondary-outputs
+all: plop_relay.elf secondary-outputs
 
 # Tool invocations
-plop.elf: $(OBJS) ../src/lscript.ld $(USER_OBJS)
+plop_relay.elf: $(OBJS) ../src/lscript.ld $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MicroBlaze gcc linker'
-	mb-gcc -Wl,-T -Wl,../src/lscript.ld -L../../plop_bsp/microblaze_0/lib -mxl-barrel-shift -mxl-pattern-compare -mcpu=v8.50.b -mno-xl-soft-mul -Wl,--no-relax -Wl,--gc-sections -o "plop.elf" $(OBJS) $(USER_OBJS) $(LIBS)
+	mb-gcc -Wl,-T -Wl,../src/lscript.ld -L../../plop505top_bsp/microblaze_0/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.50.b -mno-xl-soft-mul -mhard-float -Wl,--no-relax -Wl,--gc-sections -o "plop_relay.elf" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
-plop.elf.size: plop.elf
+plop_relay.elf.size: plop_relay.elf
 	@echo 'Invoking: MicroBlaze Print Size'
-	mb-size plop.elf  |tee "plop.elf.size"
+	mb-size plop_relay.elf  |tee "plop_relay.elf.size"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-plop.elf.elfcheck: plop.elf
+plop_relay.elf.elfcheck: plop_relay.elf
 	@echo 'Invoking: Xilinx ELF Check'
-	elfcheck plop.elf -hw ../../plop_hw_ml505top/system.xml -pe microblaze_0  |tee "plop.elf.elfcheck"
+	elfcheck plop_relay.elf -hw ../../plop505top_hw/system.xml -pe microblaze_0  |tee "plop_relay.elf.elfcheck"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES)$(ELFSIZE)$(ELFCHECK)$(S_UPPER_DEPS) plop.elf
+	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES)$(ELFSIZE)$(ELFCHECK)$(S_UPPER_DEPS) plop_relay.elf
 	-@echo ' '
 
 secondary-outputs: $(ELFSIZE) $(ELFCHECK)

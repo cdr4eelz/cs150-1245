@@ -1,9 +1,9 @@
 #!/bin/bash -beuxE
 
-PLAT_B="plop"
-PLAT_N="ml505sub"
-PLAT_T="virtex5 xc5vlx110t ff1136 -1" #TARGET: Family Device Package SpeedGrade
-D="$PWD"
+PLAT_N=${1-ploptop}  #Name: hw platform project files & exported "system".sml file
+PLAT_H=${2-top} 	#Hierarchy: "top" or "sub" project style
+PLAT_B=${3-plop} 	#Base: MHS & UCF files to base the project on
+PLAT_T=${4-virtex5 xc5vlx110t ff1136 -1} #TARGET: Family Device Package SpeedGrade
 
 # MHS is where the beef is so its easy to just roll a fresh xps project.
 
@@ -18,11 +18,11 @@ xset enable_par_timing_error 1
 xset parallel_synthesis yes
 xset sdk_export_bmm_bit 1
 
-xset hier sub
+xset hier ${PLAT_H}
 xset sdk_export_dir ../export/${PLAT_N}
 xset ucf_file ${PLAT_N}.ucf
-file copy -force ${D}/${PLAT_B}.ucf ${PLAT_N}.ucf
-file copy -force ${D}/${PLAT_B}.mhs ${PLAT_N}.mhs
+file copy -force ../${PLAT_B}.ucf ${PLAT_N}.ucf
+file copy -force ../${PLAT_B}.mhs ${PLAT_N}.mhs
 run resync
 save proj
 

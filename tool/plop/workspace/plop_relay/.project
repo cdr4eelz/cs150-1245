@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>plop</name>
-	<comment></comment>
+	<name>plop_relay</name>
+	<comment>plop505top_bsp - microblaze_0</comment>
 	<projects>
-		<project>plop_bsp</project>
+		<project>plop505top_bsp</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

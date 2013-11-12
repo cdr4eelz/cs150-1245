@@ -1,3 +1,0 @@
-PROCESSOR=microblaze_0
-REPOSITORIES=
-HWSPEC=../plop_hw_ml505top/system.xml

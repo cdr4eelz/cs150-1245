@@ -28,6 +28,6 @@
 
 ## Resets fed to the PLOP ##
 #
-Net RST_PHY_LO TIG;    Net RST_AUX_HI TIG;       Net MB0_IRQ0 TIG;
-Net MB0_IRQ1 TIG;      Net BIOS_BRAM_Rst TIG;    Net BRK_BRAM_RST TIG;
-Net BRK_DCR_Rst TIG;      ## Put UARTS into TIG???
+#Net RST_PHY_LO TIG;    Net RST_AUX_HI TIG;       Net MB0_IRQ0 TIG;
+#Net MB0_IRQ1 TIG;      Net BIOS_BRAM_Rst TIG;    Net BRK_BRAM_RST TIG;
+#Net BRK_DCR_Rst TIG;      ## Put UARTS into TIG???

@@ -322,7 +322,7 @@ assign video_valid = 1'b0, video = 32'd0;
 
 //TODO: Move all/most debug,BRK,PLOP into MIPSY & re-standardize ml505top.v
 
-`ifndef __COLT45_PLOP
+`ifdef COLT45_PLOP
     // Global PLOP lines
     wire PLOP_RST_AUX, PLOP_RST_Periph;
     wire MM0_IRQ0, MB0_IRQ1, MB0_Error, MB0_Halted;
@@ -590,7 +590,7 @@ endfunction
         //clk125: 1000 / 8 => 125 MHz 50/50 @90 deg
         .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
     ) user_clk_pll (
-        .CLKIN(user_clk_g), .RST(USER_RST), //WAS: 1'b0
+        .CLKIN(user_clk_g), .RST(~USER_RST), //WAS: 1'b0
         .CLKOUT0(clk50), .CLKOUT1(clk200), .CLKOUT2(clk0),
         .CLKOUT3(clk90), .CLKOUT4(clkdiv0), .CLKOUT5(clk125),
         .CLKFBIN(pll_fb), .CLKFBOUT(pll_fb), .LOCKED(pll_lock)
