@@ -81,7 +81,7 @@ module DumpMEMIOCPU #(
     );
 
 
-    wire [31: 0] OUT_BRa, OUT_BRb, OUT_DB, OUT_DI;
+    wire [31: 0] OUT_BRa, OUT_BRb, OUT_DB, OUT_IB;
     assign DATA_W = OUT_DB;
 
     // Key components indirectly wired elsewhere
@@ -105,7 +105,7 @@ module DumpMEMIOCPU #(
         .ena(   1'b0), /*.douta(),*/
         .wea(4'b0000), .dina(32'b0),
       .clkb(clk), .addrb(ADDR_W),
-      /*.enb(1'b1),*/ .doutb(OUT_DI)
+      /*.enb(1'b1),*/ .doutb(OUT_IB)
     );
 
     `BUS_SHAKE_type(8)  UATX, UARX;

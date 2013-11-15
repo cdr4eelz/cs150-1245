@@ -2,7 +2,7 @@
 
 `timescale  1 ps / 1 ps
 
-module glbl ();
+module glbl;
 
     parameter ROC_WIDTH = 100000;
     parameter TOC_WIDTH = 0;

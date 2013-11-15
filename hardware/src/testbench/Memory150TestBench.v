@@ -16,7 +16,7 @@
 
 `define MODELSIM 1
 
-module Memory150TestBench();
+module Memory150TestBench;
     // Test bench generates a reset
     reg Reset;
 
@@ -95,6 +95,7 @@ module Memory150TestBench();
     // Modular cache testing procedures
     `include "CacheTestTasks.vh"
 
+    wire pll_fb;
     PLL_BASE
     #(
         .BANDWIDTH("OPTIMIZED"),

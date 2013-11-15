@@ -3,4 +3,4 @@
 bit="${1}"
 host="${2}"
 
-md5sum "${bit}" && bzip2 "${bit}" -c | ssh "${host}" 'bunzip2 > x.bit && md5sum x.bit && . ~/team45/fake_150.sh && ezimpact x.bit'
+md5sum "${bit}" && bzip2 "${bit}" -c | ssh "${host}" 'bunzip2 > x.bit && md5sum x.bit && ezimpact x.bit'

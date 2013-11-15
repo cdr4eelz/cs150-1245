@@ -24,6 +24,7 @@ inst: $(OUTS:%=$(TARGET).inst.%)
 #both: $(TARGET).both.mem
 bins: $(SECS:%=$(TARGET).%.bin)
 
+.PRECIOUS: %.s %.c.llvm.s
 
 $(TARGET).elf: $(OBJS)
 	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $(LDSRC) $^ -o $@
@@ -76,7 +77,7 @@ $(TARGET).elf: $(OBJS)
 	mips-as $< -o $<.o
 
 clean:
-	rm -f $(POBJS) $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).*.bin $(TARGET).*.mif $(TARGET).*.coe $(TARGET).*.mem $(TARGET).*.v $(TARGET).dump $(TARGET).*.dump *.o
+	rm -f $(POBJS) $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).*.bin $(TARGET).*.mif $(TARGET).*.coe $(TARGET).*.mem $(TARGET).*.v $(TARGET).dump $(TARGET).*.dump *.o *.llvm.s
 
 .PHONY: clean
 

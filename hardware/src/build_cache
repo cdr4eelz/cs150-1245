@@ -1,0 +1,27 @@
+#!/bin/bash
+
+LOG="build_cache.log"
+
+echo "BEGIN build::" > $LOG
+
+
+echo "Building Cache data Block Ram" | tee -a $LOG
+(cd cache_data_blk_ram/ && ezcore) | tee -a $LOG
+
+echo "Building Cache tag Block Ram" | tee -a $LOG
+(cd cache_tag_blk_ram/ && ezcore) | tee -a $LOG
+
+echo "Building AF" | tee -a $LOG
+(cd mig_af/ && ezcore) | tee -a $LOG
+
+echo "Building RDF" | tee -a $LOG
+(cd mig_rdf/ && ezcore) | tee -a $LOG
+
+echo "Building WDF" | tee -a $LOG
+(cd mig_wdf/ && ezcore) | tee -a $LOG
+
+
+echo "::END build" >> $LOG
+
+echo "  "
+echo "build_memory is done! Please check for warnings and/or errors."

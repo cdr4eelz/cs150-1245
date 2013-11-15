@@ -59,8 +59,9 @@ module Memory150(
     // DDR2 & FIFO interface wires:
     wire         af_afull;
     wire         af_full;
+    wire         af_empty; //UNUSED
     wire         af_valid;
-    wire         ddr2_clock_tb;
+    wire         ddr2_clock_tb; //NOTE: This is clock for talking to the DDR2
     wire [33:0]  af_dout;
     wire         wdf_valid;
     wire [143:0] wdf_dout;
@@ -96,6 +97,8 @@ module Memory150(
     wire         i_wdf_wr_en,    d_wdf_wr_en;
     wire         i_stall,        d_stall;
 
+    wire rst_tb; //UNUSED?
+
     // DDR2 module:
     mig_v3_61   #(.SIM_ONLY(SIM_ONLY)) ddr2(
     .ddr2_dq(DDR2_D),
@@ -117,7 +120,7 @@ module Memory150(
     .locked(locked),
     .rst0_tb(rst_tb),
     .clk0(clk0_g),
-    .clk0_tb(ddr2_clock_tb),
+    .clk0_tb(ddr2_clock_tb), //NOTE: MIG drives this for us to sync with it (based on clk0_g)
     .clk90(clk90_g),
     .clkdiv0(clkdiv0_g),
     .clk200(clk200_g),
@@ -211,7 +214,42 @@ module Memory150(
     .i_wdf_full(i_wdf_full),
     .d_rdf_valid(d_rdf_valid),
     .d_af_full(d_af_full),
-    .d_wdf_full(d_wdf_full)
+    .d_wdf_full(d_wdf_full),
+//CP3+
+    // inputs from the line drawing engine (write-only path)
+    .line_addr_din(31'd0), // input [30:0]
+    .line_af_wr_en(1'b0), // IN
+    .line_wdf_din(128'd0), // input [127:0]
+    .line_wdf_mask_din(16'd0), // input [15:0]
+    .line_wdf_wr_en(1'b0), // IN
+    // inputs from the cache bypass module (write-only path)
+    .bypass_addr_din(31'd0), // input [30:0]
+    .bypass_af_wr_en(1'b0), // IN
+    .bypass_wdf_din(128'd0), // input [127:0]
+    .bypass_wdf_mask_din(16'd0), // input [15:0]
+    .bypass_wdf_wr_en(1'b0), // IN
+    // inputs from the color filler (write-only path)
+    .filler_addr_din(31'd0), // input [30:0]
+    .filler_af_wr_en(1'b0), // IN
+    .filler_wdf_din(128'd0), // input [127:0]
+    .filler_wdf_mask_din(16'd0), // input [15:0]
+    .filler_wdf_wr_en(1'b0), // IN
+    // pixel fifo feed
+    .pixel_rdf_rd_en(1'd0), // IN
+    .pixel_af_wr_en(1'd0), // IN
+    .pixel_addr_din(31'd0), // input [30:0]
+    // outputs to the line drawing engine
+    .line_af_full(), //OUT
+    .line_wdf_full(), //OUT
+    // outputs to the cache bypass module
+    .bypass_af_full(), //OUT
+    .bypass_wdf_full(), //OUT
+    // outputs to the color filler
+    .filler_af_full(), //OUT
+    .filler_wdf_full(), //OUT
+    // outputs to the fifo-filling module:
+    .pixel_rdf_valid(), //OUT
+    .pixel_af_full() //OUT
     );
 
     // The instruction cache:

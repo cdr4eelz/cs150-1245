@@ -212,16 +212,28 @@ localparam DD=1;
 
     // MEMORY & IO ELEMENTS THEMSELVES
 
+`ifdef COLT45_STRICT
     bios_mem brom_bios
     ( .clka(clk), .ena(~stall && _hot_BR),
         .addra(MemAddr__M[13:2]),
         .douta(RData_BR),//OUT-32
       /*.wea(_WriteMask), .dina(_WDataMasked),*/
-
     // Instruction reading port (b)
       .clkb(clk), .addrb(INST_ADDR[13:2]),
         .enb(INST_bios), .doutb(INST_BR)
     ) /* synthesis syn_noprune=1 */;
+`else
+    bios_mem brom_bios //Hack in external writeability for PLOP (32-bit wide, no byte mask)
+    ( .clka(clk), .ena(~stall && _hot_BR),
+        .addra(MemAddr__M[13:2]),
+        .douta(RData_BR),//OUT-32
+        .wea(1'b0), .dina(32'd0),
+    // Instruction reading port (b)
+      .clkb(clk), .addrb(INST_ADDR[13:2]),
+        .enb(INST_bios), .doutb(INST_BR),
+        .web(1'b0), .dinb(32'd0)
+    ) /* synthesis syn_noprune=1 */;
+`endif
 
     assign dcache_addr = MemAddr__M,
         dcache_we = (~stall && _hot_DC) ? (_WriteMask) : 4'b0000,
@@ -230,9 +242,12 @@ localparam DD=1;
         RData_DC = dcache_dout;
 //  assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
 
-// INST_IC=instruction
-// icache_addr=(INST_ADDR/DATA_ADDR/NONE)
-    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=instruction;
+//    assign icache_addr=INST_ADDR, // INST_ADDR/DATA_ADDR/NONE
+ //       icache_we=4'b0000,
+  //      icache_din=_WDataMasked,
+   //     icache_re=1'b0,
+    //    INST_IC=instruction;
+    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
 
     dmem_blk_ram bram_dmem
     ( .clka(clk), .ena(~stall && _hot_DB),
@@ -246,7 +261,6 @@ localparam DD=1;
         .addra(MemAddr__M[13:2]),
       /*.douta(RData_IB),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),
-
     // INSTRUCTION Fletch
       .clkb(clk), .addrb(INST_ADDR[13:2]),
       /*.enb(1'b1)*/ .doutb(INST_IB)

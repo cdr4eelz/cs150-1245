@@ -1,52 +1,16 @@
 module ml505top
 (
   input         USER_CLK,
-//TIMESPEC TS_USER_CLK = PERIOD USER_CLK 10.0 ns HIGH 50%;
-//Net USER_CLK    LOC = AH15  |  IOSTANDARD=LVCMOS33;
-//Net USER_CLK    TNM_NET = USER_CLK;
-  input         USER_RST,    // Extra connection added to passthrough to embedded stuff
-//Net USER_RST    TIG;
-//Net USER_RST    LOC = E9  |  IOSTANDARD=LVCMOS33  |  PULLUP;
 
   input         FPGA_SERIAL_RX,
-//Net FPGA_SERIAL_RX      LOC = AG15  |  IOSTANDARD=LVCMOS33;
   output        FPGA_SERIAL_TX,
-//Net FPGA_SERIAL_TX      LOC = AG20  |  IOSTANDARD=LVCMOS33;
 
   input [4:0]   GPIO_COMPPB,
-//Net GPIO_COMPPB[0]      LOC = AJ6   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_COMPPB[1]      LOC = AJ7   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_COMPPB[2]      LOC = V8    |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_COMPPB[3]      LOC = AK7   |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_COMPPB[4]      LOC = U8    |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-
   output [7:0]  GPIO_LED,
-//Net GPIO_LED[7]         LOC = AE24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
-//Net GPIO_LED[6]         LOC = AD24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
-//Net GPIO_LED[5]         LOC = AD25  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
-//Net GPIO_LED[4]         LOC = G16   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
-//Net GPIO_LED[3]         LOC = AD26  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2;
-//Net GPIO_LED[2]         LOC = G15   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
-//Net GPIO_LED[1]         LOC = L18   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
-//Net GPIO_LED[0]         LOC = H18   |  IOSTANDARD=LVCMOS25  |  SLEW=SLOW  |  DRIVE=2;
-
   output [4:0]  GPIO_COMPLED,
-//Net GPIO_COMPLED[0]     LOC = E8    |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_COMPLED[1]     LOC = AF23  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_COMPLED[2]     LOC = AG12  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_COMPLED[3]     LOC = AG23  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_COMPLED[4]     LOC = AF13  |  IOSTANDARD=LVCMOS33  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-
   input [7:0]   GPIO_DIP,
-//Net GPIO_DIP[0]         LOC = U25   |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_DIP[1]         LOC = AG27  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_DIP[2]         LOC = AF25  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_DIP[3]         LOC = AF26  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_DIP[4]         LOC = AE27  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_DIP[5]         LOC = AE26  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_DIP[6]         LOC = AC25  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
-//Net GPIO_DIP[7]         LOC = AC24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRIVE=2  |  PULLDOWN;
 
+// CP2+
   output [12:0] DDR2_A,
   output [1:0]  DDR2_BA,
   output        DDR2_CAS_B,
@@ -62,6 +26,8 @@ module ml505top
   output        DDR2_RAS_B,
   output        DDR2_WE_B,
     
+/*
+// CP3+
   output [11:0] DVI_D,
   output        DVI_DE,
   output        DVI_H,
@@ -71,7 +37,10 @@ module ml505top
   output        DVI_XCLK_P,
   
   inout         IIC_SCL_VIDEO,
-  inout         IIC_SDA_VIDEO
+  inout         IIC_SDA_VIDEO,
+*/
+  
+  input         USER_RST // To passthrough to embedded IP-cores
 );
 
     wire button_reset, rst_or_init, rst;
@@ -168,6 +137,7 @@ module ml505top
     assign rst_or_init = rst || ~mem_init_done;
     assign any_stall = mem_stall || man_stall || debug_stall_not_jog;
 
+/*
 // CP3+
   wire [31:0]  bypass_addr;
   wire [31:0]  bypass_din;
@@ -188,6 +158,7 @@ module ml505top
   wire         line_x1_valid;
   wire         line_y1_valid;
   wire         line_trigger;
+*/
 
   Memory150 #(.SIM_ONLY(1'b0)) mem_arch(
       .cpu_clk_g(cpu_clk_g),
@@ -223,7 +194,7 @@ module ml505top
       .dcache_dout(dcache_dout),
       .instruction(instruction),
 
-`ifdef __COLT45_pre3
+/*
       .bypass_addr(bypass_addr),
       .bypass_we  (bypass_we  ),
       .bypass_din (bypass_din ),
@@ -244,15 +215,13 @@ module ml505top
       .line_x1_valid(line_x1_valid),
       .line_y1_valid(line_y1_valid),
       .line_trigger(line_trigger),
-`endif
+*/
       .stall(mem_stall)
     );
 
-`ifndef __COLT45_pre3
-assign video_valid = 1'b0, video = 32'd0;
-`endif
-
+/*
 // CP3+
+assign video_valid = 1'b0, video = 32'd0;
   DVI #(
     .ClockFreq(                 50_000_000), //50 MHz
     .Width(                     1040),   
@@ -275,12 +244,12 @@ assign video_valid = 1'b0, video = 32'd0;
     .DVI_XCLK_P(                DVI_XCLK_P),
     .I2C_SCL_DVI(               IIC_SCL_VIDEO),
     .I2C_SDA_DVI(               IIC_SDA_VIDEO),
-    /* Ready/Valid interface for 24-bit pixel values */
+    // Ready/Valid interface for 24-bit pixel values
     .Video(                     video),
     .VideoReady(                video_ready),
     .VideoValid(                video_valid)
   );
-
+*/
 
 `ifndef CPUTYPE
 `define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
@@ -294,8 +263,8 @@ assign video_valid = 1'b0, video = 32'd0;
     .dcache_re  ( dcache_re   ),    .icache_re  ( icache_re   ),
     .dcache_din ( dcache_din  ),    .icache_din ( icache_din  ),
     .dcache_dout( dcache_dout ),    .instruction( instruction ),
+/*
 // CP3+
-`ifdef __COLT45_pre3
     .bypass_addr( bypass_addr ),    .bypass_we  ( bypass_we ),
     .bypass_din ( bypass_din  ),
     .filler_color   (filler_color),
@@ -310,7 +279,7 @@ assign video_valid = 1'b0, video = 32'd0;
     .line_x1_valid  (line_x1_valid),
     .line_y1_valid  (line_y1_valid),
     .line_trigger   (line_trigger),
-`endif
+*/
 
 //BRK tap
     .brk(debug_brk), .trace(debug_trace),
@@ -420,6 +389,7 @@ assign video_valid = 1'b0, video = 32'd0;
 `endif
 
 
+`ifdef COLT45_BRK
 /*  BRK coordinator:
 
     Intercept/Trace relative to BRK (towards CPU):
@@ -450,41 +420,40 @@ assign video_valid = 1'b0, video = 32'd0;
 */
 
 //TODO:Overcome trouble with bitvector selection,address-order,big-case,or something
-function automatic [0:255] GET_SEGMENT (
-    input [1:0] ssel,
-    input [0:1023] allbits
-);
-    begin
-        case (ssel)
-            2'd3: GET_SEGMENT = allbits[768:1023];
-            2'd2: GET_SEGMENT = allbits[512: 767];
-            2'd1: GET_SEGMENT = allbits[256: 511];
-            default: GET_SEGMENT = allbits[0:255];
-        endcase
-    end
-endfunction
+    function automatic [0:255] GET_SEGMENT (
+        input [1:0] ssel,
+        input [0:1023] allbits
+    );
+        begin
+            case (ssel)
+                2'd3: GET_SEGMENT = allbits[768:1023];
+                2'd2: GET_SEGMENT = allbits[512: 767];
+                2'd1: GET_SEGMENT = allbits[256: 511];
+                default: GET_SEGMENT = allbits[0:255];
+            endcase
+        end
+    endfunction
+    
+    function automatic [0:31] GET_DATUM (
+        input [2:0] dsel,
+        input [0:255] segbits
+    );
+        begin
+            case (dsel)
+                3'd7: GET_DATUM = segbits[224:255];
+                3'd6: GET_DATUM = segbits[192:223];
+                3'd5: GET_DATUM = segbits[160:191];
+                3'd4: GET_DATUM = segbits[128:159];
+                3'd3: GET_DATUM = segbits[ 96:127];
+                3'd2: GET_DATUM = segbits[ 64: 95];
+                3'd1: GET_DATUM = segbits[ 32: 63];
+                default: GET_DATUM = segbits[0:31];
+            endcase
+        end
+    endfunction
 
-function automatic [0:31] GET_DATUM (
-    input [2:0] dsel,
-    input [0:255] segbits
-);
-    begin
-        case (dsel)
-            3'd7: GET_DATUM = segbits[224:255];
-            3'd6: GET_DATUM = segbits[192:223];
-            3'd5: GET_DATUM = segbits[160:191];
-            3'd4: GET_DATUM = segbits[128:159];
-            3'd3: GET_DATUM = segbits[ 96:127];
-            3'd2: GET_DATUM = segbits[ 64: 95];
-            3'd1: GET_DATUM = segbits[ 32: 63];
-            default: GET_DATUM = segbits[0:31];
-        endcase
-    end
-endfunction
-
-`ifndef __COLT45_SCOPE
     wire [35: 0] CS0, CS1; //, CS2;
-    chipscope_icon_2 CS_ICON (
+    cs_icon_2 CS_ICON (
         .CONTROL0(CS0), .CONTROL1(CS1)//, .CONTROL2(CS2) // INOUT BUS [35:0]
     ) /* synthesis syn_noprune=1 */;
 
@@ -494,7 +463,7 @@ endfunction
 
     wire [ 7: 0] BRK_DSEL; // Ignores high 3-bits
     reg  [ 0:31] BRK_DVAL;
-    chipscope_vio_brk CS_VIO_BRK ( .CONTROL(CS0),  .CLK(cpu_clk_g),
+    cs_vio_brk CS_VIO_BRK ( .CONTROL(CS0),  .CLK(cpu_clk_g),
         .ASYNC_OUT( {BRK_DSEL[7:0], BRK_EN[7:0], BRK_ACTION[7:0]} ),  // OUT BUS [23:0]
         .ASYNC_IN( {BRK_DVAL[0:31], BRK_HIT[7:0], BRK_STATUS[7:0]} ), // IN BUS [47:0]
         .SYNC_OUT(  BRK_MATCH[0:255] ), // OUT BUS [255:0]
@@ -504,7 +473,7 @@ endfunction
 
     wire [ 1: 0] BRK_SSEL;
     reg  [0:255] BRK_SVAL;
-    chipscope_vio_256 CS_VIO_256 ( .CONTROL(CS1),
+    cs_vio_256 CS_VIO_256 ( .CONTROL(CS1),
         .ASYNC_OUT( BRK_SSEL[1:0] ), // OUT BUS [1:0]
         .ASYNC_IN( BRK_SVAL[0:255] ) // IN BUS [255:0]
     ) /* synthesis syn_noprune=1 */;

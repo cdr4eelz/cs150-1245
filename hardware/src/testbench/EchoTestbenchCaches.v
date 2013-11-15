@@ -1,23 +1,21 @@
 `timescale 1ns/1ps
 
-module EchoTestbenchCaches();
+module EchoTestbenchCaches;
 
-    reg Clock, Reset;
+    parameter HalfCycle = 5;
+    parameter Cycle = 2*HalfCycle;
+    parameter ClockFreq = 50_000_000;
+    
+    wire fifo_reset_async, fifo_reset_sync, cpu_rst;
+    wire user_clk_g, pll_lock, cpu_clk_g;
+
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
-
     reg   [7:0] DataIn;
     reg         DataInValid;
     wire        DataInReady;
     wire  [7:0] DataOut;
     wire        DataOutValid;
     reg         DataOutReady;
-
-    parameter HalfCycle = 5;
-    parameter Cycle = 2*HalfCycle;
-    parameter ClockFreq = 50_000_000;
-
-    initial Clock = 0;
-    always #(HalfCycle) Clock <= ~Clock;
 
     // DDR 2 wires
     wire [12:0] DDR2_A;
@@ -34,6 +32,22 @@ module EchoTestbenchCaches();
     wire DDR2_ODT;
     wire DDR2_RAS_B;
     wire DDR2_WE_B;
+    mt4htf3264hy ddr2(
+        .DDR2_A(DDR2_A),
+        .DDR2_BA(DDR2_BA),
+        .DDR2_CAS_B(DDR2_CAS_B),
+        .DDR2_CKE(DDR2_CKE),
+        .DDR2_CLK_N(DDR2_CLK_N),
+        .DDR2_CLK_P(DDR2_CLK_P),
+        .DDR2_CS_B(DDR2_CS_B),
+        .DDR2_D(DDR2_D),
+        .DDR2_DM(DDR2_DM),
+        .DDR2_DQS_N(DDR2_DQS_N),
+        .DDR2_DQS_P(DDR2_DQS_P),
+        .DDR2_ODT(DDR2_ODT),
+        .DDR2_RAS_B(DDR2_RAS_B),
+        .DDR2_WE_B(DDR2_WE_B));
+
 
     wire  [31:0] dcache_addr;
     wire  [31:0] icache_addr;
@@ -46,10 +60,98 @@ module EchoTestbenchCaches();
     wire [31:0]  dcache_dout;
     wire [31:0]  instruction;
     wire         stall;
-
+    
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
+
+
+    MIPS150 DUT(
+        .clk(cpu_clk_g),
+        .rst(cpu_rst),
+        .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
+        .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .dcache_addr (dcache_addr ),
+        .icache_addr (icache_addr ),
+        .dcache_we   (dcache_we   ),
+        .icache_we   (icache_we   ),
+        .dcache_re   (dcache_re   ),
+        .icache_re   (icache_re   ),
+        .dcache_din  (dcache_din  ),
+        .icache_din  (icache_din  ),
+        .dcache_dout (dcache_dout ),
+        .instruction (instruction ),
+        .stall(stall)
+    );
+
+    UART          #( .ClockFreq(       ClockFreq))
+                  uart( .Clock(           cpu_clk_g),
+                        .Reset(           cpu_rst),
+                        .DataIn(          DataIn),
+                        .DataInValid(     DataInValid),
+                        .DataInReady(     DataInReady),
+                        .DataOut(         DataOut),
+                        .DataOutValid(    DataOutValid),
+                        .DataOutReady(    DataOutReady),
+                        .SIn(             FPGA_SERIAL_TX),
+                        .SOut(            FPGA_SERIAL_RX));
+
+
+
+
+    wire clk200_g, clk0_g, clk90_g, clkdiv0_g, clk50_g;
+    wire init_done;
+    Memory150 #(.SIM_ONLY(1'b1)) mem_arch(
+        .cpu_clk_g(cpu_clk_g),
+        .clk0_g(clk0_g),
+        .clk200_g(clk200_g),
+        .clkdiv0_g(clkdiv0_g),
+        .clk90_g(clk90_g),
+        .rst(fifo_reset_sync),
+        .init_done(init_done),
+        .DDR2_A(DDR2_A),
+        .DDR2_BA(DDR2_BA),
+        .DDR2_CAS_B(DDR2_CAS_B),
+        .DDR2_CKE(DDR2_CKE),
+        .DDR2_CLK_N(DDR2_CLK_N),
+        .DDR2_CLK_P(DDR2_CLK_P),
+        .DDR2_CS_B(DDR2_CS_B),
+        .DDR2_D(DDR2_D),
+        .DDR2_DM(DDR2_DM),
+        .DDR2_DQS_N(DDR2_DQS_N),
+        .DDR2_DQS_P(DDR2_DQS_P),
+        .DDR2_ODT(DDR2_ODT),
+        .DDR2_RAS_B(DDR2_RAS_B),
+        .DDR2_WE_B(DDR2_WE_B),
+        .locked     (pll_lock),
+        .dcache_addr(dcache_addr),
+        .icache_addr(icache_addr),
+        .dcache_we  (dcache_we  ),
+        .icache_we  (icache_we  ),
+        .dcache_re  (dcache_re  ),
+        .icache_re  (icache_re  ),
+        .dcache_din (dcache_din ),
+        .icache_din (icache_din ),
+        .dcache_dout(dcache_dout),
+        .instruction(instruction),
+        .stall      (stall      )
+    );
+
+
+    reg Clock, Reset;
+    initial Clock = 0;
+    always #(HalfCycle) Clock <= ~Clock;
     
+    assign cpu_rst = Reset || ~init_done;
+    // Reset shift register:
+    reg [2:0] rst_sr;
+    assign fifo_reset_sync = |rst_sr;
+    assign fifo_reset_async = Reset | (|rst_sr);
+    always @(posedge cpu_clk_g) begin
+        rst_sr <= {rst_sr[1:0], Reset};
+    end
+
+
+    wire pll_fb, cpu_clk, clk200, clk0, clk90, clkdiv0, clk50;
     PLL_BASE
     #(
         .BANDWIDTH("OPTIMIZED"),
@@ -99,7 +201,6 @@ module EchoTestbenchCaches();
         .CLKIN(user_clk_g),
         .RST(1'b0)
     );
-
     IBUFG user_clk_buf ( .I(Clock),    .O(user_clk_g) );
     BUFG  cpu_clk_buf  ( .I(cpu_clk),  .O(cpu_clk_g)  );
     BUFG  clk200_buf   ( .I(clk200),   .O(clk200_g)   );
@@ -108,96 +209,6 @@ module EchoTestbenchCaches();
     BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
     BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
 
-    // Reset shift register:
-    reg [2:0] rst_sr;
-    wire fifo_reset; // fifo_reset resets fifos... reset_fifo is a fifo for the reset signal.
-    assign fifo_reset = Reset | (|rst_sr);
-    always @(posedge cpu_clk_g) begin
-        rst_sr <= {rst_sr[1:0], Reset};
-    end
-
-    mt4htf3264hy ddr2(
-        .DDR2_A(DDR2_A),
-        .DDR2_BA(DDR2_BA),
-        .DDR2_CAS_B(DDR2_CAS_B),
-        .DDR2_CKE(DDR2_CKE),
-        .DDR2_CLK_N(DDR2_CLK_N),
-        .DDR2_CLK_P(DDR2_CLK_P),
-        .DDR2_CS_B(DDR2_CS_B),
-        .DDR2_D(DDR2_D),
-        .DDR2_DM(DDR2_DM),
-        .DDR2_DQS_N(DDR2_DQS_N),
-        .DDR2_DQS_P(DDR2_DQS_P),
-        .DDR2_ODT(DDR2_ODT),
-        .DDR2_RAS_B(DDR2_RAS_B),
-        .DDR2_WE_B(DDR2_WE_B));
-
-    Memory150 #(.SIM_ONLY(1'b1)) mem_arch(
-        .cpu_clk_g(cpu_clk_g),
-        .clk0_g(clk0_g),
-        .clk200_g(clk200_g),
-        .clkdiv0_g(clkdiv0_g),
-        .clk90_g(clk90_g),
-        .rst(|rst_sr),
-        .init_done(init_done),
-        .DDR2_A(DDR2_A),
-        .DDR2_BA(DDR2_BA),
-        .DDR2_CAS_B(DDR2_CAS_B),
-        .DDR2_CKE(DDR2_CKE),
-        .DDR2_CLK_N(DDR2_CLK_N),
-        .DDR2_CLK_P(DDR2_CLK_P),
-        .DDR2_CS_B(DDR2_CS_B),
-        .DDR2_D(DDR2_D),
-        .DDR2_DM(DDR2_DM),
-        .DDR2_DQS_N(DDR2_DQS_N),
-        .DDR2_DQS_P(DDR2_DQS_P),
-        .DDR2_ODT(DDR2_ODT),
-        .DDR2_RAS_B(DDR2_RAS_B),
-        .DDR2_WE_B(DDR2_WE_B),
-        .locked     (pll_lock),
-        .dcache_addr(dcache_addr),
-        .icache_addr(icache_addr),
-        .dcache_we  (dcache_we  ),
-        .icache_we  (icache_we  ),
-        .dcache_re  (dcache_re  ),
-        .icache_re  (icache_re  ),
-        .dcache_din (dcache_din ),
-        .icache_din (icache_din ),
-        .dcache_dout(dcache_dout),
-        .instruction(instruction),
-        .stall      (stall      )
-    );
-
-
-    MIPS150 DUT(
-        .clk(cpu_clk_g),
-        .rst(Reset || ~init_done),
-        .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-        .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
-        .dcache_addr (dcache_addr ),
-        .icache_addr (icache_addr ),
-        .dcache_we   (dcache_we   ),
-        .icache_we   (icache_we   ),
-        .dcache_re   (dcache_re   ),
-        .icache_re   (icache_re   ),
-        .dcache_din  (dcache_din  ),
-        .icache_din  (icache_din  ),
-        .dcache_dout (dcache_dout ),
-        .instruction (instruction ),
-        .stall(stall)
-    );
-
-    UART          #( .ClockFreq(       ClockFreq))
-                  uart( .Clock(           cpu_clk_g),
-                        .Reset(           Reset || ~init_done),
-                        .DataIn(          DataIn),
-                        .DataInValid(     DataInValid),
-                        .DataInReady(     DataInReady),
-                        .DataOut(         DataOut),
-                        .DataOutValid(    DataOutValid),
-                        .DataOutReady(    DataOutReady),
-                        .SIn(             FPGA_SERIAL_TX),
-                        .SOut(            FPGA_SERIAL_RX));
 
     initial begin
       // Reset. Has to be long enough to not be eaten by the debouncer.

@@ -80,8 +80,8 @@ module DumpMemCPU #(
     );
 
 
-    wire [31: 0]    OUT_BRa, OUT_BRb, OUT_DB, OUT_DI;
-    assign DATA_W = OUT_DB;
+    wire [31: 0]    OUT_BRa, OUT_BRb, OUT_DB, OUT_IB;
+    assign DATA_W = OUT_BRa;
 
     // Key components indirectly wired elsewhere
 
@@ -90,7 +90,7 @@ module DumpMemCPU #(
         .ena( ~stall),      .douta(OUT_BRa),
       /*.wea(4'b0000),      .dina(32'b0),*/
       .clkb(clk),   .addrb(ADDR_W),
-        .enb( ~stall),      .doutb(OUT_BRb)
+        .enb( 1'b1),        .doutb(OUT_BRb)
     );
 
     dmem_blk_ram bram_dmem
@@ -104,7 +104,7 @@ module DumpMemCPU #(
         .ena(   1'b0),    /*.douta(),*/
         .wea(4'b0000),      .dina(32'b0),
       .clkb(clk),   .addrb(ADDR_W),
-      /*.enb(1'b1),*/       .doutb(OUT_DI)
+      /*.enb(1'b1),*/       .doutb(OUT_IB)
     );
 
     UART #(.ClockFreq(ClockFreq)) uart

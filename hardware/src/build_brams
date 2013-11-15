@@ -1,0 +1,21 @@
+#!/bin/bash
+
+LOG="build_brams.log"
+
+echo "BEGIN build::" > $LOG
+
+
+echo "Building BIOS" | tee -a $LOG
+(cd bios_mem/ && ezcore) | tee -a $LOG
+
+echo "Building DATA" | tee -a $LOG
+(cd dmem_blk_ram/ && ezcore) | tee -a $LOG
+
+echo "Building INST" | tee -a $LOG
+(cd imem_blk_ram/ && ezcore) | tee -a $LOG
+
+
+echo "::END build" >> $LOG
+
+echo "  "
+echo "build_memory is done! Please check for warnings and/or errors."

@@ -58,11 +58,13 @@ localparam DD=1;
 
     // Pre-computations for clarity (partly distilled out by logic simplification?)
     // These characteristics could come from lookup table
-    wire #DD isMemory, isMStore, isMLoad, isIComp;
+    wire #DD isMemory, isMStore, isMLoad, isIComp, isISigned, isMSigned;
     assign isMemory    = (_opcode_[5:4] == 2'b10);
     assign isMLoad     = (_opcode_[5:3] == 3'b100);
     assign isMStore    = (_opcode_[5:3] == 3'b101);
     assign isIComp     = (_opcode_[5:3] == 3'b001);
+    assign isISigned    = (isMemory || (isIComp && !_opcode_[2]));
+    assign isMSigned    = (isMemory && !isMStore && !_opcode_[1] && !_opcode_[2]);
     wire #DD isRShift, isRShiftI, isRShiftR, isROther;
     assign isRShift    = (isRType && (_funct_[5:3] == 3'b000));
     assign isRShiftI   = (isRShift && (_funct_[2] == 1'b0));
@@ -94,6 +96,7 @@ localparam DD=1;
     assign PCTARGET = (isIJump) ? {_pc[31:28], _target_, 2'b00} : `UNKNOWN(32);
     assign PCBRANCH = (isBranch) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : `UNKNOWN(32);
 
+
     // Embed existing ALUDecoder from lab
     wire [ 3: 0] #DD ALUop;
     ALUdec ALUDecoder(
@@ -101,32 +104,21 @@ localparam DD=1;
         .ALUop(ALUop)
     );
 
+
     `BUS_ICTL_type delayIControl;
     assign #DD IControl_ = delayIControl;
     BUS_ICTL_tun BUS_ICTL
     ( ._BUS_(delayIControl),
-        .ISigned(
-            (isMemory) ? 1'b1 : (isIComp) ? !_opcode_[2] : `UNKNOWN(1) //TODO: Move to isXYZ
-        ),
-        .ALUSrcA(
-            isRShiftI
-        ),
-        .ALUSrcB(
-            isMemory || isIComp
-        ),
-        .ALUOp( ALUop ),
-
-        .MemToReg(
-            isMLoad
-        ),
-        .MemWrite(
-            isMStore
-        ),
+        .ISigned( isISigned ), .MSigned( isMSigned ),
+        .MemToReg( isMLoad ), .MemWrite( isMStore ),
         .DataWidth(
             (isMemory) ? _opcode_[1:0] : `UNKNOWN(2)
         ),
-        .MSigned(
-            (isMemory && !isMStore && !_opcode_[1]) ? !_opcode_[2] : `UNKNOWN(1)
+
+        .ALUOp( ALUop ),
+        .ALUSrcA( isRShiftI ),
+        .ALUSrcB(
+            isMemory || isIComp
         ),
 
         .Jump( isJump ), .JR( isRJump ), .Link( isLink ),

@@ -40,6 +40,7 @@ module StageDXTestbench;
     );
 
     wire ALUSrcA_, ALUSrcB_, MemToReg, MemWrite, MSigned, ISigned, Jump_, JR_, Link_;
+    wire ISigned_, MSigned_, MemToReg_, MemWrite_;
     wire [ 4:0 ] DestReg_;
     wire [ 1:0 ] DataWidth_;
     wire [ 3:0 ] ALUOp_;

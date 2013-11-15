@@ -1,0 +1,16 @@
+#!/bin/bash -beauxE
+
+FILE=${1-$HOME/team45/hardware/q.out}
+DIR="_warn_"
+
+ALL="${DIR}/_all.txt"
+ALS="${DIR}/_als.txt"
+CAT="${DIR}/_cat.txt"
+
+rm -rf "${DIR}"
+mkdir -p "${DIR}"
+
+grep "${FILE}" -e '^ERROR:' -e '^WARNING:' -e '^INFO:' |tee "${ALL}" |sort >"${ALS}"
+
+cat "${ALS}" |cut --delimiter " " -f 1 |sort |uniq --count >"${CAT}"
+
