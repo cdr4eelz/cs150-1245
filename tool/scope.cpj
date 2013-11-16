@@ -1,5 +1,5 @@
 #ChipScope Pro Analyzer Project File, Version 3.0
-#Thu Nov 14 06:09:18 PST 2013
+#Fri Nov 15 02:52:17 PST 2013
 deviceChain.deviceName0=XCF32P
 deviceChain.deviceName1=XCF32P
 deviceChain.deviceName2=XC9500XL
@@ -27,8 +27,8 @@ mdiUnit0=0
 mdiUnit1=1
 navigatorHeight=0.14579256360078277
 navigatorHeightLast=0.14677103718199608
-navigatorWidth=0.0010090817356205853
-navigatorWidthLast=0.2805247225025227
+navigatorWidth=9.191176470588235E-4
+navigatorWidthLast=0.2803308823529412
 signalDisplayPath=0
 unit.-1.-1.username=
 unit.4.-1.coretype=SYSTEM MONITOR
@@ -37,7 +37,7 @@ unit.4.-1.port.-1.channelcount=0
 unit.4.-1.portcount=0
 unit.4.-1.username=
 unit.4.0.6.HEIGHT6=1.0
-unit.4.0.6.WIDTH6=0.61752576
+unit.4.0.6.WIDTH6=0.6176195
 unit.4.0.6.X6=0.0
 unit.4.0.6.Y6=0.0
 unit.4.0.browser_tree_state<ACTION.unused>=1
@@ -2792,7 +2792,7 @@ unit.4.0.port.1.b.2.tokencount=0
 unit.4.0.port.1.b.2.unsignedOffset=0.0
 unit.4.0.port.1.b.2.unsignedPrecision=0
 unit.4.0.port.1.b.2.unsignedScaleFactor=1.0
-unit.4.0.port.1.b.2.value=4
+unit.4.0.port.1.b.2.value=7
 unit.4.0.port.1.b.2.visible=1
 unit.4.0.port.1.b.3.alias=EN
 unit.4.0.port.1.b.3.channellist=8 9 10 11 12 13 14 15
@@ -2882,7 +2882,7 @@ unit.4.0.port.1.s.16.display=3
 unit.4.0.port.1.s.16.name=AsyncOut[16]
 unit.4.0.port.1.s.16.orderindex=-1
 unit.4.0.port.1.s.16.persistence=0
-unit.4.0.port.1.s.16.value=0
+unit.4.0.port.1.s.16.value=1
 unit.4.0.port.1.s.16.visible=1
 unit.4.0.port.1.s.17.alias=DSEL[1]
 unit.4.0.port.1.s.17.color=java.awt.Color[r\=0,g\=0,b\=124]
@@ -2890,7 +2890,7 @@ unit.4.0.port.1.s.17.display=3
 unit.4.0.port.1.s.17.name=AsyncOut[17]
 unit.4.0.port.1.s.17.orderindex=-1
 unit.4.0.port.1.s.17.persistence=0
-unit.4.0.port.1.s.17.value=0
+unit.4.0.port.1.s.17.value=1
 unit.4.0.port.1.s.17.visible=1
 unit.4.0.port.1.s.18.alias=DSEL[2]
 unit.4.0.port.1.s.18.color=java.awt.Color[r\=0,g\=0,b\=124]
@@ -7855,8 +7855,8 @@ unit.4.0.vio.posn.99.radix=1
 unit.4.0.vio.posn.99.type=bus
 unit.4.0.vio.readperiod=0
 unit.4.1.6.HEIGHT6=0.9338747
-unit.4.1.6.WIDTH6=0.38762885
-unit.4.1.6.X6=0.61752576
+unit.4.1.6.WIDTH6=0.38800374
+unit.4.1.6.X6=0.6176195
 unit.4.1.6.Y6=0.0
 unit.4.1.browser_tree_state<Async\ Input\ Port>=1
 unit.4.1.browser_tree_state<Async\ Output\ Port>=1
