@@ -1,0 +1,21 @@
+1   dimm (same)
+64  data width (same)
+75-ohm ODT (same)
+5000/8000ps Memory Clock (8ns when 125MHz)
+FULL drive (same)
+2 CE Width (was 1)
+2 ODT Width (was 1)
+2 Clock Width (same)
+2 CSn Width (was 1)
+DWSN enabled
+OFF Dynamic Write ODT
+FULL partial self refresh
+ENABLED Auto Self Refresh
+NORMAL High Temp Self Refresh
+?? Multi-Bank (was 1)
+
+--INFO--
+DM Width 8 (same)
+Addr Width 13 (same if row-width)
+BankAddr Width 2 (same)
+DQS Width 8 (same)

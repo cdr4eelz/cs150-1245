@@ -212,7 +212,7 @@ localparam DD=1;
 
     // MEMORY & IO ELEMENTS THEMSELVES
 
-`ifdef COLT45_STRICT
+`ifndef COLT45_FUN //STRICT
     bios_mem brom_bios
     ( .clka(clk), .ena(~stall && _hot_BR),
         .addra(MemAddr__M[13:2]),

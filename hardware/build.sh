@@ -37,7 +37,8 @@ export D_BLD
 make -f Makefile.x $@ > >(tee -a $F_OUT | grep --context=3 -n -f sparse.grep) 2> >(tee -a $F_ERR >&2) #&
 #PID="$!"
 #echo "PID: $PID" |tee $F_PID #Flag as running (real PID now)
-#wait $pid
+#wait $PID
+PID=87
 
 echo -e "\n\n*** DONE ($PID) ***\n" |tee -a $F_OUT $F_ERR
 date |tee -a $F_OUT $F_ERR

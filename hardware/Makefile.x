@@ -25,7 +25,7 @@ cleaner:
 	rm -rf $(D_BLD)
 
 cleanerer:
-	-rm -rf build n_bld /scratch/* *.out *.err
+	-rm -rf build n_bld /scratch/*_build_$(USER) *.out *.err
 	ls ./ /scratch
 
 .PHONY := $(TARGETS) sync cleaner cleanerer

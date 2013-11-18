@@ -56,12 +56,14 @@ module Memory150(
 
     parameter SIM_ONLY = 1'b0;
 
+    wire ddr2_clock_tb, rst_tb; //UNUSED
+//    assign ddr2_clock_tb = clk0_g; //EQUIVALENT (with current clocks/bufg's)
+
     // DDR2 & FIFO interface wires:
     wire         af_afull;
     wire         af_full;
     wire         af_empty; //UNUSED
     wire         af_valid;
-    wire         ddr2_clock_tb; //NOTE: This is clock for talking to the DDR2
     wire [33:0]  af_dout;
     wire         wdf_valid;
     wire [143:0] wdf_dout;
@@ -97,10 +99,12 @@ module Memory150(
     wire         i_wdf_wr_en,    d_wdf_wr_en;
     wire         i_stall,        d_stall;
 
-    wire rst_tb; //UNUSED?
 
     // DDR2 module:
-    mig_v3_61   #(.SIM_ONLY(SIM_ONLY)) ddr2(
+//  mig_v3_61 #(
+    mig_xupv5 #(
+        .SIM_ONLY(SIM_ONLY)
+    ) ddr2 (
     .ddr2_dq(DDR2_D),
     .ddr2_a(DDR2_A),
     .ddr2_ba(DDR2_BA),
@@ -120,7 +124,7 @@ module Memory150(
     .locked(locked),
     .rst0_tb(rst_tb),
     .clk0(clk0_g),
-    .clk0_tb(ddr2_clock_tb), //NOTE: MIG drives this for us to sync with it (based on clk0_g)
+    .clk0_tb(ddr2_clock_tb), //NOTE: MIG kicks this back to us (except in testbench mode)
     .clk90(clk90_g),
     .clkdiv0(clkdiv0_g),
     .clk200(clk200_g),
