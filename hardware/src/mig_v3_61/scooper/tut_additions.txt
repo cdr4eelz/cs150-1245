@@ -1,55 +1,42 @@
-// Sample MIG project additions:
+//NOT: ADD TO MODULE HEADER: parameter COLT45_SIMPLESCOPE=1,
 
-  wire [35:0] control /* synthesis syn_noprune=1 */;
-  wire [71:0] data /* synthesis syn_noprune=1 */;
-  wire [ 7:0] trig0 /* synthesis syn_noprune=1 */;
 
-  icon i_icon
-  (
-    .CONTROL0(control)
-   ) /* synthesis syn_noprune=1 */;
-  ila i_ila
-  (
-    .CLK(clk0),
-    .CONTROL(control),
-    .TRIG0(trig0),
-    .DATA(data)
-   ) /* synthesis syn_noprune=1 */;
+// Sample MIG project additions::
+generate if (COLT45_SIMPLESCOPE) begin: gen_simple_scope
 
-assign data[63:0] = app_af_addr;
-assign data[64] = app_wdf_afull;
-assign data[65] = app_af_afull;
-assign data[66] = app_wdf_wren;
-assign data[67] = app_af_cmd;
-assign data[68] = phy_init_done;
-assign data[69] = idelay_ctrl_rdy;
-assign data[70] = sys_rst_n;
-assign data[71] = error;
-assign trig0[0] = phy_init_done;
-assign trig0[1] = idelay_ctrl_rdy;
-assign trig0[2] = sys_rst_n;
-assign trig0[3] = error;
-assign trig0[4] = app_wdf_afull;
-assign trig0[5] = app_af_afull;
-assign trig0[6] = app_wdf_wren;
-assign trig0[7] = app_af_cmd;
+    wire [35:0] control /* synthesis syn_noprune=1 */;
+    wire [71:0] data    /* synthesis syn_noprune=1 */;
+    wire [ 7:0] trig0   /* synthesis syn_noprune=1 */;
 
-endmodule
+    tut_icon i_icon (
+        .CONTROL0(control)
+    ) /* synthesis syn_noprune=1 */;
+    tut_ila i_ila
+    (
+        .CLK(clk0),
+        .CONTROL(control),
+        .TRIG0(trig0),
+        .DATA(data)
+    ) /* synthesis syn_noprune=1 */;
 
-module icon(CONTROL0);
-    inout[35 : 0] CONTROL0;
-endmodule
+    assign data[63:0] = app_af_addr;
+    assign data[64] = app_wdf_afull;
+    assign data[65] = app_af_afull;
+    assign data[66] = app_wdf_wren;
+    assign data[67] = app_af_cmd;
+    assign data[68] = phy_init_done;
+    assign data[69] = idelay_ctrl_rdy;
+    assign data[70] = sys_rst_n;
+    assign data[71] = 1'b0; //error NOTE:Only in testbench version
 
-module ila
-(
-  CLK,
-  CONTROL,
-  TRIG0,
-  DATA
- );
-  input CLK;
-  inout[35 : 0] CONTROL;
-  input [7 : 0] TRIG0;
-  input [71 : 0] DATA;
-endmodule
-// Sample MIG project additions:
+    assign trig0[0] = phy_init_done;
+    assign trig0[1] = idelay_ctrl_rdy;
+    assign trig0[2] = sys_rst_n;
+    assign trig0[3] = 1'b0; //error NOTE:Only in testbench version
+    assign trig0[4] = app_wdf_afull;
+    assign trig0[5] = app_af_afull;
+    assign trig0[6] = app_wdf_wren;
+    assign trig0[7] = app_af_cmd;
+end endgenerate //gen_simple_scope
+
+// ::Sample MIG project additions

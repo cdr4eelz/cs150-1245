@@ -10,6 +10,8 @@
 `define STALLHALVES 0
 `endif
 
+`include "CPUGlobal.vh"
+
 module ASMTestbench;
     reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;

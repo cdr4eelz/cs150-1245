@@ -22,18 +22,7 @@ module StageMTestbench;
     wire   [31: 0]  _MemWValue, _MemAddr;
 
     StageM s_M
-    ( .CPUGlobal(CPUGlobal),
-        //Inputs
-        ._IControl  (IControl__M),  .IControl   (IControl_M),
-        ._MemAddr   (MemAddr__M),   .MemAddr    (MemAddr_M),
-        ._MemWValue (MemWValue__M), .RegWValue  (RegWValue_M),
-        .PCPLUS8    (PCPLUS8_M),
-        //Feedbacks
-        .WBK_Reg_   (WBKReg_M_WF_), .WBK_Val_   (WBKDat_M_WF_),
-        .WBK_CanFWD_(WBKCanFWD_M_WF_),
-        //Passthrough signals NOT sync'd with StageM
-        .INST_ADDR(32'd0), .INST_DATA(),
-        .UARX(UARX), .UATX(UATX) //UART
+    (
     );
 
     integer step = 0;

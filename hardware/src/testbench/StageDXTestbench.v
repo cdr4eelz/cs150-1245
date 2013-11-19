@@ -42,15 +42,16 @@ module StageDXTestbench;
     wire ALUSrcA_, ALUSrcB_, MemToReg, MemWrite, MSigned, ISigned, Jump_, JR_, Link_;
     wire ISigned_, MSigned_, MemToReg_, MemWrite_;
     wire [ 4:0 ] DestReg_;
-    wire [ 1:0 ] DataWidth_;
+    wire [ 1:0 ] MemShift_;
     wire [ 3:0 ] ALUOp_;
     wire [ 2:0 ] CmpOp_;
     BUS_ICTL_tap BUS_ICTL
     ( ._BUS_(IControlDX_),
         .ALUOp(ALUOp_), .ALUSrcA(ALUSrcA_), .ALUSrcB(ALUSrcB_),
-        .ISigned(ISigned_), .CmpOp(CmpOp_), .Jump(Jump_), .JR(JR_),
-        .MemToReg(MemToReg_), .DestReg(DestReg_), .MemWrite(MemWrite_),
-        .DataWidth(DataWidth_), .MSigned(MSigned_), .Link(Link_)
+        .ISigned(ISigned_), .MSigned(MSigned_), .CmpOp(CmpOp_),
+        .Jump(Jump_), .JR(JR_), .Link(Link_),
+        .MemToReg(MemToReg_), .MemWrite(MemWrite_), .MemShift(MemShift_),
+        .DestReg(DestReg_)
     );
 
     integer step = 0;

@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+`include "CPUGlobal.vh"
+
 module RegFileTestbench;
 
   parameter Halfcycle = 5; //half period is 5ns

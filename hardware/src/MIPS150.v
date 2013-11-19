@@ -207,7 +207,7 @@ module MIPS150 #(
 
     // Instruction fetch selection
     wire INST_bios = (INST_ADDR[31:28] == 4'h4);
-    wire [31:0] INST_BR, INST_IC;
+    wire [31:0] INST_BR, INST_IC, INST_IB;
     assign INST_DATA = (INST_bios) ? INST_BR : INST_IC;
 
     // MEMORY & IO ELEMENTS THEMSELVES

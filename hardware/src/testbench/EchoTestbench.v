@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+`include "CPUGlobal.vh"
+
 module EchoTestbench;
 
     reg Clock, Reset, Stall;

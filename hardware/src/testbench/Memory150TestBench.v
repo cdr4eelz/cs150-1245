@@ -16,6 +16,8 @@
 
 `define MODELSIM 1
 
+`include "CPUGlobal.vh"
+
 module Memory150TestBench;
     // Test bench generates a reset
     reg Reset;
