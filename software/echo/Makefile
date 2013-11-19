@@ -1,4 +1,4 @@
 TARGET ?= echo
-LDSTYLE ?= as_bios
+LDSTYLE ?= inject_cache
 
 include ../Makefile.llvm.in

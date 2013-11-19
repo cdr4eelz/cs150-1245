@@ -14,7 +14,8 @@ coregen -intstyle silent -b tmp/_batch
 coregen -intstyle silent -p . -b *.xco
 
 echo "Removing unneeded project/temp files."
-rm -rf coregen.* *.gise *.xise *.txt *.pdf tmp/ xlnx_auto_0_xdb/ 
+rm -rf coregen.* *.txt *.pdf tmp/ xlnx_auto_0_xdb/ 
+#rm -rf coregen.* *.gise *.xise *.txt *.pdf tmp/ xlnx_auto_0_xdb/ 
 chmod u=rw,go= *
 
 echo ""
