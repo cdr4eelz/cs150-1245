@@ -1,12 +1,12 @@
 tmp/
 /[di]mem_blk_ram/
 /bios_mem/
-/cache_data_blk_ram/
-/cache_tag_blk_ram/
 /mig_af/
 /mig_rdf/
 /mig_wdf/
-/mig_xutv5/*/
+/cache_data_blk_ram/
+/cache_tag_blk_ram/
+/mig_v3_36/scooper/
 /fun/*/
 !/fun/*.v
 !*.xco

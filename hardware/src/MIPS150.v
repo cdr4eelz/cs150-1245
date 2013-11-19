@@ -1,6 +1,7 @@
 `include "CPUGlobal.vh"
 
 module MIPS150 #(
+    parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
     parameter COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
@@ -51,8 +52,6 @@ module MIPS150 #(
 
     input stall
 );
-
-localparam DD=1;
 
 // CP3+
 `ifdef __COLT45_pre3
@@ -181,7 +180,7 @@ localparam DD=1;
         REG_MemWValue__M( .CPUGlobal(CPUGlobal),    .In(MemWValueDX_),  .Out(MemWValue__M) );
     PipelineRegister #( .Width(32) )
         REG_RegWValue_M ( .CPUGlobal(CPUGlobal),    .In(RegWValueDX_),  .Out(RegWValue_M ) );
-    PipelineRegister #( .Width(32) )
+    PipelineRegister #( .Width(32) ) //TODO: Use simple flag for "in-bios/allow-I-write"
         REG_PC_M        ( .CPUGlobal(CPUGlobal),    .In(PC_DX       ),  .Out(PC_M        ) );
 
     // MEMORY/IO Drives
@@ -208,12 +207,8 @@ localparam DD=1;
 
     // Instruction fetch selection
     wire INST_bios = (INST_ADDR[31:28] == 4'h4);
-    wire [31:0] INST_BR, INST_IB, INST_IC;
-`ifndef COLT45_pre2
+    wire [31:0] INST_BR, INST_IC;
     assign INST_DATA = (INST_bios) ? INST_BR : INST_IC;
-`else (!!) COLT45_pre2
-    assign INST_DATA = INST_IB;
-`endif
 
     // MEMORY & IO ELEMENTS THEMSELVES
 
@@ -223,6 +218,7 @@ localparam DD=1;
         .addra(MemAddr__M[13:2]),
         .douta(RData_BR),//OUT-32
       /*.wea(_WriteMask), .dina(_WDataMasked),*/
+
     // Instruction reading port (b)
       .clkb(clk), .addrb(INST_ADDR[13:2]),
         .enb(INST_bios), .doutb(INST_BR)
@@ -281,7 +277,7 @@ localparam DD=1;
         .RVA_RX(UARX), .RVA_TX(UATX)
     );
 
-    //TODO: Make UART wrapper that takes two RVA's
+    //TODO: Make this into UART wrapper that takes two RVA's
     wire Rx_Ready, Rx_Valid, Tx_Valid, Tx_Ready;
     wire [7:0] Rx_Data, Tx_Data;
     BUS_SHAKE_tun #(.InWidth(8)) TUN_SHAKE_Rx
@@ -303,6 +299,7 @@ localparam DD=1;
         .SOut(FPGA_SERIAL_TX),
         .DataIn(Tx_Data), .DataInValid(Tx_Valid), .DataInReady(Tx_Ready)
     );
+
 
 
 assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
@@ -355,6 +352,9 @@ cs_ila_1024 CS_ILA ( .CONTROL(SCOPE_CPU),  .CLK(clk),
     .TRIG2( INST_DX ),      // IN BUS [31:0]
     .TRIG3( StepCount )     // IN BUS [31:0]
 ) /* synthesis syn_noprune=1 */;
+
+
+
 
 
 // synthesis translate_off

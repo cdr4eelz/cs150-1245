@@ -28,7 +28,11 @@ module StageM (
         .CLK(clk), .RST(rst), .STL(stall)
     );
 */
-// _IControl & IControl taps
+//TODO: Avoid "-" even if synth deals with it
+//TODO: Cleaner mask/select of ranges!
+//TODO: Drive each _hot-line in an independent always (or assign)
+
+// _IControl taps
     wire [1:0] _MemShift;
     wire _isMemWrite, _isMemRead;
     BUS_ICTL_tap TAP__ICTL
@@ -46,26 +50,32 @@ module StageM (
     assign _WriteMask   = (_isMemWrite) ? _ByteMask : 4'b0000;
 
 always @(*) begin
-    _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0; _hot_IC=1'b0; _hot_DB=1'b0; _hot_IB=1'b0;
-    if (_isMemRead || _isMemWrite) case (_Target)
-        4'b1000: _hot_IO = 1'b1;
-        4'b0100: _hot_BR = !_isMemWrite;
-        4'b0001: _hot_DC = 1'b1;
-        4'b0010: _hot_IC = _isMemWrite && PC[30];
-        4'b0011: begin
-            _hot_DC = 1'b1; _hot_IC = _isMemWrite && PC[30];
-        end
+    _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0;
+    _hot_IC=1'b0; _hot_DB=1'b0; _hot_IB=1'b0;
+    if (_isMemRead || _isMemWrite) begin
+        case (_Target)
+            4'b1000: _hot_IO = 1'b1;
+            4'b0100: _hot_BR = !_isMemWrite;
+            4'b0001: _hot_DC = 1'b1;
+            4'b0010: _hot_IC = _isMemWrite && PC[30];
+            4'b0011:
+                begin
+                    _hot_DC = 1'b1;
+                    _hot_IC = _isMemWrite && PC[30];
+                end
 `ifndef COLT45_STRICT
-        4'b0101: _hot_DB = 1'b1; //EXTRA: Scratchpad-RAM
+            4'b0101: _hot_DB = 1'b1; //EXTRA: Scratchpad-RAM
 `endif //(!) COLT45_STRICT
-    endcase
+        endcase
+    end
 end
 
 
-// NOTE: ABOVE is _IControl and other pre/setup /// BELOW is IControl and other post/fetched
+// NOTE: ABOVE THIS SPOT is "_IControl" and other pre/setup staging //
+// NOTE: BELOW THIS SPOT is "IControl" and other post/fetched processing //
 
 
-// _IControl & IControl taps
+// IControl taps
     wire [1:0] MemShift;
     wire isMemRead;
     wire [4:0] DestReg;
@@ -82,7 +92,7 @@ end
     always @(*) case (Target) // "Target" (for read data coming out after clock) NOT "_Target"
         4'b1000         : DataRead = RData_IO;
         4'b0100         : DataRead = RData_BR;
-        4'b0001, 4'b0011: DataRead = RData_DC;
+        4'b0001, 4'b0011: DataRead = RData_DC; //TODO: Confirm can read from either 1 or 3
 `ifndef COLT45_STRICT //TODO: Ensure no other references to these if STRICT mode!
         4'b0101: DataRead = RData_DB; // Scratchpad-RAM
 `endif

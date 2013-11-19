@@ -9,7 +9,7 @@
 
 `timescale 1ns / 1ps
 
-module CacheTestBench();
+module CacheTestBench;
     // Test bench generates a reset
     reg Reset;
 

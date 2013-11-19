@@ -20,7 +20,7 @@ module StageWF #(
     );
 
     reg [31: 0] PC_REG;
-    always @(posedge clk) begin //TODO: Verify stall
+    always @(posedge clk) begin
         if (rst) begin
             PC_REG <= BOOTPC;
             STEPCOUNT <= 0;

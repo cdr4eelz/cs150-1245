@@ -14,7 +14,11 @@
 //  Author: <<YOUR NAME HERE>>
 //-----------------------------------------------------------------------------
 
+`include "CPUGlobal.vh"
+
+
 module RegFile #(
+    parameter DD=`COLT45_DD,
     parameter COLT45_REGWRITE=0, COLT45_REGSTALL=0
 )(
     input         clk,
@@ -26,8 +30,6 @@ module RegFile #(
     output [31:0] rd1,
     output [31:0] rd2
 );
-
-localparam DD=0.5;
 
 // The dist-ram is already "true dual port", using coordinated writes
 //   to two banks and separate asynchronous reads.  Otherwise, we could

@@ -4,15 +4,13 @@
 **  Abstraction of inter-stage register'd value.
 */
 module PipelineRegister #(
-    parameter Width=0,
-    parameter LatchOnly=0,
-    parameter ResetValue={Width{1'b0}}
+    parameter DD=`COLT45_DD,
+    parameter Width=0, LatchOnly=0, ResetValue={Width{1'b0}}
 )(
     input `BUS_CPUGlobal_type CPUGlobal,
     input  [Width-1:0] In,
     output [Width-1:0] Out
 );
-    localparam DD=0;
 
     wire clk, rst, stall;
     BUS_CPUGlobal_tap BUS_CPUGlobal
@@ -20,7 +18,6 @@ module PipelineRegister #(
         .CLK(clk), .RST(rst), .STL(stall)
     );
     reg  [Width-1:0] OverOut;
-    wire [Width-1:0] #DD _Out_;  // Hang the old value out for a tick
 
 /*
     // Make a little Z-BLIP to highlight poopigation through subsequent combinational logic
@@ -31,8 +28,8 @@ module PipelineRegister #(
     end
     assign Out = (Blip) ? {Width{1'bz}} : _Out_;
 */
-    assign Out = _Out_;
 
+//TODO: Try to LATCHIEMUX with regular sync element at end of it's combo-logic
     generate if (LatchOnly) begin:LATCHIEMUX
         // *Synchronously* consider reset & enable and
         //   register associated override value on posedge clk,
@@ -44,7 +41,7 @@ module PipelineRegister #(
             if (rst) OverOut <= ResetValue;
             else if (!OverRide) OverOut <= In; //NOTE: Uses *OLD* !OverRide!
         end
-        assign _Out_ = (OverRide) ? OverOut : In;
+        assign Out = (OverRide) ? OverOut : In;
     end else begin:REGGIEREG
         // Basic register with sync reset & sync enable (enable = !stall).
         //  Only admit new value if !stall.
@@ -52,7 +49,7 @@ module PipelineRegister #(
             if (rst) OverOut <= ResetValue;
             else if (!stall) OverOut <= In;
         end
-        assign _Out_ = OverOut;
+        assign Out = OverOut;
     end endgenerate
 endmodule
 

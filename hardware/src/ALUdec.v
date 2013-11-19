@@ -20,24 +20,25 @@ always @(*) begin
     ALUop = `ALU_XXX;
     case (opcode)
         // R-type (use funct)
-        `RTYPE: begin case(funct)
-            `SLL:   ALUop = `ALU_SLL;
-            `SRL:   ALUop = `ALU_SRL;
-            `SRA:   ALUop = `ALU_SRA;
-            `SLLV:  ALUop = `ALU_SLL;
-            `SRLV:  ALUop = `ALU_SRL;
-            `SRAV:  ALUop = `ALU_SRA;
-            `ADDU:  ALUop = `ALU_ADDU; // No "signed" add/sub,
-            `SUBU:  ALUop = `ALU_SUBU; //   since no exceptions.
-            `AND:   ALUop = `ALU_AND;
-            `OR:    ALUop = `ALU_OR;
-            `XOR:   ALUop = `ALU_XOR;
-            `NOR:   ALUop = `ALU_NOR;
-            `SLT:   ALUop = `ALU_SLT;
-            `SLTU:  ALUop = `ALU_SLTU;
-            `JR, `JALR: ALUop = `ALU_XXX;
-            default: $display("Untrapped ALU op: funct=%h  @%t", funct, $time);
-        endcase end
+        `RTYPE:
+            begin case(funct)
+                `SLL:   ALUop = `ALU_SLL;
+                `SRL:   ALUop = `ALU_SRL;
+                `SRA:   ALUop = `ALU_SRA;
+                `SLLV:  ALUop = `ALU_SLL;
+                `SRLV:  ALUop = `ALU_SRL;
+                `SRAV:  ALUop = `ALU_SRA;
+                `ADDU:  ALUop = `ALU_ADDU; // No "signed" add/sub,
+                `SUBU:  ALUop = `ALU_SUBU; //   since no exceptions.
+                `AND:   ALUop = `ALU_AND;
+                `OR:    ALUop = `ALU_OR;
+                `XOR:   ALUop = `ALU_XOR;
+                `NOR:   ALUop = `ALU_NOR;
+                `SLT:   ALUop = `ALU_SLT;
+                `SLTU:  ALUop = `ALU_SLTU;
+                `JR, `JALR: ALUop = `ALU_XXX;
+                default: $display("Untrapped ALU op: funct=%h  @%t", funct, $time);
+            endcase end
 
         // Load/store
         `LB, `LH, `LW, `LBU, `LHU, `SB, `SH, `SW:

@@ -1,6 +1,8 @@
 `include "CPUGlobal.vh"
 
-module InstructionControl(
+module InstructionControl #(
+    parameter DD=`COLT45_DD
+)(
     input [31:0 ] _inst,
     input [31:0 ] _pc,
 
@@ -18,7 +20,6 @@ module InstructionControl(
 //  output [15:0 ] FAULT
 );
 
-localparam DD=1;
 
     function [31:0] SEXT16_32;
         input [15:0] in16;
@@ -57,8 +58,8 @@ localparam DD=1;
     assign isMLoad     = (_opcode_[5:3] == 3'b100);
     assign isMStore    = (_opcode_[5:3] == 3'b101);
     assign isIComp     = (_opcode_[5:3] == 3'b001);
-    assign isISigned    = (isMemory || (isIComp && !_opcode_[2]));
-    assign isMSigned    = (isMemory && !isMStore && !_opcode_[1] && !_opcode_[2]);
+    assign isISigned   = (isMemory || (isIComp && !_opcode_[2]));
+    assign isMSigned   = (isMemory && !isMStore && !_opcode_[1] && !_opcode_[2]);
     wire #DD isRShift, isRShiftI, isRShiftR, isROther;
     assign isRShift    = (isRType && (_funct_[5:3] == 3'b000));
     assign isRShiftI   = (isRShift && (_funct_[2] == 1'b0));
