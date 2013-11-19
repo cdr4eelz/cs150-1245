@@ -56,8 +56,9 @@ module Memory150(
 
     parameter SIM_ONLY = 1'b0;
 
-    wire ddr2_clock_tb, rst_tb; //UNUSED
-//    assign ddr2_clock_tb = clk0_g; //EQUIVALENT (with current clocks/bufg's)
+    wire rst_tb; //UNUSED
+    wire ddr2_clock_tb; //EQUIVALENT to clk0_g for this setup)
+//    assign ddr2_clock_tb = clk0_g; 
 
     // DDR2 & FIFO interface wires:
     wire         af_afull;
@@ -101,8 +102,7 @@ module Memory150(
 
 
     // DDR2 module:
-//  mig_v3_61 #(
-    mig_xupv5 #(
+    mig_v3_61 #(
         .SIM_ONLY(SIM_ONLY)
     ) ddr2 (
     .ddr2_dq(DDR2_D),

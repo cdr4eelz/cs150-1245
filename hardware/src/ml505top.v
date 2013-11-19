@@ -49,6 +49,7 @@ module ml505top
 // BRK tap
     wire debug_reset, debug_stall, debug_brk, debug_jog;
     wire [0:1023] debug_trace;
+    wire [35: 0] SCOPE_CPU;
 
 // UART crosswork
     wire M_SERIAL_RX, M_SERIAL_TX;
@@ -282,7 +283,7 @@ module ml505top
 */
 
 //BRK tap
-    .brk(debug_brk), .trace(debug_trace),
+    .brk(debug_brk), .trace(debug_trace), .SCOPE_CPU(SCOPE_CPU),
 
 // Shared
     .stall(any_stall)
@@ -452,9 +453,9 @@ module ml505top
         end
     endfunction
 
-    wire [35: 0] CS0, CS1; //, CS2;
-    cs_icon_2 CS_ICON (
-        .CONTROL0(CS0), .CONTROL1(CS1)//, .CONTROL2(CS2) // INOUT BUS [35:0]
+    wire [35: 0] CS0, CS1;
+    cs_icon_3 CS_ICON (
+        .CONTROL0(CS0), .CONTROL1(CS1), .CONTROL2(SCOPE_CPU) // INOUT BUS [35:0]
     ) /* synthesis syn_noprune=1 */;
 
     wire [ 7: 0] BRK_ACTION, BRK_EN /* synthesis syn_noprune=1 */;
@@ -478,14 +479,6 @@ module ml505top
         .ASYNC_IN( BRK_SVAL[0:255] ) // IN BUS [255:0]
     ) /* synthesis syn_noprune=1 */;
     always @(*) BRK_SVAL = GET_SEGMENT(BRK_SSEL, debug_trace);
-
-// Having constraint trouble when attempting ILA inclusion (maybe DDR2 conflict? maybe size issue?)
-//  chipscope_ila_1024 CS_ILA ( .CONTROL(CS2),  .CLK(cpu_clk_g),
-//      .DATA(  debug_trace ),          // IN BUS [1023:0]
-//      .TRIG0( debug_trace[248+:8] ),  // IN BUS [7:0]  (basic state)
-//      .TRIG1( debug_trace[80+:16] ),  // IN BUS [15:0] (stepcount[15:0])
-//      .TRIG2( debug_trace[32+:32] )   // IN BUS [31:0] (opcode)
-//  ) /* synthesis syn_noprune=1 */;
 
     assign BRK_WATCH = debug_trace[0:255];
     assign BRK_HIT[0] = (BRK_MATCH[(0<<5)+:32]==BRK_WATCH[(0<<5)+:32]);
@@ -512,6 +505,9 @@ module ml505top
 `else
     assign {debug_reset,debug_stall,debug_brk,debug_jog} = 4'b0000;
     assign {BRK_MASTER,SERIAL_JTAG} = 2'b00;
+    cs_icon_1 CS_ICON (
+        .CONTROL0(SCOPE_CPU) // INOUT BUS [35:0]
+    ) /* synthesis syn_noprune=1 */;
 `endif
 
 

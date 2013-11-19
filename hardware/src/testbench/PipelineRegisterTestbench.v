@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`include "CPUBusses.vh"
+`include "CPUGlobal.vh"
 
 module PipelineRegisterTestbench;
     reg clk, rst, stl;

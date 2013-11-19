@@ -49,32 +49,3 @@ ADDRESS_MAP MIPSY PPC405 0
 
 END_ADDRESS_MAP;
 
-
-
-// File: /home/cc/cs199/fa12/class/cs199-fu/team45/tool/plop/implementation/plop.bmm
-
-ADDRESS_MAP microblaze_0 MICROBLAZE 100
-
-    ADDRESS_SPACE lmb_bram_combined RAMB32 [0x00000000:0x00003FFF]
-        BUS_BLOCK
-            PLOP/lmb_bram/lmb_bram/ramb36_0 RAMB32 [31:24] [0:4095] INPUT = lmb_bram_combined_0.mem;
-            PLOP/lmb_bram/lmb_bram/ramb36_1 RAMB32 [23:16] [0:4095] INPUT = lmb_bram_combined_1.mem;
-            PLOP/lmb_bram/lmb_bram/ramb36_2 RAMB32 [15:8] [0:4095] INPUT = lmb_bram_combined_2.mem;
-            PLOP/lmb_bram/lmb_bram/ramb36_3 RAMB32 [7:0] [0:4095] INPUT = lmb_bram_combined_3.mem;
-        END_BUS_BLOCK;
-    END_ADDRESS_SPACE;
-
-    ADDRESS_SPACE brk_bram_combined RAMB32 [0x70000000:0x70007FFF]
-        BUS_BLOCK
-            PLOP/brk_bram/brk_bram/ramb36_0 RAMB32 [31:28] [0:8191] INPUT = brk_bram_combined_0.mem;
-            PLOP/brk_bram/brk_bram/ramb36_1 RAMB32 [27:24] [0:8191] INPUT = brk_bram_combined_1.mem;
-            PLOP/brk_bram/brk_bram/ramb36_2 RAMB32 [23:20] [0:8191] INPUT = brk_bram_combined_2.mem;
-            PLOP/brk_bram/brk_bram/ramb36_3 RAMB32 [19:16] [0:8191] INPUT = brk_bram_combined_3.mem;
-            PLOP/brk_bram/brk_bram/ramb36_4 RAMB32 [15:12] [0:8191] INPUT = brk_bram_combined_4.mem;
-            PLOP/brk_bram/brk_bram/ramb36_5 RAMB32 [11:8] [0:8191] INPUT = brk_bram_combined_5.mem;
-            PLOP/brk_bram/brk_bram/ramb36_6 RAMB32 [7:4] [0:8191] INPUT = brk_bram_combined_6.mem;
-            PLOP/brk_bram/brk_bram/ramb36_7 RAMB32 [3:0] [0:8191] INPUT = brk_bram_combined_7.mem;
-        END_BUS_BLOCK;
-    END_ADDRESS_SPACE;
-
-END_ADDRESS_MAP;

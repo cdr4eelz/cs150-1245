@@ -1,15 +1,4 @@
-// UC Berkeley CS150
-// Lab 3, Spring 2012
-// Module: ALU.v
-// Desc:   32-bit ALU for the MIPS150 Processor
-// Inputs: A: 32-bit value
-// B: 32-bit value
-// ALUop: Selects the ALU's operation
-//
-// Outputs:
-// Out: The chosen function mapped to A and B.
-
-`include "CPUBusses.vh"
+`include "CPUGlobal.vh"
 
 `include "Opcode.vh"
 `include "ALUop.vh"

@@ -1,4 +1,4 @@
-`include "CPUBusses.vh"
+`include "CPUGlobal.vh"
 
 module MEMIOPlex #(
     parameter BUFSIZE=0,

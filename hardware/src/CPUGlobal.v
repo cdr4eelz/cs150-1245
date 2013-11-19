@@ -1,4 +1,4 @@
-`include "CPUBusses.vh"
+`include "CPUGlobal.vh"
 
 //TODO: Use PARAMs on MMAP to select mem-range (perhaps other masking like stall)
 //TODO: Teach chipscope the BUS ranges (some-day)
@@ -25,7 +25,7 @@ module BUS_ICTL_tun         // "tunnel" out multiple values
     input          MemToReg,
     input  [ 4:0 ] DestReg,
     input          MemWrite,
-    input  [ 1:0 ] DataWidth,
+    input  [ 1:0 ] MemShift,
     input          MSigned,
     input          ALUSrcA,
     input          ALUSrcB,
@@ -37,7 +37,7 @@ module BUS_ICTL_tun         // "tunnel" out multiple values
     input          Link
 );
     assign `ICTL__IN(_BUS_)
-        = {MemToReg,DestReg,MemWrite,DataWidth,MSigned,
+        = {MemToReg,DestReg,MemWrite,MemShift,MSigned,
             ALUSrcA,ALUSrcB,ALUOp,ISigned,CmpOp,Jump,JR,Link};
 endmodule
 
@@ -46,7 +46,7 @@ module BUS_ICTL_tap         // "tap" into desired tunneled values
     output         MemToReg,
     output [ 4:0 ] DestReg,
     output         MemWrite,
-    output [ 1:0 ] DataWidth,
+    output [ 1:0 ] MemShift,
     output         MSigned,
     output         ALUSrcA,
     output         ALUSrcB,
@@ -57,7 +57,7 @@ module BUS_ICTL_tap         // "tap" into desired tunneled values
     output         JR,
     output         Link
 );
-    assign {MemToReg,DestReg,MemWrite,DataWidth,MSigned,
+    assign {MemToReg,DestReg,MemWrite,MemShift,MSigned,
         ALUSrcA,ALUSrcB,ALUOp,ISigned,CmpOp,Jump,JR,Link}
             = `ICTL__IN(_BUS_);
 endmodule

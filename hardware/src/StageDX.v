@@ -1,4 +1,4 @@
-`include "CPUBusses.vh"
+`include "CPUGlobal.vh"
 
 module StageDX(
 //  input `BUS_CPUGlobal_type CPUGlobal, // Unused!
@@ -46,7 +46,7 @@ module StageDX(
     ( ._BUS_(IControl_), // Unused (explicitly listed to make warnings meaningful)
         .ALUOp(ALUOp), .ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB),
         .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR), .Link(Link),
-        .MemToReg(),.DestReg(),.MemWrite(),.DataWidth(),.MSigned()
+        .MemToReg(),.DestReg(),.MemWrite(),.MemShift(),.MSigned()
     );
 
     wire [31: 0] ALUResult;

@@ -1,4 +1,4 @@
-`include "CPUBusses.vh"
+`include "CPUGlobal.vh"
 
 module MIPS150 #(
     parameter ClockFreq=50_000_000,
@@ -47,6 +47,7 @@ module MIPS150 #(
 //BRK tap (will become internal instead)
     input brk,
     output [0:1023] trace,
+    inout  [35: 0] SCOPE_CPU,
 
     input stall
 );
@@ -185,7 +186,7 @@ localparam DD=1;
 
     // MEMORY/IO Drives
     wire _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB;
-    wire [ 3: 0] _ByteMask, _WriteMask;
+    wire [ 3: 0] _WriteMask, _ByteMask;
     wire [31: 0] _WDataMasked;
     wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
     StageM s_M
@@ -208,7 +209,11 @@ localparam DD=1;
     // Instruction fetch selection
     wire INST_bios = (INST_ADDR[31:28] == 4'h4);
     wire [31:0] INST_BR, INST_IB, INST_IC;
-    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB; //TODO: INST_IC
+`ifndef COLT45_pre2
+    assign INST_DATA = (INST_bios) ? INST_BR : INST_IC;
+`else (!!) COLT45_pre2
+    assign INST_DATA = INST_IB;
+`endif
 
     // MEMORY & IO ELEMENTS THEMSELVES
 
@@ -311,13 +316,45 @@ assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit a
     RData_IO,           RData_BR,           RData_DC,           RData_DB,
     MemAddr_M,          MemAddr__M,         _WDataMasked,
         {16'h1234,
-            _WriteMask,_ByteMask,2'd0,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
+            _WriteMask,_ByteMask,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
 
     INST_ADDR,          INST_DATA,          StallCount,         PC_M,
     {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_M},  {9'd0,IControl__M},
 
     256'd0
 };
+
+
+// Having constraint trouble when attempting ILA inclusion (some signals getting munched out???)
+wire [1023:0] scoper = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
+    // 0 \\             // 1 \\             // 2 \\             // 3 \\
+    PC_DX,              INST_DX,            StepCount,          PCBranch_DX_WF_,
+    FWD_rd1,            FWD_rd2,            REGFILE_wd,
+        {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
+            REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
+            _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,~rst,stall},
+
+    RData_IO,           RData_BR,           RData_DC,           RData_DB,
+    MemAddr_M,          MemAddr__M,         _WDataMasked,
+        {16'h1234,
+            _WriteMask,_ByteMask,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
+
+    INST_ADDR,          INST_DATA,          StallCount,         PC_M,
+    {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_M},  {9'd0,IControl__M},
+
+    32'd0,              32'd0,              32'd0,              32'd0,
+    32'd0,              32'd0,              32'd0,              32'd0
+};
+wire [31:0] trig0 = {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
+            REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
+            _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,~rst,stall};
+cs_ila_1024 CS_ILA ( .CONTROL(SCOPE_CPU),  .CLK(clk),
+    .DATA( scoper ),         // IN BUS [1023:0]
+    .TRIG0( trig0 ),        // IN BUS [31:0]
+    .TRIG1( PC_DX ),        // IN BUS [31:0]
+    .TRIG2( INST_DX ),      // IN BUS [31:0]
+    .TRIG3( StepCount )     // IN BUS [31:0]
+) /* synthesis syn_noprune=1 */;
 
 
 // synthesis translate_off
