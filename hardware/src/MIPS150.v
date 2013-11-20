@@ -107,7 +107,7 @@ module MIPS150 #(
     wire [31: 0] INST_ADDR, INST_DATA; //Data fetch is sync'd with StageWF
     wire [31: 0] StepCount, StallCount;
     StageWF #(
-        .COUNTERWIDTH(32)//, .BOOTPC(32'h6_000_0000) //TODO: Change back to default/BIOS
+        .COUNTERWIDTH(32), .BOOTPC(32'h6_000_0000) //TODO: Change back to default/BIOS
     ) s_WF ( .CPUGlobal(CPUGlobal),
         .DOBranch(DOBranch_DX_WF_), .PCBranch(PCBranch_DX_WF_),
         .PC(INST_ADDR),
@@ -208,7 +208,7 @@ module MIPS150 #(
     // Instruction fetch selection
     wire INST_bios = (INST_ADDR[31:28] == 4'h4);
     wire [31:0] INST_BR, INST_IC, INST_IB;
-    assign INST_DATA = (INST_bios) ? INST_BR : INST_IC;
+    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB;
 
     // MEMORY & IO ELEMENTS THEMSELVES
 
@@ -225,11 +225,11 @@ module MIPS150 #(
 
     wire [31:0] latchedADDR, latchedDATA;
     wire [3:0] latchedMASK;
-    PipelineRegister #( .Width(32), .LatchOnly(1) )
+    PipelineRegister #( .Width(32), .LatchOnly(0) )
         REG_latchedADDR( .CPUGlobal(CPUGlobal), .In(MemAddr__M), .Out(latchedADDR) );
-    PipelineRegister #( .Width(32), .LatchOnly(1) )
+    PipelineRegister #( .Width(32), .LatchOnly(0) )
         REG_latchedDATA( .CPUGlobal(CPUGlobal), .In(_WDataMasked), .Out(latchedDATA) );
-    PipelineRegister #( .Width(4), .LatchOnly(1) )
+    PipelineRegister #( .Width(4), .LatchOnly(0) )
         REG_latchedMASK( .CPUGlobal(CPUGlobal), .In(_WriteMask), .Out(latchedMASK) );
     assign dcache_addr = latchedADDR,
         dcache_we = latchedMASK, //(/*~stall &&*/ _hot_DC) ? (_WriteMask) : 4'b0000,
@@ -327,8 +327,10 @@ wire [1023:0] scoper = { // 4 segments of 8 values is 32 values (each 32-bit or 
             REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
             _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,~rst,stall},
 
-    32'd0,              32'd0,              32'd0,              32'd0,
-    32'd0,              32'd0,              32'd0,              32'd0,
+    RData_IO,           RData_BR,           RData_DC,           RData_DB,
+    32'd0,              latchedADDR,        latchedDATA,
+        {16'h1234,
+            latchedMASK,4'd0,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
 
     INST_ADDR,          INST_DATA,          StallCount,         PC_M,
     {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_M},  {9'd0,IControl__M}

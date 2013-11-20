@@ -1,5 +1,5 @@
 #ChipScope Pro Analyzer Project File, Version 3.0
-#Wed Nov 20 00:03:10 PST 2013
+#Wed Nov 20 00:42:30 PST 2013
 deviceChain.deviceName0=XCF32P
 deviceChain.deviceName1=XCF32P
 deviceChain.deviceName2=XC9500XL
@@ -21,8 +21,8 @@ mdiAreaHeightLast=0.6968421052631579
 mdiCount=2
 mdiDevice0=4
 mdiDevice1=4
-mdiType0=1
-mdiType1=0
+mdiType0=0
+mdiType1=1
 mdiUnit0=0
 mdiUnit1=0
 navigatorHeight=0.1831578947368421
@@ -47,14 +47,14 @@ unit.4.0.1.HEIGHT1=0.7308743
 unit.4.0.1.WIDTH1=1.0
 unit.4.0.1.X1=0.0
 unit.4.0.1.Y1=0.26912567
-unit.4.0.MFBitsA0=0XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-unit.4.0.MFBitsA1=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-unit.4.0.MFBitsA2=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-unit.4.0.MFBitsA3=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-unit.4.0.MFBitsB0=00000000000000000000000000000000
-unit.4.0.MFBitsB1=00000000000000000000000000000000
-unit.4.0.MFBitsB2=00000000000000000000000000000000
-unit.4.0.MFBitsB3=00000000000000000000000000000000
+unit.4.0.MFBitsA0=1XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+unit.4.0.MFBitsA1=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+unit.4.0.MFBitsA2=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+unit.4.0.MFBitsA3=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+unit.4.0.MFBitsB0=0000000000000000000000000000000000000
+unit.4.0.MFBitsB1=0000000000000000000000000000000000000
+unit.4.0.MFBitsB2=0000000000000000000000000000000000000
+unit.4.0.MFBitsB3=0000000000000000000000000000000000000
 unit.4.0.MFCompareA0=0
 unit.4.0.MFCompareA1=0
 unit.4.0.MFCompareA2=0
@@ -94,7 +94,7 @@ unit.4.0.eventCount1=1
 unit.4.0.eventCount2=1
 unit.4.0.eventCount3=1
 unit.4.0.port.-1.buscount=0
-unit.4.0.port.-1.channelcount=1024
+unit.4.0.port.-1.channelcount=768
 unit.4.0.port.-1.s.0.alias=
 unit.4.0.port.-1.s.0.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.-1.s.0.name=DataPort[0]
@@ -5216,7 +5216,7 @@ unit.4.0.port.-1.s.999.name=DataPort[999]
 unit.4.0.port.-1.s.999.orderindex=-1
 unit.4.0.port.-1.s.999.visible=1
 unit.4.0.port.0.b.0.alias=
-unit.4.0.port.0.b.0.channellist=0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+unit.4.0.port.0.b.0.channellist=0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36
 unit.4.0.port.0.b.0.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.0.b.0.name=TriggerPort0
 unit.4.0.port.0.b.0.orderindex=-1
@@ -5229,7 +5229,7 @@ unit.4.0.port.0.b.0.unsignedPrecision=0
 unit.4.0.port.0.b.0.unsignedScaleFactor=1.0
 unit.4.0.port.0.b.0.visible=1
 unit.4.0.port.0.buscount=1
-unit.4.0.port.0.channelcount=32
+unit.4.0.port.0.channelcount=37
 unit.4.0.port.0.s.0.alias=
 unit.4.0.port.0.s.0.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.0.s.0.name=TriggerPort0[0]
@@ -5360,6 +5360,31 @@ unit.4.0.port.0.s.31.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.0.s.31.name=TriggerPort0[31]
 unit.4.0.port.0.s.31.orderindex=-1
 unit.4.0.port.0.s.31.visible=1
+unit.4.0.port.0.s.32.alias=
+unit.4.0.port.0.s.32.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.0.s.32.name=TriggerPort0[32]
+unit.4.0.port.0.s.32.orderindex=-1
+unit.4.0.port.0.s.32.visible=1
+unit.4.0.port.0.s.33.alias=
+unit.4.0.port.0.s.33.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.0.s.33.name=TriggerPort0[33]
+unit.4.0.port.0.s.33.orderindex=-1
+unit.4.0.port.0.s.33.visible=1
+unit.4.0.port.0.s.34.alias=
+unit.4.0.port.0.s.34.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.0.s.34.name=TriggerPort0[34]
+unit.4.0.port.0.s.34.orderindex=-1
+unit.4.0.port.0.s.34.visible=1
+unit.4.0.port.0.s.35.alias=
+unit.4.0.port.0.s.35.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.0.s.35.name=TriggerPort0[35]
+unit.4.0.port.0.s.35.orderindex=-1
+unit.4.0.port.0.s.35.visible=1
+unit.4.0.port.0.s.36.alias=
+unit.4.0.port.0.s.36.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.0.s.36.name=TriggerPort0[36]
+unit.4.0.port.0.s.36.orderindex=-1
+unit.4.0.port.0.s.36.visible=1
 unit.4.0.port.0.s.4.alias=
 unit.4.0.port.0.s.4.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.0.s.4.name=TriggerPort0[4]
@@ -5391,7 +5416,7 @@ unit.4.0.port.0.s.9.name=TriggerPort0[9]
 unit.4.0.port.0.s.9.orderindex=-1
 unit.4.0.port.0.s.9.visible=1
 unit.4.0.port.1.b.0.alias=
-unit.4.0.port.1.b.0.channellist=0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+unit.4.0.port.1.b.0.channellist=0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36
 unit.4.0.port.1.b.0.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.1.b.0.name=TriggerPort1
 unit.4.0.port.1.b.0.orderindex=-1
@@ -5404,7 +5429,7 @@ unit.4.0.port.1.b.0.unsignedPrecision=0
 unit.4.0.port.1.b.0.unsignedScaleFactor=1.0
 unit.4.0.port.1.b.0.visible=1
 unit.4.0.port.1.buscount=1
-unit.4.0.port.1.channelcount=32
+unit.4.0.port.1.channelcount=37
 unit.4.0.port.1.s.0.alias=
 unit.4.0.port.1.s.0.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.1.s.0.name=TriggerPort1[0]
@@ -5535,6 +5560,31 @@ unit.4.0.port.1.s.31.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.1.s.31.name=TriggerPort1[31]
 unit.4.0.port.1.s.31.orderindex=-1
 unit.4.0.port.1.s.31.visible=1
+unit.4.0.port.1.s.32.alias=
+unit.4.0.port.1.s.32.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.1.s.32.name=TriggerPort1[32]
+unit.4.0.port.1.s.32.orderindex=-1
+unit.4.0.port.1.s.32.visible=1
+unit.4.0.port.1.s.33.alias=
+unit.4.0.port.1.s.33.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.1.s.33.name=TriggerPort1[33]
+unit.4.0.port.1.s.33.orderindex=-1
+unit.4.0.port.1.s.33.visible=1
+unit.4.0.port.1.s.34.alias=
+unit.4.0.port.1.s.34.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.1.s.34.name=TriggerPort1[34]
+unit.4.0.port.1.s.34.orderindex=-1
+unit.4.0.port.1.s.34.visible=1
+unit.4.0.port.1.s.35.alias=
+unit.4.0.port.1.s.35.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.1.s.35.name=TriggerPort1[35]
+unit.4.0.port.1.s.35.orderindex=-1
+unit.4.0.port.1.s.35.visible=1
+unit.4.0.port.1.s.36.alias=
+unit.4.0.port.1.s.36.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.1.s.36.name=TriggerPort1[36]
+unit.4.0.port.1.s.36.orderindex=-1
+unit.4.0.port.1.s.36.visible=1
 unit.4.0.port.1.s.4.alias=
 unit.4.0.port.1.s.4.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.1.s.4.name=TriggerPort1[4]
@@ -5566,7 +5616,7 @@ unit.4.0.port.1.s.9.name=TriggerPort1[9]
 unit.4.0.port.1.s.9.orderindex=-1
 unit.4.0.port.1.s.9.visible=1
 unit.4.0.port.2.b.0.alias=
-unit.4.0.port.2.b.0.channellist=0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+unit.4.0.port.2.b.0.channellist=0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36
 unit.4.0.port.2.b.0.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.2.b.0.name=TriggerPort2
 unit.4.0.port.2.b.0.orderindex=-1
@@ -5579,7 +5629,7 @@ unit.4.0.port.2.b.0.unsignedPrecision=0
 unit.4.0.port.2.b.0.unsignedScaleFactor=1.0
 unit.4.0.port.2.b.0.visible=1
 unit.4.0.port.2.buscount=1
-unit.4.0.port.2.channelcount=32
+unit.4.0.port.2.channelcount=37
 unit.4.0.port.2.s.0.alias=
 unit.4.0.port.2.s.0.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.2.s.0.name=TriggerPort2[0]
@@ -5710,6 +5760,31 @@ unit.4.0.port.2.s.31.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.2.s.31.name=TriggerPort2[31]
 unit.4.0.port.2.s.31.orderindex=-1
 unit.4.0.port.2.s.31.visible=1
+unit.4.0.port.2.s.32.alias=
+unit.4.0.port.2.s.32.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.2.s.32.name=TriggerPort2[32]
+unit.4.0.port.2.s.32.orderindex=-1
+unit.4.0.port.2.s.32.visible=1
+unit.4.0.port.2.s.33.alias=
+unit.4.0.port.2.s.33.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.2.s.33.name=TriggerPort2[33]
+unit.4.0.port.2.s.33.orderindex=-1
+unit.4.0.port.2.s.33.visible=1
+unit.4.0.port.2.s.34.alias=
+unit.4.0.port.2.s.34.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.2.s.34.name=TriggerPort2[34]
+unit.4.0.port.2.s.34.orderindex=-1
+unit.4.0.port.2.s.34.visible=1
+unit.4.0.port.2.s.35.alias=
+unit.4.0.port.2.s.35.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.2.s.35.name=TriggerPort2[35]
+unit.4.0.port.2.s.35.orderindex=-1
+unit.4.0.port.2.s.35.visible=1
+unit.4.0.port.2.s.36.alias=
+unit.4.0.port.2.s.36.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.2.s.36.name=TriggerPort2[36]
+unit.4.0.port.2.s.36.orderindex=-1
+unit.4.0.port.2.s.36.visible=1
 unit.4.0.port.2.s.4.alias=
 unit.4.0.port.2.s.4.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.2.s.4.name=TriggerPort2[4]
@@ -5741,7 +5816,7 @@ unit.4.0.port.2.s.9.name=TriggerPort2[9]
 unit.4.0.port.2.s.9.orderindex=-1
 unit.4.0.port.2.s.9.visible=1
 unit.4.0.port.3.b.0.alias=
-unit.4.0.port.3.b.0.channellist=0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+unit.4.0.port.3.b.0.channellist=0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36
 unit.4.0.port.3.b.0.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.3.b.0.name=TriggerPort3
 unit.4.0.port.3.b.0.orderindex=-1
@@ -5754,7 +5829,7 @@ unit.4.0.port.3.b.0.unsignedPrecision=0
 unit.4.0.port.3.b.0.unsignedScaleFactor=1.0
 unit.4.0.port.3.b.0.visible=1
 unit.4.0.port.3.buscount=1
-unit.4.0.port.3.channelcount=32
+unit.4.0.port.3.channelcount=37
 unit.4.0.port.3.s.0.alias=
 unit.4.0.port.3.s.0.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.3.s.0.name=TriggerPort3[0]
@@ -5885,6 +5960,31 @@ unit.4.0.port.3.s.31.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.3.s.31.name=TriggerPort3[31]
 unit.4.0.port.3.s.31.orderindex=-1
 unit.4.0.port.3.s.31.visible=1
+unit.4.0.port.3.s.32.alias=
+unit.4.0.port.3.s.32.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.3.s.32.name=TriggerPort3[32]
+unit.4.0.port.3.s.32.orderindex=-1
+unit.4.0.port.3.s.32.visible=1
+unit.4.0.port.3.s.33.alias=
+unit.4.0.port.3.s.33.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.3.s.33.name=TriggerPort3[33]
+unit.4.0.port.3.s.33.orderindex=-1
+unit.4.0.port.3.s.33.visible=1
+unit.4.0.port.3.s.34.alias=
+unit.4.0.port.3.s.34.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.3.s.34.name=TriggerPort3[34]
+unit.4.0.port.3.s.34.orderindex=-1
+unit.4.0.port.3.s.34.visible=1
+unit.4.0.port.3.s.35.alias=
+unit.4.0.port.3.s.35.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.3.s.35.name=TriggerPort3[35]
+unit.4.0.port.3.s.35.orderindex=-1
+unit.4.0.port.3.s.35.visible=1
+unit.4.0.port.3.s.36.alias=
+unit.4.0.port.3.s.36.color=java.awt.Color[r\=0,g\=0,b\=124]
+unit.4.0.port.3.s.36.name=TriggerPort3[36]
+unit.4.0.port.3.s.36.orderindex=-1
+unit.4.0.port.3.s.36.visible=1
 unit.4.0.port.3.s.4.alias=
 unit.4.0.port.3.s.4.color=java.awt.Color[r\=0,g\=0,b\=124]
 unit.4.0.port.3.s.4.name=TriggerPort3[4]
@@ -5930,7 +6030,7 @@ unit.4.0.triggerWindowCount=1
 unit.4.0.triggerWindowDepth=1024
 unit.4.0.triggerWindowTS=0
 unit.4.0.username=MyILA0
-unit.4.0.waveform.count=1024
+unit.4.0.waveform.count=768
 unit.4.0.waveform.posn.0.channel=0
 unit.4.0.waveform.posn.0.name=DataPort[0]
 unit.4.0.waveform.posn.0.type=signal
