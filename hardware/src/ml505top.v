@@ -136,7 +136,7 @@ module ml505top
     wire         mem_init_done;
 
     assign rst_or_init = rst || ~mem_init_done;
-    assign any_stall = mem_stall || man_stall || debug_stall_not_jog;
+    assign any_stall = mem_stall;// || man_stall || debug_stall_not_jog;
 
 /*
 // CP3+
@@ -535,29 +535,32 @@ module ml505top
 
 
     // Raw clock lines (unbuffered, don't use elsewhere)
-    wire pll_fb, clk50, clk0, clk90, clkdiv0, clk200, clk125;
+    wire pll_fb, clk50, clk0, clk90, clkdiv0, clk125;
     PLL_BASE #(
         .BANDWIDTH("OPTIMIZED"), .CLKIN_PERIOD(10.0), //Input Freq 100MHz
         .DIVCLK_DIVIDE(2), .CLKFBOUT_MULT(20), .CLKFBOUT_PHASE(0.0),
         //INTERNAL REFERENCE: --=> 100 / 2 * 20 = 1000 MHz (basis for each below):
 
         .CLKOUT0_DIVIDE(20), .CLKOUT0_DUTY_CYCLE(0.5), .CLKOUT0_PHASE(0.0),
-        //clk50/cpu_clk: 1000 / 20 = 50 MHz
+        //#0:clk50=cpu_clk: 1000 / 20 = 50 MHz
+
         .CLKOUT1_DIVIDE(5), .CLKOUT1_DUTY_CYCLE(0.5), .CLKOUT1_PHASE(0.0),
-        //clk200: 1000 / 5 => 200 MHz
-        .CLKOUT2_DIVIDE(5), .CLKOUT2_DUTY_CYCLE(0.5), .CLKOUT2_PHASE(0.0),
-        //clk0: 1000 / 5 => 200 MHz 50/50 @0 deg
-        .CLKOUT3_DIVIDE(5), .CLKOUT3_DUTY_CYCLE(0.5), .CLKOUT3_PHASE(90.0),
-        //clk90: 1000 / 5 => 200 MHz 50/50 @90 deg
-        .CLKOUT4_DIVIDE(10), .CLKOUT4_DUTY_CYCLE(0.5), .CLKOUT4_PHASE(0.0),
-        //clkdiv0: 1000 / 10 => 100 MHz 50/50 @0 deg
-        .CLKOUT5_DIVIDE(8), .CLKOUT5_DUTY_CYCLE(0.5), .CLKOUT5_PHASE(90.0),
-        //clk125: 1000 / 8 => 125 MHz 50/50 @90 deg
+        //#1:clk0=clk200: 1000 / 5 => 200 MHz 50/50 @0 deg
+
+        .CLKOUT2_DIVIDE(5), .CLKOUT2_DUTY_CYCLE(0.5), .CLKOUT2_PHASE(90.0),
+        //#2:clk90: 1000 / 5 => 200 MHz 50/50 @90 deg
+
+        .CLKOUT3_DIVIDE(10), .CLKOUT3_DUTY_CYCLE(0.5), .CLKOUT3_PHASE(0.0),
+        //#3:clkdiv0: 1000 / 10 => 100 MHz 50/50 @0 deg
+
+        .CLKOUT4_DIVIDE(8), .CLKOUT4_DUTY_CYCLE(0.5), .CLKOUT4_PHASE(90.0),
+        //#4:clk125: 1000 / 8 => 125 MHz 50/50 @90 deg
+
         .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
     ) user_clk_pll (
         .CLKIN(user_clk_g), .RST(~USER_RST), //WAS: 1'b0
-        .CLKOUT0(clk50), .CLKOUT1(clk200), .CLKOUT2(clk0),
-        .CLKOUT3(clk90), .CLKOUT4(clkdiv0), .CLKOUT5(clk125),
+        .CLKOUT0(clk50), .CLKOUT1(clk0),
+        .CLKOUT2(clk90), .CLKOUT3(clkdiv0), .CLKOUT4(clk125),
         .CLKFBIN(pll_fb), .CLKFBOUT(pll_fb), .LOCKED(pll_lock)
     );
 
@@ -567,8 +570,9 @@ module ml505top
     BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );
     BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
     BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
-    BUFG  clk200_buf   ( .I(clk200),   .O(clk200_g)   );
+    BUFG  clk200_buf   ( .I(clk0),     .O(clk200_g)   );
     BUFG  clkdiv50_buf ( .I(clk50),    .O(clk50_g)    );
-    BUFG  clk125_buf   ( .I(clk125),   .O(plop_clk_g)   );
+    BUFG  clk125_buf   ( .I(clk125),   .O(plop_clk_g) );
+// synthesis attribute keep of cpu_clk_g is "true";
 
 endmodule

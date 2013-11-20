@@ -28,8 +28,6 @@ module StageM (
         .CLK(clk), .RST(rst), .STL(stall)
     );
 */
-//TODO: Avoid "-" even if synth deals with it
-//TODO: Cleaner mask/select of ranges!
 //TODO: Drive each _hot-line in an independent always (or assign)
 
 // _IControl taps
@@ -42,12 +40,16 @@ module StageM (
         .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.MSigned(),.CmpOp(),.Jump(),.JR(),.Link()
     );
     wire  [ 3: 0] _Target   = _MemAddr[31:28];
-    wire  [ 1: 0] _SubAddr  = _MemAddr[ 1: 0];
+    wire  [ 1: 0] _SubIndex = _MemAddr[ 1: 0];
 
 // Compute some mask bytes/bits/values
-    assign _ByteMask    = (   4'b1111) << (_MemShift  ) >> (_SubAddr  );
-    assign _WDataMasked = (_MemWValue) << (_MemShift*8) >> (_SubAddr*8);
-    assign _WriteMask   = (_isMemWrite) ? _ByteMask : 4'b0000;
+//    assign _ByteMask    = (   4'b1111) << (_MemShift  ) >> (_SubIndex  );
+//    assign _WDataMasked = (_MemWValue) << (_MemShift*8) >> (_SubIndex*8);
+    ByteAccess4 ba4_write (
+        .MemShift(_MemShift), .SubIndex(_SubIndex), .WordFull(_MemWValue),
+        .ByteMask(_ByteMask), .WordMasked(_WDataMasked)
+    );
+    assign _WriteMask = (_isMemWrite) ? _ByteMask : 4'b0000;
 
 always @(*) begin
     _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0;
@@ -86,7 +88,7 @@ end
       .ALUOp(),.ALUSrcA(),.ALUSrcB(),.ISigned(),.CmpOp(),.Jump(),.JR(),.MSigned(),.Link()
     );
     wire  [ 3: 0] Target   = MemAddr[31:28];
-    wire  [ 1: 0] SubAddr  = MemAddr[ 1: 0];
+    wire  [ 1: 0] SubIndex = MemAddr[ 1: 0];
 
     reg [31: 0] DataRead; // Registered elsewhere (is just a reg here because of always@*)
     always @(*) case (Target) // "Target" (for read data coming out after clock) NOT "_Target"
@@ -99,7 +101,11 @@ end
         default: DataRead = `UNKNOWN(32);
     endcase // CAUTIOUS trapping of EVERY case
 
-    wire [31: 0] DataLoad = DataRead << (SubAddr*8) >> (MemShift*8); //TODO: Use simpler masking
+    wire [31: 0] DataLoad; // = DataRead << (SubIndex*8) >> (MemShift*8); //TODO: Use simpler masking
+    ByteAccess4 ba4_read (
+        .MemShift(MemShift), .SubIndex(SubIndex), .WordFull(DataRead),
+        .ByteMask( ), .WordMasked(DataLoad)
+    );
 
     //TODO: Maybe divorce WBK from FWD stuff more fully to clarify slightly different paths
     assign WBK_Reg_     = DestReg; // Expected to be zero when no writeback is happening
