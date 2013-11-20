@@ -7,7 +7,7 @@
 // \   \   \/     Version: P.68d
 //  \   \         Application: netgen
 //  /   /         Filename: mig_af.v
-// /___/   /\     Timestamp: Fri Nov 15 04:38:31 2013
+// /___/   /\     Timestamp: Tue Nov 19 23:05:34 2013
 // \   \  /  \ 
 //  \___\/\___\
 //             
@@ -17,7 +17,7 @@
 // Output file	: ./tmp/_cg/mig_af.v
 // # of Modules	: 1
 // Design Name	: mig_af
-// Xilinx        : C:\Xilinx\14.6\ISE_DS\ISE\
+// Xilinx        : /opt/Xilinx/14.6/ISE_DS/ISE/
 //             
 // Purpose:    
 //     This verilog netlist is a verification model and uses simulation 

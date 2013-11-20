@@ -7,7 +7,7 @@
 // \   \   \/     Version: P.68d
 //  \   \         Application: netgen
 //  /   /         Filename: mig_rdf.v
-// /___/   /\     Timestamp: Fri Nov 15 04:40:45 2013
+// /___/   /\     Timestamp: Tue Nov 19 23:07:01 2013
 // \   \  /  \ 
 //  \___\/\___\
 //             
@@ -17,7 +17,7 @@
 // Output file	: ./tmp/_cg/mig_rdf.v
 // # of Modules	: 1
 // Design Name	: mig_rdf
-// Xilinx        : C:\Xilinx\14.6\ISE_DS\ISE\
+// Xilinx        : /opt/Xilinx/14.6/ISE_DS/ISE/
 //             
 // Purpose:    
 //     This verilog netlist is a verification model and uses simulation 

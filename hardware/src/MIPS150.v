@@ -331,27 +331,24 @@ wire [1023:0] scoper = { // 4 segments of 8 values is 32 values (each 32-bit or 
     32'd0,              32'd0,              32'd0,              32'd0,
 
     INST_ADDR,          INST_DATA,          StallCount,         PC_M,
-    {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_M},  {9'd0,IControl__M},
-
-    32'd0,              32'd0,              32'd0,              32'd0,
-    32'd0,              32'd0,              32'd0,              32'd0
+    {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_M},  {9'd0,IControl__M}
 };
 
-wire [1023:0] CS_DATA = scoper  /* synthesis syn_noprune=1 */;
-wire [31:0] CS_TRIG0 = {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
+wire [767:0] CS_DATA = scoper  /* synthesis syn_noprune=1 */;
+wire [36:0] CS_TRIG0 = {5'd0, FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
                         REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
                         _hot_IO,_hot_BR,_hot_IC,_hot_DC,
-                        _hot_IB,_hot_DB,~rst,stall} /* synthesis syn_noprune=1 */;
-wire [31:0] CS_TRIG1 = PC_DX /* synthesis syn_noprune=1 */;
-wire [31:0] CS_TRIG2 = INST_DX /* synthesis syn_noprune=1 */;
-wire [31:0] CS_TRIG3 = StepCount /* synthesis syn_noprune=1 */;
+                        _hot_IB,_hot_DB,~rst,stall};
+wire [36:0] CS_TRIG1 = {5'd0, PC_DX};
+wire [36:0] CS_TRIG2 = {5'd0, INST_DX};
+wire [36:0] CS_TRIG3 = {5'd0, StepCount};
 cs_ila_1024 CS_ILA ( .CONTROL(SCOPE_CPU),
     .CLK(clk),
-    .DATA( CS_DATA ), // IN BUS [1023:0]
-    .TRIG0( CS_TRIG0 ), // IN BUS [31:0]
-    .TRIG1( CS_TRIG1 ), // IN BUS [31:0]
-    .TRIG2( CS_TRIG2 ), // IN BUS [31:0]
-    .TRIG3( CS_TRIG3 )  // IN BUS [31:0]
+    .DATA( CS_DATA ), // IN BUS [767:0]
+    .TRIG0( CS_TRIG0 ), // IN BUS [36:0]
+    .TRIG1( CS_TRIG1 ), // IN BUS [36:0]
+    .TRIG2( CS_TRIG2 ), // IN BUS [36:0]
+    .TRIG3( CS_TRIG3 )  // IN BUS [36:0]
 ) /* synthesis syn_noprune=1 */;
 
 
