@@ -98,12 +98,12 @@ module InstructionControl #(
     );
 
     wire [1:0] MemShift = (isMemory)
-                        ? (3 - _opcode_[1:0])
+                        ? (~_opcode_[1:0]) // ~x == 3-x, like 1's complement!
                         : `UNKNOWN(2);
     wire [2:0] CmpOp    = (isBSimple)
                         ? _opcode_[2:0]
                         : ( (isBGELTZ)
-                            ? _opcode_[2:0] << _rt_[0] 
+                            ? (_opcode_[2:0] << _rt_[0]) //TODO: Strange formula :(
                             : ((isJump) ? 3'b011 : 3'b000) //TODO: Use constant names!
                         );
     wire [4:0] DestReg  = (isJump)

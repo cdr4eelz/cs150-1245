@@ -212,7 +212,6 @@ module MIPS150 #(
 
     // MEMORY & IO ELEMENTS THEMSELVES
 
-`ifndef COLT45_FUN //STRICT
     bios_mem brom_bios
     ( .clka(clk), .ena(~stall && _hot_BR),
         .addra(MemAddr__M[13:2]),
@@ -223,18 +222,6 @@ module MIPS150 #(
       .clkb(clk), .addrb(INST_ADDR[13:2]),
         .enb(INST_bios), .doutb(INST_BR)
     ) /* synthesis syn_noprune=1 */;
-`else
-    bios_mem brom_bios //Hack in external writeability for PLOP (32-bit wide, no byte mask)
-    ( .clka(clk), .ena(~stall && _hot_BR),
-        .addra(MemAddr__M[13:2]),
-        .douta(RData_BR),//OUT-32
-        .wea(1'b0), .dina(32'd0),
-    // Instruction reading port (b)
-      .clkb(clk), .addrb(INST_ADDR[13:2]),
-        .enb(INST_bios), .doutb(INST_BR),
-        .web(1'b0), .dinb(32'd0)
-    ) /* synthesis syn_noprune=1 */;
-`endif
 
     assign dcache_addr = MemAddr__M,
         dcache_we = (~stall && _hot_DC) ? (_WriteMask) : 4'b0000,
@@ -262,6 +249,7 @@ module MIPS150 #(
         .addra(MemAddr__M[13:2]),
       /*.douta(RData_IB),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),
+
     // INSTRUCTION Fletch
       .clkb(clk), .addrb(INST_ADDR[13:2]),
       /*.enb(1'b1)*/ .doutb(INST_IB)
@@ -332,9 +320,10 @@ wire [1023:0] scoper = { // 4 segments of 8 values is 32 values (each 32-bit or 
             _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,~rst,stall},
 
     RData_IO,           RData_BR,           RData_DC,           RData_DB,
-    MemAddr_M,          MemAddr__M,         _WDataMasked,
+    MemAddr_M,          MemAddr__M,         32'd0/*_WDataMasked*/,
         {16'h1234,
-            _WriteMask,_ByteMask,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
+            4'b0000/*_WriteMask*/,4'b0000/*_ByteMask*/,2'b00,
+            _hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
 
     INST_ADDR,          INST_DATA,          StallCount,         PC_M,
     {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_M},  {9'd0,IControl__M},
@@ -342,18 +331,29 @@ wire [1023:0] scoper = { // 4 segments of 8 values is 32 values (each 32-bit or 
     32'd0,              32'd0,              32'd0,              32'd0,
     32'd0,              32'd0,              32'd0,              32'd0
 };
-wire [31:0] trig0 = {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
-            REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
-            _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,~rst,stall};
-cs_ila_1024 CS_ILA ( .CONTROL(SCOPE_CPU),  .CLK(clk),
-    .DATA( scoper ),         // IN BUS [1023:0]
-    .TRIG0( trig0 ),        // IN BUS [31:0]
-    .TRIG1( PC_DX ),        // IN BUS [31:0]
-    .TRIG2( INST_DX ),      // IN BUS [31:0]
-    .TRIG3( StepCount )     // IN BUS [31:0]
+
+reg [1023:0] CS_DATA;
+always @(*) CS_DATA = scoper;
+wire [31:0] CS_TRIG0 = {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
+                        REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
+                        _hot_IO,_hot_BR,_hot_IC,_hot_DC,
+                        _hot_IB,_hot_DB,~rst,stall};
+wire [31:0] CS_TRIG1 = PC_DX;
+wire [31:0] CS_TRIG2 = INST_DX;
+wire [31:0] CS_TRIG3 = StepCount;
+// synthesis attribute keep of CS_DATA is "true";
+// synthesis attribute keep of CS_TRIG0 is "true";
+// synthesis attribute keep of CS_TRIG1 is "true";
+// synthesis attribute keep of CS_TRIG2 is "true";
+// synthesis attribute keep of CS_TRIG3 is "true";
+cs_ila_1024 CS_ILA ( .CONTROL(SCOPE_CPU),
+    .CLK(clk),
+    .DATA( CS_DATA ), // IN BUS [1023:0]
+    .TRIG0( CS_TRIG0 ), // IN BUS [31:0]
+    .TRIG1( CS_TRIG1 ), // IN BUS [31:0]
+    .TRIG2( CS_TRIG2 ), // IN BUS [31:0]
+    .TRIG3( CS_TRIG3 )  // IN BUS [31:0]
 ) /* synthesis syn_noprune=1 */;
-
-
 
 
 
