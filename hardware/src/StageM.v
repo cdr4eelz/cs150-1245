@@ -101,10 +101,12 @@ end
         default: DataRead = `UNKNOWN(32);
     endcase // CAUTIOUS trapping of EVERY case
 
-    wire [31: 0] DataLoad; // = DataRead << (SubIndex*8) >> (MemShift*8); //TODO: Use simpler masking
-    ByteAccess4 ba4_read (
-        .MemShift(MemShift), .SubIndex(SubIndex), .WordFull(DataRead),
+    wire [31: 0] DataLoad;
+//  assign DataLoad = (DataRead) << (SubIndex*8) >> (MemShift*8); //TODO: Use simpler masking
+    ByteAccess4 ba4_read ( //NOTE: Swap SubIndex & MemShift to reverse
+        .MemShift(SubIndex), .SubIndex(MemShift), .WordFull(DataRead),
         .ByteMask( ), .WordMasked(DataLoad)
+        //.WordMasked = (.WordFull) << (.MemShift*8) >> (.SubIndex*8);
     );
 
     //TODO: Maybe divorce WBK from FWD stuff more fully to clarify slightly different paths

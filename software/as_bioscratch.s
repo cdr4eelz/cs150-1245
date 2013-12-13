@@ -19,8 +19,8 @@ _start:
     lui     $k0, 0
     lui     $k1, 0
     lui     $gp, 0x5000
-    lui     $fp, 0x5001
-    li      $sp, 0x50010000
+    li      $fp, 0x50004000
+    li      $sp, 0x50004000
     nop
     jal     main
     j       _start

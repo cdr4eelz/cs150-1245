@@ -1,4 +1,4 @@
 TARGET ?= dumpmem
-LDSTYLE ?= as_bioscache
+LDSTYLE ?= as_bioscratch
 
 include ../Makefile.llvm.in

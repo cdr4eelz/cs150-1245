@@ -3,6 +3,7 @@
 module MIPS150 #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
+    parameter COLT45_SCRATCH=0, COLT45_PC=0,
     parameter COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
     input clk,
@@ -107,7 +108,7 @@ module MIPS150 #(
     wire [31: 0] INST_ADDR, INST_DATA; //Data fetch is sync'd with StageWF
     wire [31: 0] StepCount, StallCount;
     StageWF #(
-        .COUNTERWIDTH(32), .BOOTPC(32'h6_000_0000) //TODO: Change back to default/BIOS
+        .COUNTERWIDTH(32)//, .BOOTPC(32'h6_000_0000) //TODO: Change back to default/BIOS
     ) s_WF ( .CPUGlobal(CPUGlobal),
         .DOBranch(DOBranch_DX_WF_), .PCBranch(PCBranch_DX_WF_),
         .PC(INST_ADDR),
@@ -128,7 +129,7 @@ module MIPS150 #(
     wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
     wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
     assign REGFILE_wa = WBKReg_M_WF_, REGFILE_wd = WBKDat_M_WF_;
-    wire REGFILE_we = ~stall && (REGFILE_wd != 0); // Mute "we" if "wd"==0 for signal clarity
+    wire REGFILE_we = ~stall && (REGFILE_wa != 0); // Mute "we" if "wa"==0 for signal clarity
     RegFile regfile
     ( .clk(clk),
         // Write is synchronous
@@ -327,16 +328,21 @@ wire [1023:0] scoper = { // 4 segments of 8 values is 32 values (each 32-bit or 
             REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
             _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,~rst,stall},
 
+    32'd0,              32'd0,              32'd0,              32'd0,
+    32'd0,              32'd0,              32'd0,              32'd0,
+/*
     RData_IO,           RData_BR,           RData_DC,           RData_DB,
     32'd0,              latchedADDR,        latchedDATA,
-        {16'h1234,
+    {16'h1234,
             latchedMASK,4'd0,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
+*/
 
     INST_ADDR,          INST_DATA,          StallCount,         PC_M,
     {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_M},  {9'd0,IControl__M}
+
 };
 
-wire [767:0] CS_DATA = scoper  /* synthesis syn_noprune=1 */;
+//wire [767:0] CS_DATA = scoper[767:0]  /* synthesis syn_noprune=1 */;
 wire [36:0] CS_TRIG0 = {5'd0, FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
                         REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
                         _hot_IO,_hot_BR,_hot_IC,_hot_DC,
@@ -346,7 +352,7 @@ wire [36:0] CS_TRIG2 = {5'd0, INST_DX};
 wire [36:0] CS_TRIG3 = {5'd0, StepCount};
 cs_ila_1024 CS_ILA ( .CONTROL(SCOPE_CPU),
     .CLK(clk),
-    .DATA( CS_DATA ), // IN BUS [767:0]
+    .DATA( scoper ), // IN BUS [767:0]
     .TRIG0( CS_TRIG0 ), // IN BUS [36:0]
     .TRIG1( CS_TRIG1 ), // IN BUS [36:0]
     .TRIG2( CS_TRIG2 ), // IN BUS [36:0]
@@ -411,6 +417,16 @@ generate if (COLT45_STEPMAX > 0) begin:_STEPS_
     end
 end endgenerate
 
+task DUMP_PC; begin
+    $display("PC: [%d] PC_DX=%h INST_DX=%h PC_M=%h", StepCount, PC_DX, INST_DX, PC_M);
+end endtask
+
+generate if (COLT45_PC) begin:_PC_
+    always@(posedge clk) if (~stall && ~rst) begin
+        DUMP_PC();
+    end
+end endgenerate
+
 generate if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "care" at clock edge
     always@(posedge clk) if (!rst) begin
         if (REGFILE_ra1 != 0) begin
@@ -429,6 +445,24 @@ generate if (COLT45_MEMWRITE) begin:_MEMWRITE_
             MemAddr__M, MemAddr__M, _WDataMasked, _WDataMasked, _WriteMask);
         $display("** TARG=%h W=%b: IO=%b BR=%b IC=%b DB=%b IB=%b",
             MemAddr__M[31:28], |_WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DB, _hot_IB);
+    end
+end endgenerate
+
+generate if (COLT45_SCRATCH) begin:_SCRATCH_
+    always@(posedge clk) if (~stall && _hot_DB) begin
+        $display("\n=============");
+        DUMP_PC();
+        $display("TARG=%h W=%b: IO=%b BR=%b IC=%b DB=%b IB=%b",
+            MemAddr__M[31:28], |_WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DB, _hot_IB);
+        if (|_WriteMask) begin
+            regfile.DUMP();
+            $display("[%h,%d] <<= %h(%d) {%b}",
+                MemAddr__M, MemAddr__M, _WDataMasked, _WDataMasked, _WriteMask);
+        end else begin
+            $display("[%h,%d] ==> %h(%d)",
+                MemAddr__M, MemAddr__M, RData_DB, RData_DB);
+        end
+        $display("=============\n");
     end
 end endgenerate
 

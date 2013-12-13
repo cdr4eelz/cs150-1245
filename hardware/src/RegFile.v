@@ -47,7 +47,7 @@ always @(posedge clk) begin
                 $display("** REG: R[%h,%d] <= %h(%d)  *WAS* %h(%d)", wa, wa, wd, wd, R[wa], R[wa]);
             end
             R[wa] <= wd;
-        end else if (COLT45_REGSTALL) $display("** REG: R[%h,%d] <=** STALLed REG WRITE **", wa, wa);
+        end else if (COLT45_REGSTALL) $display("** REG: R[%h,%d] <=** STALLed REG WRITE ** %h(%d)", wa, wa, wd, wd);
     end
 end
 
