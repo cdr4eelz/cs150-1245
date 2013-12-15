@@ -27,7 +27,8 @@ run -define {BUILDMETHOD=1 ##XSTDEFINES##}
 -lc Off
 -reduce_control_sets Off
 -verilog2001 YES
--fsm_extract YES -fsm_encoding Auto
+-fsm_extract YES
+-fsm_encoding Auto
 -safe_implementation No
 -fsm_style LUT
 -ram_extract Yes
@@ -42,7 +43,7 @@ run -define {BUILDMETHOD=1 ##XSTDEFINES##}
 -rom_style Auto
 -auto_bram_packing NO
 -mux_extract Yes
--resource_sharing YES
+-resource_sharing NO
 -async_to_sync NO
 -use_dsp48 Auto
 -iobuf YES
@@ -56,5 +57,5 @@ run -define {BUILDMETHOD=1 ##XSTDEFINES##}
 -use_sync_set Auto
 -use_sync_reset Auto
 -iob Auto
--equivalent_register_removal YES
+-equivalent_register_removal NO
 -slice_utilization_ratio_maxmargin 5

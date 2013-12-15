@@ -1,0 +1,9 @@
+bios_mem
+cache_data_blk_ram
+cache_tag_blk_ram
+dmem_blk_ram
+imem_blk_ram
+mig_af
+mig_rdf
+mig_v3_61
+mig_wdf

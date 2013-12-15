@@ -1,0 +1,20 @@
+**** Could it just be unregistered RAM issue???
+
+* Reverted to sparse CP2 top & framework *
+* Verified all functions are combinational only *
+* Reviewed CASE statements (confirmed no caseX/caseZ) *
+* Attempted fresh MIG generation with ChipScope access *
+
+Spot out-of-order assingments to temp variables in always@* blocks.
+Locate all missing signals!!!
+Figure out Post-Synthesis Simulation.
+
+Latch issue with my pipeline registers, simplify, is partly synchronous, pass responsibility to subsequent component (the one peeking into prior stage).
+
+Gated clocks.
+Don't use OUTPUT as internal signal too.
+Avoid If based priority logic (maybe even for Reset signals?)
+
+BUS abstraction (mimick xps?)
+OPCODE as parameters rather than `define's
+Cautious resource sharing.
