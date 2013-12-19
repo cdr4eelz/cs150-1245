@@ -4,7 +4,7 @@
 
 module EchoTestbench;
 
-    reg Clock, Reset, Stall;
+    reg Clock, Reset; wire Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
 
     reg   [7:0] DataIn;
@@ -27,17 +27,19 @@ module EchoTestbench;
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
 
-//    always @(posedge Clock) Stall <= ~Stall;
     reg [StallRingSize-1:0] StallRing;
-//    initial begin StallRing = 0; Stall = 0; end
+    reg StallReg;
+//    initial begin StallRing = 0; StallReg = 0; end
+//    always @(posedge Clock) StallReg <= ~StallReg;
     always @(posedge Clock) begin
         if (Reset) begin
             StallRing <= StallRingInit;
         end else begin
             StallRing <= {StallRing[StallRingSize-2:0], StallRing[StallRingSize-1]};
         end
-        Stall <= StallRing[StallRingSize-1];
+        StallReg <= StallRing[StallRingSize-1];
     end
+    assign #HalfCycle Stall = StallReg;
     wire StallClock = Clock || Stall; // Gated clock for reference/cheating
 
     reg [7:0] Check1, Check2, Check3, Check4, Check5, Check6, Check7;

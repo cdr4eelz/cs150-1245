@@ -1,0 +1,333 @@
+module ml505top
+(
+  input         USER_CLK,
+
+  input         FPGA_SERIAL_RX,
+  output        FPGA_SERIAL_TX,
+
+  input [4:0]   GPIO_COMPPB,
+  output [7:0]  GPIO_LED,
+  output [4:0]  GPIO_COMPLED,
+  input [7:0]   GPIO_DIP
+);
+
+    wire button_reset, rst_or_init, rst;
+    wire button_stall, any_stall;
+
+// BRK tap
+    wire debug_reset, debug_stall, debug_brk, debug_jog;
+    wire [0:1023] debug_trace;
+    wire [35: 0] SCOPE_CPU;
+
+// UART crosswork
+    wire M_SERIAL_RX, M_SERIAL_TX;
+    wire P_SERIAL1_RX, P_SERIAL1_TX;
+    wire P_SERIAL2_RX, P_SERIAL2_TX;
+
+// Selector for physical serial vs. debug serial (via JTAG UART)
+    wire SERIAL_JTAG, BRK_MASTER;
+
+
+  reg [3:0]  reset_r = 4'b0;
+  reg [25:0] count_r = 26'b0;
+
+  wire [3:0]  next_reset_r;
+  wire [25:0] next_count_r;
+
+    // Global clock lines (use the _g since are buffered)
+    wire user_clk_g, pll_lock;
+    wire clk0_g, clk90_g, clkdiv0_g, clk200_g, clk50_g;
+    wire cpu_clk_g, plop_clk_g; //For the MIPSY & PLOP
+
+  always @(posedge cpu_clk_g)
+  begin
+    reset_r <= next_reset_r;
+    count_r <= next_count_r;
+  end
+
+  assign next_reset_r = {reset_r[2:0], button_reset | debug_reset};
+
+  assign rst = (count_r == 26'b1) | ~pll_lock;
+
+  assign next_count_r
+    = (count_r == 26'b0) ? (reset_r[3] ? 26'b1 : 26'b0)
+    :                      count_r + 1;
+
+  // Reset shift register:
+  reg [2:0] rst_sr;
+  wire fifo_reset; // fifo_reset resets fifos... reset_fifo is a fifo for the reset signal.
+  assign fifo_reset = rst | (|rst_sr);
+  always @(posedge cpu_clk_g) begin
+    rst_sr <= {rst_sr[1:0], rst};
+  end
+
+
+// Manual stalling test (checkpoint 1):
+    reg man_stall;
+    wire man_stall_toggle;
+    always@(posedge cpu_clk_g) begin
+        if(rst) begin
+            man_stall <= 1'b0;
+        end else begin
+            if(man_stall_toggle) begin
+                man_stall <= ~man_stall;
+            end else begin
+                man_stall <= 1'b0;
+            end
+        end
+    end
+
+// Debug stall with one-shot "jog"
+    reg debug_jog_fired;
+    always @(posedge cpu_clk_g) begin
+        if (rst_or_init || ~debug_jog)
+            debug_jog_fired <= 1'd0;
+        else if (~any_stall)
+            debug_jog_fired <= 1'd1;
+        // else hold value
+    end
+    wire debug_stall_not_jog = ((debug_stall && !debug_jog) || debug_jog_fired);
+
+
+// CP2+
+wire [31:0] gooby = {GPIO_DIP, GPIO_DIP, GPIO_DIP, GPIO_DIP};
+    wire  [31:0] dcache_addr;
+    wire  [31:0] icache_addr;
+    wire  [3:0]  dcache_we;
+    wire  [3:0]  icache_we;
+    wire         dcache_re;
+    wire         icache_re;
+    wire  [31:0] dcache_din;
+    wire  [31:0] icache_din;
+    wire [31:0]  dcache_dout = gooby ^ {dcache_addr[15:0], dcache_addr[31:16]};
+    wire [31:0]  instruction = gooby ^ {icache_addr[15:0], icache_addr[31:16]};
+    wire         mem_stall = 1'b0;
+    wire         mem_init_done = 1'b0;
+
+    assign rst_or_init = rst || ~mem_init_done;
+    assign any_stall = man_stall || debug_stall_not_jog;
+
+`ifndef CPUTYPE
+`define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
+`endif
+`CPUTYPE CPU(
+    .clk( cpu_clk_g ), .rst( rst_or_init ),
+    .FPGA_SERIAL_RX(M_SERIAL_RX), .FPGA_SERIAL_TX(M_SERIAL_TX),
+// CP2+
+    .dcache_addr( dcache_addr ),    .icache_addr( icache_addr ),
+    .dcache_we  ( dcache_we   ),    .icache_we  ( icache_we   ),
+    .dcache_re  ( dcache_re   ),    .icache_re  ( icache_re   ),
+    .dcache_din ( dcache_din  ),    .icache_din ( icache_din  ),
+    .dcache_dout( dcache_dout ),    .instruction( instruction ),
+/*
+// CP3+
+    .bypass_addr( bypass_addr ),    .bypass_we  ( bypass_we ),
+    .bypass_din ( bypass_din  ),
+    .filler_color   (filler_color),
+    .filler_valid   (filler_valid),
+    .filler_ready   (filler_ready),
+    .line_ready     (line_ready),
+    .line_color     (line_color),
+    .line_point     (line_point),
+    .line_color_valid(line_color_valid),
+    .line_x0_valid  (line_x0_valid),
+    .line_y0_valid  (line_y0_valid),
+    .line_x1_valid  (line_x1_valid),
+    .line_y1_valid  (line_y1_valid),
+    .line_trigger   (line_trigger),
+*/
+
+//BRK tap
+    .brk(debug_brk), .trace(debug_trace), .SCOPE_CPU(SCOPE_CPU),
+
+// Shared
+    .stall(any_stall)
+);
+
+
+`ifdef COLT45_BRK
+/*  BRK coordinator:
+
+    Intercept/Trace relative to BRK (towards CPU):
+        debug_reset-o1
+        debug_stall-o1
+        debug_brk-o1
+        debug_jog-o1
+        trace-i1024
+    { If need to tap elements outside CPU, perhaps arrange passthrough or tap? }
+
+    Control/Reporting relative to BRK (towards Monitor):
+        action-i8:
+        status-o8:
+        enable-i8:
+        hit-o8:
+        trace-o1024: (interrogated with dsel-i5/dval-o32 or ssel-i2/sval-o256)
+        match-i256: (first 4 words simple equality w/trace; ideal allows fancier masking/edges)
+        record-oBRAM: (accumulated traces or watched items at real-speed, expose full BRAM?)
+    Convenient to pack action/enable/msel/dsel/ssel/rsel/ser into one 32-bit input!
+    { Can we accumulate snapshots at "real time" big/filtered enough to be useful (or just use CS)? }
+    { Is realistic to dump trace(s) as serial like I2C? }
+    { Little from enclosing environment, perhaps DDR/DVI and SW/LED stuff? }
+    Layout "trace" as 4 segments (256-bit) x 8 words (32-bit): (current is loosly Global/WF|DX|M|rare)
+        seg0: Global/Inter-Stage
+        seg1: StageWF
+        seg2: StageDX
+        seg3: StageM
+*/
+
+//TODO:Overcome trouble with bitvector selection,address-order,big-case,or something
+    function automatic [0:255] GET_SEGMENT (
+        input [1:0] ssel,
+        input [0:1023] allbits
+    );
+        begin
+            case (ssel)
+                2'd3: GET_SEGMENT = allbits[768:1023];
+                2'd2: GET_SEGMENT = allbits[512: 767];
+                2'd1: GET_SEGMENT = allbits[256: 511];
+                default: GET_SEGMENT = allbits[0:255];
+            endcase
+        end
+    endfunction
+    
+    function automatic [0:31] GET_DATUM (
+        input [2:0] dsel,
+        input [0:255] segbits
+    );
+        begin
+            case (dsel)
+                3'd7: GET_DATUM = segbits[224:255];
+                3'd6: GET_DATUM = segbits[192:223];
+                3'd5: GET_DATUM = segbits[160:191];
+                3'd4: GET_DATUM = segbits[128:159];
+                3'd3: GET_DATUM = segbits[ 96:127];
+                3'd2: GET_DATUM = segbits[ 64: 95];
+                3'd1: GET_DATUM = segbits[ 32: 63];
+                default: GET_DATUM = segbits[0:31];
+            endcase
+        end
+    endfunction
+
+    wire [35: 0] CS0, CS1;
+    cs_icon_3 CS_ICON (
+        .CONTROL0(CS0), .CONTROL1(CS1), .CONTROL2(SCOPE_CPU) // INOUT BUS [35:0]
+    ) /* synthesis syn_noprune=1 */;
+
+    wire [ 7: 0] BRK_ACTION, BRK_EN /* synthesis syn_noprune=1 */;
+    wire [ 7: 0] BRK_STATUS, BRK_HIT /* synthesis syn_noprune=1 */;
+    wire [0:255] BRK_MATCH, BRK_WATCH /* synthesis syn_noprune=1 */;
+
+    wire [ 7: 0] BRK_DSEL; // Ignores high 3-bits
+    reg  [ 0:31] BRK_DVAL;
+    cs_vio_brk CS_VIO_BRK ( .CONTROL(CS0),  .CLK(cpu_clk_g),
+        .ASYNC_OUT( {BRK_DSEL[7:0], BRK_EN[7:0], BRK_ACTION[7:0]} ),  // OUT BUS [23:0]
+        .ASYNC_IN( {BRK_DVAL[0:31], BRK_HIT[7:0], BRK_STATUS[7:0]} ), // IN BUS [47:0]
+        .SYNC_OUT(  BRK_MATCH[0:255] ), // OUT BUS [255:0]
+        .SYNC_IN(   BRK_WATCH[0:255] )  // IN BUS [255:0]
+    ) /* synthesis syn_noprune=1 */;
+    always @(*) BRK_DVAL = GET_DATUM(BRK_DSEL[2:0], GET_SEGMENT(BRK_DSEL[4:3], debug_trace));
+
+    wire [ 1: 0] BRK_SSEL;
+    reg  [0:255] BRK_SVAL;
+    cs_vio_256 CS_VIO_256 ( .CONTROL(CS1),
+        .ASYNC_OUT( BRK_SSEL[1:0] ), // OUT BUS [1:0]
+        .ASYNC_IN( BRK_SVAL[0:255] ) // IN BUS [255:0]
+    ) /* synthesis syn_noprune=1 */;
+    always @(*) BRK_SVAL = GET_SEGMENT(BRK_SSEL, debug_trace);
+
+    assign BRK_WATCH = debug_trace[0:255];
+    assign BRK_HIT[0] = (BRK_MATCH[(0<<5)+:32]==BRK_WATCH[(0<<5)+:32]);
+    assign BRK_HIT[1] = (BRK_MATCH[(1<<5)+:32]==BRK_WATCH[(1<<5)+:32]);
+    assign BRK_HIT[2] = (BRK_MATCH[(2<<5)+:32]==BRK_WATCH[(2<<5)+:32]);
+    assign BRK_HIT[3] = (BRK_MATCH[(3<<5)+:32]==BRK_WATCH[(3<<5)+:32]);
+        //TODO:DOBranch_DX_WF_ (use for branch-match), skip rd1/2 & coopt as masks
+    assign BRK_HIT[4] = 1'b0;
+    assign BRK_HIT[5] = 1'b0;
+    assign BRK_HIT[6] = 1'b0;
+    assign BRK_HIT[7] = 1'b0;
+    wire BRK_isEN = |BRK_EN;
+    wire BRK_isHIT = |(BRK_HIT & BRK_EN);
+
+    assign BRK_STATUS[7:0] = { rst_or_init, any_stall, button_reset, button_stall,
+                                debug_brk, debug_jog, BRK_isEN, BRK_isHIT };
+
+    assign debug_reset = BRK_ACTION[7];
+    assign debug_stall = (BRK_ACTION[6] || BRK_isHIT);
+    assign debug_brk = BRK_ACTION[5];
+    assign debug_jog = BRK_ACTION[4];
+    assign SERIAL_JTAG = BRK_ACTION[1];
+    assign BRK_MASTER = BRK_ACTION[0];
+`else
+    assign {debug_reset,debug_stall,debug_brk,debug_jog} = 4'b0000;
+    assign {BRK_MASTER,SERIAL_JTAG} = 2'b00;
+    cs_icon_1 CS_ICON (
+        .CONTROL0(SCOPE_CPU) // INOUT BUS [35:0]
+    ) /* synthesis syn_noprune=1 */;
+`endif
+
+
+// Patch course IO into generic IO board pins
+`ifdef COLT45_StallFORCE
+    assign man_stall_toggle = 1'b1;
+`else
+`ifdef COLT45_StallDIP
+    assign man_stall_toggle = GPIO_DIP[0];
+`else
+    assign man_stall_toggle = 1'b0;
+`endif
+`endif
+    assign button_reset = GPIO_COMPPB[0];   // Center PushButton on "compass"
+    //assign button_reset = GPIO_COMPPB[2];   // South PushButton on "compass"
+    assign GPIO_COMPLED = {button_reset, 1'b0, man_stall_toggle, 2'b00};
+    assign GPIO_LED = {5'b00000, any_stall, pll_lock, mem_init_done};
+    //if SERIAL_JTAG then MIPSY talks to PLOP UART1 & PLOP UART2 gets physical UART
+    assign FPGA_SERIAL_TX = (SERIAL_JTAG) ? P_SERIAL2_TX    : M_SERIAL_TX;
+    assign M_SERIAL_RX    = (SERIAL_JTAG) ? P_SERIAL1_TX    : FPGA_SERIAL_RX;
+    assign P_SERIAL1_RX   = (SERIAL_JTAG) ? M_SERIAL_TX     : P_SERIAL2_TX;
+    assign P_SERIAL2_RX   = (SERIAL_JTAG) ? FPGA_SERIAL_RX  : P_SERIAL1_TX;
+    //NOTE: Because we are AT the border between external and internal UART
+    //      connections, the FPGA_SERIAL_xx names appear flipped.
+
+
+    // Raw clock lines (unbuffered, don't use elsewhere)
+    wire pll_fb, clk50, clk0, clk90, clkdiv0, clk125;
+    PLL_BASE #(
+        .BANDWIDTH("OPTIMIZED"), .CLKIN_PERIOD(10.0), //Input Freq 100MHz
+        .DIVCLK_DIVIDE(2), .CLKFBOUT_MULT(20), .CLKFBOUT_PHASE(0.0),
+        //INTERNAL REFERENCE: --=> 100 / 2 * 20 = 1000 MHz (basis for each below):
+
+        .CLKOUT0_DIVIDE(20), .CLKOUT0_DUTY_CYCLE(0.5), .CLKOUT0_PHASE(0.0),
+        //#0:clk50=cpu_clk: 1000 / 20 = 50 MHz
+
+        .CLKOUT1_DIVIDE(5), .CLKOUT1_DUTY_CYCLE(0.5), .CLKOUT1_PHASE(0.0),
+        //#1:clk0=clk200: 1000 / 5 => 200 MHz 50/50 @0 deg
+
+        .CLKOUT2_DIVIDE(5), .CLKOUT2_DUTY_CYCLE(0.5), .CLKOUT2_PHASE(90.0),
+        //#2:clk90: 1000 / 5 => 200 MHz 50/50 @90 deg
+
+        .CLKOUT3_DIVIDE(10), .CLKOUT3_DUTY_CYCLE(0.5), .CLKOUT3_PHASE(0.0),
+        //#3:clkdiv0: 1000 / 10 => 100 MHz 50/50 @0 deg
+
+        .CLKOUT4_DIVIDE(8), .CLKOUT4_DUTY_CYCLE(0.5), .CLKOUT4_PHASE(90.0),
+        //#4:clk125: 1000 / 8 => 125 MHz 50/50 @90 deg
+
+        .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
+    ) user_clk_pll (
+        .CLKIN(user_clk_g), .RST(~USER_RST), //WAS: 1'b0
+        .CLKOUT0(clk50), .CLKOUT1(clk0),
+        .CLKOUT2(clk90), .CLKOUT3(clkdiv0), .CLKOUT4(clk125),
+        .CLKFBIN(pll_fb), .CLKFBOUT(pll_fb), .LOCKED(pll_lock)
+    );
+
+    // Buffer reset/clocks for general use
+    IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
+    BUFG  cpu_clk_buf  ( .I(clk50),    .O(cpu_clk_g)  );
+    BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );
+    BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
+    BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
+    BUFG  clk200_buf   ( .I(clk0),     .O(clk200_g)   );
+    BUFG  clkdiv50_buf ( .I(clk50),    .O(clk50_g)    );
+    BUFG  clk125_buf   ( .I(clk125),   .O(plop_clk_g) );
+// synthesis attribute keep of cpu_clk_g is "true";
+
+endmodule

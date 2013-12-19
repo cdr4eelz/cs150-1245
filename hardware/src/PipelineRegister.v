@@ -5,11 +5,12 @@
 */
 module PipelineRegister #(
     parameter DD=`COLT45_DD,
-    parameter Width=0, LatchOnly=0, ResetValue={Width{1'b0}}
+    parameter Mode=0 /*0-3=(Reg,Latch,PassReset,PassThru)*/, 
+    parameter Width=0, ResetValue={Width{1'b0}}
 )(
     input `BUS_CPUGlobal_type CPUGlobal,
     input  [Width-1:0] In,
-    output [Width-1:0] Out
+    output reg [Width-1:0] Out
 );
 
     wire clk, rst, stall;
@@ -17,59 +18,42 @@ module PipelineRegister #(
     ( ._BUS_(CPUGlobal),
         .CLK(clk), .RST(rst), .STL(stall)
     );
-    reg  [Width-1:0] OverOut;
-
-/*
-    // Make a little Z-BLIP to highlight poopigation through subsequent combinational logic
-    reg Blip;
-    always @ (posedge clk) begin
-        Blip <= #1 (!stall && !rst);
-        Blip <= #2 1'b0;
-    end
-    assign Out = (Blip) ? {Width{1'bz}} : _Out_;
-*/
 
 //TODO: Try to LATCHIEMUX with regular sync element at end of it's combo-logic
-    generate if (LatchOnly) begin:LATCHIEMUX
+    generate if (Mode == 3) begin:PASSTHRU
+        always @(*) Out = In;
+    end else if (Mode == 2) begin:PASSRESET
+        // *Synchronously* apply reset but totally IGNORE enable.
+        reg SyncReset;
+        always @(posedge clk) begin
+            SyncReset <= rst;
+        end
+        always @(*) begin
+            if (SyncReset)
+                Out = ResetValue;
+            else
+                Out = In; // Both cases fully covered
+        end
+    end else if (Mode == 1) begin:LATCHIEMUX
         // *Synchronously* consider reset & enable and
         //   register associated override value on posedge clk,
         //   but if not overridden, track In live during full cycle.
         // Appropriately hold ambiguous value until reset or enable.
         reg OverRide;
-        always @ (posedge clk) begin
+        reg  [Width-1:0] OverOut;
+        always @(posedge clk) begin
             OverRide <= rst || stall;
             if (rst) OverOut <= ResetValue;
             else if (!OverRide) OverOut <= In; //NOTE: Uses *OLD* !OverRide!
         end
-        assign Out = (OverRide) ? OverOut : In;
+        always @(*) Out = (OverRide) ? OverOut : In;
     end else begin:REGGIEREG
-        // Basic register with sync reset & sync enable (enable = !stall).
+        // Basic register with sync-reset & sync-enable (enable = !stall).
         //  Only admit new value if !stall.
-        always @ (posedge clk) begin
-            if (rst) OverOut <= ResetValue;
-            else if (!stall) OverOut <= In;
+        always @(posedge clk) begin
+            if (rst) Out <= ResetValue;
+            else if (!stall) Out <= In;
+            //else hold value
         end
-        assign Out = OverOut;
     end endgenerate
 endmodule
-
-/* Abstract pipeline separation & registering even when
-** another synchronous element is doing the actual registering
-** of the value at hand.  In that case, set LatchOnly=1 so
-** that this "register" then behaves like a latch.  Note that
-** in this asynchronous latch mode, both Reset and Stall are
-** considered only on posedge Clock, making them synchronous.
-** Care is taken not to latch values prematurely, nor repeatedly.
-** 
-** In BOTH modes, an arbitrary reset value may be imposed.
-** These features allow identical treatment in regards to key
-** pipeline register behavior, even if butted up against a
-** pre-registering synchronous element.
-**
-** Since transitions between pipeline stages are paramount to
-** understanding CPU state, some debugging tricks may also be
-** applied universally via this abstraction.  The OutDelay &
-** ClockBlip help resultant waveforms to emphasize critical
-** transitions & facilitate use of delays in subsequent
-** combinational logic to highlight datapath flow.
-*/
