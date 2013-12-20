@@ -11,8 +11,8 @@
 #
 # DDR locations matched with skeleton UCF, though a few pins were lacking:
 
-NET USER_RST    LOC = E9    |  IOSTANDARD=LVCMOS33  |  PULLUP;
-NET USER_RST    TIG;
+#NET USER_RST    LOC = E9    |  IOSTANDARD=LVCMOS33  |  PULLUP;
+#NET USER_RST    TIG;
 
 NET USER_CLK    LOC = AH15  |  IOSTANDARD=LVCMOS33;
 NET USER_CLK    TNM_NET = TNM_USER_CLK;
@@ -90,14 +90,14 @@ Net GPIO_DIP[7]         LOC = AC24  |  IOSTANDARD=LVCMOS18  |  SLEW=SLOW  |  DRI
 NET "clk0_g" TNM_NET = "SYS_clk0";
 TIMESPEC "TS_SYS_clk0" = PERIOD "SYS_clk0" 5 ns HIGH 50 %;
 
-NET "clk90_g" TNM_NET = "SYS_clk90";
-TIMESPEC "TS_SYS_clk90" = PERIOD "SYS_clk90" "TS_SYS_clk0" PHASE 1.25 ns HIGH 50 %;
+#NET "clk90_g" TNM_NET = "SYS_clk90";
+#TIMESPEC "TS_SYS_clk90" = PERIOD "SYS_clk90" "TS_SYS_clk0" PHASE 1.25 ns HIGH 50 %;
 
-NET "clkdiv0_g" TNM_NET = "SYS_clkdiv0";
-TIMESPEC "TS_SYS_clkdiv0" = PERIOD "SYS_clkdiv0" "TS_SYS_clk0" * 2 HIGH 50 %;
+#NET "clkdiv0_g" TNM_NET = "SYS_clkdiv0";
+#TIMESPEC "TS_SYS_clkdiv0" = PERIOD "SYS_clkdiv0" "TS_SYS_clk0" * 2 HIGH 50 %;
 
-NET "clk200_g" TNM_NET = "SYS_clk200";
-TIMESPEC "TS_SYS_clk200" = PERIOD "SYS_clk200" 5 ns HIGH 50 %;
+#NET "clk200_g" TNM_NET = "SYS_clk200";
+#TIMESPEC "TS_SYS_clk200" = PERIOD "SYS_clk200" 5 ns HIGH 50 %;
 
 ########################################################################
 # Controller 0
@@ -369,7 +369,8 @@ INST "*/u_phy_calib/gen_gate[7].u_en_dqs_ff"  LOC = SLICE_X0Y131;
 # In general PAR should be able to route this
 # within 900ps over all speed grades.
 NET "*/u_phy_io/en_dqs[*]" MAXDELAY = 600 ps;
-NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 850 ps;
+#NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 850 ps;
+NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 900 ps;
 
 ###############################################################################
 # "Half-cycle" path constraint from IOB flip-flop to CE pin for all DQ IDDR's

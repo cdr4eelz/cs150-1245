@@ -1,7 +1,5 @@
 module ml505top
 (
-  input         USER_CLK,
-
   input         FPGA_SERIAL_RX,
   output        FPGA_SERIAL_TX,
 
@@ -39,9 +37,11 @@ module ml505top
   inout         IIC_SCL_VIDEO,
   inout         IIC_SDA_VIDEO,
 */
-  
-  input         USER_RST // To passthrough to embedded IP-cores
+
+//  input         USER_RST, // To passthrough to embedded IP-cores
+  input         USER_CLK
 );
+    wire USER_RST = 1'b1; //Disable (active_low)
 
     wire button_reset, rst_or_init, rst;
     wire button_stall, any_stall;
@@ -505,9 +505,9 @@ module ml505top
 `else
     assign {debug_reset,debug_stall,debug_brk,debug_jog} = 4'b0000;
     assign {BRK_MASTER,SERIAL_JTAG} = 2'b00;
-    cs_icon_1 CS_ICON (
-        .CONTROL0(SCOPE_CPU) // INOUT BUS [35:0]
-    ) /* synthesis syn_noprune=1 */;
+//    cs_icon_1 CS_ICON (
+//        .CONTROL0(SCOPE_CPU) // INOUT BUS [35:0]
+//    ) /* synthesis syn_noprune=1 */;
 `endif
 
 

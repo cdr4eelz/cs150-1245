@@ -8,11 +8,11 @@ module PipelineRegisterTestbench;
     wire [3:0] outA, outB;
     `BUS_CPUGlobal_type CPUGlobal;
 
-    PipelineRegister    #( .LatchOnly(0), .Width(4), .ResetValue(4'hE)
+    PipelineRegister    #( .Mode(0), .Width(4), .ResetValue(4'hE)
     ) DUT_REGGIE        ( .CPUGlobal(CPUGlobal),
         .In(in),    .Out(outA)
     );
-    PipelineRegister    #( .LatchOnly(1), .Width(4), .ResetValue(4'h3)
+    PipelineRegister    #( .Mode(1), .Width(4), .ResetValue(4'h3)
     ) DUT_LATCHY        ( .CPUGlobal(CPUGlobal),
         .In(in),    .Out(outB)
     );

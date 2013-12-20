@@ -100,7 +100,7 @@ module EchoTestbench;
         .SOut(            FPGA_SERIAL_RX)
     );
 
-integer countIN = 0, maxchars = 10;
+integer countIN = 0, maxchars = 45;
 event now_listening;
 event now_reset;
 

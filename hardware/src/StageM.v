@@ -47,7 +47,7 @@ module StageM (
 //    assign _WDataMasked = (_MemWValue) << (_MemShift*8) >> (_SubIndex*8);
     ByteAccess4 ba4_write (
         .MemShift(_MemShift), .SubIndex(_SubIndex), .WordFull(_MemWValue),
-        .ByteMask(_ByteMask), .WordMasked(_WDataMasked)
+        .ByteMask(_ByteMask), .WordMasked(_WDataMasked), .ValExtract()
     );
     assign _WriteMask = (_isMemWrite) ? _ByteMask : 4'b0000;
 
@@ -102,11 +102,10 @@ end
     endcase // CAUTIOUS trapping of EVERY case
 
     wire [31: 0] DataLoad;
-//  assign DataLoad = (DataRead) << (SubIndex*8) >> (MemShift*8); //TODO: Use simpler masking
+//  assign DataLoad = (DataRead) << (SubIndex*8) >> (MemShift*8);
     ByteAccess4 ba4_read ( //NOTE: Swap SubIndex & MemShift to reverse
-        .MemShift(SubIndex), .SubIndex(MemShift), .WordFull(DataRead),
-        .ByteMask( ), .WordMasked(DataLoad)
-        //.WordMasked = (.WordFull) << (.MemShift*8) >> (.SubIndex*8);
+        .MemShift(MemShift), .SubIndex(SubIndex), .WordFull(DataRead),
+        .ByteMask( ), .WordMasked(), .ValExtract(DataLoad)
     );
 
     //TODO: Maybe divorce WBK from FWD stuff more fully to clarify slightly different paths

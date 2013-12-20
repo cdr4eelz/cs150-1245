@@ -9,11 +9,17 @@
 	{ TRAN_DATA = ((unsigned int)CH); }
 #define _tran_ch(CH) \
 	{ _tran_wait; _tran_out(CH); }
+#define TRAN_DATA2 (*((volatile unsigned char*)0x8000000B))
+#define _tran_out2(CH) \
+	{ TRAN_DATA2 = ((unsigned char)CH); }
+#define _tran_ch2(CH) \
+	{ _tran_wait; _tran_out2(CH); }
 
 #define DSTR "This is just a simple test. Memory contents are echoed to UART constantly. Ideally the values will make it. Reset can be an issue but we shall cee (sic).  "
 
+__attribute__ ((aligned))
 const char rodata[] = "ReaDoNLy: " DSTR;
-char data[] = "xyz pdq: UNSEEN"; //Not initialized unless loader or _start do something
+//char data[] = "xyz pdq: UNSEEN"; //Not initialized unless loader or _start do something
 
 //NOTE: This is coded awkwardly in order to minimize reads from memory during preamble
 //      which helps confirm simple serial link operation (rather than memory testing).
@@ -21,42 +27,59 @@ char data[] = "xyz pdq: UNSEEN"; //Not initialized unless loader or _start do so
 
 void send_ch(char ch) { _tran_ch(ch & 0x000000FF); }
 
-void mem_xfer4(unsigned int *dp, const unsigned int *sp, int len) {
-	while (len--) *dp++ = *sp++;
+void send8(char *sp) { //KISS Version
+	_tran_ch(*sp++); _tran_ch(*sp++);
+	send_ch(*sp++); _tran_ch2(*sp++);
+	_tran_ch(*sp++); _tran_ch(*sp++);
+	_tran_ch2(*sp++); _tran_ch(*sp++);
+}
+
+void mem_xfer16(unsigned char *dp, const unsigned char *sp) { //KISS version
+	*dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++;
+	*dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++;
+	*dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++;
+	*dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++;
+}
+
+void mem_xfer(unsigned char *dp, const unsigned char *sp, int bytes) {
+	while (bytes--) *dp++ = *sp++;
 }
 
 void ptr_check() {
 	const char *cp = rodata;
-	send_ch(cp[0]); send_ch(cp[1]); send_ch(cp[2]); send_ch(cp[3]);
-	_tran_ch('-');
-	send_ch(*cp++); send_ch(*cp++); send_ch(*cp++); send_ch(*cp++);
+	send_ch(*cp++);
+	send_ch(cp[0]); send_ch(cp[1]);
+	send_ch(*cp++);
 }
 
-int main(void) { // Could have _start pass basic memory info (base/stack pointers)
-	_tran_ch('|');
-	_tran_ch('-'); _tran_ch(']'); _tran_ch('['); _tran_ch('-');
+int main() {
+	_tran_ch(']'); _tran_ch2('[');
+	
+	send_ch(']'); send_ch('[');
 	
 	_tran_ch('@');
-	send_ch(' '); send_ch('<'); send_ch('>'); send_ch(' ');
+	send_ch(rodata[3]); send_ch(rodata[4]); send_ch(rodata[0]); send_ch(rodata[7]);
 	
 	_tran_ch('#');
-	send_ch(rodata[0]); send_ch(rodata[1]); send_ch(rodata[2]); send_ch(rodata[3]);
-	_tran_ch('-');
-	send_ch(rodata[4]); send_ch(rodata[5]); send_ch(rodata[6]); send_ch(rodata[7]);
-	_tran_ch('#');
-	
-	_tran_ch('$');
 	ptr_check();
+
 	_tran_ch('$');
+	mem_xfer16( (unsigned char *)0x50000100, (const unsigned char *)rodata);
+	_tran_ch((char *)0x50000102);
+	_tran_ch('>');
+	send8( (char *)0x50000107 );
 
 	_tran_ch('%');
-	mem_xfer4( ((unsigned int *)0x10000000), (const unsigned int *)rodata, 256);
-	
-	_tran_ch('^'); _tran_ch('<'); _tran_ch('v'); _tran_ch('>');
-	const char *cm = (const char *)(0x10000000);
-	_tran_ch('&');
+	mem_xfer16( ((unsigned char *)0x10000100), (const unsigned char *)rodata);
+	_tran_ch((char *)0x10000102);
+	_tran_ch('>');
+	send8( ((char *)0x10000107) );
+
+	_tran_ch('!'); _tran_ch('B'); _tran_ch('y'); _tran_ch('e');
+	_tran_ch('\n');
+	int countdown = 32;
+	while (countdown--) _tran_ch(',');
+	_tran_ch('\n');
 L_EVERMORE:
-	_tran_ch('.');
-	send_ch( *cm++ ); // This rolls over (and hopefully back "around")
 	goto L_EVERMORE;
 }
