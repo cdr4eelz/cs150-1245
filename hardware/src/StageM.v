@@ -16,9 +16,11 @@ module StageM (
     output [31: 0]  WBK_Val_,
     output          WBK_CanFWD_,
     // Memory/IO drives
+    output reg _hot_ISR, //ISR//
     output reg _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB,
     output [ 3: 0] _ByteMask, _WriteMask,
     output [31: 0] _WDataMasked,
+    input  [31: 0] RData_ISR, //ISR//
     input  [31: 0] RData_IO, RData_BR, RData_DC, RData_DB
 );
 /*
@@ -52,10 +54,12 @@ module StageM (
     assign _WriteMask = (_isMemWrite) ? _ByteMask : 4'b0000;
 
 always @(*) begin
+    _hot_ISR=1'b0; //ISR//
     _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0;
     _hot_IC=1'b0; _hot_DB=1'b0; _hot_IB=1'b0;
     if (_isMemRead || _isMemWrite) begin
         case (_Target)
+            4'b1100: _hot_ISR = 1'b1; //ISR//
             4'b1000: _hot_IO = 1'b1;
             4'b0100: _hot_BR = !_isMemWrite;
             4'b0001: _hot_DC = 1'b1;
@@ -92,6 +96,7 @@ end
 
     reg [31: 0] DataRead; // Registered elsewhere (is just a reg here because of always@*)
     always @(*) case (Target) // "Target" (for read data coming out after clock) NOT "_Target"
+        4'b1100         : DataRead = RData_ISR; //ISR//
         4'b1000         : DataRead = RData_IO;
         4'b0100         : DataRead = RData_BR;
         4'b0001, 4'b0011: DataRead = RData_DC; //TODO: Confirm can read from either 1 or 3

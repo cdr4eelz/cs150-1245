@@ -209,9 +209,11 @@ module MIPS150 #(
         REG_PC_M        ( .CPUGlobal(CPUGlobal),    .In(PC_DX       ),  .Out(PC_M        ) );
 
     // MEMORY/IO Drives
+    wire _hot_ISR; //ISR//
     wire _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB;
     wire [ 3: 0] _WriteMask, _ByteMask;
     wire [31: 0] _WDataMasked;
+    wire [31: 0] RData_ISR; //ISR//
     wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
     StageM s_M
     ( //.CPUGlobal(CPUGlobal),
@@ -224,18 +226,47 @@ module MIPS150 #(
         .WBK_Reg_   (WBKReg_M_WF_), .WBK_Val_   (WBKDat_M_WF_),
         .WBK_CanFWD_(WBKCanFWD_M_WF_),
         //Memory/IO patchwork
+        ._hot_ISR(_hot_ISR), //ISR//
         ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
         ._hot_IC(_hot_IC), ._hot_DB(_hot_DB), ._hot_IB(_hot_IB),
         ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked), ._ByteMask(_ByteMask),
+        .RData_ISR(RData_ISR), //ISR//
         .RData_IO(RData_IO), .RData_BR(RData_BR), .RData_DC(RData_DC), .RData_DB(RData_DB)
     );
 
     // Instruction fetch selection
     wire INST_bios = (INST_ADDR[31:28] == 4'h4);
+    wire [31:0] INST_ISR; //ISR//
     wire [31:0] INST_BR, INST_IC, INST_IB;
-    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB;
+    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB; //TODO: MUX all instruction sources
 
     // MEMORY & IO ELEMENTS THEMSELVES
+
+    //TODO: Decode instructions, activate controls, allow writeback
+    //TODO: UART FSMs (for edges)
+    COP0150 cop0 (
+        .Clock(clk), .Reset(rst), .Enable(1'b1),
+        .DataAddress(), //IN-5 (REGISTER)
+        .DataOut(), //OUT-32 (TO ALU-B if CONTROL-mfc0)
+        .DataInEnable(), //IN (CONTROL-mtc0)
+        .DataIn(), //IN-32 (FROM WB)
+        .InterruptedPC(), //IN-32
+        .InterruptHandled(), //IN
+        .InterruptRequest(), //OUT
+        .UART0Request(), //IN
+        .UART1Request() //IN
+    );
+
+    isr_mem bram_isr
+    ( .clka(clk), .ena(~stall && _hot_ISR),
+        .addra(MemAddr__M[13:2]),
+      /*.douta(RData_IB),//OUT-32*/
+        .wea(_WriteMask), .dina(_WDataMasked),
+
+    // INSTRUCTION Fletch
+      .clkb(clk), .addrb(INST_ADDR[13:2]),
+      /*.enb(1'b1)*/ .doutb(INST_ISR)
+    ) /* synthesis syn_noprune=1 */;
 
     bios_mem brom_bios
     ( .clka(clk), .ena(~stall && _hot_BR),
