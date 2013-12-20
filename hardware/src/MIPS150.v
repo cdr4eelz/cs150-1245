@@ -195,13 +195,13 @@ module MIPS150 #(
     wire  [31: 0]   PC_M;
     PipelineRegister #( .Width(`BUS_ICTL_width) )   // Register all controls & let unused get pruned out
         REG_IControl_M  ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M  ) );
-    PipelineRegister #( .Width(`BUS_ICTL_width), .Mode(1) ) //NOTE:MODE-3
+    PipelineRegister #( .Width(`BUS_ICTL_width), .Mode(3) ) //NOTE:MODE-3 was MODE-1
         REG_IControl__M ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl__M ) );
-    PipelineRegister #( .Width(32), .Mode(1) ) //NOTE:MODE-3
+    PipelineRegister #( .Width(32), .Mode(3) ) //NOTE:MODE-3 was MODE-1
         REG_MemAddr__M  ( .CPUGlobal(CPUGlobal),    .In(MemAddrDX_  ),  .Out(MemAddr__M  ) );
     PipelineRegister #( .Width(32) )
         REG_MemAddr_M   ( .CPUGlobal(CPUGlobal),    .In(MemAddrDX_  ),  .Out(MemAddr_M   ) );
-    PipelineRegister #( .Width(32), .Mode(1) ) //NOTE:MODE-3
+    PipelineRegister #( .Width(32), .Mode(3) ) //NOTE:MODE-3 was MODE-1
         REG_MemWValue__M( .CPUGlobal(CPUGlobal),    .In(MemWValueDX_),  .Out(MemWValue__M) );
     PipelineRegister #( .Width(32) )
         REG_RegWValue_M ( .CPUGlobal(CPUGlobal),    .In(RegWValueDX_),  .Out(RegWValue_M ) );

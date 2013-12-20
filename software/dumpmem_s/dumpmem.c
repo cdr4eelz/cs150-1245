@@ -34,11 +34,23 @@ void send8(char *sp) { //KISS Version
 	_tran_ch2(*sp++); _tran_ch(*sp++);
 }
 
-void mem_xfer16(unsigned char *dp, const unsigned char *sp) { //KISS version
-	*dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++;
-	*dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++;
-	*dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++;
-	*dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++; *dp++ = *sp++;
+void mem_xfer16(unsigned int *dp, const unsigned int *sp) { //KISS version
+	unsigned int *dp_w;
+	unsigned short *dp_h;
+	unsigned char *dp_b;
+	const unsigned int *sp_w;
+	const unsigned short *sp_h;
+	const unsigned char *sp_b;
+
+	dp_w = (unsigned int *)dp;
+	sp_w = (const unsigned int *)sp;
+	*dp_w++ = *sp_w++; *dp_w++ = *sp_w++;
+	dp_h = (unsigned short *)dp_w;
+	sp_h = (const unsigned short *)sp_w;
+	*dp_h++ = *sp_h++; *dp_h++ = *sp_h++;
+	dp_b = (unsigned char *)dp_h;
+	sp_b = (const unsigned char *)sp_h;
+	*dp_b++ = *sp_b++; *dp_b++ = *sp_b++;
 }
 
 void mem_xfer(unsigned char *dp, const unsigned char *sp, int bytes) {
@@ -64,14 +76,14 @@ int main() {
 	ptr_check();
 
 	_tran_ch('$');
-	mem_xfer16( (unsigned char *)0x50000100, (const unsigned char *)rodata);
-	_tran_ch((char *)0x50000102);
+	mem_xfer16( (unsigned int *)0x50000100, (const unsigned int *)rodata);
+	_tran_ch(*((char *)0x50000100));
 	_tran_ch('>');
 	send8( (char *)0x50000107 );
 
 	_tran_ch('%');
-	mem_xfer16( ((unsigned char *)0x10000100), (const unsigned char *)rodata);
-	_tran_ch((char *)0x10000102);
+	mem_xfer16( ((unsigned int *)0x10000100), (const unsigned int *)rodata);
+	_tran_ch(*((char *)0x10000100));
 	_tran_ch('>');
 	send8( ((char *)0x10000107) );
 
