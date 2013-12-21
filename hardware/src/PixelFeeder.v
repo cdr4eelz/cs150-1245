@@ -14,7 +14,9 @@ module PixelFeeder( //System:
                     // DVI module:
                     output [23:0]  video,
                     output         video_valid,
-                    input          video_ready);
+                    input          video_ready,
+
+		    output frame_interrupt);
 
     // Hint: States
     localparam IDLE = 1'b0;
@@ -25,7 +27,7 @@ module PixelFeeder( //System:
     /**************************************************************************
     * YOUR CODE HERE: Write logic to keep the FIFO as full as possible.
     **************************************************************************/
-    wire [31:0] feeder_dout;
+
 
     /* We drop the first frame to allow the buffer to fill with data from
     * DDR2. This gives alignment of the frame. */
@@ -40,6 +42,8 @@ module PixelFeeder( //System:
 
     // FIFO to buffer the reads with a write width of 128 and read width of 32. We try to fetch blocks
     // until the FIFO is full.
+    wire [31:0] feeder_dout;
+
     pixel_fifo feeder_fifo(
     	.rst(rst),
     	.wr_clk(cpu_clk_g),
@@ -55,3 +59,4 @@ module PixelFeeder( //System:
     assign video_valid = 1'b1;
 
 endmodule
+

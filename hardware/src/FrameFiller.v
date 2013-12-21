@@ -14,10 +14,16 @@ module FrameFiller(//system:
   output            af_wr_en,
   output [15:0]     wdf_mask_din,
   // handshaking:
-  output            ready);
+  output            ready,
+  
+  input [31:0] FF_frame_base
+  );
+
+   //Your code goes here. GL HF DD DS
 
 
   // Remove these when you implement the frame filler:
+
   assign wdf_wr_en = 1'b0;
   assign af_wr_en  = 1'b0;
   assign ready     = 1'b1;

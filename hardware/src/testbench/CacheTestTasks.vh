@@ -208,7 +208,7 @@ begin
   case(cache_select)
     `ICACHE: begin
       StrRW          = "i";
-      data_to_verify = instruction;
+      data_to_verify = icache_dout;
       TempReadWriteNum    = readNumI;
     end
     `DCACHE: begin

@@ -9,7 +9,7 @@
 
 `timescale 1ns / 1ps
 
-module CacheTestBench;
+module CacheTestBench();
     // Test bench generates a reset
     reg Reset;
 
@@ -72,7 +72,7 @@ module CacheTestBench;
     reg  [31:0] d_addr;
     reg  [31:0] PC;
     wire [31:0] dcache_dout;
-    wire [31:0] instruction;
+    wire [31:0] icache_dout;
     wire        stall;
     wire        init_done;
 
@@ -213,7 +213,7 @@ module CacheTestBench;
         .dcache_din (dcache_din ),
         .icache_din (icache_din ),
         .dcache_dout(dcache_dout),
-        .instruction(instruction),
+        .icache_dout(icache_dout),
         .stall      (stall      )
     );
 

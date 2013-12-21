@@ -60,7 +60,7 @@ module EchoTestbenchCaches;
     wire  [31:0] dcache_din;
     wire  [31:0] icache_din;
     wire [31:0]  dcache_dout;
-    wire [31:0]  instruction;
+    wire [31:0]  icache_dout;
     wire         stall;
     
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
@@ -81,7 +81,7 @@ module EchoTestbenchCaches;
         .dcache_din  (dcache_din  ),
         .icache_din  (icache_din  ),
         .dcache_dout (dcache_dout ),
-        .instruction (instruction ),
+        .instruction (icache_dout ),
         .stall(stall)
     );
 
@@ -134,7 +134,7 @@ module EchoTestbenchCaches;
         .dcache_din (dcache_din ),
         .icache_din (icache_din ),
         .dcache_dout(dcache_dout),
-        .instruction(instruction),
+        .icache_dout(icache_dout),
         .stall      (stall      )
     );
 

@@ -25,50 +25,25 @@ module MIPS150 #(
     output [31:0] icache_din,
     input [31:0] dcache_dout,
     input [31:0] instruction,
+    input stall,
 
-// CP3+
-`ifdef __COLT45_pre3
-    output [31:0] bypass_addr,
-    output [31:0] bypass_din,
-    output [3:0]  bypass_we,
-    // Graphics ports
-    input          filler_ready,
-    input          line_ready,
-    output  [23:0] filler_color,
-    output         filler_valid,
-    output  [31:0] line_color,
-    output  [9:0]  line_point,
-    output         line_color_valid,
-    output         line_x0_valid,
-    output         line_y0_valid,
-    output         line_x1_valid,
-    output         line_y1_valid,
-    output         line_trigger,
-`endif
+// CP4+
+    output [31:0] gp_code,
+    output [31:0] gp_frame,
+    output gp_valid,
+    input frame_interrupt,
 
 //BRK tap (will become internal instead)
     input brk,
     output [0:1023] trace,
-    inout  [35: 0] SCOPE_CPU,
-
-    input stall
+    inout  [35: 0] SCOPE_CPU
 );
 
     localparam ENABLE_BRK=0, ENABLE_SCOPE=0;
 
-// CP3+
-`ifdef __COLT45_pre3
-    assign bypass_addr=32'd0, bypass_din=32'd0, bypass_we=4'd0;
-    assign filler_color=24'd0, filler_valid=1'b0, line_color=32'd0, line_point=10'd0;
-    // Remove these for CP5. 
-    assign line_color_valid = 1'b0;
-    assign line_x0_valid = 1'b0;
-    assign line_x1_valid = 1'b0;
-    assign line_y0_valid = 1'b0;
-    assign line_y1_valid = 1'b0;
-
-    assign line_trigger=1'b0;
-`endif
+// CP4+
+    assign gp_code=32'd0, gp_frame=32'd0;
+    assign gp_valid = 1'b0;
 
     // Global sorts of things
     `BUS_CPUGlobal_type CPUGlobal;

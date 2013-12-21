@@ -16,9 +16,7 @@
 
 `define MODELSIM 1
 
-`include "CPUGlobal.vh"
-
-module Memory150TestBench;
+module Memory150TestBench();
     // Test bench generates a reset
     reg Reset;
 
@@ -84,7 +82,7 @@ module Memory150TestBench;
     reg  [31:0] d_addr;
     reg  [31:0] PC;
     wire [31:0] dcache_dout;
-    wire [31:0] instruction;
+    wire [31:0] icache_dout;
     wire        stall;
     wire        init_done;
 
@@ -97,7 +95,6 @@ module Memory150TestBench;
     // Modular cache testing procedures
     `include "CacheTestTasks.vh"
 
-    wire pll_fb;
     PLL_BASE
     #(
         .BANDWIDTH("OPTIMIZED"),
@@ -204,7 +201,7 @@ module Memory150TestBench;
         .dcache_din (dcache_din ),
         .icache_din (icache_din ),
         .dcache_dout(dcache_dout),
-        .instruction(instruction),
+        .icache_dout(icache_dout),
         .stall      (stall      )
     );
 

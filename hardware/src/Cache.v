@@ -108,7 +108,6 @@ module Cache(
 
     wire write_hit_hold;
     wire tag_equal;
-    wire read_miss;
 
     // block ram for the cache:
     // 8kb

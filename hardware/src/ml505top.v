@@ -2,11 +2,13 @@ module ml505top
 (
   input         FPGA_SERIAL_RX,
   output        FPGA_SERIAL_TX,
-
   input [4:0]   GPIO_COMPPB,
-  output [7:0]  GPIO_LED,
-  output [4:0]  GPIO_COMPLED,
   input [7:0]   GPIO_DIP,
+  output [4:0]  GPIO_COMPLED,
+//input         USER_RST, // To passthrough to embedded IP-cores
+  input         USER_CLK,
+
+  output [7:0]  GPIO_LED,
 
 // CP2+
   output [12:0] ddr2_a,
@@ -24,8 +26,7 @@ module ml505top
   output        ddr2_ras_n,
   output        ddr2_we_n,
 
-/*
-// CP3+
+// CP4+
   output [11:0] DVI_D,
   output        DVI_DE,
   output        DVI_H,
@@ -33,13 +34,9 @@ module ml505top
   output        DVI_V,
   output        DVI_XCLK_N,
   output        DVI_XCLK_P,
-  
-  inout         IIC_SCL_VIDEO,
-  inout         IIC_SDA_VIDEO,
-*/
 
-//  input         USER_RST, // To passthrough to embedded IP-cores
-  input         USER_CLK
+  inout         IIC_SCL_VIDEO,
+  inout         IIC_SDA_VIDEO
 );
     wire USER_RST = 1'b1; //Disable (active_low)
 
@@ -133,42 +130,46 @@ module ml505top
     wire [31:0]  dcache_dout;
     wire [31:0]  instruction;
     wire         mem_stall;
-    wire         mem_init_done;
+    wire         init_done;
 
-    assign rst_or_init = rst || ~mem_init_done;
+    assign rst_or_init = rst || ~init_done;
     assign any_stall = mem_stall;// || man_stall || debug_stall_not_jog;
 
-/*
-// CP3+
-    wire [31:0]  bypass_addr;
-    wire [31:0]  bypass_din;
-    wire [3:0]   bypass_we;
+// CP4+
     wire         video_ready;
-    wire         dvi_video_ready;
+//    wire         dvi_video_ready;
     wire         video_valid;
     wire [23:0]  video;
-    wire [23:0]  filler_color;
-    wire         filler_ready;
-    wire         filler_valid;
-    wire         line_ready;
-    wire  [31:0] line_color;
-    wire  [9:0]  line_point;
-    wire         line_color_valid;
-    wire         line_x0_valid;
-    wire         line_y0_valid;
-    wire         line_x1_valid;
-    wire         line_y1_valid;
-    wire         line_trigger;
-*/
+//    wire [23:0]  filler_color;
+//    wire         filler_ready;
+//    wire         filler_valid;
+//    wire         line_ready;
+//    wire  [31:0] line_color;
+//    wire  [9:0]  line_point;
+//    wire         line_color_valid;
+//    wire         line_x0_valid;
+//    wire         line_y0_valid;
+//    wire         line_x1_valid;
+//    wire         line_y1_valid;
+//    wire         line_trigger;
+  wire fb0;
+   wire frame_interrupt;
+   wire [31:0] gp_code;
+   wire [31:0] gp_frame;
+   wire        gp_valid;
 
     Memory150 #(.SIM_ONLY(1'b0)) mem_arch(
         .cpu_clk_g  (cpu_clk_g),
         .clk0_g     (clk0_g),
-        .clk90_g    (clk90_g),
-        .clkdiv0_g  (clkdiv0_g),
         .clk200_g   (clk200_g),
+        .clkdiv0_g  (clkdiv0_g),
+        .clk90_g    (clk90_g),
+        .clk50_g    (clk50_g),
+        .locked     (pll_lock),
+
         .rst        (fifo_reset),
-        .init_done  (mem_init_done),
+        .init_done  (init_done),
+
         .DDR2_A     (ddr2_a),
         .DDR2_BA    (ddr2_ba),
         .DDR2_CAS_B (ddr2_cas_n),
@@ -183,7 +184,7 @@ module ml505top
         .DDR2_ODT   (ddr2_odt),
         .DDR2_RAS_B (ddr2_ras_n),
         .DDR2_WE_B  (ddr2_we_n),
-        .locked     (pll_lock),
+
         .dcache_addr(dcache_addr),
         .icache_addr(icache_addr),
         .dcache_we  (dcache_we  ),
@@ -193,38 +194,22 @@ module ml505top
         .dcache_din (dcache_din ),
         .icache_din (icache_din ),
         .dcache_dout(dcache_dout),
-        .instruction(instruction),
-
-/*
-        .bypass_addr(bypass_addr),
-        .bypass_we  (bypass_we  ),
-        .bypass_din (bypass_din ),
-        .clk50_g(clk50_g),
-
+        .icache_dout(instruction),
+        .stall      (mem_stall),
+//CP4+
         .video      (video      ),
         .video_ready(video_ready),
         .video_valid(video_valid),
-        .filler_color(filler_color),
-        .filler_valid(filler_valid),
-        .filler_ready(filler_ready),
-        .line_ready(line_ready),
-        .line_color(line_color),
-        .line_point(line_point),
-        .line_color_valid(line_color_valid),
-        .line_x0_valid(line_x0_valid),
-        .line_y0_valid(line_y0_valid),
-        .line_x1_valid(line_x1_valid),
-        .line_y1_valid(line_y1_valid),
-        .line_trigger(line_trigger),
-*/
-        .stall(mem_stall)
+
+        .cpu_gp_code(gp_code),
+        .cpu_gp_frame(gp_frame),
+        .cpu_gp_valid(gp_valid),
+        .frame_interrupt(frame_interrupt)
     );
 
-/*
-// CP3+
-    assign video_valid = 1'b0, video = 32'd0;
+// CP4+
     DVI #(
-        .ClockFreq(                 50_000_000), //50 MHz
+        .ClockFreq(                 50000000), //50 MHz
         .Width(                     1040),
         .FrontH(                    56),
         .PulseH(                    120),
@@ -250,7 +235,6 @@ module ml505top
         .VideoReady(                video_ready),
         .VideoValid(                video_valid)
     );
-*/
 
 `ifndef CPUTYPE
 `define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
@@ -264,23 +248,13 @@ module ml505top
     .dcache_re  ( dcache_re   ),    .icache_re  ( icache_re   ),
     .dcache_din ( dcache_din  ),    .icache_din ( icache_din  ),
     .dcache_dout( dcache_dout ),    .instruction( instruction ),
-/*
-// CP3+
-    .bypass_addr( bypass_addr ),    .bypass_we  ( bypass_we ),
-    .bypass_din ( bypass_din  ),
-    .filler_color   (filler_color),
-    .filler_valid   (filler_valid),
-    .filler_ready   (filler_ready),
-    .line_ready     (line_ready),
-    .line_color     (line_color),
-    .line_point     (line_point),
-    .line_color_valid(line_color_valid),
-    .line_x0_valid  (line_x0_valid),
-    .line_y0_valid  (line_y0_valid),
-    .line_x1_valid  (line_x1_valid),
-    .line_y1_valid  (line_y1_valid),
-    .line_trigger   (line_trigger),
-*/
+
+// CP4+
+    .gp_code(cpu_gp_code),
+    .gp_frame(cpu_gp_frame),
+    .gp_valid(cpu_gp_valid),
+    .frame_interrupt(frame_interrupt),
+//add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
 
 //BRK tap
     .brk(debug_brk), .trace(debug_trace), .SCOPE_CPU(SCOPE_CPU),
@@ -524,7 +498,7 @@ module ml505top
     assign button_reset = GPIO_COMPPB[0];   // Center PushButton on "compass"
     //assign button_reset = GPIO_COMPPB[2];   // South PushButton on "compass"
     assign GPIO_COMPLED = {button_reset, 1'b0, man_stall_toggle, 2'b00};
-    assign GPIO_LED = {5'b00000, any_stall, pll_lock, mem_init_done};
+    assign GPIO_LED = {5'b00000, any_stall, pll_lock, init_done};
     //if SERIAL_JTAG then MIPSY talks to PLOP UART1 & PLOP UART2 gets physical UART
     assign FPGA_SERIAL_TX = (SERIAL_JTAG) ? P_SERIAL2_TX    : M_SERIAL_TX;
     assign M_SERIAL_RX    = (SERIAL_JTAG) ? P_SERIAL1_TX    : FPGA_SERIAL_RX;
