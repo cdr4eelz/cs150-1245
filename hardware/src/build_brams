@@ -14,6 +14,9 @@ echo "Building DATA" | tee -a $LOG
 echo "Building INST" | tee -a $LOG
 (cd imem_blk_ram/ && ezcore) | tee -a $LOG
 
+echo "Building ISR" | tee -a $LOG
+(cd isr_mem/ && ezcore) | tee -a $LOG
+
 
 echo "::END build" >> $LOG
 
