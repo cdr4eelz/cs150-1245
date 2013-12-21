@@ -248,6 +248,7 @@ module ml505top
     .dcache_re  ( dcache_re   ),    .icache_re  ( icache_re   ),
     .dcache_din ( dcache_din  ),    .icache_din ( icache_din  ),
     .dcache_dout( dcache_dout ),    .instruction( instruction ),
+    .stall(any_stall),
 
 // CP4+
     .gp_code(cpu_gp_code),
@@ -257,10 +258,7 @@ module ml505top
 //add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
 
 //BRK tap
-    .brk(debug_brk), .trace(debug_trace), .SCOPE_CPU(SCOPE_CPU),
-
-// Shared
-    .stall(any_stall)
+    .brk(debug_brk), .trace(debug_trace), .SCOPE_CPU(SCOPE_CPU)
 );
 
 
@@ -479,6 +477,7 @@ module ml505top
 `else
     assign {debug_reset,debug_stall,debug_brk,debug_jog} = 4'b0000;
     assign {BRK_MASTER,SERIAL_JTAG} = 2'b00;
+
 //    cs_icon_1 CS_ICON (
 //        .CONTROL0(SCOPE_CPU) // INOUT BUS [35:0]
 //    ) /* synthesis syn_noprune=1 */;

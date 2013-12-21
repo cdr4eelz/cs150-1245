@@ -1,6 +1,7 @@
 tmp/
 /[di]mem_blk_ram/
 /bios_mem/
+/isr_mem/
 /mig_af/
 /mig_rdf/
 /mig_wdf/

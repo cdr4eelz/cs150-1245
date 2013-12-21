@@ -53,28 +53,27 @@ module StageM (
     );
     assign _WriteMask = (_isMemWrite) ? _ByteMask : 4'b0000;
 
-always @(*) begin
-    _hot_ISR=1'b0; //ISR//
-    _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0;
-    _hot_IC=1'b0; _hot_DB=1'b0; _hot_IB=1'b0;
-    if (_isMemRead || _isMemWrite) begin
-        case (_Target)
-            4'b1100: _hot_ISR = 1'b1; //ISR//
-            4'b1000: _hot_IO = 1'b1;
-            4'b0100: _hot_BR = !_isMemWrite;
-            4'b0001: _hot_DC = 1'b1;
-            4'b0010: _hot_IC = _isMemWrite && PC[30];
-            4'b0011:
-                begin
-                    _hot_DC = 1'b1;
-                    _hot_IC = _isMemWrite && PC[30];
-                end
-`ifndef COLT45_STRICT
-            4'b0101: _hot_DB = 1'b1; //EXTRA: Scratchpad-RAM
-`endif //(!) COLT45_STRICT
-        endcase
+    always @(*) begin
+        _hot_ISR=1'b0; //ISR//
+        _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0;
+        _hot_IC=1'b0; _hot_DB=1'b0; _hot_IB=1'b0;
+        if (_isMemRead || _isMemWrite) begin
+            case (_Target)
+                4'b1100: _hot_ISR = 1'b1; //ISR//
+                4'b1000: _hot_IO = 1'b1;
+                4'b0100: _hot_BR = !_isMemWrite; //Read-only
+                4'b0011: begin
+                        _hot_DC = 1'b1;
+                        _hot_IC = _isMemWrite && PC[30];
+                    end
+                4'b0010: _hot_IC = _isMemWrite && PC[30]; //Write-only via BIOS
+                4'b0001: _hot_DC = 1'b1;
+    `ifndef COLT45_STRICT
+                4'b0101: _hot_DB = 1'b1; //EXTRA: Scratchpad-RAM
+    `endif //(!) COLT45_STRICT
+            endcase
+        end
     end
-end
 
 
 // NOTE: ABOVE THIS SPOT is "_IControl" and other pre/setup staging //
@@ -99,9 +98,9 @@ end
         4'b1100         : DataRead = RData_ISR; //ISR//
         4'b1000         : DataRead = RData_IO;
         4'b0100         : DataRead = RData_BR;
-        4'b0001, 4'b0011: DataRead = RData_DC; //TODO: Confirm can read from either 1 or 3
+        4'b0001, 4'b0011: DataRead = RData_DC;
 `ifndef COLT45_STRICT //TODO: Ensure no other references to these if STRICT mode!
-        4'b0101: DataRead = RData_DB; // Scratchpad-RAM
+        4'b0101         : DataRead = RData_DB; // Scratchpad-RAM
 `endif
         default: DataRead = `UNKNOWN(32);
     endcase // CAUTIOUS trapping of EVERY case

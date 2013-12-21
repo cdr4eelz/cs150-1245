@@ -3,7 +3,7 @@
 module MIPS150 #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
-    parameter COLT45_SCRATCH=1, COLT45_PC=1,
+    parameter COLT45_SCRATCH=0, COLT45_PC=0,
     parameter COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
     input clk,
@@ -94,13 +94,13 @@ module MIPS150 #(
 
 
     // Pipeline border: WF/DX
-    wire [31: 0] PC_DX;
     wire [31: 0] INST_DX;
-    PipelineRegister #( .Width(32), .Mode(0) )
-        REG_PC_DX   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX) );
     PipelineRegister #( .Width(32), .Mode(1) ) // Registered for us in prior stage
         REG_INST_DX ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX) );
     //NOTE: INST_DATA gets changed early by BRAM (no disable availabe) but INST_DX gets "latched" on stall!
+    wire [31: 0] PC_DX;
+    PipelineRegister #( .Width(32), .Mode(0) )
+        REG_PC_DX   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX) );
 
 /*
 //For examining waveform/timing impact of each variation simultaneously
@@ -138,6 +138,21 @@ module MIPS150 #(
         .ra2(REGFILE_ra2), .rd2(REGFILE_rd2)
     );
 
+    //TODO: Decode instructions, activate controls, allow writeback
+    //TODO: UART FSMs (for edges)
+    COP0150 cop0 (
+        .Clock(clk), .Reset(rst), .Enable(1'b1), //TODO: Consider stall?
+        .DataAddress(), //IN-5 (REGISTER)
+        .DataOut(), //OUT-32 (TO ALU-B if CONTROL-mfc0)
+        .DataInEnable(), //IN (CONTROL-mtc0)
+        .DataIn(), //IN-32 (FROM WB)
+        .InterruptedPC(), //IN-32
+        .InterruptHandled(), //IN
+        .InterruptRequest(), //OUT
+        .UART0Request(), //IN
+        .UART1Request() //IN
+    );
+
     // Forwarding calculation
     wire FWD_Allow = WBKCanFWD_M_WF_; // Has already checked for "wa"==0 elsewhere
     wire FWD_1 = (FWD_Allow) ? (REGFILE_wa == REGFILE_ra1) : 1'b0;
@@ -164,20 +179,23 @@ module MIPS150 #(
     );
 
     // Pipeline border: DX/M
-    `BUS_ICTL_type IControl_M, IControl__M;
-    wire  [31: 0]   MemAddr__M, MemAddr_M;
-    wire  [31: 0]   MemWValue__M, RegWValue_M;
-    wire  [31: 0]   PC_M;
-    PipelineRegister #( .Width(`BUS_ICTL_width) )   // Register all controls & let unused get pruned out
-        REG_IControl_M  ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M  ) );
-    PipelineRegister #( .Width(`BUS_ICTL_width), .Mode(3) ) //NOTE:MODE-3 was MODE-1
+    `BUS_ICTL_type IControl__M;
+    wire  [31: 0]   MemAddr__M;
+    wire  [31: 0]   MemWValue__M;
+    PipelineRegister #( .Width(`BUS_ICTL_width), .Mode(1) ) //NOTE:MODE-3 vs MODE-1
         REG_IControl__M ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl__M ) );
-    PipelineRegister #( .Width(32), .Mode(3) ) //NOTE:MODE-3 was MODE-1
+    PipelineRegister #( .Width(32),              .Mode(1) ) //NOTE:MODE-3 vs MODE-1
         REG_MemAddr__M  ( .CPUGlobal(CPUGlobal),    .In(MemAddrDX_  ),  .Out(MemAddr__M  ) );
+    PipelineRegister #( .Width(32),              .Mode(1) ) //NOTE:MODE-3 vs MODE-1
+        REG_MemWValue__M( .CPUGlobal(CPUGlobal),    .In(MemWValueDX_),  .Out(MemWValue__M) );
+    `BUS_ICTL_type IControl_M;
+    wire  [31: 0]   MemAddr_M;
+    wire  [31: 0]   RegWValue_M;
+    wire  [31: 0]   PC_M;
+    PipelineRegister #( .Width(`BUS_ICTL_width) )
+        REG_IControl_M  ( .CPUGlobal(CPUGlobal),    .In(IControlDX_),   .Out(IControl_M  ) );
     PipelineRegister #( .Width(32) )
         REG_MemAddr_M   ( .CPUGlobal(CPUGlobal),    .In(MemAddrDX_  ),  .Out(MemAddr_M   ) );
-    PipelineRegister #( .Width(32), .Mode(3) ) //NOTE:MODE-3 was MODE-1
-        REG_MemWValue__M( .CPUGlobal(CPUGlobal),    .In(MemWValueDX_),  .Out(MemWValue__M) );
     PipelineRegister #( .Width(32) )
         REG_RegWValue_M ( .CPUGlobal(CPUGlobal),    .In(RegWValueDX_),  .Out(RegWValue_M ) );
     PipelineRegister #( .Width(32) ) //TODO: Use simple flag for "in-bios/allow-I-write"
@@ -217,21 +235,6 @@ module MIPS150 #(
 
     // MEMORY & IO ELEMENTS THEMSELVES
 
-    //TODO: Decode instructions, activate controls, allow writeback
-    //TODO: UART FSMs (for edges)
-    COP0150 cop0 (
-        .Clock(clk), .Reset(rst), .Enable(1'b1),
-        .DataAddress(), //IN-5 (REGISTER)
-        .DataOut(), //OUT-32 (TO ALU-B if CONTROL-mfc0)
-        .DataInEnable(), //IN (CONTROL-mtc0)
-        .DataIn(), //IN-32 (FROM WB)
-        .InterruptedPC(), //IN-32
-        .InterruptHandled(), //IN
-        .InterruptRequest(), //OUT
-        .UART0Request(), //IN
-        .UART1Request() //IN
-    );
-
     isr_mem bram_isr
     ( .clka(clk), .ena(~stall && _hot_ISR),
         .addra(MemAddr__M[13:2]),
@@ -254,27 +257,40 @@ module MIPS150 #(
         .enb(INST_bios), .doutb(INST_BR)
     ) /* synthesis syn_noprune=1 */;
 
+/* Experiments with latching cache drives (but ensuring StageM uses latched inputs is ok)
     wire [31:0] latchedADDR, latchedDATA;
     wire [3:0] latchedMASK;
-    PipelineRegister #( .Width(32), .Mode(0) )
-        REG_latchedADDR( .CPUGlobal(CPUGlobal), .In(MemAddr__M), .Out(latchedADDR) );
-    PipelineRegister #( .Width(32), .Mode(0) )
-        REG_latchedDATA( .CPUGlobal(CPUGlobal), .In(_WDataMasked), .Out(latchedDATA) );
-    PipelineRegister #( .Width(4), .Mode(0) )
-        REG_latchedMASK( .CPUGlobal(CPUGlobal), .In(_WriteMask), .Out(latchedMASK) );
-    assign dcache_addr = latchedADDR,
-        dcache_we = latchedMASK, //(/*~stall &&*/ _hot_DC) ? (_WriteMask) : 4'b0000,
-        dcache_din = latchedDATA,
-        dcache_re = !(|latchedMASK), //(/*~stall &&*/ _hot_DC && |_WriteMask),
-        RData_DC = dcache_dout;
-//    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
+    wire latchedHOT_DC;
+    PipelineRegister #( .Width(32), .Mode(1) )
+        REG_latchedADDR( .CPUGlobal(CPUGlobal), .In(MemAddr__M),    .Out(latchedADDR) );
+    PipelineRegister #( .Width(32), .Mode(1) )
+        REG_latchedDATA( .CPUGlobal(CPUGlobal), .In(_WDataMasked),  .Out(latchedDATA) );
+    PipelineRegister #( .Width( 4), .Mode(1) )
+        REG_latchedMASK( .CPUGlobal(CPUGlobal), .In(_WriteMask),    .Out(latchedMASK) );
+    PipelineRegister #( .Width( 1), .Mode(1) )
+        REG_latchedH_DC( .CPUGlobal(CPUGlobal), .In(_hot_DC),       .Out(latchedHOT_DC) );
+    assign dcache_addr = {8'h00, latchedADDR[23:0]},
+        dcache_we   = (latchedHOT_DC) ? (latchedMASK) : 4'b0000,
+        dcache_din  = latchedDATA,
+        dcache_re   = latchedHOT_DC && !(|latchedMASK),
+        RData_DC    = dcache_dout;
+*/
+    //TODO: Ensure this doesn't trigger double-reads/writes!!!
+    assign dcache_addr = {4'h0, MemAddr__M[27:0]},
+        dcache_we   = (_hot_DC) ? (_WriteMask) : 4'b0000,
+        dcache_din  = _WDataMasked,
+        dcache_re   = _hot_DC && !(|_WriteMask),
+        RData_DC    = dcache_dout;
+    //NOTE: Both _hot_DC && _hot_IC are allowed to be active simultaneously for write
+    //NOTE: Writability rules in StageM prevent inst-read & data-write collision
+    assign icache_addr = {4'h0, (_hot_IC) ? MemAddr__M[27:0] : INST_ADDR[27:0]},
+        icache_we   = (_hot_IC) ? (_WriteMask) : 4'b0000,
+        icache_din  = _WDataMasked,
+        icache_re   = (INST_ADDR[31:28] == 4'b0001),
+        INST_IC     = instruction;
 
-//    assign icache_addr=INST_ADDR, // INST_ADDR/DATA_ADDR/NONE
- //       icache_we=4'b0000,
-  //      icache_din=_WDataMasked,
-   //     icache_re=1'b0,
-    //    INST_IC=instruction;
-    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
+//    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
+//    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC =32'd0;
 
     dmem_blk_ram bram_dmem
     ( .clka(clk), .ena(~stall && _hot_DB),
