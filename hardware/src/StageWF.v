@@ -10,7 +10,8 @@ module StageWF #(
     input  [31: 0] PCBranch,
     input          DOBranch,
 
-    output reg [COUNTERWIDTH-1:0] STEPCOUNT, STALLCOUNT
+    input ResetCounters,
+    output reg [COUNTERWIDTH-1:0] CycleCount, StallCount, StepCount
 );
 
     wire clk, rst, stall;
@@ -23,13 +24,21 @@ module StageWF #(
     always @(posedge clk) begin
         if (rst) begin
             PC_REG <= BOOTPC;
-            STEPCOUNT <= 0;
-            STALLCOUNT <= 0;
-        end else if (stall) begin
-            STALLCOUNT <= STALLCOUNT + 1;
-        end else begin
+        end else if (!stall) begin
             PC_REG <= (DOBranch) ? PCBranch : (PC_REG+4);
-            STEPCOUNT <= STEPCOUNT + 1;
+        end
+
+        if (rst || ResetCounters) begin
+            CycleCount <= 0;
+            StallCount <= 0;
+            StepCount <= 0;
+        end else begin
+            CycleCount <= CycleCount+1;
+            if (stall) begin
+                StallCount <= StallCount+1;
+            end else begin
+                StepCount <= StepCount+1;
+            end
         end
     end
 

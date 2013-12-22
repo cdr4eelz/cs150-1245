@@ -118,7 +118,7 @@ module StageM (
                             ? ( (isMemRead) ? DataLoad : RegWValue )
                             : `UNKNOWN(32); // Jump-Link could inject RegWValue
     assign WBK_CanFWD_  = (WBK_Reg_ != 5'd0)
-                            ? ( !isMemRead )
+                            ? ( !isMemRead ) // This covers CopRead case (forwarding allowed)
                             : `UNKNOWN(32); // 
 
 endmodule

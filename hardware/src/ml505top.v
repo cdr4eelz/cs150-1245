@@ -538,6 +538,7 @@ module ml505top
     );
 
     // Buffer reset/clocks for general use
+//TODO: BUFG the global reset too?
     IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
     BUFG  cpu_clk_buf  ( .I(clk50),    .O(cpu_clk_g)  );
     BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );

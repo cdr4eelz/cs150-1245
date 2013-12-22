@@ -16,11 +16,12 @@ module InstructionControl #(
     output [ 4:0 ] SRC2,
 
     output [31:0 ] PCTARGET,
-    output [31:0 ] PCBRANCH
+    output [31:0 ] PCBRANCH,
 
+    output [ 4:0 ] COPADDR,
+    output COPREAD, COPWRITE
 //  output [15:0 ] FAULT
 );
-
 
     function [31:0] SEXT16_32;
         input [15:0] in16;
@@ -33,12 +34,12 @@ module InstructionControl #(
     endfunction
 
     wire [ 5: 0] _opcode_ = _inst[31:26];
-    wire isRType, isIType, isJType;
 
+    wire isRType, isCType, isJType, isIType;
     assign isRType  = (_opcode_[5:0] == 6'b000000);
     assign isCType  = (_opcode_[5:0] == 6'b010000); //ISR//
     assign isJType  = (_opcode_[5:1] == 5'b00001_);
-    assign isIType  = (!isRType && !isJType);
+    assign isIType  = !(isRType || isCType || isJType);
 
     //TODO: Utilize the `TVALID(valid-expr,value) optional concat/unknown trick
     wire [ 4: 0] _rs_, _rt_, _rd_, _shamt_;
@@ -56,12 +57,15 @@ module InstructionControl #(
     // Pre-computations for clarity (partly distilled out by logic simplification?)
     // These characteristics could come from lookup table
     wire #DD isMemory, isMStore, isMLoad, isIComp, isISigned, isMSigned;
+    wire #DD isCopRead, isCopWrite; //ISR//
     assign isMemory    = (_opcode_[5:4] == 2'b10);
     assign isMLoad     = (_opcode_[5:3] == 3'b100);
     assign isMStore    = (_opcode_[5:3] == 3'b101);
     assign isIComp     = (_opcode_[5:3] == 3'b001);
     assign isISigned   = (isMemory || (isIComp && !_opcode_[2]));
     assign isMSigned   = (isMemory && !isMStore && !_opcode_[1] && !_opcode_[2]);
+    assign isCopRead   = (isCType && (_rs_ == `COP0_FROM));
+    assign isCopWrite  = (isCType && (_rs_ == `COP0_TO));
     wire #DD isRShift, isRShiftI, isRShiftR, isROther;
     assign isRShift    = (isRType && (_funct_[5:3] == 3'b000));
     assign isRShiftI   = (isRShift && (_funct_[2] == 1'b0));
@@ -86,12 +90,15 @@ module InstructionControl #(
     assign SHAMT    = (isRShiftI) ? _shamt_ : `UNKNOWN(5);
     assign SRC1     = (!isJType && !isRShiftI) ? _rs_ : 5'd0;
     assign SRC2     = (isBranch0) ? 5'd0 :
-                       (isROther || isBranchX || isRShift || isMStore
-                        || (isCType && (_rs_ == `COP0_TO)) ) //ISR//
+                       (isROther || isBranchX || isRShift || isMStore || isCopWrite)
                            ? _rt_ : 5'd0;
 
     assign PCTARGET = (isIJump) ? {_pc[31:28], _nearaddr_, 2'b00} : `UNKNOWN(32);
     assign PCBRANCH = (isBranch) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : `UNKNOWN(32);
+
+    assign COPADDR  = (isCopRead || isCopWrite) ? _rd_ : 5'd0;
+    assign COPREAD  = isCopRead;
+    assign COPWRITE = isCopWrite;
 
     // Embed existing ALUDecoder from lab
     wire [ 3: 0] #DD ALUop;
@@ -116,9 +123,7 @@ module InstructionControl #(
                             : 5'd0)
                         : ( (isRType)
                             ? _rd_
-                            : ( (isMLoad || isIComp || (isCType && (_rs_ == `COP0_FROM)) )
-                                ? _rt_
-                                : 5'd0)
+                            : ( (isMLoad || isIComp || isCopRead ) ? _rt_ : 5'd0)
                         );
 
     `BUS_ICTL_type delayIControl;

@@ -53,7 +53,8 @@ module MIPS150 #(
     );
 
 
-/*  Naming conventions (might be inconsistent/in-flux though :)
+/*
+  NAMING CONVENTIONS: (might be inconsistent/in-flux though :)
     SUFFIX for stage code (WF, DX, M) == (WriteBack-InstFetch, Decode-Execute, Memory)
     xxxSS_  : Value unstable during given stage (but stable at posedge exit)
     Typical output of a stage/module (headed to next stage somehow).
@@ -71,60 +72,56 @@ module MIPS150 #(
     _xxx    : Value is "hot" from prior stage (unregistered/passthrough/preview).
     xxx     : Value was registered prior (either by prior stage or by pipeline reg).
     ....
+
+  DATA PATH:
+    Top-to-bottom in this file depicts general "forward-flow" of datapath through
+        3 stages with clock edge.  Implied "wraparound" bottom-backto-top matches
+        notion of overlapped stages in a instruction vs. clock/stage pipeline diagram.
+    Modules are less embedded to avoid excessive signal passing when they straddle
+        stages or contribute debug taps (temporary or permanent).
+    Though design is "flattened", modules are placed between pipeline divisions
+        or near their most related stage where possible (REGFILE&COP0, MEM/MEMIO).
+        (Memory placement complicated by separate inst/data but helped by "wraparound")
+    Signals tend to be decleared ALAP to communicate general "forward" datapath.
+    Appropriate "violations" named to depict purpose (feedback/forwarding, async taps),
+        with redundant "local" signal assigned for clarity.
 */
 
-    // Forward declare feedback related wires (other key wires declared just prior to use)
-    wire         #DD DOBranch_DX_WF_;
-    wire [31: 0] #DD PCBranch_DX_WF_;
-    wire [ 4: 0] #DD WBKReg_M_WF_;   // Not sure there really is a "W" stage anywhere!
-    wire [31: 0] #DD WBKDat_M_WF_;   // but the concept seems harmless.
-    wire         #DD WBKCanFWD_M_WF_;// This prevents accidental creation of a slow MDX stage!
 
+    // Forward declare feedback related wires (other key wires declared just prior to use, ALAP)
+    wire         #DD DOBranch_DX_WF_; // The "W" (writeback) and branch lives near the M-Stage
+    wire [31: 0] #DD PCBranch_DX_WF_; // because they carry forward/backward from there but
+    wire [ 4: 0] #DD WBKReg_M_WF_;    // this is a "WF" stage because impact is "timed" to
+    wire [31: 0] #DD WBKDat_M_WF_;    // correlate with fetch & is "behind" aligned pipeline regs.
+    wire         #DD WBKCanFWD_M_WF_; // *Overeager forwarding created a monster-slow MDX-stage!
+//TODO: Make "foward declares" consistent: all UP-here or all ALAP for use
 
     // Declare outputs of WF stage
-    wire [31: 0] INST_ADDR, INST_DATA; //Data fetch is sync'd with StageWF
-    wire [31: 0] StepCount, StallCount;
+    wire [31: 0] INST_ADDR;
+    wire [31: 0] CycleCount, StallCount, StepCount;
     StageWF #(
         .COUNTERWIDTH(32)//, .BOOTPC(32'h6_000_0000) //TODO: Change back to default/BIOS
     ) s_WF ( .CPUGlobal(CPUGlobal),
         .DOBranch(DOBranch_DX_WF_), .PCBranch(PCBranch_DX_WF_),
         .PC(INST_ADDR),
-        .STEPCOUNT(StepCount), .STALLCOUNT(StallCount)
+        .CycleCount(CycleCount), .StallCount(StallCount), .StepCount(StepCount)
     );
+    wire [31: 0] INST_DATA; //Instruction fetch is sync'd here but handled by StageM
+//TODO: Declare related "async" line & rename this for stage-of-origin
 
 
-    // Pipeline border: WF/DX
+//=============| PIPELINE-BORDER: WF/DX >>>=============
     wire [31: 0] INST_DX;
+    //NOTE: INST_DATA gets changed early by BRAM (no disable availabe) so latch not register
     PipelineRegister #( .Width(32), .Mode(1) ) // Registered for us in prior stage
         REG_INST_DX ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX) );
-    //NOTE: INST_DATA gets changed early by BRAM (no disable availabe) but INST_DX gets "latched" on stall!
     wire [31: 0] PC_DX;
     PipelineRegister #( .Width(32), .Mode(0) )
         REG_PC_DX   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX) );
+//=============<<< PIPELINE-BORDER: WF/DX |=============
 
-/*
-//For examining waveform/timing impact of each variation simultaneously
-    wire [31: 0] PC_DX0, PC_DX1, PC_DX2, PC_DX3;
-    wire [31: 0] INST_DX0, INST_DX1, INST_DX2, INST_DX3;
-    PipelineRegister #( .Width(32), .Mode(0) )
-        REG_PC_DX0   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX0) );
-    PipelineRegister #( .Width(32), .Mode(1) )
-        REG_PC_DX1   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX1) );
-    PipelineRegister #( .Width(32), .Mode(2) )
-        REG_PC_DX2   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX2) );
-    PipelineRegister #( .Width(32), .Mode(3) )
-        REG_PC_DX3   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX3) );
-    PipelineRegister #( .Width(32), .Mode(0) )
-        REG_INST_DX0 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX0) );
-    PipelineRegister #( .Width(32), .Mode(1) )
-        REG_INST_DX1 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX1) );
-    PipelineRegister #( .Width(32), .Mode(2) )
-        REG_INST_DX2 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX2) );
-    PipelineRegister #( .Width(32), .Mode(3) )
-        REG_INST_DX3 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX3) );
-*/
 
-    // RegFile lines (write driven by write-back from M-stage, read driven asynchronously by DX-stage)
+    // REGFILE async-read via DX-stage but sync-write via M-stage WB
     wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
     wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
     assign REGFILE_wa = WBKReg_M_WF_, REGFILE_wd = WBKDat_M_WF_;
@@ -137,37 +134,44 @@ module MIPS150 #(
         .ra1(REGFILE_ra1), .rd1(REGFILE_rd1),
         .ra2(REGFILE_ra2), .rd2(REGFILE_rd2)
     );
-
-    //TODO: Decode instructions, activate controls, allow writeback
-    //TODO: UART FSMs (for edges)
-    COP0150 cop0 (
-        .Clock(clk), .Reset(rst), .Enable(1'b1), //TODO: Consider stall?
-        .DataAddress(), //IN-5 (REGISTER)
-        .DataOut(), //OUT-32 (TO ALU-B if CONTROL-mfc0)
-        .DataInEnable(), //IN (CONTROL-mtc0)
-        .DataIn(), //IN-32 (FROM WB)
-        .InterruptedPC(), //IN-32
-        .InterruptHandled(), //IN
-        .InterruptRequest(), //OUT
-        .UART0Request(), //IN
-        .UART1Request() //IN
-    );
-
-    // Forwarding calculation
+    // FORWARDING calculation (a "virtual" behavior tacked onto REGFILE)
     wire FWD_Allow = WBKCanFWD_M_WF_; // Has already checked for "wa"==0 elsewhere
     wire FWD_1 = (FWD_Allow) ? (REGFILE_wa == REGFILE_ra1) : 1'b0;
     wire FWD_2 = (FWD_Allow) ? (REGFILE_wa == REGFILE_ra2) : 1'b0;
     wire [31: 0] #DD FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
     wire [31: 0] #DD FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 
+    // COPROCESSOR async-read via DX-stage (like REGFILE) but sync-write from REGFORWARD
+    wire         CopInHot;
+    wire [ 4: 0] CopAddr;
+    wire [31: 0] CopOut;
+    // COP0 lines for control/branch
+    // COP0 lines for peripherals
+    COP0150 cop0 (
+        .Clock(clk), .Reset(rst), .Enable(1'b0), //TODO: ENABLE! Disable until handled?
+        .DataAddress(CopAddr), //IN-5 (Cop Register to read/write)
+        .DataOut(CopOut), //OUT-32 (Injected into StageDX.RegWValue_)
+        .DataInEnable(CopInHot), //IN (mtc0)
+        .DataIn(FWD_rd2), //IN-32 (Always fed, only used if enabled)
+        .InterruptedPC(), //IN-32 (PC_DX or similar)
+        .InterruptHandled(), //IN (Acknowledge the branch is happening)
+        .InterruptRequest(), //OUT (Like a branch)
+        .UART0Request(), //IN (edge detect can-write)
+        .UART1Request() //IN (edge detect can-read)
+    );
+    //TODO: Pick correct PC to stash
+    //TODO: Time handling around branches & acknowledge
+    //TODO: UART FSMs/Gates (for edges)
+
     // Declare outputs of DX stage
     `BUS_ICTL_type IControlDX_;
     wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_;
     StageDX s_DX
     ( //.CPUGlobal(CPUGlobal),
-        //Async regfile reads
+        //Async regfile reads & COP access
         .REG_R1_(REGFILE_ra1), .REG_D1_(FWD_rd1),
         .REG_R2_(REGFILE_ra2), .REG_D2_(FWD_rd2),
+        .CopAddr(CopAddr), .CopOut(CopOut), .CopInHot(CopInHot),
         //Inputs
         ._PC(PC_DX), ._INST(INST_DX),
         //Outputs
@@ -178,7 +182,8 @@ module MIPS150 #(
         .DOBranch_(DOBranch_DX_WF_), .PCBranch_(PCBranch_DX_WF_)
     );
 
-    // Pipeline border: DX/M
+
+//=============| PIPELINE-BORDER: DX/M >>>=============
     `BUS_ICTL_type IControl__M;
     wire  [31: 0]   MemAddr__M;
     wire  [31: 0]   MemWValue__M;
@@ -200,40 +205,60 @@ module MIPS150 #(
         REG_RegWValue_M ( .CPUGlobal(CPUGlobal),    .In(RegWValueDX_),  .Out(RegWValue_M ) );
     PipelineRegister #( .Width(32) ) //TODO: Use simple flag for "in-bios/allow-I-write"
         REG_PC_M        ( .CPUGlobal(CPUGlobal),    .In(PC_DX       ),  .Out(PC_M        ) );
+//=============<<< PIPELINE-BORDER: DX/M |=============
 
-    // MEMORY/IO Drives
-    wire _hot_ISR; //ISR//
-    wire _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB;
+
+    // MEMORY/MMIO patchwork lines ("setups" prefixed with "_", "results" not)
+    wire _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB, _hot_ISR;
     wire [ 3: 0] _WriteMask, _ByteMask;
     wire [31: 0] _WDataMasked;
-    wire [31: 0] RData_ISR; //ISR//
-    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
+    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB, RData_ISR;
+    wire [31: 0] INST_BR, INST_IC, INST_IB, INST_ISR;
     StageM s_M
     ( //.CPUGlobal(CPUGlobal),
         //Inputs
         ._IControl  (IControl__M),  .IControl   (IControl_M),
         ._MemAddr   (MemAddr__M),   .MemAddr    (MemAddr_M),
         ._MemWValue (MemWValue__M), .RegWValue  (RegWValue_M),
-        .PC         (PC_M),
-        //Feedbacks
+        .PC         (PC_M), //TODO: Just pass "in-bios" flag & pass PC-to-fetch
+        //Feedbacks to "prior" stages (forwarding & instruction fetch)
         .WBK_Reg_   (WBKReg_M_WF_), .WBK_Val_   (WBKDat_M_WF_),
         .WBK_CanFWD_(WBKCanFWD_M_WF_),
-        //Memory/IO patchwork
-        ._hot_ISR(_hot_ISR), //ISR//
+//      TODO: .PC_DATA fetched
+        //Memory/MMIO "pre-clock" drives OUT
         ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
         ._hot_IC(_hot_IC), ._hot_DB(_hot_DB), ._hot_IB(_hot_IB),
+        ._hot_ISR(_hot_ISR),
         ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked), ._ByteMask(_ByteMask),
-        .RData_ISR(RData_ISR), //ISR//
-        .RData_IO(RData_IO), .RData_BR(RData_BR), .RData_DC(RData_DC), .RData_DB(RData_DB)
+        //Memory/MMIO "post-clock" results IN
+        .RData_IO(RData_IO), .RData_BR(RData_BR), .RData_DC(RData_DC),
+        .RData_DB(RData_DB), .RData_ISR(RData_ISR)
     );
+//TODO: Move into StageM & mux all sources
+    wire _hoti_BR = (INST_ADDR[31:28] == 4'h4);
+    assign INST_DATA = (_hoti_BR) ? INST_BR : INST_IB;
 
-    // Instruction fetch selection
-    wire INST_bios = (INST_ADDR[31:28] == 4'h4);
-    wire [31:0] INST_ISR; //ISR//
-    wire [31:0] INST_BR, INST_IC, INST_IB;
-    assign INST_DATA = (INST_bios) ? INST_BR : INST_IB; //TODO: MUX all instruction sources
+    // MEMORY/MMIO ELEMENTS (straddle M-WF-stages & interface outside CPU)
+//TODO: House these in new MEMIOPlex
 
-    // MEMORY & IO ELEMENTS THEMSELVES
+//TODO: Debug trailing "zero" on DDR send test output
+    //TODO: Ensure this doesn't trigger double-reads/writes from stall nuances
+    //NOTE: DRAM addrs rollorver @ 0x0200_0000 but CPU need only clip top nibble here.
+    assign dcache_addr = {4'h0, MemAddr__M[27:0]},
+        dcache_we   = (_hot_DC) ? (_WriteMask) : 4'b0000,
+        dcache_din  = _WDataMasked,
+        dcache_re   = _hot_DC && !(|_WriteMask),
+        RData_DC    = dcache_dout;
+//    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
+
+    //NOTE: Both _hot_DC && _hot_IC ARE allowed to be active simultaneously for WRITE
+    //      but writability rules prevent INST-read & DATA-write collision
+    assign icache_addr = {4'h0, (_hot_IC) ? MemAddr__M[27:0] : INST_ADDR[27:0]},
+        icache_we   = (_hot_IC) ? (_WriteMask) : 4'b0000,
+        icache_din  = _WDataMasked,
+        icache_re   = (INST_ADDR[31:28] == 4'b0001),
+        INST_IC     = instruction;
+//    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC =32'd0;
 
     isr_mem bram_isr
     ( .clka(clk), .ena(~stall && _hot_ISR),
@@ -241,7 +266,7 @@ module MIPS150 #(
       /*.douta(RData_IB),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),
 
-    // INSTRUCTION Fletch
+    // INSTRUCTION Fletch (sic :)
       .clkb(clk), .addrb(INST_ADDR[13:2]),
       /*.enb(1'b1)*/ .doutb(INST_ISR)
     ) /* synthesis syn_noprune=1 */;
@@ -254,43 +279,8 @@ module MIPS150 #(
 
     // Instruction reading port (b)
       .clkb(clk), .addrb(INST_ADDR[13:2]),
-        .enb(INST_bios), .doutb(INST_BR)
+        .enb(_hoti_BR), .doutb(INST_BR)
     ) /* synthesis syn_noprune=1 */;
-
-/* Experiments with latching cache drives (but ensuring StageM uses latched inputs is ok)
-    wire [31:0] latchedADDR, latchedDATA;
-    wire [3:0] latchedMASK;
-    wire latchedHOT_DC;
-    PipelineRegister #( .Width(32), .Mode(1) )
-        REG_latchedADDR( .CPUGlobal(CPUGlobal), .In(MemAddr__M),    .Out(latchedADDR) );
-    PipelineRegister #( .Width(32), .Mode(1) )
-        REG_latchedDATA( .CPUGlobal(CPUGlobal), .In(_WDataMasked),  .Out(latchedDATA) );
-    PipelineRegister #( .Width( 4), .Mode(1) )
-        REG_latchedMASK( .CPUGlobal(CPUGlobal), .In(_WriteMask),    .Out(latchedMASK) );
-    PipelineRegister #( .Width( 1), .Mode(1) )
-        REG_latchedH_DC( .CPUGlobal(CPUGlobal), .In(_hot_DC),       .Out(latchedHOT_DC) );
-    assign dcache_addr = {8'h00, latchedADDR[23:0]},
-        dcache_we   = (latchedHOT_DC) ? (latchedMASK) : 4'b0000,
-        dcache_din  = latchedDATA,
-        dcache_re   = latchedHOT_DC && !(|latchedMASK),
-        RData_DC    = dcache_dout;
-*/
-    //TODO: Ensure this doesn't trigger double-reads/writes!!!
-    assign dcache_addr = {4'h0, MemAddr__M[27:0]},
-        dcache_we   = (_hot_DC) ? (_WriteMask) : 4'b0000,
-        dcache_din  = _WDataMasked,
-        dcache_re   = _hot_DC && !(|_WriteMask),
-        RData_DC    = dcache_dout;
-    //NOTE: Both _hot_DC && _hot_IC are allowed to be active simultaneously for write
-    //NOTE: Writability rules in StageM prevent inst-read & data-write collision
-    assign icache_addr = {4'h0, (_hot_IC) ? MemAddr__M[27:0] : INST_ADDR[27:0]},
-        icache_we   = (_hot_IC) ? (_WriteMask) : 4'b0000,
-        icache_din  = _WDataMasked,
-        icache_re   = (INST_ADDR[31:28] == 4'b0001),
-        INST_IC     = instruction;
-
-//    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
-//    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC =32'd0;
 
     dmem_blk_ram bram_dmem
     ( .clka(clk), .ena(~stall && _hot_DB),
@@ -305,12 +295,12 @@ module MIPS150 #(
       /*.douta(RData_IB),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),
 
-    // INSTRUCTION Fletch
+    // INSTRUCTION Fletch (sic :)
       .clkb(clk), .addrb(INST_ADDR[13:2]),
       /*.enb(1'b1)*/ .doutb(INST_IB)
     ) /* synthesis syn_noprune=1 */;
 
-    //TODO: Split MEMIOPlex into separate RX vs TX RVA's (parameter based?)
+    //TODO: Rename MEMIOPlex := UARTRVA (new MEMIOPlex houses MEM/MMIO)
     `BUS_SHAKE_type(8) UATX, UARX;
     MEMIOPlex iomap_uart
     ( .clk(clk), .rst(rst), .ena(~stall && _hot_IO),
@@ -319,8 +309,6 @@ module MIPS150 #(
         .wea(_WriteMask), .dina(_WDataMasked),
         .RVA_RX(UARX), .RVA_TX(UATX)
     );
-
-    //TODO: Make this into UART wrapper that takes two RVA's
     wire Rx_Ready, Rx_Valid, Tx_Valid, Tx_Ready;
     wire [7:0] Rx_Data, Tx_Data;
     BUS_SHAKE_tun #(.InWidth(8)) TUN_SHAKE_Rx
@@ -343,6 +331,31 @@ module MIPS150 #(
         .DataIn(Tx_Data), .DataInValid(Tx_Valid), .DataInReady(Tx_Ready)
     );
 
+
+
+//=============DEBUGGING TOOLS BELOW THIS POINT=============
+
+/*
+//For examining waveform/timing impact of each variation simultaneously
+    wire [31: 0] PC_DX0, PC_DX1, PC_DX2, PC_DX3;
+    wire [31: 0] INST_DX0, INST_DX1, INST_DX2, INST_DX3;
+    PipelineRegister #( .Width(32), .Mode(0) )
+        REG_PC_DX0   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX0) );
+    PipelineRegister #( .Width(32), .Mode(1) )
+        REG_PC_DX1   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX1) );
+    PipelineRegister #( .Width(32), .Mode(2) )
+        REG_PC_DX2   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX2) );
+    PipelineRegister #( .Width(32), .Mode(3) )
+        REG_PC_DX3   ( .CPUGlobal(CPUGlobal),  .In(INST_ADDR),   .Out(PC_DX3) );
+    PipelineRegister #( .Width(32), .Mode(0) )
+        REG_INST_DX0 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX0) );
+    PipelineRegister #( .Width(32), .Mode(1) )
+        REG_INST_DX1 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX1) );
+    PipelineRegister #( .Width(32), .Mode(2) )
+        REG_INST_DX2 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX2) );
+    PipelineRegister #( .Width(32), .Mode(3) )
+        REG_INST_DX3 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX3) );
+*/
 
 `ifdef ENABLE_BRK
 assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)

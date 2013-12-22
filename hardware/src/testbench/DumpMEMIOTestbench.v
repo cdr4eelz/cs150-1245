@@ -100,11 +100,7 @@ module DumpMEMIOTestbench;
         .WMask  (4'b0000),      .WData  (32'bz)
     );
 
-    MEMIOPlex iomap_listener
-    (   .clk(Clock), .rst(Reset), .ena(~Stall),
-        .SERIAL_RX(SERIAL_TX), .SERIAL_TX(SERIAL_RX),
-        .IOMAP(IOLISTEN)
-    );
+    //TODO: MMIO "listener" to capture serial-out
 */
 
 endmodule

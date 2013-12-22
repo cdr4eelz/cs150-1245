@@ -5,6 +5,9 @@ module StageDX(
     // Asynchronous plugs to shared outer components
     output [ 4: 0] REG_R1_, REG_R2_,
     input  [31: 0] REG_D1_, REG_D2_,
+    output         CopInHot,
+    output [ 4: 0] CopAddr,
+    input  [31: 0] CopOut,
 
     // Prior stage inputs
     input  [31: 0] _PC,
@@ -21,8 +24,15 @@ module StageDX(
     output         DOBranch_
 );
 
+    // Decoded signals only used locally
     wire [ 4: 0] SRC1, SRC2;
     wire [31: 0] SIMMED, UIMMED, SHAMT, PCTARGET, PCBRANCH;
+    wire COPREAD; //ISR//
+
+    // Asyncronous drive/read of outer register/coprocessor components
+    assign  REG_R1_ = SRC1,     REG_R2_ = SRC2;
+    wire [31: 0] R1 = REG_D1_,  R2      = REG_D2_; // Redeclare to clarify dependencies...
+    // SEE: CopAddr & CopOut (for asynchronous drives)
 
     InstructionControl decodeControl(
         ._pc(_PC), ._inst(_INST),
@@ -31,14 +41,11 @@ module StageDX(
 
         .SIMMED(SIMMED), .UIMMED(UIMMED),
         .SHAMT(SHAMT), .SRC1(SRC1), .SRC2(SRC2),
-        .PCTARGET(PCTARGET), .PCBRANCH(PCBRANCH)
+        .PCTARGET(PCTARGET), .PCBRANCH(PCBRANCH),
+        .COPREAD(COPREAD), .COPWRITE(CopInHot), .COPADDR(CopAddr) //ISR//
     );
 
-    // Asyncronously plug into outer register component
-    assign  REG_R1_ = SRC1,     REG_R2_ = SRC2;
-    wire [31: 0] R1 = REG_D1_,  R2      = REG_D2_; // Redeclare to clarify dependencies
-
-    // Tap only specific control signals used inside DX
+    // Tap control signals used inside DX
     wire ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link;
     wire [ 3: 0] ALUOp;
     wire [ 2: 0] CmpOp;
@@ -69,6 +76,7 @@ module StageDX(
     assign PCBranch_    = (Jump) ? (JR ? R1 : PCTARGET) : PCBRANCH;
     assign MemAddr_     = ALUResult;
     assign MemWValue_   = R2;
-    assign RegWValue_   = (Link) ? (_PC + 8) : ALUResult; //$ra := PC+8 because of trailing instruction
+    assign RegWValue_   = (Link) ? (_PC+8) //$ra := PC+8 because of trailing instruction
+                                : ( (COPREAD) ? CopOut : ALUResult );
 
 endmodule
