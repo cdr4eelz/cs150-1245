@@ -370,7 +370,7 @@ module Memory150(
    
     PixelFeeder pixelfeed(
         .cpu_clk_g(cpu_clk_g),
-        .clk50_g(cpu_clk_g),
+        .clk50_g(clk50_g), //NOTE: Was cpu_clk_g in skeleton
         .rst(rst || ~init_done),
         .rdf_valid(pixel_rdf_valid),
         .af_full(pixel_af_full),

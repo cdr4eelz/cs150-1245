@@ -11,7 +11,7 @@ module ml505top
   output [7:0]  GPIO_LED,
 
 // CP2+
-  output [12:0] ddr2_a,
+  output [12:0] ddr2_a, //Lower case just to match MIG ucf PIN convention
   output [1:0]  ddr2_ba,
   output        ddr2_cas_n,
   output [0:0]  ddr2_cke,
@@ -119,58 +119,57 @@ module ml505top
 
 
 // CP2+
-    wire  [31:0] dcache_addr;
-    wire  [31:0] icache_addr;
-    wire  [3:0]  dcache_we;
-    wire  [3:0]  icache_we;
-    wire         dcache_re;
-    wire         icache_re;
-    wire  [31:0] dcache_din;
-    wire  [31:0] icache_din;
-    wire [31:0]  dcache_dout;
-    wire [31:0]  instruction;
-    wire         mem_stall;
-    wire         init_done;
-
-    assign rst_or_init = rst || ~init_done;
-    assign any_stall = mem_stall;// || man_stall || debug_stall_not_jog;
-
+  wire  [31:0] dcache_addr;
+  wire  [31:0] icache_addr;
+  wire  [3:0]  dcache_we;
+  wire  [3:0]  icache_we;
+  wire         dcache_re;
+  wire         icache_re;
+  wire  [31:0] dcache_din;
+  wire  [31:0] icache_din;
+  wire [31:0]  dcache_dout;
+  wire [31:0]  instruction;
+  wire         stall;
 // CP4+
-    wire         video_ready;
-//    wire         dvi_video_ready;
-    wire         video_valid;
-    wire [23:0]  video;
-//    wire [23:0]  filler_color;
-//    wire         filler_ready;
-//    wire         filler_valid;
-//    wire         line_ready;
-//    wire  [31:0] line_color;
-//    wire  [9:0]  line_point;
-//    wire         line_color_valid;
-//    wire         line_x0_valid;
-//    wire         line_y0_valid;
-//    wire         line_x1_valid;
-//    wire         line_y1_valid;
-//    wire         line_trigger;
+  wire         video_ready;
+  wire         video_valid;
+  wire [23:0]  video;
+/* Probably leftover from pre-GraphicsController/RequestProcessor patch
+  wire         dvi_video_ready;
+  wire [23:0]  filler_color;
+  wire         filler_ready;
+  wire         filler_valid;
+  wire         line_ready;
+  wire  [31:0] line_color;
+  wire  [9:0]  line_point;
+  wire         line_color_valid;
+  wire         line_x0_valid;
+  wire         line_y0_valid;
+  wire         line_x1_valid;
+  wire         line_y1_valid;
+  wire         line_trigger;
+*/
   wire fb0;
    wire frame_interrupt;
    wire [31:0] gp_code;
    wire [31:0] gp_frame;
    wire        gp_valid;
 
-    Memory150 #(.SIM_ONLY(1'b0)) mem_arch(
-        .cpu_clk_g  (cpu_clk_g),
-        .clk0_g     (clk0_g),
-        .clk200_g   (clk200_g),
-        .clkdiv0_g  (clkdiv0_g),
-        .clk90_g    (clk90_g),
-        .clk50_g    (clk50_g),
-        .locked     (pll_lock),
+    wire         init_done; //Missing decl in skeleton
+//Might help to delay master rst_or_init against slowest clock & release early in phase
+    assign rst_or_init = rst || ~init_done;
+    assign any_stall = stall;// || man_stall || debug_stall_not_jog;
 
-        .rst        (fifo_reset),
-        .init_done  (init_done),
-
-        .DDR2_A     (ddr2_a),
+  Memory150 #(.SIM_ONLY(1'b0)) mem_arch(
+      .cpu_clk_g(cpu_clk_g),
+      .clk0_g(clk0_g),
+      .clk200_g(clk200_g),
+      .clkdiv0_g(clkdiv0_g),
+      .clk90_g(clk90_g),
+      .clk50_g(clk50_g),
+      .rst(fifo_reset),
+      .init_done(init_done),
+        .DDR2_A     (ddr2_a), //Lower case just to match MIG ucf PIN convention
         .DDR2_BA    (ddr2_ba),
         .DDR2_CAS_B (ddr2_cas_n),
         .DDR2_CKE   (ddr2_cke),
@@ -184,31 +183,32 @@ module ml505top
         .DDR2_ODT   (ddr2_odt),
         .DDR2_RAS_B (ddr2_ras_n),
         .DDR2_WE_B  (ddr2_we_n),
-
-        .dcache_addr(dcache_addr),
-        .icache_addr(icache_addr),
-        .dcache_we  (dcache_we  ),
-        .icache_we  (icache_we  ),
-        .dcache_re  (dcache_re  ),
-        .icache_re  (icache_re  ),
-        .dcache_din (dcache_din ),
-        .icache_din (icache_din ),
-        .dcache_dout(dcache_dout),
-        .icache_dout(instruction),
-        .stall      (mem_stall),
+      .locked(pll_lock),
+      .dcache_addr(dcache_addr),
+      .icache_addr(icache_addr),
+      .dcache_we  (dcache_we  ),
+      .icache_we  (icache_we  ),
+      .dcache_re  (dcache_re  ),
+      .icache_re  (icache_re  ),
+      .dcache_din (dcache_din ),
+      .icache_din (icache_din ),
+      .dcache_dout(dcache_dout),
+      .icache_dout(instruction),
+      .stall      (stall      ),
 //CP4+
-        .video      (video      ),
-        .video_ready(video_ready),
-        .video_valid(video_valid),
-
-        .cpu_gp_code(gp_code),
-        .cpu_gp_frame(gp_frame),
-        .cpu_gp_valid(gp_valid),
-        .frame_interrupt(frame_interrupt)
+      .video      (video      ),
+      .video_ready(video_ready),
+      .video_valid(video_valid),
+      .cpu_gp_code(gp_code),
+      .cpu_gp_frame(gp_frame),
+      .cpu_gp_valid(gp_valid),
+      .frame_interrupt(frame_interrupt)
     );
 
 // CP4+
     DVI #(
+// Resolution         Width   FrontH  PulseH  BackH   Height  FrontV  PulseV  BackV   ClockFreq
+// VESA 800x600,72Hz: 1040    56      120     64      666     37      6       23      50000000
         .ClockFreq(                 50000000), //50 MHz
         .Width(                     1040),
         .FrontH(                    56),
@@ -219,7 +219,7 @@ module ml505top
         .PulseV(                    6),
         .BackV(                     23)
     ) dvi(
-        .Clock(                     cpu_clk_g),
+        .Clock(                     clk50_g),//NOTE: Was cpu_clk_g in skeleton
         .Reset(                     rst_or_init),
         .DVI_D(                     DVI_D),
         .DVI_DE(                    DVI_DE),
@@ -544,7 +544,7 @@ module ml505top
     BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
     BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
     BUFG  clk200_buf   ( .I(clk0),     .O(clk200_g)   );
-    BUFG  clkdiv50_buf ( .I(clk50),    .O(clk50_g)    );
+    BUFG  clk50_buf    ( .I(clk50),    .O(clk50_g)    );
     BUFG  clk125_buf   ( .I(clk125),   .O(plop_clk_g) );
 // synthesis attribute keep of cpu_clk_g is "true";
 

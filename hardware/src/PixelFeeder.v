@@ -18,20 +18,54 @@ module PixelFeeder( //System:
 
 		    output frame_interrupt);
 
+localparam FRAME0_BASE = 32'h1040_0000, FRAME1_BASE = 32'h1080_0000;
+//address = {8'h10, 2'b01, y, x, 2’b0}  _01 are high 2-bits of "4" in base0
+//address = {8'h10, 2'b10, y, x, 2’b0}  _10 are high 2-bits of "8" in base1
+//Each pixel 32-bits (though top byte is zero)
+//X sequential (would allow fetching 4 at a time
+localparam FRAME0_SEL = 2'b01, FRAME1_SEL = 2'b10;
+wire [30:0] next_addr;
+wire [9:0] head_y = 10'd0, head_x = 10'd0;
+assign next_addr = {7'b000_0000, FRAME0_SEL, head_y, head_x, 2'b00};
+
+//Traverse row & col, flip source frame & fire interrupt (pulse) between.
+//Request goes out af, and back later on rdf...Might help to think of single offset
+//  into series of pixels or advance a HEAD & TAIL somewhat separately.
+//  TAIL goes to pixel-fifo (splits pair of reads into 8 pixels).
+//  HEAD jumps 4 pixels & triggers frame interrupt.
+//No need for HEAD/TAIL...memory FIFOs are not for queueing, just clock traversal.
+//Once arbiter gives attention, a read will ensure (two chunks). (mimic "Cache.v")
+//Place chunks in register-stages to be pieced out to pixel-fifo.
+
     // Hint: States
     localparam IDLE = 1'b0;
     localparam FETCH = 1'b1;
 
     reg  [31:0] ignore_count;
+    wire feeder_empty, feeder_full;
 
     /**************************************************************************
     * YOUR CODE HERE: Write logic to keep the FIFO as full as possible.
     **************************************************************************/
+//Luckily byte-enables are always 4x4x4 from memory? (800 /4 /2 -> 100 af addr)
+//Data comes in two "halves"???  (Two fetches from read FIFO)
+//How to consider FIFO capacity?
 
+//Skeleton signals go straight from memory FIFO to pixel FIFO so maybe one pixel
+//  at a time???  Or go wider & register in between to do chunks of 4.
+
+//af_full = !ready : Keep requesting
+//af_wr_en: !af_full && !wdf_full && "running" (always after init)
+//af_addr_din: HEAD address of next 4-pixel (32x4x4) chunk.
+
+//rdf_valid (straight from MEM->PIX FIFOS)
+//rdf_dout[127:0] 4-pixels worth? or just low 32-bits?
+//rdf_rd_en: Read when we know next FIFO can take 4x32
+//frame_interrupt: on end of frame (on last address request?)
 
     /* We drop the first frame to allow the buffer to fill with data from
     * DDR2. This gives alignment of the frame. */
-    always @(posedge cpu_clk_g) begin
+    always @(posedge clk50_g) begin //NOTE: Was cpu_clk_g in skeleton
        if(rst)
             ignore_count <= 32'd480000; // 600*800 
        else if(ignore_count != 0 & video_ready)
@@ -55,8 +89,38 @@ module PixelFeeder( //System:
     	.full(feeder_full),
     	.empty(feeder_empty));
 
+localparam COLT45_PATGEN = 1;
+`ifdef COLT45_PATGEN
+    reg [15:0] sweep_RGB;
+    reg sweep_VALID;
+    always @(posedge clk50_g) begin
+        if (rst) begin
+            sweep_RGB <= 16'hE2A2;
+            sweep_VALID <= 1'b0;
+        end else begin
+            if (video_valid && video_ready) begin
+$display("RGB: %h", video);
+                sweep_RGB <= sweep_RGB+5;
+            end
+            sweep_VALID <= 1'b1;
+        end
+    end
+    assign video_valid = sweep_VALID;
+    assign video = {sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]};
+/*
+    // DIRECTLY inject simple pattern gen from other semester
+    PatternGenerator #(
+        .CLOCK_HZ(50_000_000), //DVI Clock
+        .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600), .SCENES_PER_SEC(1)
+    ) (
+        .clock(clk50_g), .reset(rst),
+        .video(video), .video_valid(video_valid), .video_ready(video_ready)
+    )
+*/
+`else //! :: ifdef COLT45_PATGEN
     assign video = feeder_dout[23:0];
     assign video_valid = 1'b1;
+`endif //ifdef COLT45_PATGEN
 
 endmodule
 
