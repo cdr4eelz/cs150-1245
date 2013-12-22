@@ -41,7 +41,9 @@
 //==============================================================================
 //	Includes
 //==============================================================================
-`define MACROSAFE // required to get this to compile...
+`ifndef MACROSAFE
+  `define MACROSAFE 
+`endif// required to get this to compile...
 `include "Const.v"
 //==============================================================================
 
@@ -140,10 +142,51 @@ module	PixelCounter(Clock, Reset, PixelX, PixelY, PixelActive, PixelHSync, Pixel
 	//--------------------------------------------------------------------------
 	//	Region Comparators
 	//--------------------------------------------------------------------------
-	CountRegion #(.Width(XWidth), .Start(0), .End(ActiveH)) RgnAX(.Clock(Clock), .Reset(Reset), .Enable(PixelIncrement), .Count(PixelX), .Max(XReset), .Output(XActive));
-	CountRegion	#(.Width(YWidth), .Start(0), .End(ActiveV)) RgnAY(.Clock(Clock), .Reset(Reset), .Enable(XMax & PixelIncrement), .Count(PixelY), .Max(YReset), .Output(YActive));
-	CountRegion	#(.Width(XWidth), .Start(ActiveH+FrontH), .End(ActiveH+FrontH+PulseH)) RgnHS(.Clock(Clock), .Reset(Reset), .Enable(PixelIncrement), .Count(PixelX), .Max(XReset), .Output(PixelHSync));
-	CountRegion	#(.Width(YWidth), .Start(ActiveV+FrontV), .End(ActiveV+FrontV+PulseV)) RgnVS(.Clock(Clock), .Reset(Reset), .Enable(XMax & PixelIncrement), .Count(PixelY), .Max(YReset), .Output(PixelVSync));
+	CountRegion #(
+    .Width(XWidth),
+    .Start(0),
+    .End(ActiveH))
+  RgnAX(.Clock(Clock),
+    .Reset(Reset),
+    .Enable(PixelIncrement),
+    .Count(PixelX),
+    .Max(XReset),
+    .Output(XActive));
+	
+  CountRegion	#(
+    .Width(YWidth),
+    .Start(0),
+    .End(ActiveV))
+  RgnAY(.Clock(Clock),
+    .Reset(Reset),
+    .Enable(XMax & PixelIncrement),
+    .Count(PixelY),
+    .Max(YReset),
+    .Output(YActive));
+	
+  CountRegion	#(
+    .Width(XWidth),
+    .Start(ActiveH+FrontH),
+    .End(ActiveH+FrontH+PulseH)) 
+  RgnHS(
+    .Clock(Clock),
+    .Reset(Reset),
+    .Enable(PixelIncrement),
+    .Count(PixelX),
+    .Max(XReset),
+    .Output(PixelHSync));
+	
+  CountRegion	#(
+    .Width(YWidth),
+    .Start(ActiveV+FrontV),
+    .End(ActiveV+FrontV+PulseV))
+  RgnVS(
+    .Clock(Clock),
+    .Reset(Reset),
+    .Enable(XMax & PixelIncrement),
+    .Count(PixelY),
+    .Max(YReset),
+    .Output(PixelVSync));
 	//--------------------------------------------------------------------------
 endmodule	
 //------------------------------------------------------------------------------

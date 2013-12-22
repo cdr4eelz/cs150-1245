@@ -132,10 +132,10 @@ module ml505top
   wire         stall;
 // CP4+
   wire         video_ready;
+//  wire         dvi_video_ready;
   wire         video_valid;
   wire [23:0]  video;
 /* Probably leftover from pre-GraphicsController/RequestProcessor patch
-  wire         dvi_video_ready;
   wire [23:0]  filler_color;
   wire         filler_ready;
   wire         filler_valid;
@@ -209,7 +209,7 @@ module ml505top
     DVI #(
 // Resolution         Width   FrontH  PulseH  BackH   Height  FrontV  PulseV  BackV   ClockFreq
 // VESA 800x600,72Hz: 1040    56      120     64      666     37      6       23      50000000
-        .ClockFreq(                 50000000), //50 MHz
+        .ClockFreq(                 50_000_000), //50 MHz
         .Width(                     1040),
         .FrontH(                    56),
         .PulseH(                    120),

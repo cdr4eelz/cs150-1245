@@ -89,24 +89,19 @@ assign next_addr = {7'b000_0000, FRAME0_SEL, head_y, head_x, 2'b00};
     	.full(feeder_full),
     	.empty(feeder_empty));
 
-localparam COLT45_PATGEN = 1;
-`ifdef COLT45_PATGEN
     reg [15:0] sweep_RGB;
-    reg sweep_VALID;
     always @(posedge clk50_g) begin
         if (rst) begin
             sweep_RGB <= 16'hE2A2;
-            sweep_VALID <= 1'b0;
         end else begin
             if (video_valid && video_ready) begin
 $display("RGB: %h", video);
                 sweep_RGB <= sweep_RGB+5;
             end
-            sweep_VALID <= 1'b1;
         end
     end
-    assign video_valid = sweep_VALID;
     assign video = {sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]};
+    assign video_valid = 1'b1;
 /*
     // DIRECTLY inject simple pattern gen from other semester
     PatternGenerator #(
@@ -117,10 +112,7 @@ $display("RGB: %h", video);
         .video(video), .video_valid(video_valid), .video_ready(video_ready)
     )
 */
-`else //! :: ifdef COLT45_PATGEN
-    assign video = feeder_dout[23:0];
-    assign video_valid = 1'b1;
-`endif //ifdef COLT45_PATGEN
+//    assign video = feeder_dout[23:0];
+//    assign video_valid = 1'b1;
 
 endmodule
-
