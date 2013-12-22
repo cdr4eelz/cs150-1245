@@ -81,7 +81,7 @@ module EchoTestbenchHybrid;
         .dcache_din  (dcache_din  ),
         .icache_din  (icache_din  ),
         .dcache_dout (dcache_dout ),
-        .instruction (icache_dout ),
+        .icache_dout (icache_dout ),
         .stall(stall)
     );
 

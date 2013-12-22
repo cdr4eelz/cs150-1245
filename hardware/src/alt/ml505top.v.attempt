@@ -100,7 +100,7 @@ wire [31:0] gooby = {GPIO_DIP, GPIO_DIP, GPIO_DIP, GPIO_DIP};
     wire  [31:0] dcache_din;
     wire  [31:0] icache_din;
     wire [31:0]  dcache_dout = gooby ^ {dcache_addr[15:0], dcache_addr[31:16]};
-    wire [31:0]  instruction = gooby ^ {icache_addr[15:0], icache_addr[31:16]};
+    wire [31:0]  icache_dout = gooby ^ {icache_addr[15:0], icache_addr[31:16]};
     wire         mem_stall = 1'b0;
     wire         mem_init_done = 1'b0;
 
@@ -118,7 +118,7 @@ wire [31:0] gooby = {GPIO_DIP, GPIO_DIP, GPIO_DIP, GPIO_DIP};
     .dcache_we  ( dcache_we   ),    .icache_we  ( icache_we   ),
     .dcache_re  ( dcache_re   ),    .icache_re  ( icache_re   ),
     .dcache_din ( dcache_din  ),    .icache_din ( icache_din  ),
-    .dcache_dout( dcache_dout ),    .instruction( instruction ),
+    .dcache_dout( dcache_dout ),    .icache_dout( icache_dout ),
 /*
 // CP3+
     .bypass_addr( bypass_addr ),    .bypass_we  ( bypass_we ),

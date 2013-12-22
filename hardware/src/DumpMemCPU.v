@@ -22,27 +22,19 @@ module DumpMemCPU #(
     output [31:0] dcache_din,
     output [31:0] icache_din,
     input [31:0] dcache_dout,
-    input [31:0] instruction,
+    input [31:0] icache_dout,
+    input stall,
 
-// CP3+
-    output [31:0] bypass_addr,
-    output [31:0] bypass_din,
-    output [3:0]  bypass_we,
-    // Graphics ports
-    input          filler_ready,
-    input          line_ready,
-    output  [23:0] filler_color,
-    output         filler_valid,
-    output  [31:0] line_color,
-    output  [9:0]  line_point,
-    output         line_color_valid,
-    output         line_x0_valid,
-    output         line_y0_valid,
-    output         line_x1_valid,
-    output         line_y1_valid,
-    output         line_trigger,
+// CP4+
+    output [31:0] gp_code,
+    output [31:0] gp_frame,
+    output gp_valid,
+    input frame_interrupt,
 
-    input stall
+//BRK tap (will become internal instead)
+    input brk,
+    output [0:1023] trace,
+    inout  [35: 0] SCOPE_CPU
 );
 
     `BUS_CPUGlobal_type CPUGlobal;

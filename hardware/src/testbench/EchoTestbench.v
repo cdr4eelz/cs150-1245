@@ -66,7 +66,7 @@ module EchoTestbench;
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
 // CP2+
-        .dcache_dout(32'b0), .instruction(32'b0),
+        .dcache_dout(32'b0), .icache_dout(32'b0),
 // CP3+
 //      .filler_ready(1'b0), .line_ready(1'b0),
 
@@ -79,7 +79,7 @@ module EchoTestbench;
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(xFPGA_SERIAL_TXx),
 // CP2+
-        .dcache_dout(32'b0), .instruction(32'b0),
+        .dcache_dout(32'b0), .icache_dout(32'b0),
 // CP3+
         .filler_ready(1'b0), .line_ready(1'b0),
 

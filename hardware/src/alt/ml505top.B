@@ -153,7 +153,7 @@ module ml505top
   wire  [31:0] dcache_din;
   wire  [31:0] icache_din;
   wire [31:0]  dcache_dout;
-  wire [31:0]  instruction;
+  wire [31:0]  icache_dout;
   wire         stall;
   wire         video_ready;
   wire         dvi_video_ready;
@@ -212,7 +212,7 @@ module ml505top
       .dcache_din (dcache_din ), 
       .icache_din (icache_din ), 
       .dcache_dout(dcache_dout),
-      .icache_dout(instruction),
+      .icache_dout(icache_dout),
       .stall      (stall      ),
       .video      (video      ),
       .video_ready(video_ready),
@@ -239,7 +239,7 @@ module ml505top
     .dcache_din  (dcache_din  ),
     .icache_din  (icache_din  ),
     .dcache_dout (dcache_dout ),
-    .instruction (instruction ),
+    .icache_dout (icache_dout ),
     .gp_code(cpu_gp_code),
     .gp_frame(cpu_gp_frame),
     .gp_valid(cpu_gp_valid),

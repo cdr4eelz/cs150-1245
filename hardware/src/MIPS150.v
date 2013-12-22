@@ -24,7 +24,7 @@ module MIPS150 #(
     output [31:0] dcache_din,
     output [31:0] icache_din,
     input [31:0] dcache_dout,
-    input [31:0] instruction,
+    input [31:0] icache_dout,
     input stall,
 
 // CP4+
@@ -257,7 +257,7 @@ module MIPS150 #(
         icache_we   = (_hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
         icache_re   = (INST_ADDR[31:28] == 4'b0001),
-        INST_IC     = instruction;
+        INST_IC     = icache_dout;
 //    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC =32'd0;
 
     isr_mem bram_isr

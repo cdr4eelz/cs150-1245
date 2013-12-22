@@ -128,7 +128,7 @@ module ml505top
   wire  [31:0] dcache_din;
   wire  [31:0] icache_din;
   wire [31:0]  dcache_dout;
-  wire [31:0]  instruction;
+  wire [31:0]  icache_dout;
   wire         stall;
 // CP4+
   wire         video_ready;
@@ -193,7 +193,7 @@ module ml505top
       .dcache_din (dcache_din ),
       .icache_din (icache_din ),
       .dcache_dout(dcache_dout),
-      .icache_dout(instruction),
+      .icache_dout(icache_dout),
       .stall      (stall      ),
 //CP4+
       .video      (video      ),
@@ -247,7 +247,7 @@ module ml505top
     .dcache_we  ( dcache_we   ),    .icache_we  ( icache_we   ),
     .dcache_re  ( dcache_re   ),    .icache_re  ( icache_re   ),
     .dcache_din ( dcache_din  ),    .icache_din ( icache_din  ),
-    .dcache_dout( dcache_dout ),    .instruction( instruction ),
+    .dcache_dout( dcache_dout ),    .icache_dout( icache_dout ),
     .stall(any_stall),
 
 // CP4+
