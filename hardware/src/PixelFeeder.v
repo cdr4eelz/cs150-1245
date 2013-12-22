@@ -1,7 +1,7 @@
 /* This module keeps a FIFO filled that then outputs to the DVI module. */
 
 module PixelFeeder #(
-    parameter COLT45_TESTPAT=2
+    parameter COLT45_TESTPAT=1
 )                   ( //System:
                     input          cpu_clk_g,
                     input          clk50_g, // DVI Clock
