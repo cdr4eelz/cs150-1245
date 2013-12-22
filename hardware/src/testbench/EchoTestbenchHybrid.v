@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 module EchoTestbenchHybrid;
 

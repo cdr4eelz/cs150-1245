@@ -96,13 +96,15 @@ if (COLT45_TESTPAT == 0) begin:PAT_FEED
     assign video = feeder_dout[23:0];
     assign video_valid = 1'b1;
 end else if (COLT45_TESTPAT == 1) begin:PAT_GEN
-    // DIRECTLY inject simple pattern gen from other semester
+    // DIRECTLY inject simple pattern gen from FALL-2013-CP1
     PatternGenerator #(
         .CLOCK_HZ(50_000_000), //DVI Clock
-        .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600), .SCENES_PER_SEC(1)
-    ) (
+        .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600),
+        .SCENES_PER_SEC(1)
+    ) patgen (
         .clock(clk50_g), .reset(rst),
-        .video(video), .video_valid(video_valid), .video_ready(video_ready)
+        .video(video), .video_valid(video_valid),
+        .video_ready(video_ready)
     );
 end else begin:PAT_SWEEP
     reg [15:0] sweep_RGB;

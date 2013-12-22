@@ -10,7 +10,7 @@
 `define STALLHALVES 0
 `endif
 
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 module ASMTestbench;
     reg Clock, Reset, Stall;

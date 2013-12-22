@@ -1,4 +1,5 @@
 `include "cpuglobal.vh"
+`include "opcode.vh"
 
 module InstructionControl #(
     parameter DD=`COLT45_DD
