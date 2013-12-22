@@ -1,6 +1,8 @@
 /* This module keeps a FIFO filled that then outputs to the DVI module. */
 
-module PixelFeeder( //System:
+module PixelFeeder #(
+    parameter COLT45_TESTPAT = 2
+)                   ( //System:
                     input          cpu_clk_g,
                     input          clk50_g, // DVI Clock
                     input          rst,
@@ -89,20 +91,11 @@ assign next_addr = {7'b000_0000, FRAME0_SEL, head_y, head_x, 2'b00};
     	.full(feeder_full),
     	.empty(feeder_empty));
 
-    reg [15:0] sweep_RGB;
-    always @(posedge clk50_g) begin
-        if (rst) begin
-            sweep_RGB <= 16'hE2A2;
-        end else begin
-            if (video_valid && video_ready) begin
-$display("RGB: %h", video);
-                sweep_RGB <= sweep_RGB+5;
-            end
-        end
-    end
-    assign video = {sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]};
+generate
+if (COLT45_TESTPAT == 0) begin:PAT_FEED
+    assign video = feeder_dout[23:0];
     assign video_valid = 1'b1;
-/*
+end else if (COLT45_TESTPAT == 1) begin:PAT_GEN
     // DIRECTLY inject simple pattern gen from other semester
     PatternGenerator #(
         .CLOCK_HZ(50_000_000), //DVI Clock
@@ -110,9 +103,21 @@ $display("RGB: %h", video);
     ) (
         .clock(clk50_g), .reset(rst),
         .video(video), .video_valid(video_valid), .video_ready(video_ready)
-    )
-*/
-//    assign video = feeder_dout[23:0];
-//    assign video_valid = 1'b1;
+    );
+end else begin:PAT_SWEEP
+    reg [15:0] sweep_RGB;
+    always @(posedge clk50_g) begin
+        if (rst) begin
+            sweep_RGB <= 16'hE2A2;
+        end else begin
+            if (video_valid && video_ready) begin
+                sweep_RGB <= (sweep_RGB[15]) ? ~sweep_RGB : sweep_RGB+5;
+            end
+        end
+    end
+    assign video = {sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]};
+    assign video_valid = 1'b1;
+end
+endgenerate
 
 endmodule

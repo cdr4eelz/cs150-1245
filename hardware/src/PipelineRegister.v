@@ -20,7 +20,8 @@ module PipelineRegister #(
     );
 
 //TODO: Try to LATCHIEMUX with regular sync element at end of it's combo-logic
-    generate if (Mode == 3) begin:PASSTHRU
+generate
+    if (Mode == 3) begin:PASSTHRU
         always @(*) Out = In;
     end else if (Mode == 2) begin:PASSRESET
         // *Synchronously* apply reset but totally IGNORE enable.
@@ -55,5 +56,7 @@ module PipelineRegister #(
             else if (!stall) Out <= In;
             //else hold value
         end
-    end endgenerate
+    end
+endgenerate
+
 endmodule
