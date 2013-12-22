@@ -1,5 +1,5 @@
-`include "CPUGlobal.vh"
-`include "BranchCMPop.vh"
+`include "cpuglobal.vh"
+`include "branchcmpop.vh"
 
 // Playing with functions to see when they help much.
 // Now requires zeroing of B externally!

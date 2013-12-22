@@ -1,4 +1,4 @@
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 /* (See bottom for comments)
 **  Abstraction of inter-stage register'd value.

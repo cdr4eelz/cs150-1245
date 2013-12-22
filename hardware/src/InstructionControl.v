@@ -1,4 +1,4 @@
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 module InstructionControl #(
     parameter DD=`COLT45_DD
@@ -35,6 +35,7 @@ module InstructionControl #(
     wire isRType, isIType, isJType;
 
     assign isRType  = (_opcode_[5:0] == 6'b000000);
+    assign isCType  = (_opcode_[5:0] == 6'b010000); //ISR//
     assign isJType  = (_opcode_[5:1] == 5'b00001_);
     assign isIType  = (!isRType && !isJType);
 
@@ -43,9 +44,9 @@ module InstructionControl #(
     wire [ 5: 0] _funct_;
     wire [15: 0] _immediate_;
     wire [25: 0] _nearaddr_;
-    assign _rs_         = (isRType || isIType) ? _inst[25:21] : `UNKNOWN(5); // !isJType
-    assign _rt_         = (isRType || isIType) ? _inst[20:16] : `UNKNOWN(5);
-    assign _rd_         = (isRType) ? _inst[15:11] : `UNKNOWN(5);
+    assign _rs_         = (isRType || isIType || isCType) ? _inst[25:21] : `UNKNOWN(5); // !isJType
+    assign _rt_         = (isRType || isIType || isCType) ? _inst[20:16] : `UNKNOWN(5);
+    assign _rd_         = (isRType || isCType) ? _inst[15:11] : `UNKNOWN(5);
     assign _shamt_      = (isRType) ? _inst[10:6 ] : `UNKNOWN(5);
     assign _funct_      = (isRType) ? _inst[ 5:0 ] : `UNKNOWN(6);
     assign _immediate_  = (isIType) ? _inst[15:0 ] : `UNKNOWN(16);
@@ -84,7 +85,8 @@ module InstructionControl #(
     assign SHAMT    = (isRShiftI) ? _shamt_ : `UNKNOWN(5);
     assign SRC1     = (!isJType && !isRShiftI) ? _rs_ : 5'd0;
     assign SRC2     = (isBranch0) ? 5'd0 :
-                       (isROther || isBranchX || isRShift || isMStore)
+                       (isROther || isBranchX || isRShift || isMStore
+                        || (isCType && (_rs_ == `COP0_TO)) ) //ISR//
                            ? _rt_ : 5'd0;
 
     assign PCTARGET = (isIJump) ? {_pc[31:28], _nearaddr_, 2'b00} : `UNKNOWN(32);
@@ -97,6 +99,7 @@ module InstructionControl #(
         .ALUop(ALUop)
     );
 
+// These might do better to be "flattened" in case statements...
     wire [1:0] MemShift = (isMemory)
                         ? (~_opcode_[1:0]) // ~x == 3-x, like 1's complement!
                         : `UNKNOWN(2);
@@ -112,7 +115,9 @@ module InstructionControl #(
                             : 5'd0)
                         : ( (isRType)
                             ? _rd_
-                            : ((isMLoad || isIComp) ? _rt_ : 5'd0)
+                            : ( (isMLoad || isIComp || (isCType && (_rs_ == `COP0_FROM)) )
+                                ? _rt_
+                                : 5'd0)
                         );
 
     `BUS_ICTL_type delayIControl;

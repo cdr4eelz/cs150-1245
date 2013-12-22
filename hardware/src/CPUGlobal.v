@@ -1,4 +1,4 @@
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 //TODO: Use PARAMs on MMAP to select mem-range (perhaps other masking like stall)
 //TODO: Teach chipscope the BUS ranges (some-day)

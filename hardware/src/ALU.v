@@ -1,7 +1,7 @@
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
-`include "Opcode.vh"
-`include "ALUop.vh"
+`include "opcode.vh"
+`include "aluop.vh"
 
 module ALU(
     input [31:0] A,B,

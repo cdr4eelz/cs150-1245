@@ -459,8 +459,8 @@ module Memory150TestBench();
     SetupRead(`DCACHE, a2e);
     // Verify 3
     // Read miss
-    VerifyRead(`ICACHE, d1, 0'bx);
-    VerifyRead(`DCACHE, d2, 0'bx);
+    VerifyRead(`ICACHE, d1, 1'bx); //NOTE: Was 0'bx in skeleton
+    VerifyRead(`DCACHE, d2, 1'bx); //NOTE: Was 0'bx in skeleton
     ClockInRequest();
 
     // Request 5
@@ -468,8 +468,8 @@ module Memory150TestBench();
     SetupRead(`DCACHE, a2e);
     // Verify 4
     // Read miss
-    VerifyRead(`ICACHE, d1e, 0'bx);
-    VerifyRead(`DCACHE, d2e, 0'bx);
+    VerifyRead(`ICACHE, d1e, 1'bx); //NOTE: Was 0'bx in skeleton
+    VerifyRead(`DCACHE, d2e, 1'bx); //NOTE: Was 0'bx in skeleton
     ClockInRequest();
 
     // Request 5

@@ -1,4 +1,4 @@
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 module StageM (
 //    input `BUS_CPUGlobal_type CPUGlobal,

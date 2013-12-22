@@ -1,4 +1,4 @@
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 module StageWF #(
     parameter [31:0] BOOTPC=32'h4_000_0000, // BIOS base address

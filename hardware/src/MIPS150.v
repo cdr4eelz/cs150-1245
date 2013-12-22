@@ -1,4 +1,4 @@
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 module MIPS150 #(
     parameter DD=`COLT45_DD,

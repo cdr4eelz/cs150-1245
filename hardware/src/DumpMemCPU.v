@@ -1,4 +1,4 @@
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 module DumpMemCPU #(
     parameter ClockFreq=50_000_000,

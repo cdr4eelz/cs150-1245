@@ -6,8 +6,8 @@
 //         funct: the funct, in the case of r-type instructions
 // Outputs: ALUop: Selects the ALU's operation
 
-`include "Opcode.vh"
-`include "ALUop.vh"
+`include "opcode.vh"
+`include "aluop.vh"
 
 module ALUdec(
   input [5:0] funct, opcode,

@@ -1,4 +1,4 @@
-`include "CPUGlobal.vh"
+`include "cpuglobal.vh"
 
 module StageDX(
 //  input `BUS_CPUGlobal_type CPUGlobal, // Unused!

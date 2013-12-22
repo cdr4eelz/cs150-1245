@@ -1,7 +1,7 @@
 /* This module keeps a FIFO filled that then outputs to the DVI module. */
 
 module PixelFeeder #(
-    parameter COLT45_TESTPAT = 2
+    parameter COLT45_TESTPAT=2
 )                   ( //System:
                     input          cpu_clk_g,
                     input          clk50_g, // DVI Clock
@@ -109,10 +109,8 @@ end else begin:PAT_SWEEP
     always @(posedge clk50_g) begin
         if (rst) begin
             sweep_RGB <= 16'hE2A2;
-        end else begin
-            if (video_valid && video_ready) begin
-                sweep_RGB <= (sweep_RGB[15]) ? ~sweep_RGB : sweep_RGB+5;
-            end
+        end else if (video_valid && video_ready) begin
+            sweep_RGB <= sweep_RGB+5;
         end
     end
     assign video = {sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]};
