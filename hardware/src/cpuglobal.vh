@@ -18,13 +18,6 @@
 `define UNKNOWN(WxW)    {WxW{ (`UNCLEBIT) }}
 //TODO: Ensure the repetition operator above is working as expected!
 
-//tuninput.3  {CLK.1,RST.1,STL.1}
-//tunoutput.0 {}
-`define BUS_CPUGlobal_width ((1+1+1)+(0)) /* =3 */
-`define BUS_CPUGlobal_type  wire [0:`BUS_CPUGlobal_width-1]
-`define CPUGlobal__IN(  BUS)BUS [  0 +:  3 ]
-//`define CPUGlobal__OUT( BUS)BUS [  4 +:  0 ]
-
 
 //tuninput.23{MemToReg.1,DestReg.5,MemWrite.1,MemShift.2,MSigned.1,
 //            ALUSrcA.1,ALUSrcB.1,ALUOp.4,ISigned.1,CmpOp.3,Jump.1,JR.1,Link.1}

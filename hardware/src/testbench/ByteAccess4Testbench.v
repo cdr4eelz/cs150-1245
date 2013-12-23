@@ -33,6 +33,7 @@ module ByteAccess4Testbench;
                 {_ByteMask,_WordMasked,_ValExtract}) begin
                 $display("FAIL: Got BM:%b WM:%h VE:%h",
                          ByteMask, WordMasked, ValExtract);
+                $finish();
             end
         end
     endtask

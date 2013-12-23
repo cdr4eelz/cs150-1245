@@ -1,7 +1,8 @@
 `include "cpuglobal.vh"
 
 module StageDX(
-//  input `BUS_CPUGlobal_type CPUGlobal, // Unused!
+    input clk, rst, stall,
+
     // Asynchronous plugs to shared outer components
     output [ 4: 0] REG_R1_, REG_R2_,
     input  [31: 0] REG_D1_, REG_D2_,

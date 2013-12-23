@@ -1,22 +1,6 @@
 `include "cpuglobal.vh"
 
-//TODO: Use PARAMs on MMAP to select mem-range (perhaps other masking like stall)
 //TODO: Teach chipscope the BUS ranges (some-day)
-
-// CPUGlobal values (driven by CPU, used by innerds)
-module BUS_CPUGlobal_tun    // "tunnel" out multiple values
-( output `BUS_CPUGlobal_type _BUS_,
-    input CLK, RST, STL
-);
-    assign `CPUGlobal__IN(_BUS_) = {CLK,RST,STL};
-endmodule
-
-module BUS_CPUGlobal_tap    // "tap" into desired tunneled values
-( input `BUS_CPUGlobal_type _BUS_,
-    output CLK, RST, STL
-);
-    assign {CLK,RST,STL} = `CPUGlobal__IN(_BUS_);
-endmodule
 
 
 // IControl values (driven by decoder, used by everybody)

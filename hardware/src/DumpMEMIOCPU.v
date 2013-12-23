@@ -1,8 +1,9 @@
 `include "cpuglobal.vh"
 
 module DumpMEMIOCPU #(
+    parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
-    parameter DBG_DELAY=0, COLT45_STEPMAX=0
+    parameter COLT45_STEPMAX=0
 )(
     input clk,
     input rst,
@@ -36,12 +37,6 @@ module DumpMEMIOCPU #(
     output [0:1023] trace
 );
 
-    `BUS_CPUGlobal_type CPUGlobal;
-    BUS_CPUGlobal_tun TUN_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
-
     wire [13: 0]    ADDR, ADDR_NEXT;
     wire [11: 0]    ADDR_W;
     wire [ 1: 0]    ADDR_N;
@@ -50,23 +45,23 @@ module DumpMEMIOCPU #(
     wire [ 1: 0]    STATE;
     wire [ 1: 0]    NEXT_STATE;
 
-    assign #DBG_DELAY ADDR_W   = ADDR[13: 2];
-    assign #DBG_DELAY ADDR_N   = ADDR[ 1: 0];
-    assign #DBG_DELAY TX_Data  = (ADDR_N[1]) 
+    assign #DD ADDR_W   = ADDR[13: 2];
+    assign #DD ADDR_N   = ADDR[ 1: 0];
+    assign #DD TX_Data  = (ADDR_N[1]) 
                 ? ( (ADDR_N[0]) ? DATA_W[ 0 +: 8] : DATA_W[ 8 +: 8])
                 : ( (ADDR_N[0]) ? DATA_W[16 +: 8] : DATA_W[24 +: 8]);
 
-    assign #DBG_DELAY NEXT_STATE = ((STATE === 1) && (IOSTATUS !== 32'd1)) ? STATE : (STATE+1)%4;
-    assign #DBG_DELAY ADDR_NEXT = (STATE === 2) ? (ADDR + 1) : ADDR;
+    assign #DD NEXT_STATE = ((STATE === 1) && (IOSTATUS !== 32'd1)) ? STATE : (STATE+1)%4;
+    assign #DD ADDR_NEXT = (STATE === 2) ? (ADDR + 1) : ADDR;
 
-    PipelineRegister #( .Width(2) )
-    ADVANCE_REG ( .CPUGlobal(CPUGlobal),
+    PipelineBorder #( .Width(2) )
+    ADVANCE_REG ( .clk(clk), .rst(rst), .stall(stall),
         .In(    NEXT_STATE),
         .Out(   STATE)
     );
 
-    PipelineRegister #( .Width(14) )
-    ADDR_REG ( .CPUGlobal(CPUGlobal),
+    PipelineBorder #( .Width(14) )
+    ADDR_REG ( .clk(clk), .rst(rst), .stall(stall),
         .In(    ADDR_NEXT),
         .Out(   ADDR)
     );
@@ -110,27 +105,11 @@ module DumpMEMIOCPU #(
         .RVA_TX (UATX), .RVA_RX(UARX)
     );
 
-    //TODO: Use UART wrapper that takes two RVA's
-    wire Rx_Ready, Rx_Valid, Tx_Valid, Tx_Ready;
-    wire [7:0] Rx_Data, Tx_Data;
-    BUS_SHAKE_tun #(.InWidth(8)) TUN_SHAKE_Rx
-    ( ._BUS_(UARX),
-        .DataReady(Rx_Ready),
-        .DataValid(Rx_Valid), .Data(Rx_Data)
-    );
-    BUS_SHAKE_tap #(.InWidth(8)) TAP_SHAKE_Tx
-    ( ._BUS_(UATX),
-        .DataValid(Tx_Valid), .Data(Tx_Data),
-        .DataReady(Tx_Ready)
-    );
-    UART #(.ClockFreq(ClockFreq)) uart
-    ( .Clock(clk), .Reset(rst),
-        // Receiver     (handshakes go both in/out)
-        .SIn(FPGA_SERIAL_RX),
-        .DataOut(Rx_Data), .DataOutValid(Rx_Valid), .DataOutReady(Rx_Ready),
-        // Transmitter  (handshakes go both in/out)
-        .SOut(FPGA_SERIAL_TX),
-        .DataIn(Tx_Data), .DataInValid(Tx_Valid), .DataInReady(Tx_Ready)
+    UARTRVA #(
+        .ClockFreq(ClockFreq)
+    ) uart ( .Clock(clk), .Reset(rst),
+        .SIn(FPGA_SERIAL_RX), .UARX(UARX), //Receiver
+        .UATX(UATX), .SOut(FPGA_SERIAL_TX) //Transmitter
     );
 
 

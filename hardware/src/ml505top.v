@@ -387,9 +387,9 @@ generate if (COLT45_BRK) begin:_BRK_TOP_
     { Little from enclosing environment, perhaps DDR/DVI and SW/LED stuff? }
     Layout "trace" as 4 segments (256-bit) x 8 words (32-bit): (current is loosly Global/WF|DX|M|rare)
         seg0: Global/Inter-Stage
-        seg1: StageWF
+        seg1: StageF
         seg2: StageDX
-        seg3: StageM
+        seg3: StageMW
 */
 
 //TODO:Overcome trouble with bitvector selection,address-order,big-case,or something
@@ -540,8 +540,7 @@ end endgenerate //COLT45_BRK
         .CLKFBIN(pll_fb), .CLKFBOUT(pll_fb), .LOCKED(pll_lock)
     );
 
-//TODO: BUFG the global reset too? Doing that & delay/sync with slowest clock could help?
-    // Buffer reset/clocks for general use
+    // Buffer clocks for general use
     IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
     BUFG  cpu_clk_buf  ( .I(clk50),    .O(cpu_clk_g)  );
     BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );

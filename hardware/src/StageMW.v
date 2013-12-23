@@ -1,36 +1,26 @@
 `include "cpuglobal.vh"
 
-module StageM (
-//    input `BUS_CPUGlobal_type CPUGlobal,
+module StageMW (
+    input clk, rst, stall,
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
     input `BUS_ICTL_type _IControl, // Few are used (hopefully tools will prune)
     input  [31: 0]  _MemWValue,
     input  [31: 0]  _MemAddr,
+    input           _PCinBIOS,
     // Inputs held stable during our stage for us
     input `BUS_ICTL_type IControl,  // Not all are used (hopefully tools will prune)
     input  [31: 0]  MemAddr,
     input  [31: 0]  RegWValue,
-    input  [31: 0]  PC,
     // Outputs fed back to prior stages
     output [ 4: 0]  WBK_Reg_,
     output [31: 0]  WBK_Val_,
     output          WBK_CanFWD_,
     // Memory/IO drives
-    output reg _hot_ISR, //ISR//
-    output reg _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB,
+    output reg _hot_IO,_hot_BR,_hot_DC,_hot_IC,_hot_DB,_hot_IB,_hot_ISR,
     output [ 3: 0] _ByteMask, _WriteMask,
     output [31: 0] _WDataMasked,
-    input  [31: 0] RData_ISR, //ISR//
-    input  [31: 0] RData_IO, RData_BR, RData_DC, RData_DB
+    input  [31: 0] RData_IO, RData_BR, RData_DC, RData_DB, RData_ISR
 );
-/*
-    wire clk, rst, stall;
-    BUS_CPUGlobal_tap BUS_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
-*/
-//TODO: Drive each _hot-line in an independent always (or assign)
 
 // _IControl taps
     wire [1:0] _MemShift;
@@ -54,9 +44,7 @@ module StageM (
     assign _WriteMask = (_isMemWrite) ? _ByteMask : 4'b0000;
 
     always @(*) begin
-        _hot_ISR=1'b0; //ISR//
-        _hot_IO=1'b0; _hot_BR=1'b0; _hot_DC=1'b0;
-        _hot_IC=1'b0; _hot_DB=1'b0; _hot_IB=1'b0;
+        {_hot_IO,_hot_BR,_hot_DC,_hot_IC,_hot_DB,_hot_IB,_hot_ISR} = 0;
         if (_isMemRead || _isMemWrite) begin
             case (_Target)
                 4'b1100: _hot_ISR = 1'b1; //ISR//
@@ -64,12 +52,12 @@ module StageM (
                 4'b0100: _hot_BR = !_isMemWrite; //Read-only
                 4'b0011: begin
                         _hot_DC = 1'b1;
-                        _hot_IC = _isMemWrite && PC[30];
+                        _hot_IC = _isMemWrite && _PCinBIOS;
                     end
-                4'b0010: _hot_IC = _isMemWrite && PC[30]; //Write-only via BIOS
+                4'b0010: _hot_IC = _isMemWrite && _PCinBIOS;
                 4'b0001: _hot_DC = 1'b1;
     `ifndef COLT45_STRICT
-                4'b0101: _hot_DB = 1'b1; //EXTRA: Scratchpad-RAM
+                4'b0101: _hot_DB = 1'b1; //EXTRA: Scratchpad-DMEM
     `endif //(!) COLT45_STRICT
             endcase
         end

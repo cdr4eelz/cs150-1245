@@ -1,6 +1,7 @@
 `include "cpuglobal.vh"
 
 module DumpMemCPU #(
+    parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
     parameter COLT45_STEPMAX=9
 )(
@@ -36,13 +37,6 @@ module DumpMemCPU #(
     output [0:1023] trace
 );
 
-    `BUS_CPUGlobal_type CPUGlobal;
-    BUS_CPUGlobal_tun TUN_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
-
-
     wire [13: 0]    ADDR, ADDR_NEXT;
     wire [11: 0]    ADDR_W;
     wire [ 1: 0]    ADDR_N;
@@ -58,14 +52,14 @@ module DumpMemCPU #(
     assign TX_Data  = (ADDR_N[1]) ? ( (ADDR_N[0]) ? DATA_W[ 0 +: 8] : DATA_W[ 8 +: 8])
                                   : ( (ADDR_N[0]) ? DATA_W[16 +: 8] : DATA_W[24 +: 8]);
 
-    PipelineRegister #( .Width(1) )
-    ADVANCE_REG ( .CPUGlobal(CPUGlobal),
+    PipelineBorder #( .Width(1) )
+    ADVANCE_REG ( .clk(clk), .rst(rst), .stall(stall),
         .In(    ADVANCE),
         .Out(   ADVANCE_LAST)
     );
 
-    PipelineRegister #( .Width(14) )
-    ADDR_REG ( .CPUGlobal(CPUGlobal),
+    PipelineBorder #( .Width(14) )
+    ADDR_REG ( .clk(clk), .rst(rst), .stall(stall),
         .In(    ADDR_NEXT),
         .Out(   ADDR)
     );

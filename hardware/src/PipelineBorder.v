@@ -4,22 +4,17 @@
 /*
 **  Abstraction of inter-stage register'd or latch'd value at pipeline stage borders
 */
-module PipelineRegister #(
+module PipelineBorder #(
     parameter DD=`COLT45_DD,
-    parameter Mode=0 /*0-3=(Reg,Latch,PassReset,PassThru)*/, 
+    parameter Mode=0 /*0-3=(Reg,LatchieMUX,PassReset,PassThru)*/, 
     parameter Width=0, ResetValue={Width{1'b0}}
 )(
-    input `BUS_CPUGlobal_type CPUGlobal,
+    input clk, rst, stall,
     input  [Width-1:0] In,
     output reg [Width-1:0] Out
 );
 
-    wire clk, rst, stall;
-    BUS_CPUGlobal_tap BUS_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
-
+//TODO: Eliminate LATCHIEMUX use altogether
 //TODO: Try to LATCHIEMUX with regular sync element at end of it's combo-logic
 generate
     if (Mode == 3) begin:PASSTHRU
@@ -41,14 +36,18 @@ generate
         //   register associated override value on posedge clk,
         //   but if not overridden, track In live during full cycle.
         // Appropriately hold ambiguous value until reset or enable.
+        reg [Width-1:0] OverOut;
         reg OverRide;
-        reg  [Width-1:0] OverOut;
-        always @(posedge clk) begin
-            OverRide <= rst || stall;
-            if (rst) OverOut <= ResetValue;
-            else if (!OverRide) OverOut <= In; //NOTE: Uses *OLD* !OverRide!
+        always @(posedge clk) begin //Synchronously capture value & stall
+            if (rst) begin
+                OverOut <= ResetValue;
+                OverRide <= 1'b1;
+            end else begin
+                OverRide <= stall; //Sample stall synchronously for next cycle's OverRide state
+                if (!OverRide) OverOut <= In; //If last-cycle wasn't OverRiden, admit new potential OverOut
+            end
         end
-        always @(*) Out = (OverRide) ? OverOut : In;
+        always @(*) Out = (OverRide) ? OverOut : In; //The latchie portion (but based on synchronized OverRide)
     end else begin:REGGIEREG
         // Basic register with sync-reset & sync-enable (enable = !stall).
         //  Only admit new value if !stall.

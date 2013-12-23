@@ -9,7 +9,6 @@ module StageDXTestbench;
 
     reg [31:0] REGFILE [0:31];
     `BUS_ICTL_type IControlDX_;
-    `BUS_CPUGlobal_type CPUGlobal;
 
     //Ignoring control line outputs
     //Just focusing on datapath stuff
@@ -25,9 +24,10 @@ module StageDXTestbench;
     assign REG_rd1 = REGFILE[REG_ra1], REG_rd2 = REGFILE[REG_ra2];
     wire [31: 0] ALUOutDX_, R2ValueDX_, PCPLUS8DX_;
     StageDX DUT
-    ( //.CPUGlobal(CPUGlobal),
+    ( .clk(1'bx), .rst(1'bx), .stall(1'bx),
         .REG_R1_    (REG_ra1),          .REG_R2_    (REG_ra2),
         .REG_D1_    (REG_rd1),          .REG_D2_    (REG_rd2),
+        .CopInHot(), .CopAddr(), .CopOut(32'd0),
         //Inputs
         ._PC        (PC),               ._INST      (Inst),
         //Outputs

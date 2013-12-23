@@ -6,12 +6,6 @@ module DumpMEMIOTestbench;
     reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
 
-    `BUS_CPUGlobal_type CPUGlobal;
-    BUS_CPUGlobal_tun BUS_CPUGlobal
-    (   ._BUS_(CPUGlobal),
-        .CLK(Clock), .RST(Reset), .STL(Stall)
-    );
-
     reg   [7:0] DataIn;
     reg         DataInValid;
     wire        DataInReady;
@@ -55,8 +49,10 @@ module DumpMEMIOTestbench;
         .frame_interrupt(1'b0)
     );
 
-    UART        #( .ClockFreq(       ClockFreq))
-    uart_tb( .Clock(      Clock),
+    UART #(
+        .ClockFreq(ClockFreq)
+    ) uart_tb (
+        .Clock(           Clock),
         .Reset(           Reset),
         .DataIn(          DataIn),
         .DataInValid(     DataInValid),

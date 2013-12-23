@@ -3,14 +3,9 @@
 `include "cpuglobal.vh"
 `include "opcode.vh"
 
-module StageMTestbench;
+module StageMWTestbench;
 
     wire clk, rst, stall;
-    `BUS_CPUGlobal_type CPUGlobal;
-    BUS_CPUGlobal_tun BUS_CPUGlobal
-    ( ._BUS_(CPUGlobal),
-        .CLK(clk), .RST(rst), .STL(stall)
-    );
     
     `BUS_ICTL_type      _IControl, IControl;
     `BUS_SHAKE_type(8) UARX, UATX; // Ready-Valid 
@@ -21,7 +16,7 @@ module StageMTestbench;
     wire            WBK_Forward;
     wire   [31: 0]  _MemWValue, _MemAddr;
 
-    StageM s_M
+    StageMW s_MW
     (
     );
 
