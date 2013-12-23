@@ -10,5 +10,13 @@ file copy -force ../../../software/dumpmem_s/dumpmem.data.mif dmem_blk_ram.mif
 #file copy -force ../../../software/echo/echo.inst.mif bios_mem.mif
 #file copy -force ../../../software/echo/echo.inst.mif imem_blk_ram.mif
 #file copy -force ../../../software/echo/echo.data.mif dmem_blk_ram.mif
-log -r /*
+add wave EchoTestbenchCaches/*
+add wave EchoTestbenchCaches/mem_arch/*
+add wave EchoTestbenchCaches/mem_arch/dcache/*
+add wave EchoTestbenchCaches/mem_arch/icache/*
+add wave EchoTestbenchCaches/DUT/*
+add wave EchoTestbenchCaches/DUT/regfile/*
+add wave EchoTestbenchCaches/DUT/s_WF/*
+add wave EchoTestbenchCaches/DUT/s_DX/*
+add wave EchoTestbenchCaches/DUT/s_M/*
 run 4832us

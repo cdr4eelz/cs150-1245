@@ -35,12 +35,13 @@ module ALUTestVectorTestbench;
     // Task for checking output
     task checkOutput;
         input [5:0] opcode, funct;
-        if ( REFout !== DUTout ) begin
+        if ((opcode === 6'bx) || (opcode === 6'bz)) begin
+            $display("WARN: Fishy opcode in test sampling: %h %b", opcode, opcode);
+        end else if (REFout !== DUTout) begin
             $display("FAIL: Incorrect result for opcode %b, funct: %b:", opcode, funct);
             $display("\tA: 0x%h, B: 0x%h, DUTout: 0x%h, REFout: 0x%h", A, B, DUTout, REFout);
-        $finish();
-        end
-        else begin
+            $finish();
+        end else begin
             $display("PASS: opcode %b, funct %b", opcode, funct);
             $display("\tA: 0x%h, B: 0x%h, DUTout: 0x%h, REFout: 0x%h", A, B, DUTout, REFout);
         end

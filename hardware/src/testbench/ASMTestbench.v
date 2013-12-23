@@ -1,15 +1,5 @@
 `timescale 1ns/1ps
 
-`ifndef CPUTYPE
-`define CPUTYPE MIPS150
-`endif
-`ifndef MAXCHARS
-`define MAXCHARS 10
-`endif
-`ifndef STALLHALVES
-`define STALLHALVES 0
-`endif
-
 `include "cpuglobal.vh"
 
 module ASMTestbench;
@@ -26,8 +16,8 @@ module ASMTestbench;
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
-    parameter MaxChars = `MAXCHARS;
-    parameter StallHalves = `STALLHALVES;
+    parameter MaxChars = 10;
+    parameter StallHalves = 0;
     
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
@@ -40,10 +30,14 @@ module ASMTestbench;
     
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    `CPUTYPE CPU
+    MIPS150 #(.ClockFreq(ClockFreq)) DUT
     (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-        .FPGA_SERIAL_TX(FPGA_SERIAL_TX)
+        .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+// CP2+
+        .dcache_dout(32'b0), .icache_dout(32'b0),
+// CP4+
+        .frame_interrupt(1'b0)
     );
     
     UART        #( .ClockFreq(       ClockFreq))

@@ -67,11 +67,11 @@ module EchoTestbenchCaches;
     // to the UART we use for testing
 
 
-    MIPS150 DUT(
-        .clk(cpu_clk_g),
-        .rst(cpu_rst),
+    MIPS150 DUT
+    (   .clk(cpu_clk_g), .rst(cpu_rst), .stall(stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+// CP2+
         .dcache_addr (dcache_addr ),
         .icache_addr (icache_addr ),
         .dcache_we   (dcache_we   ),
@@ -82,7 +82,8 @@ module EchoTestbenchCaches;
         .icache_din  (icache_din  ),
         .dcache_dout (dcache_dout ),
         .icache_dout (icache_dout ),
-        .stall(stall)
+// CP4+
+        .frame_interrupt(1'b0)
     );
 
     UART          #( .ClockFreq(       ClockFreq))

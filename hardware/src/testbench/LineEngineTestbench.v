@@ -67,7 +67,7 @@ module LineEngineTestbench();
     assign x = {af_addr_din[8:2], mask};
     assign y = af_addr_din[18:9];
 
-    LineEngine le (
+    LineEngine DUT (
     .clk(Clock),
     .rst(rst),
 		.LE_ready(LE_ready),

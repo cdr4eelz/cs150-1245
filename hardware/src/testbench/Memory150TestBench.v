@@ -86,7 +86,6 @@ module Memory150TestBench();
     wire        stall;
     wire        init_done;
 
-
     // DVI interface:
     wire [23:0] video;
     wire        video_valid;
@@ -175,8 +174,11 @@ module Memory150TestBench();
         .clk200_g(clk200_g),
         .clkdiv0_g(clkdiv0_g),
         .clk90_g(clk90_g),
+        .clk50_g(clk50_g),
+        .locked(pll_lock),
         .rst(Reset),
         .init_done(init_done),
+
         .DDR2_A(DDR2_A),
         .DDR2_BA(DDR2_BA),
         .DDR2_CAS_B(DDR2_CAS_B),
@@ -191,7 +193,6 @@ module Memory150TestBench();
         .DDR2_ODT(DDR2_ODT),
         .DDR2_RAS_B(DDR2_RAS_B),
         .DDR2_WE_B(DDR2_WE_B),
-        .locked     (pll_lock),
         .dcache_addr(d_addr),
         .icache_addr(PC         ),
         .dcache_we  (dcache_we  ),
@@ -202,7 +203,15 @@ module Memory150TestBench();
         .icache_din (icache_din ),
         .dcache_dout(dcache_dout),
         .icache_dout(icache_dout),
-        .stall      (stall      )
+        .stall      (stall      ),
+        
+        .video(video),
+        .video_valid(video_valid),
+        .video_ready(video_ready),
+        .cpu_gp_code(32'd0),
+        .cpu_gp_frame(32'd0),
+        .cpu_gp_valid(1'b0),
+        .frame_interrupt()
     );
 
     initial begin

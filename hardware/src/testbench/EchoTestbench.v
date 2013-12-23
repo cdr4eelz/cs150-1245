@@ -61,29 +61,25 @@ module EchoTestbench;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    MIPS150 DUT
-    (   .clk(Clock), .rst(Reset),
+    MIPS150 #(.ClockFreq(ClockFreq)) DUT
+    (   .clk(Clock), .rst(Reset), .stall( (1) ? Stall : 1'b0 ),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
 // CP2+
         .dcache_dout(32'b0), .icache_dout(32'b0),
-// CP3+
-//      .filler_ready(1'b0), .line_ready(1'b0),
-
-        .stall( (1) ? Stall : 1'b0 )
+// CP4+
+        .frame_interrupt(1'b0)
     );
 /*
     // A shadow CPU using a gated clock
     MIPS150 #(.ClockFreq(StallFreq)) DUT2
-    (   .clk(StallClock), .rst(Reset),
+    (   .clk(StallClock), .rst(Reset), .stall(1'b0),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(xFPGA_SERIAL_TXx),
 // CP2+
         .dcache_dout(32'b0), .icache_dout(32'b0),
-// CP3+
-        .filler_ready(1'b0), .line_ready(1'b0),
-
-        .stall(1'b0)
+// CP4+
+        .frame_interrupt(1'b0)
     );
 */
 

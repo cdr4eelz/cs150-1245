@@ -34,6 +34,7 @@ module EchoTestbenchHybrid;
     wire DDR2_ODT;
     wire DDR2_RAS_B;
     wire DDR2_WE_B;
+
     mt4htf3264hy ddr2(
         .DDR2_A(DDR2_A),
         .DDR2_BA(DDR2_BA),
@@ -49,7 +50,6 @@ module EchoTestbenchHybrid;
         .DDR2_ODT(DDR2_ODT),
         .DDR2_RAS_B(DDR2_RAS_B),
         .DDR2_WE_B(DDR2_WE_B));
-
 
     wire  [31:0] dcache_addr;
     wire  [31:0] icache_addr;
