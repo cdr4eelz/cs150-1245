@@ -1,7 +1,8 @@
 `include "cpuglobal.vh"
+//TODO: Split into two modules now that experimentation phase is over
 
-/* (See bottom for comments)
-**  Abstraction of inter-stage register'd value.
+/*
+**  Abstraction of inter-stage register'd or latch'd value at pipeline stage borders
 */
 module PipelineRegister #(
     parameter DD=`COLT45_DD,

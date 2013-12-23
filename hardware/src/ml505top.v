@@ -11,7 +11,7 @@ module ml505top
   output [7:0]  GPIO_LED,
 
 // CP2+
-  output [12:0] ddr2_a, //Lower case just to match MIG ucf PIN convention
+  output [12:0] ddr2_a,  //NOTE:Warning! Lowercase to match MIG ucf (Skeleton was UPPERCASE)
   output [1:0]  ddr2_ba,
   output        ddr2_cas_n,
   output [0:0]  ddr2_cke,
@@ -38,23 +38,34 @@ module ml505top
   inout         IIC_SCL_VIDEO,
   inout         IIC_SDA_VIDEO
 );
+//TODO: Translate any desired global "defines" into params used in each generate
+    localparam COLT45_PLOP = 0;
+    localparam COLT45_BRK = 0;
+
+// Was tied to FPGA user-reset PIN
     wire USER_RST = 1'b1; //Disable (active_low)
-
-    wire button_reset, rst_or_init, rst;
-    wire button_stall, any_stall;
-
 // BRK tap
     wire debug_reset, debug_stall, debug_brk, debug_jog;
     wire [0:1023] debug_trace;
-    wire [35: 0] SCOPE_CPU;
-
 // UART crosswork
     wire M_SERIAL_RX, M_SERIAL_TX;
     wire P_SERIAL1_RX, P_SERIAL1_TX;
     wire P_SERIAL2_RX, P_SERIAL2_TX;
+    wire SERIAL_JTAG; //Select MIPSY serial: physical vs. JTAG-via-PLOP
+    wire BRK_MASTER; //Select BRK control: chipscope-VIO vs PLOP
 
-// Selector for physical serial vs. debug serial (via JTAG UART)
-    wire SERIAL_JTAG, BRK_MASTER;
+
+    // Forward declare global/buffered clock lines (hide non-globals below)
+    wire user_clk_g, pll_lock;
+    wire clk0_g, clk90_g, clkdiv0_g, clk200_g, clk50_g;
+    wire cpu_clk_g, plop_clk_g; //For the MIPSY & PLOP
+
+    //TODO: Generate separate "coordinated" resets (peripherals, busses, CPUs)
+    wire rst, button_reset, init_done; //init_done missing decl in skeleton
+    wire rst_or_init = (rst || ~init_done); //A "late-stage" reset of sorts
+
+    wire any_stall, man_stall, debug_stall_not_jog, man_stall_toggle;
+    //Also see "stall" which is memory-stall, declared with Memory150 signals
 
 
   reg [3:0]  reset_r = 4'b0;
@@ -62,11 +73,6 @@ module ml505top
 
   wire [3:0]  next_reset_r;
   wire [25:0] next_count_r;
-
-    // Global clock lines (use the _g since are buffered)
-    wire user_clk_g, pll_lock;
-    wire clk0_g, clk90_g, clkdiv0_g, clk200_g, clk50_g;
-    wire cpu_clk_g, plop_clk_g; //For the MIPSY & PLOP
 
   always @(posedge cpu_clk_g)
   begin
@@ -89,33 +95,6 @@ module ml505top
   always @(posedge cpu_clk_g) begin
     rst_sr <= {rst_sr[1:0], rst};
   end
-
-
-// Manual stalling test (checkpoint 1):
-    reg man_stall;
-    wire man_stall_toggle;
-    always@(posedge cpu_clk_g) begin
-        if(rst) begin
-            man_stall <= 1'b0;
-        end else begin
-            if(man_stall_toggle) begin
-                man_stall <= ~man_stall;
-            end else begin
-                man_stall <= 1'b0;
-            end
-        end
-    end
-
-// Debug stall with one-shot "jog"
-    reg debug_jog_fired;
-    always @(posedge cpu_clk_g) begin
-        if (rst_or_init || ~debug_jog)
-            debug_jog_fired <= 1'd0;
-        else if (~any_stall)
-            debug_jog_fired <= 1'd1;
-        // else hold value
-    end
-    wire debug_stall_not_jog = ((debug_stall && !debug_jog) || debug_jog_fired);
 
 
 // CP2+
@@ -148,17 +127,12 @@ module ml505top
   wire         line_x1_valid;
   wire         line_y1_valid;
   wire         line_trigger;
+  wire fb0; //Was this before cpu_gp_frame??? or something else???
 */
-  wire fb0;
    wire frame_interrupt;
-   wire [31:0] gp_code;
-   wire [31:0] gp_frame;
-   wire        gp_valid;
-
-    wire         init_done; //Missing decl in skeleton
-//Might help to delay master rst_or_init against slowest clock & release early in phase
-    assign rst_or_init = rst || ~init_done;
-    assign any_stall = stall;// || man_stall || debug_stall_not_jog;
+   wire [31:0] cpu_gp_code;
+   wire [31:0] cpu_gp_frame;
+   wire        cpu_gp_valid;
 
   Memory150 #(.SIM_ONLY(1'b0)) mem_arch(
       .cpu_clk_g(cpu_clk_g),
@@ -169,7 +143,7 @@ module ml505top
       .clk50_g(clk50_g),
       .rst(fifo_reset),
       .init_done(init_done),
-        .DDR2_A     (ddr2_a), //Lower case just to match MIG ucf PIN convention
+        .DDR2_A     (ddr2_a), //NOTE:Warning! Lowercase to match MIG ucf (Skeleton was UPPERCASE)
         .DDR2_BA    (ddr2_ba),
         .DDR2_CAS_B (ddr2_cas_n),
         .DDR2_CKE   (ddr2_cke),
@@ -199,16 +173,16 @@ module ml505top
       .video      (video      ),
       .video_ready(video_ready),
       .video_valid(video_valid),
-      .cpu_gp_code(gp_code),
-      .cpu_gp_frame(gp_frame),
-      .cpu_gp_valid(gp_valid),
+      .cpu_gp_code(cpu_gp_code),
+      .cpu_gp_frame(cpu_gp_frame),
+      .cpu_gp_valid(cpu_gp_valid),
       .frame_interrupt(frame_interrupt)
     );
 
 // CP4+
-    DVI #(
 // Resolution         Width   FrontH  PulseH  BackH   Height  FrontV  PulseV  BackV   ClockFreq
 // VESA 800x600,72Hz: 1040    56      120     64      666     37      6       23      50000000
+    DVI #( //DVI support files were updated from newer skeleton & tweaked a bit
         .ClockFreq(                 50_000_000), //50 MHz
         .Width(                     1040),
         .FrontH(                    56),
@@ -236,12 +210,13 @@ module ml505top
         .VideoValid(                video_valid)
     );
 
+//TODO: MIPS150 variants instead (or wrapper might be nice but affects module/signal hierarchy)
 `ifndef CPUTYPE
 `define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
 `endif
 `CPUTYPE CPU(
     .clk( cpu_clk_g ), .rst( rst_or_init ),
-    .FPGA_SERIAL_RX(M_SERIAL_RX), .FPGA_SERIAL_TX(M_SERIAL_TX),
+    .FPGA_SERIAL_RX( M_SERIAL_RX ), .FPGA_SERIAL_TX( M_SERIAL_TX ),
 // CP2+
     .dcache_addr( dcache_addr ),    .icache_addr( icache_addr ),
     .dcache_we  ( dcache_we   ),    .icache_we  ( icache_we   ),
@@ -255,16 +230,43 @@ module ml505top
     .gp_frame(cpu_gp_frame),
     .gp_valid(cpu_gp_valid),
     .frame_interrupt(frame_interrupt),
-//add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
 
-//BRK tap
-    .brk(debug_brk), .trace(debug_trace), .SCOPE_CPU(SCOPE_CPU)
+//BRK tap & debug
+    .brk(debug_brk), .trace(debug_trace)
 );
 
+// Debug stall with one-shot "jog"
+    reg debug_jog_fired;
+    always @(posedge cpu_clk_g) begin
+        if (rst_or_init || ~debug_jog)
+            debug_jog_fired <= 1'd0;
+        else if (~any_stall)
+            debug_jog_fired <= 1'd1;
+        // else hold value
+    end
+    assign debug_stall_not_jog = ((debug_stall && !debug_jog) || debug_jog_fired);
 
-//TODO: Move all/most debug,BRK,PLOP into MIPSY & re-standardize ml505top.v
+// Manual stall modes (force / DIP(checkpoint1) / disabled)
+    reg man_stall_reg; //TODO: Upgrade to "stall ring" from testbenches
+    always@(posedge cpu_clk_g) begin
+        if(rst_or_init) begin
+            man_stall_reg <= 1'b0;
+        end else if (man_stall_toggle) begin
+            man_stall_reg <= ~man_stall_reg;
+        end else begin
+            man_stall_reg <= 1'b0;
+        end
+    end
 
-`ifdef COLT45_PLOP
+    assign man_stall_toggle = 1'b0; // or 1'b1 or GPIO_DIP[0] (for checkpoint#1)
+    assign any_stall = stall; // || man_stall || debug_stall_not_jog;
+
+
+`ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
+
+//TODO: Move PLOP,BRK into MIPSY & tap specific lines; re-standardize ml505top.v
+
+generate if (COLT45_PLOP) begin:_PLOP_
     // Global PLOP lines
     wire PLOP_RST_AUX, PLOP_RST_Periph;
     wire MM0_IRQ0, MB0_IRQ1, MB0_Error, MB0_Halted;
@@ -288,7 +290,7 @@ module ml505top
         .CLK_MIPSY      ( cpu_clk_g ), //IN
         .CLK_PLOP       ( plop_clk_g ), //IN
         .CLK_Locked     ( pll_lock ), //IN
-        .RST_PHY_LO     ( USER_RST ), //IN
+        .RST_PHY_LO     ( USER_RST ), //IN (active low)
         .RST_AUX_HI     ( PLOP_RST_AUX ), //IN
         .RST_Periph_HI  ( PLOP_RST_Periph ), //OUT
 
@@ -336,14 +338,12 @@ module ml505top
         .UART_MIPSY_Tx    ( UART_MIPSY_Tx ) //OUT
     ) /* synthesis syn_noprune=1 */;
 
-
-
     // PLOP patchwork
     assign PLOP_RST_AUX = 1'b0,
             MB0_IRQ0 = 1'b0,
             MB0_IRQ1 = 1'b0; // PLOP_RST_Periph, MB0_Error, MB0_Halted
     assign BIOS_BRAM_DIN = 32'd0; // ,,,
-    assign BRK_BRAM_RST = USER_RST, //TODO: Becomes our internal reset/init_done
+    assign BRK_BRAM_RST = USER_RST, //TODO: Use an actual reset
             BRK_BRAM_CLK = cpu_clk_g, //TODO: Consider faster clock just for BRK
             BRK_BRAM_EN = 1'b0,
             BRK_BRAM_WEN = 4'b0000,
@@ -357,12 +357,12 @@ module ml505top
             P_SERIAL1_TX  = UART_MIPSY_Tx,
             UART_PHY_RX   = P_SERIAL2_RX,
             P_SERIAL2_TX = UART_PHY_Tx;
-`else
+end else begin:_PLOP_ELSE_
     assign P_SERIAL1_TX = 1'b1, P_SERIAL2_TX = 1'b1;
-`endif
+end endgenerate //COLT45_PLOP
 
 
-`ifdef COLT45_BRK
+generate if (COLT45_BRK) begin:_BRK_TOP_
 /*  BRK coordinator:
 
     Intercept/Trace relative to BRK (towards CPU):
@@ -426,8 +426,8 @@ module ml505top
     endfunction
 
     wire [35: 0] CS0, CS1;
-    cs_icon_3 CS_ICON (
-        .CONTROL0(CS0), .CONTROL1(CS1), .CONTROL2(SCOPE_CPU) // INOUT BUS [35:0]
+    cs_icon_2 CS_ICON (
+        .CONTROL0(CS0), .CONTROL1(CS1) // INOUT BUS [35:0]
     ) /* synthesis syn_noprune=1 */;
 
     wire [ 7: 0] BRK_ACTION, BRK_EN /* synthesis syn_noprune=1 */;
@@ -465,7 +465,7 @@ module ml505top
     wire BRK_isEN = |BRK_EN;
     wire BRK_isHIT = |(BRK_HIT & BRK_EN);
 
-    assign BRK_STATUS[7:0] = { rst_or_init, any_stall, button_reset, button_stall,
+    assign BRK_STATUS[7:0] = { rst_or_init, any_stall, button_reset, man_stall,
                                 debug_brk, debug_jog, BRK_isEN, BRK_isHIT };
 
     assign debug_reset = BRK_ACTION[7];
@@ -474,26 +474,29 @@ module ml505top
     assign debug_jog = BRK_ACTION[4];
     assign SERIAL_JTAG = BRK_ACTION[1];
     assign BRK_MASTER = BRK_ACTION[0];
-`else
+end else begin:_BRK_TOP_ELSE_
+    assign {debug_reset,debug_stall,debug_brk,debug_jog} = 4'b0000;
+    assign {BRK_MASTER,SERIAL_JTAG} = 2'b00;
+end endgenerate //COLT45_BRK
+
+
+`else //! :: COLT45_KILLFUN
+//Gather DUPLICATES of the "disabled state" assigns here in case KILLFUN is used :(
+
+    //COLT45_PLOP
+    assign P_SERIAL1_TX = 1'b1, P_SERIAL2_TX = 1'b1;
+
+    // COLT45_BRK
     assign {debug_reset,debug_stall,debug_brk,debug_jog} = 4'b0000;
     assign {BRK_MASTER,SERIAL_JTAG} = 2'b00;
 
-//    cs_icon_1 CS_ICON (
-//        .CONTROL0(SCOPE_CPU) // INOUT BUS [35:0]
-//    ) /* synthesis syn_noprune=1 */;
-`endif
+    //COLT45_SCOPE
+    //  Just leave cs_icon line dangling (is inout)
+
+`endif //COLT45_KILLFUN
 
 
-// Patch course IO into generic IO board pins
-`ifdef COLT45_StallFORCE
-    assign man_stall_toggle = 1'b1;
-`else
-`ifdef COLT45_StallDIP
-    assign man_stall_toggle = GPIO_DIP[0];
-`else
-    assign man_stall_toggle = 1'b0;
-`endif
-`endif
+//Patchwork to outer world (PINS)
     assign button_reset = GPIO_COMPPB[0];   // Center PushButton on "compass"
     //assign button_reset = GPIO_COMPPB[2];   // South PushButton on "compass"
     assign GPIO_COMPLED = {button_reset, 1'b0, man_stall_toggle, 2'b00};
@@ -537,8 +540,8 @@ module ml505top
         .CLKFBIN(pll_fb), .CLKFBOUT(pll_fb), .LOCKED(pll_lock)
     );
 
+//TODO: BUFG the global reset too? Doing that & delay/sync with slowest clock could help?
     // Buffer reset/clocks for general use
-//TODO: BUFG the global reset too?
     IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
     BUFG  cpu_clk_buf  ( .I(clk50),    .O(cpu_clk_g)  );
     BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );

@@ -33,8 +33,7 @@ module DumpMemCPU #(
 
 //BRK tap (will become internal instead)
     input brk,
-    output [0:1023] trace,
-    inout  [35: 0] SCOPE_CPU
+    output [0:1023] trace
 );
 
     `BUS_CPUGlobal_type CPUGlobal;

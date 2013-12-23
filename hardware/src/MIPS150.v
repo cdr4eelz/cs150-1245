@@ -3,6 +3,7 @@
 module MIPS150 #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
+    parameter COLT45_BRK=0, COLT45_SCOPE=0,
     parameter COLT45_SCRATCH=0, COLT45_PC=0,
     parameter COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
@@ -35,11 +36,9 @@ module MIPS150 #(
 
 //BRK tap (will become internal instead)
     input brk,
-    output [0:1023] trace,
-    inout  [35: 0] SCOPE_CPU
+    output [0:1023] trace
 );
 
-    localparam ENABLE_BRK=0, ENABLE_SCOPE=0;
 
 // CP4+
     assign gp_code=32'd0, gp_frame=32'd0;
@@ -300,43 +299,28 @@ module MIPS150 #(
       /*.enb(1'b1)*/ .doutb(INST_IB)
     ) /* synthesis syn_noprune=1 */;
 
-    //TODO: Rename MEMIOPlex := UARTRVA (new MEMIOPlex houses MEM/MMIO)
-    `BUS_SHAKE_type(8) UATX, UARX;
-    MEMIOPlex iomap_uart
+    `BUS_SHAKE_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
+    MEMIOPlex memiomap
     ( .clk(clk), .rst(rst), .ena(~stall && _hot_IO),
         .addra(MemAddr__M[13:2]),
         .douta(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
         .RVA_RX(UARX), .RVA_TX(UATX)
-    );
-    wire Rx_Ready, Rx_Valid, Tx_Valid, Tx_Ready;
-    wire [7:0] Rx_Data, Tx_Data;
-    BUS_SHAKE_tun #(.InWidth(8)) TUN_SHAKE_Rx
-    ( ._BUS_(UARX),
-        .DataReady(Rx_Ready),
-        .DataValid(Rx_Valid), .Data(Rx_Data)
-    );
-    BUS_SHAKE_tap #(.InWidth(8)) TAP_SHAKE_Tx
-    ( ._BUS_(UATX),
-        .DataValid(Tx_Valid), .Data(Tx_Data),
-        .DataReady(Tx_Ready)
-    );
-    UART #(.ClockFreq(ClockFreq)) uart
-    ( .Clock(clk), .Reset(rst),
-        // Receiver     (handshakes go both in/out)
-        .SIn(FPGA_SERIAL_RX),
-        .DataOut(Rx_Data), .DataOutValid(Rx_Valid), .DataOutReady(Rx_Ready),
-        // Transmitter  (handshakes go both in/out)
-        .SOut(FPGA_SERIAL_TX),
-        .DataIn(Tx_Data), .DataInValid(Tx_Valid), .DataInReady(Tx_Ready)
-    );
+    ) /* synthesis syn_noprune=1 */;
 
+    UARTRVA #(.ClockFreq(ClockFreq)) uartrva
+    ( .Clock(clk), .Reset(rst),
+        .SIn(FPGA_SERIAL_RX), .UARX(UARX), //Receiver
+        .UATX(UATX), .SOut(FPGA_SERIAL_TX) //Transmitter
+    ) /* synthesis syn_noprune=1 */;
 
 
 //=============DEBUGGING TOOLS BELOW THIS POINT=============
 
-/*
-//For examining waveform/timing impact of each variation simultaneously
+`ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
+
+generate if (0) begin:_LATCHLINGS_
+    //For examining waveform/timing impact of each variation simultaneously
     wire [31: 0] PC_DX0, PC_DX1, PC_DX2, PC_DX3;
     wire [31: 0] INST_DX0, INST_DX1, INST_DX2, INST_DX3;
     PipelineRegister #( .Width(32), .Mode(0) )
@@ -355,9 +339,10 @@ module MIPS150 #(
         REG_INST_DX2 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX2) );
     PipelineRegister #( .Width(32), .Mode(3) )
         REG_INST_DX3 ( .CPUGlobal(CPUGlobal),  .In(INST_DATA),   .Out(INST_DX3) );
-*/
+end endgenerate //_LATCHLINGS_
 
-`ifdef ENABLE_BRK
+
+generate if (COLT45_BRK) begin:_BRK_
 assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
     PC_DX,              INST_DX,            StepCount,          PCBranch_DX_WF_,
@@ -376,11 +361,14 @@ assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit a
 
     256'd0
 };
-`endif //ifdef ENABLE_BRK
+end endgenerate //COLT45_BRK
 
-`ifdef ENABLE_SCOPE
-// Having constraint trouble when attempting ILA inclusion (some signals getting munched out???)
-wire [1023:0] scoper = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
+
+generate if (COLT45_SCOPE) begin:_SCOPE_
+//TODO: Fix trouble between ILA & DDR (maybe I have lingering self-eating logic-loop)
+
+wire [1023:0] scoper = {
+// 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
     PC_DX,              INST_DX,            StepCount,          PCBranch_DX_WF_,
     FWD_rd1,            FWD_rd2,            REGFILE_wd,
@@ -399,30 +387,36 @@ wire [1023:0] scoper = { // 4 segments of 8 values is 32 values (each 32-bit or 
 
     INST_ADDR,          INST_DATA,          StallCount,         PC_M,
     {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_M},  {9'd0,IControl__M}
-
 };
 
-//wire [767:0] CS_DATA = scoper[767:0]  /* synthesis syn_noprune=1 */;
-wire [36:0] CS_TRIG0 = {5'd0, FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
-                        REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
-                        _hot_IO,_hot_BR,_hot_IC,_hot_DC,
-                        _hot_IB,_hot_DB,~rst,stall};
-wire [36:0] CS_TRIG1 = {5'd0, PC_DX};
-wire [36:0] CS_TRIG2 = {5'd0, INST_DX};
-wire [36:0] CS_TRIG3 = {5'd0, StepCount};
-cs_ila_1024 CS_ILA ( .CONTROL(SCOPE_CPU),
-    .CLK(clk),
-    .DATA( scoper ), // IN BUS [767:0]
-    .TRIG0( CS_TRIG0 ), // IN BUS [36:0]
-    .TRIG1( CS_TRIG1 ), // IN BUS [36:0]
-    .TRIG2( CS_TRIG2 ), // IN BUS [36:0]
-    .TRIG3( CS_TRIG3 )  // IN BUS [36:0]
-) /* synthesis syn_noprune=1 */;
-`endif //ifdef ENABLE_SCOPE
+    wire [36:0] CS_TRIG0 = {5'd0, FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
+                            REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
+                            _hot_IO,_hot_BR,_hot_IC,_hot_DC,
+                            _hot_IB,_hot_DB,~rst,stall};
+    wire [36:0] CS_TRIG1 = {5'd0, PC_DX};
+    wire [36:0] CS_TRIG2 = {5'd0, INST_DX};
+    wire [36:0] CS_TRIG3 = {5'd0, StepCount};
 
+    wire [35: 0] cs_icon_scope;
+    cs_icon_1 CS_ICON (
+        .CONTROL0(cs_icon_scope) // INOUT BUS [35:0]
+    ) /* synthesis syn_noprune=1 */;
+
+    cs_ila_1024 CS_ILA ( .CONTROL(cs_icon_scope),
+        .CLK(clk),
+        .DATA( scoper ), // IN BUS [767:0]
+        .TRIG0( CS_TRIG0 ), // IN BUS [36:0]
+        .TRIG1( CS_TRIG1 ), // IN BUS [36:0]
+        .TRIG2( CS_TRIG2 ), // IN BUS [36:0]
+        .TRIG3( CS_TRIG3 )  // IN BUS [36:0]
+    ) /* synthesis syn_noprune=1 */;
+end endgenerate //COLT45_SCOPE
+
+
+// SIMULATION ONLY business
 
 // synthesis translate_off
-generate if (COLT45_STEPMAX > 0) begin:_STEPS_
+generate if (COLT45_STEPMAX) begin:_STEPS_
     reg [15:0] DBG_cycle, DBG_step;
     initial begin
         $display ("%m");
@@ -475,7 +469,7 @@ generate if (COLT45_STEPMAX > 0) begin:_STEPS_
         $display("%d]      : %b", DBG_cycle, IControl_M); // Make a task to break into fields
         $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
     end
-end endgenerate
+end endgenerate //COLT45_STEPMAX
 
 task DUMP_PC; begin
     $display("PC: [%d] PC_DX=%h INST_DX=%h PC_M=%h", StepCount, PC_DX, INST_DX, PC_M);
@@ -485,7 +479,7 @@ generate if (COLT45_PC) begin:_PC_
     always@(posedge clk) if (~stall && ~rst) begin
         DUMP_PC();
     end
-end endgenerate
+end endgenerate //COLT45_PC
 
 generate if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "care" at clock edge
     always@(posedge clk) if (!rst) begin
@@ -527,5 +521,6 @@ generate if (COLT45_SCRATCH) begin:_SCRATCH_
 end endgenerate
 
 // synthesis translate_on
+`endif //COLT45_KILLFUN (either def/ndef check)
 
 endmodule
