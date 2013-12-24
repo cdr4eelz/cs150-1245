@@ -1,3 +1,3 @@
 start PipelineBorderTestbench
 log -r /*
-run 1000us
+run 5000us

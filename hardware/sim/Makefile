@@ -48,6 +48,6 @@ $(TRANSCRIPT) : results/%.transcript : build/%.do $(STATUS) $(TESTINPUTSBUILD) |
 	cp build/vsim.wlf $(patsubst %.transcript,%.wlf,$@)
 
 clean:
-	rm -rf results build
+	rm -rf results/* build
 
 .PHONY := all clean compile

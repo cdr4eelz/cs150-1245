@@ -22,15 +22,8 @@ generate
     end else if (Mode == 2) begin:PASSRESET
         // *Synchronously* apply reset but totally IGNORE enable.
         reg SyncReset;
-        always @(posedge clk) begin
-            SyncReset <= rst;
-        end
-        always @(*) begin
-            if (SyncReset)
-                Out = ResetValue;
-            else
-                Out = In; // Both cases fully covered
-        end
+        always @(posedge clk) SyncReset <= rst;
+        always @(*) Out = (SyncReset) ? ResetValue : In;
     end else if (Mode == 1) begin:LATCHIEMUX
         // *Synchronously* consider reset & enable and
         //   register associated override value on posedge clk,
@@ -39,22 +32,27 @@ generate
         reg [Width-1:0] OverOut;
         reg OverRide;
         always @(posedge clk) begin //Synchronously capture value & stall
-            if (rst) begin
-                OverOut <= ResetValue;
-                OverRide <= 1'b1;
-            end else begin
-                OverRide <= stall; //Sample stall synchronously for next cycle's OverRide state
-                if (!OverRide) OverOut <= In; //If last-cycle wasn't OverRiden, admit new potential OverOut
-            end
+            case (rst)
+                1'b1: begin
+                    OverOut <= ResetValue;
+                    OverRide <= 1'b1;
+                end
+                1'b0: begin
+                    OverRide <= stall; //Sample stall synchronously for next cycle's OverRide state
+                    if (!OverRide) OverOut <= In; //If last-cycle wasn't OverRiden, admit new potential OverOut
+                end
+            endcase
         end
         always @(*) Out = (OverRide) ? OverOut : In; //The latchie portion (but based on synchronized OverRide)
     end else begin:REGGIEREG
         // Basic register with sync-reset & sync-enable (enable = !stall).
         //  Only admit new value if !stall.
         always @(posedge clk) begin
-            if (rst) Out <= ResetValue;
-            else if (!stall) Out <= In;
-            //else hold value
+            if (rst === 1) begin
+                Out <= ResetValue;
+            end else if (stall === 0) begin
+                Out <= In;
+            end //else hold value
         end
     end
 endgenerate

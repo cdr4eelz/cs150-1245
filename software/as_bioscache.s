@@ -18,9 +18,9 @@ _start:
     lui     $s7, 0
     lui     $k0, 0
     lui     $k1, 0
-    lui     $gp, 0x1000
-    lui     $fp, 0x1001
-    li      $sp, 0x10010000
+    lui     $gp, 0x1700
+    lui     $fp, 0x1E00
+    li      $sp, 0x1E000000
     nop
     jal     main
     j       _start
