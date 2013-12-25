@@ -11,28 +11,27 @@ module StageF #(
     input  [31: 0] PCBranch,
     input          DOBranch,
     //Instruction related counters & reset (synchronous)
-    output reg [COUNTERWIDTH-1:0] CycleCount, StallCount, StepCount,
-    input ResetCounters
+    output reg [COUNTERWIDTH-1:0] CNT_Cycle, CNT_Stall, CNT_Step
 );
 
     reg [31: 0] PC_REG;
     always @(posedge clk) begin
-        if (rst) begin
+        //Trying to make it easy to map into LUT/SYNC-FF(reset/enable)
+        if (rst) begin:_PC_
             PC_REG <= BOOTPC;
         end else if (!stall) begin
             PC_REG <= PCNext_;
         end
 
-        if (rst || ResetCounters) begin
-            CycleCount <= 0;
-            StallCount <= 0;
-            StepCount <= 0;
+        //Hoping to map to nice counters (could use utility modules instead)
+        if (rst) begin:_CPU_COUNTERS_
+            {CNT_Cycle, CNT_Stall, CNT_Step} <= 0;
         end else begin
-            CycleCount <= CycleCount+1;
+            CNT_Cycle <= CNT_Cycle+1;
             if (stall) begin
-                StallCount <= StallCount+1;
+                CNT_Stall <= CNT_Stall+1;
             end else begin
-                StepCount <= StepCount+1;
+                CNT_Step <= CNT_Step+1;
             end
         end
     end

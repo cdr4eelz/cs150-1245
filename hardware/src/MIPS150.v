@@ -3,7 +3,7 @@
 module MIPS150 #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
-    parameter COLT45_BRK=0, COLT45_SCOPE=0,
+    parameter COLT45_BRK=0, COLT45_SCOPE=1,
     parameter COLT45_SCRATCH=0, COLT45_PC=0,
     parameter COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
@@ -88,13 +88,15 @@ module MIPS150 #(
 
     // Declare outputs of F stage
     wire [31: 0] PC_F, PC4_F, PCNext_F_;
-    wire [31: 0] CycleCount, StallCount, StepCount;
+    wire [64: 0] CNT_Cycle, CNT_Step, CNT_Stall;
     StageF #(
-        .COUNTERWIDTH(32)//, .BOOTPC(32'h6_000_0000) //TODO: Change back to default/BIOS
+        .BOOTPC(32'h4_000_0000), //NOTE: h6_000_0000 for SCRATCH_IMEM
+        .COUNTERWIDTH(64)
     ) s_F ( .clk(clk), .rst(rst), .stall(stall),
         .DOBranch(DOBranch_DX_F_), .PCBranch(PCBranch_DX_F_),
         .PC(PC_F), .PC4(PC4_F), .PCNext_(PCNext_F_),
-        .CycleCount(CycleCount), .StallCount(StallCount), .StepCount(StepCount)
+        //CPU Counters (for debug/trace)
+        .CNT_Cycle(CNT_Cycle), .CNT_Step(CNT_Step), .CNT_Stall(CNT_Stall)
     );
     reg [31: 0] INST_F_; //Instruction fetch coordinated here but handled in StageMW module
 //TODO: Declare related "async" line & rename this for stage-of-origin
@@ -202,7 +204,7 @@ module MIPS150 #(
     wire  [31: 0]   MemAddr_MW;
     wire  [31: 0]   RegWValue_MW;
     wire  [31: 0]   PC_MW;
-//TODO: Register only RESULT & CONTROL signals for driving POST-clock handling of it!
+//TODO: Register only RESULT & CONTROL signals for driving POST-clock handling
     PipelineBorder #( .Width(`BUS_ICTL_width) )
         PIPR_IControl_M   ( .clk(clk), .rst(rst), .stall(stall),
                             .In(IControlDX_),   .Out(IControl_MW  ) );
@@ -230,7 +232,7 @@ module MIPS150 #(
         ._MemWValue (MemWValue__MW), .RegWValue  (RegWValue_MW),
         ._PCinBIOS  (PC__MW[30]), //TODO: Verify ok to just use 1 bit
         //Feedbacks to "prior" stages (forwarding & instruction fetch)
-        .WBK_Reg_   (WBKReg_MW_F_), .WBK_Val_   (WBKDat_MW_F_),
+        .WBK_Reg_   (WBKReg_MW_F_),  .WBK_Val_   (WBKDat_MW_F_),
         .WBK_CanFWD_(WBKCanFWD_MW_F_),
         //Memory/MMIO "pre-clock" drives OUT
         ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
@@ -256,7 +258,7 @@ module MIPS150 #(
     end
     wire [31: 0] INST_ISR, INST_IB, INST_BR, INST_IC;
     always @(*) begin
-        INST_F_ = 0; //TODO: Clever halt/jump/exception on bad address?
+        INST_F_ = 0; //TODO: Clever way to halt/jump/exception on bad address?
         case (PC_F[31:28]) //INST_ISR, INST_IB, INST_BR, INST_IC
             4'b1100: INST_F_ = INST_ISR; //0xC
 `ifndef COLT45_STRICT
@@ -331,11 +333,12 @@ module MIPS150 #(
 
     `BUS_SHAKE_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
     MEMIOPlex memiomap
-    ( .clk(clk), .rst(rst), .ena(!stall && _hot_IO),
+    ( .clk(clk), .rst(rst), .stall(stall), //NOTE: stall currently only used for counter.
+        .ena(!stall && _hot_IO), //NOTE: Manage "ena" as with actual memories
         .addra(MemAddr__MW[13:2]),
         .douta(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
-        .RVA_RX(UARX), .RVA_TX(UATX)
+        .RVa_RX(UARX), .RVa_TX(UATX)
     ) /* synthesis syn_noprune=1 */;
 
     UARTRVA #(.ClockFreq(ClockFreq)) uartrva
@@ -383,19 +386,19 @@ end endgenerate //_LATCHLINGS_
 generate if (COLT45_BRK) begin:_BRK_
 assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
-    PC_DX,              INST__DX,            StepCount,          PCBranch_DX_F_,
+    PC_DX,              INST__DX,           CNT_Step,           PCBranch_DX_F_,
     FWD_rd1,            FWD_rd2,            REGFILE_wd,
         {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
             REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
             _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,!rst,stall},
 
     RData_IO,           RData_BR,           RData_DC,           RData_DB,
-    MemAddr_MW,          MemAddr__MW,         _WDataMasked,
+    MemAddr_MW,         MemAddr__MW,        _WDataMasked,
         {16'h1234,
             _WriteMask,_ByteMask,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
 
-    PC_F,          INST_F_,          StallCount,         PC_MW,
-    {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_MW},  {9'd0,IControl__MW},
+    PC_F,               INST_F_,            CNT_Stall,          PC_MW,
+    {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_MW}, {9'd0,IControl__MW},
 
     256'd0
 };
@@ -408,7 +411,7 @@ generate if (COLT45_SCOPE) begin:_SCOPE_
 wire [1023:0] scoper = {
 // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
-    PC_DX,              INST__DX,            StepCount,          PCBranch_DX_F_,
+    PC_DX,              INST__DX,           CNT_Step,           PCBranch_DX_F_,
     FWD_rd1,            FWD_rd2,            REGFILE_wd,
         {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
             REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
@@ -423,8 +426,8 @@ wire [1023:0] scoper = {
             latchedMASK,4'd0,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
 */
 
-    PC_F,          INST_F_,          StallCount,         PC_MW,
-    {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_MW},  {9'd0,IControl__MW}
+    PC_F,               INST_F_,            CNT_Stall,          PC_MW,
+    {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_MW}, {9'd0,IControl__MW}
 };
 
     wire [36:0] CS_TRIG0 = {5'd0, FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
@@ -433,7 +436,7 @@ wire [1023:0] scoper = {
                             _hot_IB,_hot_DB,!rst,stall};
     wire [36:0] CS_TRIG1 = {5'd0, PC_DX};
     wire [36:0] CS_TRIG2 = {5'd0, INST__DX};
-    wire [36:0] CS_TRIG3 = {5'd0, StepCount};
+    wire [36:0] CS_TRIG3 = {5'd0, CNT_Step};
 
     wire [35: 0] cs_icon_scope;
     cs_icon_1 CS_ICON (
@@ -502,7 +505,7 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
         $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stall, DBG_step);
         // DOBranch_DX_F_
         $display("%d]    /F: %h *%d", DBG_cycle, PCBranch_DX_F_, DOBranch_DX_F_);
-        $display("%d]  F/DX: %h %h #%d", DBG_cycle, PC_DX, INST__DX, StepCount);
+        $display("%d]  F/DX: %h %h #%d", DBG_cycle, PC_DX, INST__DX, CNT_Step);
         $display("%d]DX/MW : %h <=%h", DBG_cycle, PC_MW, RegWValue_MW);
         $display("%d]      : %b", DBG_cycle, IControl_MW); // Make a task to break into fields
         $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
@@ -510,7 +513,7 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
 end endgenerate //COLT45_STEPMAX
 
 task DUMP_PC; begin
-    $display("PC: [%d] PC_DX=%h INST__DX=%h PC_MW=%h", StepCount, PC_DX, INST__DX, PC_MW);
+    $display("PC: [%d] PC_DX=%h INST__DX=%h PC_MW=%h", CNT_Step, PC_DX, INST__DX, PC_MW);
 end endtask
 
 generate if (COLT45_PC) begin:_PC_
