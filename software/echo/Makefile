@@ -1,4 +1,4 @@
 TARGET ?= echo
-LDSTYLE ?= inject_bram
+LDSTYLE ?= inject_basic
 
 include ../Makefile.llvm.in

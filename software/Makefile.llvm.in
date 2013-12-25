@@ -1,4 +1,4 @@
-LDSTYLE ?= inject_bram
+LDSTYLE ?= inject_basic
 LDSRC ?= ../$(LDSTYLE).ld
 START ?= ../$(LDSTYLE).s
 

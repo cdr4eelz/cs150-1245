@@ -2,12 +2,18 @@
 .global     _start
 
 _start:
-    li      $ra, 0x40000000
+    j       main # Kinda like a mini jumptable
     nop
-    j       main            //This is "j" for jump, calle returns to BIOS
+nop#j       exception
     nop
-    li      $ra, 0x40000000
     nop
-    jr      $ra
     nop
-
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
