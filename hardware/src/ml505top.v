@@ -269,7 +269,7 @@ module ml505top
 generate if (COLT45_PLOP) begin:_PLOP_
     // Global PLOP lines
     wire PLOP_RST_AUX, PLOP_RST_Periph;
-    wire MM0_IRQ0, MB0_IRQ1, MB0_Error, MB0_Halted;
+    wire MB0_IRQ0, MB0_IRQ1, MB0_Error, MB0_Halted;
     wire BIOS_BRAM_Clk, BIOS_BRAM_En;
     wire [0:3]  BIOS_BRAM_Wen;
     wire [0:31] BIOS_BRAM_Addr;

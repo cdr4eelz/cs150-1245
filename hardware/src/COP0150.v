@@ -34,6 +34,7 @@ input                           UART1Request;
 
 
 wire                            firetimer;
+wire                            firertc;
 wire        [5:0]               interrupts;
 
 

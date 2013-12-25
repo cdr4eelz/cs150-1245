@@ -1,4 +1,4 @@
 TARGET ?= dumpmem
-LDSTYLE ?= inject_bram
+LDSTYLE ?= as_bioscache
 
 include ../Makefile.llvm.in

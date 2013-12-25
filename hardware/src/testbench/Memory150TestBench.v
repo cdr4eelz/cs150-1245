@@ -71,6 +71,7 @@ module Memory150TestBench();
     wire clk200;
     wire clk200_g;
     wire pll_lock;
+    wire pll_fb;
 
     // Memory150, CPU wires
     reg  [3:0]  dcache_we;

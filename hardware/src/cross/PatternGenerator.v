@@ -12,6 +12,9 @@ module PatternGenerator #(
     output video_valid,
     input video_ready
 );
+    //Compute ideal sceen duration as # of rows (might not fall on frame boundary)
+    localparam SCENE_TICKS = CLOCK_HZ / SCENES_PER_SEC;
+
     reg validRGB;
     reg [23: 0] curRGB, nextRGB;
     reg [31: 0] curCOL, curROW, curFRAME;
@@ -20,10 +23,7 @@ module PatternGenerator #(
 
     assign video = curRGB;
     assign video_valid = validRGB;
-    assign advanceRVA = video_valid && video_ready; //reset will trump this
-
-    //Compute ideal sceen duration as # of rows (might not fall on frame boundary)
-    localparam SCENE_TICKS = CLOCK_HZ / SCENES_PER_SEC;
+    wire advanceRVA = video_valid && video_ready; //reset will trump this
 
     //Could use fast-counter/pixelrange util instead of our own
     wire rollCOL = (curCOL >= SCREEN_WIDTH-1);
