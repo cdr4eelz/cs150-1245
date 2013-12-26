@@ -2,18 +2,6 @@
 .global     _start
 
 _start:
-    j       main # Kinda like a mini jumptable
-    nop
-nop#j       exception
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
+    lui     $sp, 0x1001
+    lui     $ra, 0x4000
+    j       main

@@ -3,7 +3,7 @@
 module MIPS150 #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
-    parameter COLT45_BRK=0, COLT45_SCOPE=1,
+    parameter COLT45_BRK=0, COLT45_SCOPE=0,
     parameter COLT45_SCRATCH=0, COLT45_PC=0,
     parameter COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
@@ -349,44 +349,12 @@ module MIPS150 #(
 
 
 //=============DEBUGGING TOOLS BELOW THIS POINT=============
-
 `ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
-
-generate if (0) begin:_LATCHLINGS_
-    //For examining waveform/timing impact of each variation simultaneously
-    wire [31: 0] PC_DX0, PC_DX1, PC_DX2, PC_DX3;
-    wire [31: 0] INST_DX0, INST_DX1, INST_DX2, INST_DX3;
-    PipelineBorder #( .Width(32), .Mode(0) )
-        PIPR_PC_DX0   ( .clk(clk), .rst(rst), .stall(stall),
-                        .In(PC_F),   .Out(PC_DX0) );
-    PipelineBorder #( .Width(32), .Mode(1) )
-        PIPR_PC_DX1   ( .clk(clk), .rst(rst), .stall(stall),
-                        .In(PC_F),   .Out(PC_DX1) );
-    PipelineBorder #( .Width(32), .Mode(2) )
-        PIPR_PC_DX2   ( .clk(clk), .rst(rst), .stall(stall),
-                        .In(PC_F),   .Out(PC_DX2) );
-    PipelineBorder #( .Width(32), .Mode(3) )
-        PIPR_PC_DX3   ( .clk(clk), .rst(rst), .stall(stall),
-                        .In(PC_F),   .Out(PC_DX3) );
-    PipelineBorder #( .Width(32), .Mode(0) )
-        PIPR_INST_DX0 ( .clk(clk), .rst(rst), .stall(stall),
-                        .In(INST_F_),   .Out(INST_DX0) );
-    PipelineBorder #( .Width(32), .Mode(1) )
-        PIPR_INST_DX1 ( .clk(clk), .rst(rst), .stall(stall),
-                        .In(INST_F_),   .Out(INST_DX1) );
-    PipelineBorder #( .Width(32), .Mode(2) )
-        PIPR_INST_DX2 ( .clk(clk), .rst(rst), .stall(stall),
-                        .In(INST_F_),   .Out(INST_DX2) );
-    PipelineBorder #( .Width(32), .Mode(3) )
-        PIPR_INST_DX3 ( .clk(clk), .rst(rst), .stall(stall),
-                        .In(INST_F_),   .Out(INST_DX3) );
-end endgenerate //_LATCHLINGS_
-
 
 generate if (COLT45_BRK) begin:_BRK_
 assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
-    PC_DX,              INST__DX,           CNT_Step,           PCBranch_DX_F_,
+    PC_DX,              INST__DX,           CNT_Step[31:0],     PCBranch_DX_F_,
     FWD_rd1,            FWD_rd2,            REGFILE_wd,
         {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
             REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
@@ -397,7 +365,7 @@ assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit a
         {16'h1234,
             _WriteMask,_ByteMask,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
 
-    PC_F,               INST_F_,            CNT_Stall,          PC_MW,
+    PC_F,               INST_F_,            CNT_Stall[31:0],    PC_MW,
     {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_MW}, {9'd0,IControl__MW},
 
     256'd0
@@ -408,10 +376,10 @@ end endgenerate //COLT45_BRK
 generate if (COLT45_SCOPE) begin:_SCOPE_
 //TODO: Fix trouble between ILA & DDR (maybe I have lingering self-eating logic-loop)
 
-wire [1023:0] scoper = {
-// 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
+wire [767:0] scoper = {
+// 3 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
-    PC_DX,              INST__DX,           CNT_Step,           PCBranch_DX_F_,
+    PC_DX,              INST__DX,           CNT_Step[31:0],     PCBranch_DX_F_,
     FWD_rd1,            FWD_rd2,            REGFILE_wd,
         {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
             REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
@@ -426,8 +394,8 @@ wire [1023:0] scoper = {
             latchedMASK,4'd0,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
 */
 
-    PC_F,               INST_F_,            CNT_Stall,          PC_MW,
-    {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_MW}, {9'd0,IControl__MW}
+    PC_F,               INST_F_,            CNT_Stall[31:0],    PC_MW,
+    {9'd0,IControlDX_}, 32'd0,              32'd0,              32'd0
 };
 
     wire [36:0] CS_TRIG0 = {5'd0, FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
@@ -436,7 +404,7 @@ wire [1023:0] scoper = {
                             _hot_IB,_hot_DB,!rst,stall};
     wire [36:0] CS_TRIG1 = {5'd0, PC_DX};
     wire [36:0] CS_TRIG2 = {5'd0, INST__DX};
-    wire [36:0] CS_TRIG3 = {5'd0, CNT_Step};
+    wire [36:0] CS_TRIG3 = CNT_Step[36:0];
 
     wire [35: 0] cs_icon_scope;
     cs_icon_1 CS_ICON (
