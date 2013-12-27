@@ -1,8 +1,0 @@
-00000000  7c 2d 5d 5b 2d 40 40 40  40 40 23 00 00 00 00 2d  ||-][-@@@@@#....-|
-00000010  00 00 00 00 23 24 24 24  24 24 2d 81 82 83 84 24  |....#$$$$$-....$|
-
-|-][-@ <> #ReaD-oNLy#$ReaD-ReaD$%^<v>&
-
-send_ch() failing -- usually repeating prior sent char
-mem_xfer4() perhaps infinite/lockup?
-

@@ -1,19 +1,42 @@
-**** Could it just be unregistered RAM issue???
+::PRIORITIES::
+    More thorough instruction/asm/C tests
+    COP0 complete & test
+    ISR software
+    PixelFeeder from DDR (optional cross-clock count-estimate)
+    Reset deassert per-clock (and delay based on component)
+    FSL links & commands (allow drop-in of uBlaze coprocs)
 
+::LIKELY BUGS::
+    Bios "cp" to 0x3 I/D-caches seems to lockup
+    First run of code in I-Cache is flakey
+        Seems to run multiple times, maybe "conditional" value/test failing...
+        ...perhaps just the saving of registers to memory is messed.
+        Likely stall bugs (maybe misunderstanding about dual-write)
+    First xmit when running from I-Cache seems to get lost/corrupt:
+        Maybe stall not handled properly, maybe just part of flakey DDR run above
+
+::TOOLS::
+    Impose fake stall on regular block ram as diagnostic.
+    Cache Flush commands (for testing/debugging).
+    Archive of code in scratch IMEM ("cp" or hw-copy to DDR to fetch)
+        (If auto-copy to DDR on boot, maybe could simulate run in DDR)
+    Put common routines at steady "bios" entry-points for user-program use.
+
+::TROUBLESHOOT STEPS::
 * Reverted to sparse CP2 top & framework *
 * Verified all functions are combinational only *
 * Reviewed CASE statements (confirmed no caseX/caseZ) *
 * Attempted fresh MIG generation with ChipScope access *
+* Spot out-of-order assingments to temp variables in always@* blocks.
+* Locate all missing signals!!!
 
-Spot out-of-order assingments to temp variables in always@* blocks.
-Locate all missing signals!!!
-Figure out Post-Synthesis Simulation.
+WANT: Figure out Post-Synthesis Simulation.
 
 Latch issue with my pipeline registers, simplify, is partly synchronous, pass responsibility to subsequent component (the one peeking into prior stage).
 
 Gated clocks.
 Don't use OUTPUT as internal signal too.
-Avoid If based priority logic (maybe even for Reset signals?)
+Avoid If based priority logic (maybe even for Reset signals?) flatten & muxlike.
 
 BUS abstraction (mimick xps?)
 OPCODE as parameters rather than `define's

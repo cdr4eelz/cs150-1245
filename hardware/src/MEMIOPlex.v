@@ -1,7 +1,7 @@
 `include "cpuglobal.vh"
 
 module MEMIOPlex #(
-    parameter PREMATURE_BYTE=8'h33, COLT45_SHAKE=0
+    parameter PREMATURE_BYTE=8'h3E, COLT45_SHAKE=0
     //TODO: Config address via parameters (or live with config registers/lines)
 )(
     input clk, rst, stall, //NOTE:stall doesn't automatically override "ena"
@@ -17,7 +17,8 @@ module MEMIOPlex #(
     inout `BUS_SHAKE_type(8) RVa_RX, RVa_TX
 );
 
-    wire notwrite = !(|wea); //Like an isRead signal (almost)!
+    wire isWrite = (|wea); //TODO: Do we check "ena" for write???
+    wire isRead = ena && !isWrite;
 
 //RVA-Pair operations
     // Forward patchwork (individual ready/valid lines to consolidated RVA SHAKE below):
@@ -28,48 +29,56 @@ module MEMIOPlex #(
     wire            Tx_Valid;   // OUT: We announce a byte
     wire            Tx_Ready;   // IN : UART can take a byte from us
     // Drive these pre-clock (continuous drive) so other RVA sees them at clock
-    assign Rx_Ready = ena && notwrite && (addra==12'h003);
-    assign Tx_Valid = ena && wea[0] && (addra==12'h002);
+    assign Rx_Ready = isRead && (addra==12'h003);
+    assign Tx_Valid = isWrite && wea[0] && (addra==12'h002);
     assign Tx_Data  = (Tx_Valid) ? dina[7:0] : PREMATURE_BYTE;
 
     // Stats & Counters
     reg  [31: 0] CNT_Rx, CNT_Tx; //Minimal IO statistics
-    reg  [31: 0] CycleCount, StepCount;
+    reg  [31: 0] CycleCount, StepCount, nextCycle, nextStep;
+
+    always@(*) begin
+        nextCycle = CycleCount+1;
+        nextStep = StepCount+(~stall);
+        if (isWrite && (addra==12'h018)) begin
+            {nextCycle, nextStep} = 0;
+        end
+    end
 
     always@(posedge clk) begin
         if (rst) begin
-            {CNT_Tx, CNT_Rx} <= 0;
+            douta <= 0;
+            {CNT_Rx, CNT_Tx} <= 0;
+            {CycleCount, StepCount} <= 0;
         end else begin
-            // Update our "internal" performance counters
-            CycleCount <= CycleCount+1;
-            if (!stall) begin
-                StepCount <= StepCount+1;
-            end
+            {CycleCount, StepCount} <= {nextCycle, nextStep}; //Update performance counters
 
-            if (ena) case (addra) //ena might not apply to everything later (double-check)
-                12'h000: if (notwrite) begin
-                    if (COLT45_SHAKE && Tx_Ready) $display("MEMIO: Poll Tx (%b)   @%t", Tx_Ready, $time);
-                    douta  <= {31'b0, Tx_Ready};
-                end
-                12'h001: if (notwrite) begin
-                    if (COLT45_SHAKE && Rx_Valid) $display("MEMIO: Poll Rx (%b)   @%t", Rx_Valid, $time);
-                    douta  <= {31'b0, Rx_Valid};
-                end
-                12'h002: if (wea[0]) begin
+            if (isWrite) case (addra)
+                12'h002: begin //Just our debug & stats here (write happens from RVA signals)
                     if (COLT45_SHAKE) $display("MEMIO: Tx Shake (0x%h, %d, '%c') CNT: %d   @%t", Tx_Data, Tx_Data, Tx_Data, CNT_Tx+1, $time);
                     CNT_Tx <= CNT_Tx + 1;
                 end
-                12'h003: if (notwrite) begin
+            endcase
+
+            if (isRead) case (addra) //Perform a read (value held until next read)
+                12'h000: begin
+                    if (COLT45_SHAKE && Tx_Ready) $display("MEMIO: Poll Tx (%b)   @%t", Tx_Ready, $time);
+                    douta  <= {31'b0, Tx_Ready};
+                end
+                12'h001: begin
+                    if (COLT45_SHAKE && Rx_Valid) $display("MEMIO: Poll Rx (%b)   @%t", Rx_Valid, $time);
+                    douta  <= {31'b0, Rx_Valid};
+                end
+                12'h003: begin
                     if (COLT45_SHAKE) $display("MEMIO: Rx Shake (0x%h, %d, '%c') CNT: %d  @%t", Rx_Data, Rx_Data, Rx_Data, CNT_Rx+1, $time);
                     CNT_Rx <= CNT_Rx + 1;
                     douta <= {24'b0, Rx_Data};
                 end
-
                 12'h010: douta <= CycleCount;
                 12'h014: douta <= StepCount;
-                12'h018: {CycleCount, StepCount} <= 0;
-
+                default: douta <= 0;
             endcase
+
         end
     end
 

@@ -38,9 +38,39 @@ void store(uint32_t address, uint32_t length)
     }
 }
 
+void show_block(uint32_t address, int8_t* bufMEM, uint32_t bufLEN)
+{
+    volatile uint32_t* p = (volatile uint32_t*)(address);
+    for (uint32_t i = 0; i < 16; i++) {
+        if ((i%4)==0) {
+            uwrite_int8s("\r\n");
+            uwrite_int8s(uint32_to_ascii_hex((uint32_t) p, bufMEM, bufLEN));
+            uwrite_int8(':');
+        } else {
+            uwrite_int8(' ');
+        }
+        uwrite_int8s(uint32_to_ascii_hex(*p++, bufMEM, bufLEN));
+    }
+}
+
+uint32_t copy_xor(uint32_t pSRC, uint32_t pDST, uint32_t length)
+{
+    volatile uint32_t* s = (volatile uint32_t*)(pSRC);
+    volatile uint32_t* d = (volatile uint32_t*)(pDST);
+    uint32_t result = 0;
+    for (uint32_t i = 0; i*4 < length; i++) {
+        uint32_t val = *s++;
+        result ^= val;
+        if (pDST) {
+            *d++ = val;
+        }
+    }
+    return result;
+}
+
 
 #define BUFFER_LEN 128
-#define VERSION_CHAR '0'
+#define VERSION_CHAR '1'
 
 typedef void (*entry_t)(void);
 
@@ -109,6 +139,20 @@ int main(void)
 
             volatile uint8_t* p = (volatile uint8_t*)(address);
             *p = byte;
+        } else if (strcmp(input, "dump") == 0) {
+            uint32_t address = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+
+            show_block(address, buffer, BUFFER_LEN);
+            uwrite_int8s("\r\n");
+        } else if (strcmp(input, "cp") == 0) {
+            uint32_t a_src = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint32_t a_dst = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint32_t l_cpy = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+
+            uint32_t xor = copy_xor(a_src, a_dst, l_cpy);
+
+            uwrite_int8s(uint32_to_ascii_hex(xor, buffer, BUFFER_LEN));
+            uwrite_int8s("\r\n");
         }
     }
 
