@@ -7,6 +7,7 @@
     FSL links & commands (allow drop-in of uBlaze coprocs)
 
 ::LIKELY BUGS::
+    Can latchiemux be killed?
     Bios "cp" to 0x3 I/D-caches seems to lockup
     First run of code in I-Cache is flakey
         Seems to run multiple times, maybe "conditional" value/test failing...
@@ -14,9 +15,10 @@
         Likely stall bugs (maybe misunderstanding about dual-write)
     First xmit when running from I-Cache seems to get lost/corrupt:
         Maybe stall not handled properly, maybe just part of flakey DDR run above
+    EchoTestBench doesn't run echo.
 
 ::TOOLS::
-    Impose fake stall on regular block ram as diagnostic.
+    Impose fake stall on regular block ram as diagnostic [map d/i-cache lines -> BRAM]
     Cache Flush commands (for testing/debugging).
     Archive of code in scratch IMEM ("cp" or hw-copy to DDR to fetch)
         (If auto-copy to DDR on boot, maybe could simulate run in DDR)

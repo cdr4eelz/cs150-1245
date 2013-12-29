@@ -88,7 +88,7 @@ module MIPS150 #(
 
     // Declare outputs of F stage
     wire [31: 0] PC_F, PC4_F, PCNext_F_;
-    wire [64: 0] CNT_Cycle, CNT_Step, CNT_Stall;
+    wire [63: 0] CNT_Cycle, CNT_Step, CNT_Stall;
     StageF #(
         .BOOTPC(32'h4_000_0000), //NOTE: h6_000_0000 for SCRATCH_IMEM
         .COUNTERWIDTH(64)

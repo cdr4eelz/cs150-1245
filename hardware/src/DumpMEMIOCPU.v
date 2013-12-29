@@ -102,7 +102,7 @@ module DumpMEMIOCPU #(
         .dina ( {24'b0, TX_Data} ),
 //      .rmask( {3'b000, (STATE !== 2)} ),
         .douta( IOSTATUS ),
-        .RVA_TX (UATX), .RVA_RX(UARX)
+        .RVa_TX (UATX), .RVa_RX(UARX)
     );
 
     UARTRVA #(
