@@ -285,7 +285,7 @@ module Memory150(
         .line_wdf_din(line_wdf_din),         
         .line_wdf_mask_din(line_wdf_mask_din),  
         .line_wdf_wr_en(line_wdf_wr_en),         
-        .bypass_addr_din(128'b0), //not using this port
+        .bypass_addr_din(31'b0), //not using this port
         .bypass_af_wr_en(1'b0),  //not using this port               
         .bypass_wdf_din(128'b0),  //not using this port
         .bypass_wdf_mask_din(),  //not using this port

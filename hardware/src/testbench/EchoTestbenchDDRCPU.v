@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+`include "cpuglobal.vh"
+
 module EchoTestbenchDDRCPU;
 
     reg Clock, Reset;
@@ -169,7 +171,7 @@ module EchoTestbenchDDRCPU;
     );
 
 
-    MIPS150 DUT(
+    EchoDDRCPU DUT(
         .clk(cpu_clk_g),
         .rst(Reset || ~init_done),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
