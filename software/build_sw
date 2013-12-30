@@ -1,0 +1,4 @@
+#!/bin/bash
+
+find . -type d |xargs -n 1 -I iIi make -C iIi
+
