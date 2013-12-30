@@ -7,7 +7,6 @@
     FSL links & commands (allow drop-in of uBlaze coprocs)
 
 ::LIKELY BUGS::
-    Can latchiemux be killed?
     Bios "cp" to 0x3 I/D-caches seems to lockup
     First run of code in I-Cache is flakey
         Seems to run multiple times, maybe "conditional" value/test failing...
@@ -16,6 +15,7 @@
     First xmit when running from I-Cache seems to get lost/corrupt:
         Maybe stall not handled properly, maybe just part of flakey DDR run above
     EchoTestBench doesn't run echo.
+    Sim Makefile rebuilding everything every time
 
 ::TOOLS::
     Impose fake stall on regular block ram as diagnostic [map d/i-cache lines -> BRAM]
@@ -24,7 +24,8 @@
         (If auto-copy to DDR on boot, maybe could simulate run in DDR)
     Put common routines at steady "bios" entry-points for user-program use.
 
-::TROUBLESHOOT STEPS::
+
+::SPECIAL TROUBLESHOOT STEPS::
 * Reverted to sparse CP2 top & framework *
 * Verified all functions are combinational only *
 * Reviewed CASE statements (confirmed no caseX/caseZ) *
@@ -34,7 +35,6 @@
 
 WANT: Figure out Post-Synthesis Simulation.
 
-Latch issue with my pipeline registers, simplify, is partly synchronous, pass responsibility to subsequent component (the one peeking into prior stage).
 
 Gated clocks.
 Don't use OUTPUT as internal signal too.

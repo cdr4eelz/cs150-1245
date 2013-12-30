@@ -3,7 +3,7 @@
 module MIPS150 #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
-    parameter COLT45_BRK=0, COLT45_SCOPE=0,
+    parameter COLT45_BRK=0, COLT45_SCOPE=1,
     parameter COLT45_SCRATCH=0, COLT45_PC=0,
     parameter COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
@@ -211,27 +211,26 @@ module MIPS150 #(
     wire _hot_IB, _hot_DB;
     wire [ 3: 0] _WriteMask, _ByteMask;
     wire [31: 0] _WDataMasked;
-    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB, RData_ISR;
+    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
     StageMW s_MW
     (  .clk(clk), .rst(rst), .stall(stall),
         //Inputs
         ._IControl  (IControl__MW),  .IControl   (IControl_MW),
         ._MemAddr   (MemAddr__MW),   .MemAddr    (MemAddr_MW),
         ._MemWValue (MemWValue__MW), .RegWValue  (RegWValue_MW),
-        ._PCinBIOS  (PC_MW[30]), //TODO: Move to control signal and name PC4???
+        ._PCinBIOS  (PC_MW[31:28]==4'b0100), //TODO: Move to control signal and name PC4???
         //Feedbacks to "prior" stages (forwarding & instruction fetch)
         .WBK_Reg_   (WBKReg_MW_F_),  .WBK_Val_   (WBKDat_MW_F_),
         .WBK_CanFWD_(WBKCanFWD_MW_F_),
         //Memory/MMIO "pre-clock" drives OUT
-        ._hot_ISR(_hot_ISR),
-        ._hot_IO(_hot_IO), ._hot_BR(_hot_BR),
-        ._hot_IC(_hot_IC), ._hot_DC(_hot_DC),
-        ._hot_IB(_hot_IB), ._hot_DB(_hot_DB),
+        ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
+        ._hot_IB(_hot_IB), ._hot_DB(_hot_DB), //EXTRA: Scratchpad
+        ._hot_IC(_hot_IC), ._hot_ISR(_hot_ISR), //Write-only via I-Cache (keep fetch consistent later)
         
         ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked), ._ByteMask(_ByteMask),
         //Memory/MMIO "post-clock" results IN
         .RData_IO(RData_IO), .RData_BR(RData_BR), .RData_DC(RData_DC),
-        .RData_DB(RData_DB), .RData_ISR(RData_ISR)
+        .RData_DB(RData_DB)
     );
 
     reg [3:0] _hoti;
@@ -256,11 +255,11 @@ module MIPS150 #(
 
     always @(*) begin //Drive instruction from appropriate memory component
         case (PC_F[31:28])
-            4'b1100: INST_F_ = INST_ISR; //0xC
-            4'b0100: INST_F_ = INST_BR; //0x4
-            4'b0001: INST_F_ = INST_IC; //0x1
+            4'b1100: INST_F_ = INST_ISR; //0xC => ISR
+            4'b0100: INST_F_ = INST_BR; //0x4 => BR
+            4'b0001: INST_F_ = INST_IC; //0x1 => IC
 `ifndef COLT45_STRICT
-            4'b0110: INST_F_ = INST_IB; //EXTRA: Scratchpad-IMEM
+            4'b0110: INST_F_ = INST_IB; //EXTRA: Scratchpad-IMEM: 0x6 => IB
 `endif
             default: INST_F_ = 0; //NOP
         endcase
@@ -362,7 +361,7 @@ assign trace = {
     PC_DX[31:0],        INST__DX[31:0],     CNT_Step[31:0],     PCBranch_DX_F_[31:0],
     FWD_rd1[31:0],      FWD_rd2[31:0],      REGFILE_wd[31:0],   keywatch[31:0],
 
-    RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_ISR[31:0],
+    RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     32'd0,
     MemAddr_MW[31:0],   MemAddr__MW[31:0],  _WDataMasked[31:0],
     {8'd0, 8'd0, 8'd0, _WriteMask,_ByteMask},
 

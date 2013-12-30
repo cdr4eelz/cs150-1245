@@ -16,11 +16,13 @@ module StageMW (
     output [31: 0]  WBK_Val_,
     output          WBK_CanFWD_,
     // Memory/IO drives
-    output reg _hot_IO,_hot_BR,_hot_DC,_hot_IC,_hot_DB,_hot_IB,_hot_ISR,
+    output reg _hot_IO,_hot_BR,_hot_DC,_hot_IB,_hot_DB,_hot_IC,_hot_ISR,
     output [ 3: 0] _ByteMask, _WriteMask,
     output [31: 0] _WDataMasked,
-    input  [31: 0] RData_IO, RData_BR, RData_DC, RData_DB, RData_ISR
+    input  [31: 0] RData_IO, RData_BR, RData_DC, RData_DB
 );
+
+//TODO: Move almost all to instruction decode (makes pre/post clock activities legitimate)
 
 // _IControl taps
     wire [1:0] _MemShift;
@@ -44,10 +46,9 @@ module StageMW (
     assign _WriteMask = (_isMemWrite) ? _ByteMask : 4'b0000;
 
     always @(*) begin
-        {_hot_IO,_hot_BR,_hot_DC,_hot_IC,_hot_DB,_hot_IB,_hot_ISR} = 0;
+        {_hot_IO,_hot_BR,_hot_DC,_hot_IB,_hot_DB,_hot_IC,_hot_ISR} = 0;
         if (_isMemRead || _isMemWrite) begin
             case (_Target)
-                4'b1100: _hot_ISR = 1'b1; //ISR//
                 4'b1000: _hot_IO = 1'b1;
                 4'b0100: _hot_BR = !_isMemWrite; //Read-only
                 4'b0011: begin
@@ -56,9 +57,11 @@ module StageMW (
                     end
                 4'b0010: _hot_IC = _isMemWrite && _PCinBIOS;
                 4'b0001: _hot_DC = 1'b1;
-    `ifndef COLT45_STRICT
+`ifndef COLT45_STRICT
+                4'b0110: _hot_IB = _isMemWrite; //EXTRA: Scratchpad-DMEM
                 4'b0101: _hot_DB = 1'b1; //EXTRA: Scratchpad-DMEM
-    `endif //(!) COLT45_STRICT
+`endif //(!) COLT45_STRICT
+                4'b1100: _hot_ISR = _isMemWrite; //ISR//
             endcase
         end
     end
@@ -82,16 +85,17 @@ module StageMW (
     wire  [ 1: 0] SubIndex = MemAddr[ 1: 0];
 
     reg [31: 0] DataRead; // Registered elsewhere (is just a reg here because of always@*)
-    always @(*) case (Target) // "Target" (for read data coming out after clock) NOT "_Target"
-        4'b1100         : DataRead = RData_ISR; //ISR//
-        4'b1000         : DataRead = RData_IO;
-        4'b0100         : DataRead = RData_BR;
-        4'b0001, 4'b0011: DataRead = RData_DC;
+    always @(*) begin
+        case (Target) // "Target" (for read data coming out after clock) NOT "_Target"
+            4'b1000         : DataRead = RData_IO;
+            4'b0100         : DataRead = RData_BR;
+            4'b0001, 4'b0011: DataRead = RData_DC;
 `ifndef COLT45_STRICT //TODO: Ensure no other references to these if STRICT mode!
-        4'b0101         : DataRead = RData_DB; // Scratchpad-RAM
+            4'b0101         : DataRead = RData_DB; // Scratchpad-RAM
 `endif
-        default: DataRead = `UNKNOWN(32);
-    endcase // CAUTIOUS trapping of EVERY case
+            default: DataRead = 32'd0;
+        endcase // CAUTIOUS trapping of EVERY case
+    end
 
     wire [31: 0] DataLoad;
 //  assign DataLoad = (DataRead) << (SubIndex*8) >> (MemShift*8);
