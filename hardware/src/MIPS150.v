@@ -102,22 +102,21 @@ module MIPS150 #(
 //TODO: Declare related "async" line & rename this for stage-of-origin
 
 
-//=============| PIPELINE-BORDER: F/DX >>>=============
-    wire [31: 0] PC4_DX, INST_DX;
-    PipelineBorder #( .Width(32) )
+//=============--- "PIPELINE"-PEEK: F/DX ---=============
+//TODO: Eliminate/Clarify peek-ahead from prior cycle
+    wire [31: 0] INST__DX = INST_F_; //Note: Mux-select on PC_F but at mercy of memory register (glitch?)
+//===============| PIPELINE-BORDER: F/DX >>>=============
+    wire [31: 0] PC4_DX, INST_DX, PC_DX;
+    PipelineRegister #( .Width(32) )
         PIPR_PC4_DX   ( .clk(clk), .rst(rst), .stall(stall),
                         .In(PC4_F),   .Out(PC4_DX) );
-    PipelineBorder #( .Width(32) )
+    PipelineRegister #( .Width(32) )
         PIPR_INST_DX  ( .clk(clk), .rst(rst), .stall(stall),
                         .In(INST_F_),   .Out(INST_DX) );
-    wire [31: 0] PC_DX, INST__DX;
-    PipelineBorder #( .Width(32) )
+    PipelineRegister #( .Width(32) )
         PIPR_PC_DX    ( .clk(clk), .rst(rst), .stall(stall),
                         .In(PC_F),   .Out(PC_DX) );
-    PipelineBorder #( .Width(32), .Mode(1) ) //NOTE: Presumes pre-registered except on stall
-        PIPR_INST__DX ( .clk(clk), .rst(rst), .stall(stall),
-                        .In(INST_F_),   .Out(INST__DX) );
-//=============<<< PIPELINE-BORDER: F/DX |=============
+//=============<<< PIPELINE-BORDER: F/DX |===============
 
 
     // REGFILE async-read via DX-stage but sync-write via M-stage WB
@@ -166,7 +165,7 @@ module MIPS150 #(
     `BUS_ICTL_type IControlDX_;
     wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_;
     StageDX s_DX
-    ( .clk(clk), .rst(rst), .stall(stall),
+    ( //NOTE: Currently async: .clk(clk), .rst(rst), .stall(stall),
         //Async regfile reads & COP access
         .REG_R1_(REGFILE_ra1), .REG_D1_(FWD_rd1),
         .REG_R2_(REGFILE_ra2), .REG_D2_(FWD_rd2),
@@ -182,45 +181,34 @@ module MIPS150 #(
     );
 
 
-//=============| PIPELINE-BORDER: DX/M >>>=============
-    `BUS_ICTL_type IControl__MW;
-    wire  [31: 0]   MemAddr__MW;
-    wire  [31: 0]   MemWValue__MW;
-    wire  [31: 0]   PC__MW; //TODO: Don't bother with entire 32-bits, just "from-bios" control!
-    PipelineBorder #( .Width(`BUS_ICTL_width), .Mode(1) ) //NOTE:MODE-3 vs MODE-1
-        PIPR_IControl__MW ( .clk(clk), .rst(rst), .stall(stall),
-                            .In(IControlDX_),   .Out(IControl__MW ) );
-    PipelineBorder #( .Width(32),              .Mode(1) ) //NOTE:MODE-3 vs MODE-1
-        PIPR_MemAddr__MW  ( .clk(clk), .rst(rst), .stall(stall),
-                            .In(MemAddrDX_  ),  .Out(MemAddr__MW  ) );
-    PipelineBorder #( .Width(32),              .Mode(1) ) //NOTE:MODE-3 vs MODE-1
-        PIPR_MemWValue__MW( .clk(clk), .rst(rst), .stall(stall),
-                            .In(MemWValueDX_),  .Out(MemWValue__MW) );
-    PipelineBorder #( .Width(32),              .Mode(1) ) //NOTE:MODE-3 vs MODE-1
-        PIPR_PC__MW       ( .clk(clk), .rst(rst), .stall(stall),
-                            .In(PC_DX       ),  .Out(PC__MW       ) );
-    // MODE-3 could be ok for those 
+//=============--- "PIPELINE"-PEEK: DX/M ---=============
+//TODO: Eliminate/Clarify peek-ahead from prior cycle
+    `BUS_ICTL_type  IControl__MW = IControlDX_;
+    wire  [31: 0]   MemAddr__MW = MemAddrDX_;
+    wire  [31: 0]   MemWValue__MW = MemWValueDX_;
+//===============| PIPELINE-BORDER: DX/M >>>=============
     `BUS_ICTL_type IControl_MW;
     wire  [31: 0]   MemAddr_MW;
     wire  [31: 0]   RegWValue_MW;
-    wire  [31: 0]   PC_MW;
+    wire  [31: 0]   PC_MW; //TODO: Don't bother with entire 32-bits, just "from-bios" control!
 //TODO: Register only RESULT & CONTROL signals for driving POST-clock handling
-    PipelineBorder #( .Width(`BUS_ICTL_width) )
+    PipelineRegister #( .Width(`BUS_ICTL_width) )
         PIPR_IControl_M   ( .clk(clk), .rst(rst), .stall(stall),
                             .In(IControlDX_),   .Out(IControl_MW  ) );
-    PipelineBorder #( .Width(32) )
+    PipelineRegister #( .Width(32) )
         PIPR_MemAddr_M    ( .clk(clk), .rst(rst), .stall(stall),
                             .In(MemAddrDX_  ),  .Out(MemAddr_MW   ) );
-    PipelineBorder #( .Width(32) )
+    PipelineRegister #( .Width(32) )
         PIPR_RegWValue_M  ( .clk(clk), .rst(rst), .stall(stall),
                             .In(RegWValueDX_),  .Out(RegWValue_MW ) );
-    PipelineBorder #( .Width(32) ) //NOTE: Just used for debugging
+    PipelineRegister #( .Width(32) ) //NOTE: Only need 1 bit, but full value nice for debugging
         PIPR_PC_M         ( .clk(clk), .rst(rst), .stall(stall),
                             .In(PC_DX       ),  .Out(PC_MW        ) );
-//=============<<< PIPELINE-BORDER: DX/M |=============
+//=============<<< PIPELINE-BORDER: DX/M |===============
 
     // MEMORY/MMIO patchwork lines ("setups" prefixed with "_", "results" not)
-    wire _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_DB, _hot_IB, _hot_ISR;
+    wire _hot_ISR, _hot_IO, _hot_BR, _hot_IC, _hot_DC;
+    wire _hot_IB, _hot_DB;
     wire [ 3: 0] _WriteMask, _ByteMask;
     wire [31: 0] _WDataMasked;
     wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB, RData_ISR;
@@ -230,42 +218,51 @@ module MIPS150 #(
         ._IControl  (IControl__MW),  .IControl   (IControl_MW),
         ._MemAddr   (MemAddr__MW),   .MemAddr    (MemAddr_MW),
         ._MemWValue (MemWValue__MW), .RegWValue  (RegWValue_MW),
-        ._PCinBIOS  (PC__MW[30]), //TODO: Verify ok to just use 1 bit
+        ._PCinBIOS  (PC_MW[30]), //TODO: Move to control signal and name PC4???
         //Feedbacks to "prior" stages (forwarding & instruction fetch)
         .WBK_Reg_   (WBKReg_MW_F_),  .WBK_Val_   (WBKDat_MW_F_),
         .WBK_CanFWD_(WBKCanFWD_MW_F_),
         //Memory/MMIO "pre-clock" drives OUT
-        ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
-        ._hot_IC(_hot_IC), ._hot_DB(_hot_DB), ._hot_IB(_hot_IB),
         ._hot_ISR(_hot_ISR),
+        ._hot_IO(_hot_IO), ._hot_BR(_hot_BR),
+        ._hot_IC(_hot_IC), ._hot_DC(_hot_DC),
+        ._hot_IB(_hot_IB), ._hot_DB(_hot_DB),
+        
         ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked), ._ByteMask(_ByteMask),
         //Memory/MMIO "post-clock" results IN
         .RData_IO(RData_IO), .RData_BR(RData_BR), .RData_DC(RData_DC),
         .RData_DB(RData_DB), .RData_ISR(RData_ISR)
     );
 
-    reg _hoti_ISR, _hoti_IB, _hoti_BR, _hoti_IC;
-    always @(*) begin
-        {_hoti_ISR, _hoti_IB, _hoti_BR, _hoti_IC} = 0;
+    reg [3:0] _hoti;
+    always @(*) begin //Drive appropriate "activate" line for instruction fetch
         case (PC_F[31:28])
-            4'b1100: _hoti_ISR = 1'b1; //0xC
+            4'b1100: _hoti = 4'b1000; //0xC => ISR
+            4'b0100: _hoti = 4'b0100; //0x4 => BR
+            4'b0001: _hoti = 4'b0010; //0x1 => IC
 `ifndef COLT45_STRICT
-            4'b0110: _hoti_IB = 1'b1; //EXTRA: Scratchpad-IMEM
+            4'b0110: _hoti = 4'b0001; //EXTRA: Scratchpad-IMEM: 0x6 => IB
 `endif
-            4'b0100: _hoti_BR = 1'b1; //0x4
-            4'b0001: _hoti_IC = 1'b1; //0x1
+            default: _hoti = 4'b0000; //TODO: Handle Illegal PC
         endcase
     end
-    wire [31: 0] INST_ISR, INST_IB, INST_BR, INST_IC;
-    always @(*) begin
-        INST_F_ = 0; //TODO: Clever way to halt/jump/exception on bad address?
-        case (PC_F[31:28]) //INST_ISR, INST_IB, INST_BR, INST_IC
+
+    wire _hoti_ISR = _hoti[3];
+    wire _hoti_BR  = _hoti[2];
+    wire _hoti_IC  = _hoti[1];
+    wire _hoti_IB  = _hoti[0];
+    wire [31: 0] INST_ISR, INST_BR, INST_IC;
+    wire [31: 0] INST_IB;
+
+    always @(*) begin //Drive instruction from appropriate memory component
+        case (PC_F[31:28])
             4'b1100: INST_F_ = INST_ISR; //0xC
+            4'b0100: INST_F_ = INST_BR; //0x4
+            4'b0001: INST_F_ = INST_IC; //0x1
 `ifndef COLT45_STRICT
             4'b0110: INST_F_ = INST_IB; //EXTRA: Scratchpad-IMEM
 `endif
-            4'b0100: INST_F_ = INST_BR; //0x4
-            4'b0001: INST_F_ = INST_IC; //0x1
+            default: INST_F_ = 0; //NOP
         endcase
     end
 
@@ -351,60 +348,42 @@ module MIPS150 #(
 //=============DEBUGGING TOOLS BELOW THIS POINT=============
 `ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
 
-generate if (COLT45_BRK) begin:_BRK_
-assign trace = { // 4 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
+//Shared between BRK and SCOPE
+
+wire [31:0] keywatch = {REGFILE_we,FWD_Allow,FWD_1,FWD_2, REGFILE_wa[3:0],
+                        REGFILE_ra1[3:0], REGFILE_ra2[3:0],
+                        _hot_IO,_hot_BR,_hot_IC,_hot_DC, _hot_ISR,1'b0,_hot_IB,_hot_DB,
+                        _hoti_ISR,_hoti_IB,_hoti_BR,_hoti_IC, PC_MW[30],brk,rst,stall};
+//TODO: "register" this (and other key state) to "preserve" it.
+
+assign trace = {
+// 3 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
-    PC_DX,              INST__DX,           CNT_Step[31:0],     PCBranch_DX_F_,
-    FWD_rd1,            FWD_rd2,            REGFILE_wd,
-        {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
-            REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
-            _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,!rst,stall},
+    PC_DX[31:0],        INST__DX[31:0],     CNT_Step[31:0],     PCBranch_DX_F_[31:0],
+    FWD_rd1[31:0],      FWD_rd2[31:0],      REGFILE_wd[31:0],   keywatch[31:0],
 
-    RData_IO,           RData_BR,           RData_DC,           RData_DB,
-    MemAddr_MW,         MemAddr__MW,        _WDataMasked,
-        {16'h1234,
-            _WriteMask,_ByteMask,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
+    RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_ISR[31:0],
+    MemAddr_MW[31:0],   MemAddr__MW[31:0],  _WDataMasked[31:0],
+    {8'd0, 8'd0, 8'd0, _WriteMask,_ByteMask},
 
-    PC_F,               INST_F_,            CNT_Stall[31:0],    PC_MW,
-    {9'd0,IControlDX_}, 32'd0,              {9'd0,IControl_MW}, {9'd0,IControl__MW},
+    PC_F[31:0],         INST_F_[31:0],      CNT_Stall[31:0],    PC_MW[31:0],
+    {41'd0,IControlDX_[22:0]},              {41'd0,IControl_MW[22:0]},
 
-    256'd0
+    32'd0,              32'd0,              32'd0,              32'd0,
+    32'd0,              32'd0,              32'd0,              32'd0
 };
+
+
+generate if (COLT45_BRK) begin:_BRK_
+    //TODO: Move from top to here
 end endgenerate //COLT45_BRK
 
 
 generate if (COLT45_SCOPE) begin:_SCOPE_
-//TODO: Fix trouble between ILA & DDR (maybe I have lingering self-eating logic-loop)
-
-wire [767:0] scoper = {
-// 3 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
-    // 0 \\             // 1 \\             // 2 \\             // 3 \\
-    PC_DX,              INST__DX,           CNT_Step[31:0],     PCBranch_DX_F_,
-    FWD_rd1,            FWD_rd2,            REGFILE_wd,
-        {FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
-            REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
-            _hot_IO,_hot_BR,_hot_IC,_hot_DC,_hot_IB,_hot_DB,!rst,stall},
-
-    32'd0,              32'd0,              32'd0,              32'd0,
-    32'd0,              32'd0,              32'd0,              32'd0,
-/*
-    RData_IO,           RData_BR,           RData_DC,           RData_DB,
-    32'd0,              latchedADDR,        latchedDATA,
-    {16'h1234,
-            latchedMASK,4'd0,2'b00,_hot_IB,_hot_DB,_hot_IO,_hot_BR,_hot_IC,_hot_DC},
-*/
-
-    PC_F,               INST_F_,            CNT_Stall[31:0],    PC_MW,
-    {9'd0,IControlDX_}, 32'd0,              32'd0,              32'd0
-};
-
-    wire [36:0] CS_TRIG0 = {5'd0, FWD_1,2'b00,REGFILE_ra1, FWD_2,2'b00,REGFILE_ra2,
-                            REGFILE_we,FWD_Allow,1'b0,REGFILE_wa,
-                            _hot_IO,_hot_BR,_hot_IC,_hot_DC,
-                            _hot_IB,_hot_DB,!rst,stall};
-    wire [36:0] CS_TRIG1 = {5'd0, PC_DX};
-    wire [36:0] CS_TRIG2 = {5'd0, INST__DX};
-    wire [36:0] CS_TRIG3 = CNT_Step[36:0];
+    wire [31:0] CS_TRIG0 = keywatch[31:0];
+    wire [31:0] CS_TRIG1 = PC_DX[31:0];
+    wire [31:0] CS_TRIG2 = INST__DX[31:0];
+    wire [31:0] CS_TRIG3 = CNT_Step[31:0];
 
     wire [35: 0] cs_icon_scope;
     cs_icon_1 CS_ICON (
@@ -413,11 +392,11 @@ wire [767:0] scoper = {
 
     cs_ila_1024 CS_ILA ( .CONTROL(cs_icon_scope),
         .CLK(clk),
-        .DATA( scoper ), // IN BUS [767:0]
-        .TRIG0( CS_TRIG0 ), // IN BUS [36:0]
-        .TRIG1( CS_TRIG1 ), // IN BUS [36:0]
-        .TRIG2( CS_TRIG2 ), // IN BUS [36:0]
-        .TRIG3( CS_TRIG3 )  // IN BUS [36:0]
+        .DATA( trace ), // IN BUS [1023:0]
+        .TRIG0( CS_TRIG0 ), // IN BUS [31:0]
+        .TRIG1( CS_TRIG1 ), // IN BUS [31:0]
+        .TRIG2( CS_TRIG2 ), // IN BUS [31:0]
+        .TRIG3( CS_TRIG3 )  // IN BUS [31:0]
     ) /* synthesis syn_noprune=1 */;
 end endgenerate //COLT45_SCOPE
 
@@ -425,6 +404,7 @@ end endgenerate //COLT45_SCOPE
 // SIMULATION ONLY business
 
 // synthesis translate_off
+
 generate if (COLT45_STEPMAX) begin:_STEPS_
     reg [15:0] DBG_cycle, DBG_step;
     initial begin
@@ -530,6 +510,11 @@ generate if (COLT45_SCRATCH) begin:_SCRATCH_
 end endgenerate
 
 // synthesis translate_on
+
+`else //COLT45_KILLFUN (either def/ndef check)
+
+assign trace = 1024'd0;
+
 `endif //COLT45_KILLFUN (either def/ndef check)
 
 endmodule

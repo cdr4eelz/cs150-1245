@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Generating IP:"
+echo "Generating IP..."
 ls *.xco
 
 rm -rf tmp
@@ -12,14 +12,23 @@ EOM
 
 coregen -intstyle silent -b tmp/_batch
 coregen -intstyle silent -p . -b *.xco
+if [ "$?" -ne 0 ]; then
+  echo "Error indicated.  All working files left alone."
+  exit 1
+fi
 
-echo "Removing unneeded project/temp files."
-rm -rf coregen.* *.txt *.pdf tmp/ xlnx_auto_0_xdb/ 
-#rm -rf coregen.* *.gise *.xise *.txt *.pdf tmp/ xlnx_auto_0_xdb/ 
-chmod u=rw,go= *
+echo "Removing extras, owner-only permissions, dos2unix (if Cygwin)..."
+rm -rf coregen.* *.txt *.pdf tmp/ xlnx_auto_0_xdb/ _xmsgs/
+#rm -rf *.gise *.xise *.tcl *.asy
+chmod -R u=rw,go= ./*/*
+chmod u=rw,go= ./*
+chmod -R u=rwX ./*
+if [ $(uname -o) == "Cygwin" ]; then
+  find . -type f -a -not -name '*.ngc' |xargs dos2unix --keepdate
+fi
 
 echo ""
-ls -al
+ls -alR
 echo ""
 
 

@@ -1,7 +1,6 @@
 `include "cpuglobal.vh"
 
-//TODO: Teach chipscope the BUS ranges (some-day)
-
+//TODO: Turn into truly global control lines (control/datapath separation)
 
 // IControl values (driven by decoder, used by everybody)
 module BUS_ICTL_tun         // "tunnel" out multiple values
@@ -51,7 +50,7 @@ endmodule
 module BUS_SHAKE_tun #(parameter InWidth=8)
 ( inout `BUS_SHAKE_type(InWidth) _BUS_,
     input                   DataValid,
-    input   [InWidth-1:0]   Data,
+    input  [(InWidth-1):0]  Data,
     output                  DataReady
 );
     assign `SHAKE_tunIN(InWidth,_BUS_) = {DataValid,Data};
@@ -62,7 +61,7 @@ module BUS_SHAKE_tap #(parameter InWidth=8)
 ( inout `BUS_SHAKE_type(InWidth) _BUS_,
     input                   DataReady,
     output                  DataValid,
-    output  [InWidth-1:0]   Data
+    output [(InWidth-1):0]  Data
 );
     assign `SHAKE_tunOUT(InWidth,_BUS_) = {DataReady};
     assign {DataValid,Data} = `SHAKE_tunIN(InWidth,_BUS_);

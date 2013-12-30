@@ -1,7 +1,8 @@
 `include "cpuglobal.vh"
 
 module StageDX(
-    input clk, rst, stall,
+//NOTE:Currently just asynchronous "control" logic!
+//    input clk, rst, stall,
 
     // Asynchronous plugs to shared outer components
     output [ 4: 0] REG_R1_, REG_R2_,

@@ -212,7 +212,7 @@ module ml505top
 
 //TODO: MIPS150 variants instead (or wrapper might be nice but affects module/signal hierarchy)
 `ifndef CPUTYPE
-`define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU
+`define CPUTYPE MIPS150 // MIPS150/DumpMemCPU/DumpMEMIOCPU/EchoDDRCPU
 `endif
 `CPUTYPE CPU(
     .clk( cpu_clk_g ), .rst( rst_or_init ),
@@ -229,10 +229,7 @@ module ml505top
     .gp_code(cpu_gp_code),
     .gp_frame(cpu_gp_frame),
     .gp_valid(cpu_gp_valid),
-    .frame_interrupt(frame_interrupt),
-
-//BRK tap & debug
-    .brk(debug_brk), .trace(debug_trace)
+    .frame_interrupt(frame_interrupt)
 );
 
 // Debug stall with one-shot "jog"

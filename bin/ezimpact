@@ -6,7 +6,13 @@ then
     exit 1
 fi
 
-impact -batch /dev/stdin <<EOF
+
+TMP_BATCH="_impact_$$"
+
+echo "BIT:$1"
+echo "BATCH:$TMP_BATCH"
+
+tee $TMP_BATCH <<EOF
 setMode -bscan
 setCable -port auto
 identify
@@ -14,3 +20,8 @@ assignFile -p 5 -file $1
 program -p 5
 quit
 EOF
+
+echo "----------"
+
+impact -batch $TMP_BATCH && rm -f $TMP_BATCH
+

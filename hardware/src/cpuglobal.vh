@@ -23,16 +23,16 @@
 //            ALUSrcA.1,ALUSrcB.1,ALUOp.4,ISigned.1,CmpOp.3,Jump.1,JR.1,Link.1}
 //tunoutput.0{}
 `define BUS_ICTL_width      ((1+5+1+2+1+1+1+4+1+3+1+1+1)+(0)) /* =23 */
-`define BUS_ICTL_type       wire [0:`BUS_ICTL_width-1]
-`define ICTL__IN(       BUS)BUS [  0 +: 23 ]
-//`define ICTL__OUT(      BUS)BUS [ 24 +:  0 ]
+`define BUS_ICTL_type       wire [(`BUS_ICTL_width-1):0]
+`define ICTL__IN(       BUS)BUS [22: 0]
+//`define ICTL__OUT(      BUS)BUS [xx:23]
 
 
 //tuninput  {DataValid.1, Data.DIw}
 //tunoutput {DataReady.1}
 `define BUS_SHAKE_width(DIw)    (1+(DIw)+1)
-`define BUS_SHAKE_type( DIw)    wire [1+(DIw)+1 -1:0]
-`define SHAKE_tunIN(    DIw,BUS)BUS [1+(DIw)+1 -1:1]
-`define SHAKE_tunOUT(   DIw,BUS)BUS [1 -1:0]
+`define BUS_SHAKE_type( DIw)    wire [(1+(DIw)+1 -1):0]
+`define SHAKE_tunIN(    DIw,BUS)BUS [(1+(DIw)+1 -1):1]
+`define SHAKE_tunOUT(   DIw,BUS)BUS [(1 -1):0]
 
 `endif //CPUGLOBAL_VH
