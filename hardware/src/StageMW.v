@@ -1,20 +1,25 @@
 `include "cpuglobal.vh"
 
 module StageMW (
-    input clk, rst, stall,
+//NOTE:Currently just asynchronous "control" logic!
+//    input clk, rst, stall,
+
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
     input `BUS_ICTL_type _IControl, // Few are used (hopefully tools will prune)
     input  [31: 0]  _MemWValue,
     input  [31: 0]  _MemAddr,
     input           _PCinBIOS,
+
     // Inputs held stable during our stage for us
     input `BUS_ICTL_type IControl,  // Not all are used (hopefully tools will prune)
     input  [31: 0]  MemAddr,
     input  [31: 0]  RegWValue,
+
     // Outputs fed back to prior stages
     output [ 4: 0]  WBK_Reg_,
     output [31: 0]  WBK_Val_,
     output          WBK_CanFWD_,
+
     // Memory/IO drives
     output reg _hot_IO,_hot_BR,_hot_DC,_hot_IB,_hot_DB,_hot_IC,_hot_ISR,
     output [ 3: 0] _ByteMask, _WriteMask,

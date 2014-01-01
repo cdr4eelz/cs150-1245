@@ -15,7 +15,7 @@ all: $(TRANSCRIPT)
 compile: $(STATUS)
 
 $(STATUS): $(SRCS) | build/Makefile
-	make -C build
+	make -C build work/ml505top/_primary.dat
 	touch $@
 
 build/Makefile:
