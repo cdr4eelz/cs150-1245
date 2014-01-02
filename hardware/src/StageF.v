@@ -55,11 +55,12 @@ module StageF #(
     always @(*) begin:_MUX_PCNEXT_
         //Encourage flat MUX despite priorities
         //3-selectors & 2 variable values -> 5-LUT hopefully!
-        casex ({rst,_DoBranch,_DoException})
-            3'b1xx: MUX_PCNEXT = BOOTPC; //Normal boot
-            3'b01x: MUX_PCNEXT = _PCBranch;
-            3'b001: MUX_PCNEXT = ISR0PC;
-            3'b000: MUX_PCNEXT = PCp4;
+        casex ({rst,stall,_DoBranch,_DoException})
+            4'b1xxx: MUX_PCNEXT = BOOTPC; //Normal boot
+            4'b01xx: MUX_PCNEXT = REG_PC;
+            4'b001x: MUX_PCNEXT = _PCBranch;
+            4'b0001: MUX_PCNEXT = ISR0PC;
+            4'b0000: MUX_PCNEXT = PCp4;
             default: MUX_PCNEXT = BOOTPC; //Normal boot or fault in branch signals
         endcase
     end
