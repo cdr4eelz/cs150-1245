@@ -1,46 +1,62 @@
-::PRIORITIES::
-    More thorough instruction/asm/C tests
-    COP0 complete & test
-    ISR software
-    PixelFeeder from DDR (optional cross-clock count-estimate)
-    Reset deassert per-clock (and delay based on component)
-    FSL links & commands (allow drop-in of uBlaze coprocs)
+KEYtag: BUG!/? STEP OPTImize TOOL CLeanUP ANALyze COOLcrossuse WANTtolearn
 
-::LIKELY BUGS::
-    Reworked fetch still skipping instruction after stall.
-    ? Bios "cp" to 0x3 I/D-caches seems to lockup
-    ? First run of code in I-Cache is flakey
-        Seems to run multiple times, maybe "conditional" value/test failing...
-        ...perhaps just the saving of registers to memory is messed.
-        Likely stall bugs (maybe misunderstanding about dual-write)
-    ? First xmit when running from I-Cache seems to get lost/corrupt:
-        Maybe stall not handled properly, maybe just part of flakey DDR run above
-    ? Can_Forward during stall (don't change based on stall)
-    EchoTestBench doesn't run echo.
-    Reset is double applied with 2-cycle gap (init_done lag)
+BUG!    Copy code from scratch to "3" seems flakey (helped by 2nd copy to "2")
+BUG-    Reset is double applied with 2-cycle gap (init_done lag)
+BUG-    Timing errors (try separate PLLs, single-clock DDR, pull from sysgen, etc.)
 
-::TOOLS::
-    Cache-Flush, Break, Scope-trigger, etc. instructions (for testing/debugging).
-    Archive of code in scratch IMEM ("cp" or hw-copy to DDR to fetch)
-        (If auto-copy to DDR on boot, maybe could simulate run in DDR)
-    Put common routines at steady "bios" entry-points for user-program use.
+CLUP    Revert ml505top as much as possible, move fanciness to sub/wrapper
+CLUP    Re-group/balance modules
+CLUP    Data vs control segregation
+CLUP    OPCODE (& almost everything) as parameters rather than `define
+CLUP    Top level `define -> localparam mappings
+
+STEP    More thorough instruction/asm/C tests
+STEP    COP0 complete & test
+STEP    ISR software
+STEP    PixelFeeder from DDR (optional cross-clock count-estimate)
+STEP    Reset deassert per-clock (and delay based on component)
+
+TOOL    Helper functions in scratch IMEM (link with smaller user code)
+TOOL    Cache-Flush, Break, Scope-trigger, etc. instructions (for testing/debugging)
+COOL    FSL link & instuctions (drop-in of/as uBlaze coprocs & use RVA tricks)
+COOL    PixelFeeder as FSL (more cross-use even FIR with MIPS?)
+
+WRAP    Retro-patch prior checkpoints?
+WRAP    Writeup highlighting cross-project & extra-credit work
+WRAP    Prune/cherry-pick git repo
+
+ANAL    Track down flop styling (CE, SET/RESET, etc)
+ANAL    Any "gated" clocks vs. clock-enable?
+OPTI    Avoid If based priority logic (maybe even for Reset signals?) flatten & muxlike
+OPTI    Cautious resource sharing?
+
+WANT    Figure out Post-Synthesis Simulation
+WANT    Use FPGAEditor and LOC/RLOC tricks in select spots
+WANT    Rebuild custom GCC tools (without clang, with clang)
+WANT    Try simple dual-processing arrangement
+
+OLD?    ???Don't use OUTPUT as internal signal too???
 
 
-::SPECIAL TROUBLESHOOT STEPS::
-* Reverted to sparse CP2 top & framework *
-* Verified all functions are combinational only *
-* Reviewed CASE statements (confirmed no caseX/caseZ) *
-* Attempted fresh MIG generation with ChipScope access *
-* Spot out-of-order assingments to temp variables in always@* blocks.
-* Locate all missing signals!!!
-
-WANT: Figure out Post-Synthesis Simulation.
+::EXTRAS::
+    Memory patching with .bmm file tricks
+    SCRATCHPAD memory kept active
+    BIOS "cp", "dump"
+    PLOP for serial forwarding & other tricks
+    BRKTAP for debug stepping & monitoring
+    Research (revisions?) of timing, MIG details, uBlaze, etc.
 
 
-Gated clocks.
-Don't use OUTPUT as internal signal too.
-Avoid If based priority logic (maybe even for Reset signals?) flatten & muxlike.
+::TROUBLESHOOT STEPS (when sim/synth discrep)::
+    * Reverted to sparse CP2 top & framework *
+    * Verified all functions are combinational only *
+    * Reviewed CASE statements (confirmed no caseX/caseZ) *
+    * Attempted fresh MIG generation with ChipScope access *
+    * Spot out-of-order assingments to temp variables in always@* blocks.
+    * Locate all missing signals!!!
 
-BUS abstraction (mimick xps?)
-OPCODE as parameters rather than `define's
-Cautious resource sharing.
+
+::LESSONS::
+    Questionable tricks (short-term not worth long-term)
+    Control/Datapath useful (though difficult for big pipeline CPU)
+    

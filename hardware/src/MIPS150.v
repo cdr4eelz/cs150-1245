@@ -82,30 +82,34 @@ module MIPS150 #(
 
 
     // Forward declare feedback related wires (other key wires declared just prior to use, ALAP)
-    wire         #DD DoBranch_DX_F_, DoException_DX_F_;
+    wire         #DD DoBranch_DX_F_, DoException_DX_F_, ResetCNT_MW_F_;
     wire [31: 0] #DD PCBranch_DX_F_;
     wire [ 4: 0] #DD WBKReg_MW_F_;
     wire [31: 0] #DD WBKDat_MW_F_;
     wire         #DD WBKCanFWD_MW_F_; //WARN: Overeager forwarding bug had caused a monster-slow DXMW-stage!
 
     // Declare outputs of F stage
-    wire [31: 0] PC_F_, IMEM_ADDR;
-    wire [31: 0] INST_F_, IMEM_DATA;
+    wire [31: 0] PC_F_;
+    wire [31: 0] INST_F_;
     wire DoneException_F_;
-    wire [63: 0] CNT_Cycle, CNT_Step, CNT_Stall;
+    wire [63: 0] CNT_Cycle, CNT_Inst, CNT_Stall;
+    wire WAS_Stall, WAS_Inst;
+    wire [31: 0] IMEM_ADDR;
+    wire [31: 0] IMEM_DATA;
     StageF #(
         .BOOTPC(32'h4000_0000), //NOTE: h6000_0000 for SCRATCH_IMEM
         .COUNTERWIDTH(64)
     ) s_F ( .clk(clk), .rst(rst), .stall(stall),
-        //Inputs (feedback from DX-stage)
+        //Inputs (feedback from other stages)
         ._DoBranch(DoBranch_DX_F_), ._PCBranch(PCBranch_DX_F_),
-        ._DoException(DoException_DX_F_),
+        ._DoException(DoException_DX_F_), ._ResetCNT(ResetCNT_MW_F_),
         //Outputs (toward next stage)
-        .PC_(PC_F_), .INST_(INST_F_), .DoneException_(DoneException_F_),
+        .PC_(PC_F_), .INST_(INST_F_), .DONEEXCEPTION_(DoneException_F_),
+        //CPU Counters & Prior-state flags
+        .CNT_CYCLE(CNT_Cycle), .CNT_INST(CNT_Inst), .CNT_STALL(CNT_Stall),
+        .WAS_STALL(WAS_Stall), .WAS_INST(WAS_Inst),
         //Instruction memory taps
-        .IMEM_ADDR(IMEM_ADDR), .IMEM_DATA(IMEM_DATA),
-        //CPU Counters (for debug/trace)
-        .CNT_Cycle(CNT_Cycle), .CNT_Step(CNT_Step), .CNT_Stall(CNT_Stall)
+        .IMEM_ADDR(IMEM_ADDR), .IMEM_Data(IMEM_DATA)
     );
 
 
@@ -336,12 +340,14 @@ module MIPS150 #(
 
     `BUS_SHAKE_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
     MEMIOPlex memiomap
-    ( .clk(clk), .rst(rst), .stall(stall), //NOTE: stall currently only used for counter.
+    ( .clk(clk), .rst(rst),
         .ena(!stall && _hot_IO), //NOTE: Manage "ena" as with actual memories
         .addra(MemAddr__MW[13:2]),
-        .douta(RData_IO),//OUT-32
+        .DOUTA(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
-        .RVa_RX(UARX), .RVa_TX(UATX)
+        //Mapped devices/info
+        .RVa_RX(UARX), .RVa_TX(UATX),
+        .CNT_Cycle(CNT_Cycle[31:0]), .CNT_Inst(CNT_Inst[31:0]), .CNT_RESET_(ResetCNT_MW_F_)
     ) /* synthesis syn_noprune=1 */;
 
     UARTRVA #(.ClockFreq(ClockFreq)) uartrva
@@ -370,7 +376,7 @@ wire [31:0] keywatch = {REGFILE_we,FWD_Allow,FWD_1,FWD_2,
 assign trace = {
 // 3 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
-    PC_DX[31:0],        INST_DX[31:0],      CNT_Step[31:0],     PCBranch_DX_F_[31:0],
+    PC_DX[31:0],        INST_DX[31:0],      CNT_Inst[31:0],     PCBranch_DX_F_[31:0],
     FWD_rd1[31:0],      FWD_rd2[31:0],      REGFILE_wd[31:0],   keywatch[31:0],
 
     RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_DB[31:0],
@@ -394,7 +400,7 @@ generate if (COLT45_SCOPE) begin:_SCOPE_
     wire [31:0] CS_TRIG0 = keywatch[31:0];
     wire [31:0] CS_TRIG1 = PC_DX[31:0];
     wire [31:0] CS_TRIG2 = INST_DX[31:0];
-    wire [31:0] CS_TRIG3 = CNT_Step[31:0];
+    wire [31:0] CS_TRIG3 = CNT_Inst[31:0];
 
     wire [35: 0] cs_icon_scope;
     cs_icon_1 CS_ICON (
@@ -464,7 +470,7 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
         $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stall, DBG_step);
         // DoBranch_DX_F_
         $display("%d]    /F: %h *%d", DBG_cycle, PCBranch_DX_F_, DoBranch_DX_F_);
-        $display("%d]  F/DX: %h %h #%d", DBG_cycle, PC_DX, INST_DX, CNT_Step);
+        $display("%d]  F/DX: %h %h #%d", DBG_cycle, PC_DX, INST_DX, CNT_Inst);
         $display("%d]DX/MW : %h <=%h", DBG_cycle, PC_MW, RegWValue_MW);
         $display("%d]      : %b", DBG_cycle, IControl_MW); // Make a task to break into fields
         $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
@@ -472,7 +478,7 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
 end endgenerate //COLT45_STEPMAX
 
 task DUMP_PC; begin
-    $display("PC: [%d] PC_DX=%h INST_DX=%h PC_MW=%h", CNT_Step, PC_DX, INST_DX, PC_MW);
+    $display("PC: [%d] PC_DX=%h INST_DX=%h PC_MW=%h", CNT_Inst, PC_DX, INST_DX, PC_MW);
 end endtask
 
 generate if (COLT45_PC) begin:_PC_

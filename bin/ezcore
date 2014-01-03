@@ -23,6 +23,7 @@ rm -rf coregen.* *.txt *.pdf tmp/ xlnx_auto_0_xdb/ _xmsgs/
 chmod -R u=rw,go= ./*/*
 chmod u=rw,go= ./*
 chmod -R u=rwX ./*
+chmod u+x ./build ./clean
 if [ $(uname -o) == "Cygwin" ]; then
   find . -type f -a -not -name '*.ngc' |xargs dos2unix --keepdate
 fi
