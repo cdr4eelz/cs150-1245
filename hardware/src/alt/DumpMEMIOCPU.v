@@ -30,11 +30,7 @@ module DumpMEMIOCPU #(
     output [31:0] gp_code,
     output [31:0] gp_frame,
     output gp_valid,
-    input frame_interrupt,
-
-//BRK tap (will become internal instead)
-    input brk,
-    output [0:1023] trace
+    input frame_interrupt
 );
 
     wire [13: 0]    ADDR, ADDR_NEXT;
@@ -54,13 +50,13 @@ module DumpMEMIOCPU #(
     assign #DD NEXT_STATE = ((STATE === 1) && (IOSTATUS !== 32'd1)) ? STATE : (STATE+1)%4;
     assign #DD ADDR_NEXT = (STATE === 2) ? (ADDR + 1) : ADDR;
 
-    PipelineBorder #( .Width(2) )
+    PipelineRegister #( .Width(2) )
     ADVANCE_REG ( .clk(clk), .rst(rst), .stall(stall),
         .In(    NEXT_STATE),
         .Out(   STATE)
     );
 
-    PipelineBorder #( .Width(14) )
+    PipelineRegister #( .Width(14) )
     ADDR_REG ( .clk(clk), .rst(rst), .stall(stall),
         .In(    ADDR_NEXT),
         .Out(   ADDR)
@@ -95,13 +91,14 @@ module DumpMEMIOCPU #(
     );
 
     `BUS_SHAKE_type(8)  UATX, UARX;
-    MEMIOPlex iomap_uart
-    ( .clk(clk), .rst(rst), .ena(~stall),
+    MEMIOPlex iomap_plex
+    ( .clk(clk), .rst(rst),
+        .ena(~stall),
         .addra( (STATE === 2) ? 12'h002 : 12'h000 ),
         .wea  ( {3'b000, (STATE === 2)} ),
         .dina ( {24'b0, TX_Data} ),
 //      .rmask( {3'b000, (STATE !== 2)} ),
-        .douta( IOSTATUS ),
+        .DOUTA( IOSTATUS ),
         .RVa_TX (UATX), .RVa_RX(UARX)
     );
 

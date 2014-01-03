@@ -43,19 +43,19 @@ module MEMIOPlex #(
     // Stats & Counters
 //    reg  [31: 0] CNT_Rx, CNT_Tx; //Minimal IO statistics
 
-    assign CNT_RESET_ = isWrite && (addra==12'h018);
+    assign CNT_RESET_ = isWrite && (addra==12'h006);
 
 /* if (COLT45_SHAKE) begin
             if (isRead) case (addra)
                 12'h000: $display("MEMIO: Poll Tx (%b)   @%t", Tx_Ready, $time);
                 12'h001: $display("MEMIO: Poll Rx (%b)   @%t", Rx_Valid, $time);
                 12'h003: $display("MEMIO: Rx Shake (0x%h, %d, '%c')   @%t", Rx_Data, Rx_Data, Rx_Data, $time);
-                12'h010: $display("MEMIO: Read Cycles (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
-                12'h014: $display("MEMIO: Read Steps (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
+                12'h004: $display("MEMIO: Read Cycles (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
+                12'h005: $display("MEMIO: Read Steps (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
             endcase
             if (isWrite) case (addra)
                 12'h002: $display("MEMIO: Tx Shake (0x%h, %d, '%c')  @%t", Tx_Data, Tx_Data, Tx_Data, $time);
-                12'h018: $display("MEMIO: Counters reset. Were Cycles=%h Stalls=%h  @%t", CNT_Cycle, CNT_Inst, $time);
+                12'h006: $display("MEMIO: Counters reset. Were Cycles=%h Stalls=%h  @%t", CNT_Cycle, CNT_Inst, $time);
             endcase
 */
 
@@ -66,8 +66,8 @@ module MEMIOPlex #(
             12'h000: MUX_DOUTA = {31'b0, Tx_Ready};
             12'h001: MUX_DOUTA = {31'b0, Rx_Valid};
             12'h003: MUX_DOUTA = {24'b0, Rx_Data};
-            12'h010: MUX_DOUTA = CNT_Cycle;
-            12'h014: MUX_DOUTA = CNT_Inst;
+            12'h004: MUX_DOUTA = CNT_Cycle;
+            12'h005: MUX_DOUTA = CNT_Inst;
         endcase
     end
     always @(posedge clk) begin:_REG_DOUTA_

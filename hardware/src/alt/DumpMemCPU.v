@@ -30,11 +30,7 @@ module DumpMemCPU #(
     output [31:0] gp_code,
     output [31:0] gp_frame,
     output gp_valid,
-    input frame_interrupt,
-
-//BRK tap (will become internal instead)
-    input brk,
-    output [0:1023] trace
+    input frame_interrupt
 );
 
     wire [13: 0]    ADDR, ADDR_NEXT;
@@ -52,13 +48,13 @@ module DumpMemCPU #(
     assign TX_Data  = (ADDR_N[1]) ? ( (ADDR_N[0]) ? DATA_W[ 0 +: 8] : DATA_W[ 8 +: 8])
                                   : ( (ADDR_N[0]) ? DATA_W[16 +: 8] : DATA_W[24 +: 8]);
 
-    PipelineBorder #( .Width(1) )
+    PilelineRegister #( .Width(1) )
     ADVANCE_REG ( .clk(clk), .rst(rst), .stall(stall),
         .In(    ADVANCE),
         .Out(   ADVANCE_LAST)
     );
 
-    PipelineBorder #( .Width(14) )
+    PipelineRegister #( .Width(14) )
     ADDR_REG ( .clk(clk), .rst(rst), .stall(stall),
         .In(    ADDR_NEXT),
         .Out(   ADDR)

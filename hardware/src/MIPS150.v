@@ -32,17 +32,16 @@ module MIPS150 #(
     output [31:0] gp_code,
     output [31:0] gp_frame,
     output gp_valid,
-    input frame_interrupt,
-
-//BRK tap (will become internal instead)
-    input brk,
-    output [0:1023] trace
+    input frame_interrupt
 );
-
 
 // CP4+
     assign gp_code=32'd0, gp_frame=32'd0;
     assign gp_valid = 1'b0;
+
+//BRK tap (in transition)
+    wire [0:1023] trace;
+    wire brk = 1'b0;
 
 //TODO: Ensure naming convention consistency (and/or simplify convention)
 
@@ -294,7 +293,7 @@ module MIPS150 #(
     assign icache_addr = {4'h0, (_hot_IC) ? MemAddr__MW[27:0] : IMEM_ADDR[27:0]},
         icache_we   = (!stall && _hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
-        icache_re   = (!stall && _hoti_IC),
+        icache_re   = (!stall && _hoti_IC && !_hot_IC),
         INST_IC     = icache_dout;
 //    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC =32'd0;
 
@@ -386,8 +385,8 @@ assign trace = {
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
     {41'd0,IControlDX_[22:0]},              {41'd0,IControl_MW[22:0]},
 
-    PC_F_[31:0],        INST_F_[31:0],      32'd0,              32'd0,
-    32'd0,              32'd0,              32'd0,              32'd0
+    PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[63:0],
+    CNT_Inst[63:0],                         CNT_Stall[63:0]
 };
 
 

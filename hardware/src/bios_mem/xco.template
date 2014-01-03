@@ -1,7 +1,7 @@
 ##############################################################
 #
-# Xilinx Core Generator version 13.3
-# Date: Tue Mar 27 20:44:58 2012
+# Xilinx Core Generator version 14.6
+# Date: Fri Jan  3 06:33:33 2014
 #
 ##############################################################
 #
@@ -31,7 +31,7 @@ SET implementationfiletype = Ngc
 SET package = ff1136
 SET removerpms = false
 SET simulationfiles = Behavioral
-SET speedgrade = -3
+SET speedgrade = -1
 SET verilogsim = true
 SET vhdlsim = false
 # END Project Options
@@ -93,5 +93,8 @@ CSET write_depth_a=4096
 CSET write_width_a=32
 CSET write_width_b=32
 # END Parameters
+# BEGIN Extra information
+MISC pkg_timestamp=2013-06-08T23:00:50Z
+# END Extra information
 GENERATE
-# CRC: 8ca6b2ce
+# CRC: a062d34a

@@ -19,7 +19,7 @@ fi
 
 echo "Removing extras, owner-only permissions, dos2unix (if Cygwin)..."
 rm -rf coregen.* *.txt *.pdf tmp/ xlnx_auto_0_xdb/ _xmsgs/
-#rm -rf *.gise *.xise *.tcl *.asy
+rm -rf *.gise *.xise *.tcl *.asy *.mif
 chmod -R u=rw,go= ./*/*
 chmod u=rw,go= ./*
 chmod -R u=rwX ./*
