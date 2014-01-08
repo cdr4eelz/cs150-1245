@@ -109,9 +109,11 @@ module StageMW (
         .ByteMask( ), .WordMasked(), .ValExtract(DataLoad)
     );
 
-    //WBK outputs (including "can forward" signal)
+// WBK outputs (including "can forward" signal)
     assign WBK_Reg_     = DestReg; //ZERO when no register writeback is happening
-    assign WBK_Val_     = (isMemRead) ? DataLoad : RegWValue; //Jump-Link could inject RegWValue
-    assign WBK_CanFWD_  = !isMemRead; //Covers CopRead too (forwarding allowed)
+    assign WBK_Val_     = (DestReg == 5'd0) ? `UNKNOWN(32)
+                            : ( (isMemRead) ? DataLoad : RegWValue ); //Jump-Link uses RegWValue
+    assign WBK_CanFWD_  = (DestReg == 5'd0) ? `UNKNOWN(1)
+                            : ( !isMemRead ); //Covers CopRead too (forwarding allowed)
 
 endmodule

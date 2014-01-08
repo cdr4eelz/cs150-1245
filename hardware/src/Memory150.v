@@ -456,5 +456,5 @@ module Memory150(
       .GP_valid(cpu_gp_valid));
    
 				
-initial $monitor("VID_READY: %b", video_ready);       
+//initial $monitor("VID_READY: %b", video_ready);       
 endmodule
