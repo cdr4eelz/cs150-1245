@@ -12,4 +12,4 @@ add wave EchoTestbenchCaches/DUT/regfile/*
 add wave EchoTestbenchCaches/DUT/s_F/*
 add wave EchoTestbenchCaches/DUT/s_DX/*
 add wave EchoTestbenchCaches/DUT/s_MW/*
-run 10000us
+run 40000us

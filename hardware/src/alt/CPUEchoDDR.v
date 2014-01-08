@@ -1,4 +1,4 @@
-module EchoDDRCPU #(
+module CPUEchoDDR #(
     parameter COLT45_SCOPE=0
 )(
     input clk,

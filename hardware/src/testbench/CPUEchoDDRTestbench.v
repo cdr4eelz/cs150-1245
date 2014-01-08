@@ -2,7 +2,7 @@
 
 `include "cpuglobal.vh"
 
-module EchoTestbenchDDRCPU;
+module CPUEchoDDRTestbench;
 
     reg Clock, Reset;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
@@ -20,6 +20,10 @@ module EchoTestbenchDDRCPU;
 
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
+
+//SKEL: Had been undefined (warnings only)
+wire user_clk_g, pll_fb, pll_lock, cpu_clk, clk200, clk0, clk50, clk90, clkdiv0;
+wire cpu_clk_g, init_done, clk200_g, clk0_g, clk50_g, clk90_g, clkdiv0_g;
 
     // DDR 2 wires
     wire [12:0] DDR2_A;
@@ -51,7 +55,7 @@ module EchoTestbenchDDRCPU;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    
+
     PLL_BASE
     #(
         .BANDWIDTH("OPTIMIZED"),
@@ -171,7 +175,7 @@ module EchoTestbenchDDRCPU;
     );
 
 
-    EchoDDRCPU DUT(
+    CPUEchoDDR DUT(
         .clk(cpu_clk_g),
         .rst(Reset || ~init_done),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),

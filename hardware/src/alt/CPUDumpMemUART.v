@@ -1,6 +1,6 @@
 `include "cpuglobal.vh"
 
-module DumpMemCPU #(
+module CPUDumpMemUART #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
     parameter COLT45_STEPMAX=9
@@ -48,7 +48,7 @@ module DumpMemCPU #(
     assign TX_Data  = (ADDR_N[1]) ? ( (ADDR_N[0]) ? DATA_W[ 0 +: 8] : DATA_W[ 8 +: 8])
                                   : ( (ADDR_N[0]) ? DATA_W[16 +: 8] : DATA_W[24 +: 8]);
 
-    PilelineRegister #( .Width(1) )
+    PipelineRegister #( .Width(1) )
     ADVANCE_REG ( .clk(clk), .rst(rst), .stall(stall),
         .In(    ADVANCE),
         .Out(   ADVANCE_LAST)

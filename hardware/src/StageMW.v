@@ -63,8 +63,8 @@ module StageMW (
                 4'b0010: _hot_IC = _isMemWrite && _PCinBIOS;
                 4'b0001: _hot_DC = 1'b1;
 `ifndef COLT45_STRICT
-                4'b0110: _hot_IB = _isMemWrite; //EXTRA: Scratchpad-DMEM
-                4'b0101: _hot_DB = 1'b1; //EXTRA: Scratchpad-DMEM
+                4'b0110: _hot_IB = _isMemWrite; //XTRA: Scratchpad-DMEM
+                4'b0101: _hot_DB = 1'b1; //XTRA: Scratchpad-DMEM
 `endif //(!) COLT45_STRICT
                 4'b1100: _hot_ISR = _isMemWrite; //ISR//
             endcase
@@ -109,13 +109,9 @@ module StageMW (
         .ByteMask( ), .WordMasked(), .ValExtract(DataLoad)
     );
 
-    //TODO: Maybe divorce WBK from FWD stuff more fully to clarify slightly different paths
-    assign WBK_Reg_     = DestReg; // Expected to be zero when no writeback is happening
-    assign WBK_Val_     = (WBK_Reg_ != 5'd0)
-                            ? ( (isMemRead) ? DataLoad : RegWValue )
-                            : `UNKNOWN(32); // Jump-Link could inject RegWValue
-    assign WBK_CanFWD_  = (WBK_Reg_ != 5'd0)
-                            ? ( !isMemRead ) // This covers CopRead case (forwarding allowed)
-                            : `UNKNOWN(32); // 
+    //WBK outputs (including "can forward" signal)
+    assign WBK_Reg_     = DestReg; //ZERO when no register writeback is happening
+    assign WBK_Val_     = (isMemRead) ? DataLoad : RegWValue; //Jump-Link could inject RegWValue
+    assign WBK_CanFWD_  = !isMemRead; //Covers CopRead too (forwarding allowed)
 
 endmodule

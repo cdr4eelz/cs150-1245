@@ -26,7 +26,7 @@ module MIPS150 #(
     output [31:0] icache_din,
     input [31:0] dcache_dout,
     input [31:0] icache_dout,
-    input stall, //TODO:ENSURE glitches on stall don't disrupt any active signals
+    input stall,
 
 // CP4+
     output [31:0] gp_code,
@@ -81,16 +81,16 @@ module MIPS150 #(
 
 
     // Forward declare feedback related wires (other key wires declared just prior to use, ALAP)
-    wire         #DD DoBranch_DX_F_, DoException_DX_F_, ResetCNT_MW_F_;
-    wire [31: 0] #DD PCBranch_DX_F_;
-    wire [ 4: 0] #DD WBKReg_MW_F_;
-    wire [31: 0] #DD WBKDat_MW_F_;
-    wire         #DD WBKCanFWD_MW_F_; //WARN: Overeager forwarding bug had caused a monster-slow DXMW-stage!
+    wire         #DD BRA_DoBranch_DX2F_;
+    wire [31: 0] #DD BRA_PCBranch_DX2F_;
+    wire [ 4: 0] #DD WBK_Reg_MW2DX_;
+    wire [31: 0] #DD WBK_Val_MW2DX_;
+    wire         #DD WBK_CanFWD_MW2DX_;
+    wire         #DD CNT_Reset_MW2F_;
 
     // Declare outputs of F stage
     wire [31: 0] PC_F_;
     wire [31: 0] INST_F_;
-    wire DoneException_F_;
     wire [63: 0] CNT_Cycle, CNT_Inst, CNT_Stall;
     wire WAS_Stall, WAS_Inst;
     wire [31: 0] IMEM_ADDR;
@@ -100,10 +100,10 @@ module MIPS150 #(
         .COUNTERWIDTH(64)
     ) s_F ( .clk(clk), .rst(rst), .stall(stall),
         //Inputs (feedback from other stages)
-        ._DoBranch(DoBranch_DX_F_), ._PCBranch(PCBranch_DX_F_),
-        ._DoException(DoException_DX_F_), ._ResetCNT(ResetCNT_MW_F_),
+        ._DoBranch(BRA_DoBranch_DX2F_), ._PCBranch(BRA_PCBranch_DX2F_),
+        ._ResetCounters(CNT_Reset_MW2F_),
         //Outputs (toward next stage)
-        .PC_(PC_F_), .INST_(INST_F_), .DONEEXCEPTION_(DoneException_F_),
+        .PC_(PC_F_), .INST_(INST_F_),
         //CPU Counters & Prior-state flags
         .CNT_CYCLE(CNT_Cycle), .CNT_INST(CNT_Inst), .CNT_STALL(CNT_Stall),
         .WAS_STALL(WAS_Stall), .WAS_INST(WAS_Inst),
@@ -114,24 +114,18 @@ module MIPS150 #(
 
 //=============--- "PIPELINE"-PEEK: F/DX ---=============
     wire [31: 0] PC_DX, INST_DX;
-    wire DoneException_DX;
     PipelineRegister #( .Width(32) )
         PIPR_PC_DX    ( .clk(clk), .rst(rst), .stall(stall),
                         .In(PC_F_),     .Out(PC_DX) );
     PipelineRegister #( .Width(32) )
         PIPR_INST_DX  ( .clk(clk), .rst(rst), .stall(stall),
                         .In(INST_F_),   .Out(INST_DX) );
-    PipelineRegister #( .Width(1) )
-        PIPR_EXCEPT_DX( .clk(clk), .rst(rst), .stall(stall),
-                        .In(DoneException_F_), .Out(DoneException_DX) );
 //=============<<< PIPELINE-BORDER: F/DX |===============
-
-//TODO: Move Regfile/COP0 inside DX (just pass write-back inside???)
 
     // REGFILE async-read via DX-stage but sync-write via M-stage WB
     wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
     wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
-    assign REGFILE_wa = WBKReg_MW_F_, REGFILE_wd = WBKDat_MW_F_;
+    assign REGFILE_wa = WBK_Reg_MW2DX_, REGFILE_wd = WBK_Val_MW2DX_;
     wire REGFILE_we = !stall && (REGFILE_wa != 0); // Mute "we" if "wa"==0 for signal clarity
     RegFile regfile
     ( .clk(clk),
@@ -142,18 +136,16 @@ module MIPS150 #(
         .ra2(REGFILE_ra2), .rd2(REGFILE_rd2)
     );
     // FORWARDING calculation (a "virtual" behavior tacked onto REGFILE)
-    wire FWD_Allow = WBKCanFWD_MW_F_; // Has already checked for "wa"==0 elsewhere
+    wire FWD_Allow = WBK_CanFWD_MW2DX_; // Has already checked for "wa"==0 elsewhere
     wire FWD_1 = (FWD_Allow) ? (REGFILE_wa == REGFILE_ra1) : 1'b0;
     wire FWD_2 = (FWD_Allow) ? (REGFILE_wa == REGFILE_ra2) : 1'b0;
     wire [31: 0] #DD FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
     wire [31: 0] #DD FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 
     // COPROCESSOR async-read via DX-stage (like REGFILE) but sync-write from REGFORWARD
-    wire         CopInHot;
     wire [ 4: 0] CopAddr;
     wire [31: 0] CopOut;
-    // COP0 lines for control/branch
-    // COP0 lines for peripherals
+    wire CopInHot, IRQUART0, IRQUART1, IRQPending;
     COP0150 cop0 (
         .Clock(clk), .Reset(rst), .Enable(1'b0), //TODO: ENABLE! Disable until handled?
         .DataAddress(CopAddr), //IN-5 (Cop Register to read/write)
@@ -161,14 +153,11 @@ module MIPS150 #(
         .DataInEnable(CopInHot), //IN (mtc0)
         .DataIn(FWD_rd2), //IN-32 (Always fed, only used if enabled)
         .InterruptedPC(PC_DX), //IN-32 (PC_DX or similar)
-        .InterruptHandled(DoneException_DX), //IN (Acknowledge the branch is happening)
-        .InterruptRequest(DoException_DX_F_), //OUT (Like a branch to fixed address)
-        .UART0Request(), //IN (edge detect can-write)
-        .UART1Request() //IN (edge detect can-read)
+        .InterruptHandled(1'b0), //IN (Acknowledge the branch is happening)
+        .InterruptRequest(IRQPending), //OUT (Like a branch to fixed address)
+        .UART0Request(IRQUART0), .UART1Request(IRQUART1) //IN (edge detect "pulse")
     );
-    //TODO: Pick correct PC to stash
-    //TODO: Time handling around branches & acknowledge
-    //TODO: UART FSMs/Gates (for edges)
+    //TODO: Pick correct PC to stash at right time (utilize branch)
 
     // Declare outputs of DX stage
     `BUS_ICTL_type IControlDX_;
@@ -186,12 +175,11 @@ module MIPS150 #(
         .MemAddr_(MemAddrDX_), .MemWValue_(MemWValueDX_),
         .RegWValue_(RegWValueDX_),
         //Feedback outputs
-        .DOBranch_(DoBranch_DX_F_), .PCBranch_(PCBranch_DX_F_)
+        .DOBranch_(BRA_DoBranch_DX2F_), .PCBranch_(BRA_PCBranch_DX2F_)
     );
 
 
 //=============--- "PIPELINE"-PEEK: DX/M ---=============
-//TODO: Eliminate/Clarify peek-ahead from prior cycle
     `BUS_ICTL_type  IControl__MW = IControlDX_;
     wire  [31: 0]   MemAddr__MW = MemAddrDX_;
     wire  [31: 0]   MemWValue__MW = MemWValueDX_;
@@ -199,8 +187,6 @@ module MIPS150 #(
     `BUS_ICTL_type IControl_MW;
     wire  [31: 0]   MemAddr_MW;
     wire  [31: 0]   RegWValue_MW;
-    wire  [31: 0]   PC_MW; //TODO: Don't bother with entire 32-bits, just "from-bios" control!
-//TODO: Register only RESULT & CONTROL signals for driving POST-clock handling
     PipelineRegister #( .Width(`BUS_ICTL_width) )
         PIPR_IControl_MW  ( .clk(clk), .rst(rst), .stall(stall),
                             .In(IControlDX_),   .Out(IControl_MW  ) );
@@ -210,6 +196,8 @@ module MIPS150 #(
     PipelineRegister #( .Width(32) )
         PIPR_RegWValue_MW ( .clk(clk), .rst(rst), .stall(stall),
                             .In(RegWValueDX_),  .Out(RegWValue_MW ) );
+//Debug use only
+    wire  [31: 0]   PC_MW;
     PipelineRegister #( .Width(32) ) //NOTE: Only need 1 bit, but full value nice for debugging
         PIPR_PC_MW        ( .clk(clk), .rst(rst), .stall(stall),
                             .In(PC_DX       ),  .Out(PC_MW        ) );
@@ -227,13 +215,13 @@ module MIPS150 #(
         ._IControl  (IControl__MW),  .IControl   (IControl_MW),
         ._MemAddr   (MemAddr__MW),   .MemAddr    (MemAddr_MW),
         ._MemWValue (MemWValue__MW), .RegWValue  (RegWValue_MW),
-        ._PCinBIOS  (PC_MW[31:28]==4'b0100), //TODO: Move to control signal and name PC4???
+        ._PCinBIOS  (PC_DX[31:28]==4'b0100), //Borrow value from other stage (close enough)
         //Feedbacks to "prior" stages (forwarding & instruction fetch)
-        .WBK_Reg_   (WBKReg_MW_F_),  .WBK_Val_   (WBKDat_MW_F_),
-        .WBK_CanFWD_(WBKCanFWD_MW_F_),
+        .WBK_Reg_(WBK_Reg_MW2DX_), .WBK_Val_(WBK_Val_MW2DX_),
+        .WBK_CanFWD_(WBK_CanFWD_MW2DX_),
         //Memory/MMIO "pre-clock" drives OUT
         ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
-        ._hot_IB(_hot_IB), ._hot_DB(_hot_DB), //EXTRA: Scratchpad
+        ._hot_IB(_hot_IB), ._hot_DB(_hot_DB), //XTRA: Scratchpad
         ._hot_IC(_hot_IC), ._hot_ISR(_hot_ISR), //Write-only via I-Cache (keep fetch consistent later)
         ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked), ._ByteMask(_ByteMask),
         //Memory/MMIO "post-clock" results IN
@@ -241,45 +229,46 @@ module MIPS150 #(
         .RData_DB(RData_DB)
     );
 
-    reg [3:0] _hoti;
+
+    reg [3:0] hoti_;
     always @(*) begin:_MUX_HOTI_ //Drive appropriate "activate" line for instruction fetch
         case (IMEM_ADDR[31:28])
-            4'b1100: _hoti = 4'b1000; //0xC => ISR
-            4'b0100: _hoti = 4'b0100; //0x4 => BR
-            4'b0001: _hoti = 4'b0010; //0x1 => IC
+            4'b1100: hoti_ = 4'b1000; //0xC => ISR
+            4'b0100: hoti_ = 4'b0100; //0x4 => BR
+            4'b0001: hoti_ = 4'b0010; //0x1 => IC
 `ifndef COLT45_STRICT
-            4'b0110: _hoti = 4'b0001; //EXTRA: Scratchpad-IMEM: 0x6 => IB
+            4'b0110: hoti_ = 4'b0001; //XTRA: Scratchpad-IMEM: 0x6 => IB
 `endif
-            default: _hoti = 4'b0000; //TODO: Handle Illegal PC
+            default: hoti_ = 4'b0000;
         endcase
     end
 
-    wire _hoti_ISR = _hoti[3];
-    wire _hoti_BR  = _hoti[2];
-    wire _hoti_IC  = _hoti[1];
-    wire _hoti_IB  = _hoti[0];
-    wire [31: 0] INST_ISR, INST_BR, INST_IC;
-    wire [31: 0] INST_IB;
+    wire hoti_BR_  = hoti_[2];
+    wire hoti_IC_  = hoti_[1];
 
+    wire [ 3: 0] _hoti;
+    PipelineRegister #( .Width(4) )
+        PIPR_HOTI ( .clk(clk), .rst(rst), .stall(stall),
+                    .In(hoti_), .Out(_hoti) );
+
+    wire [31: 0] INST_ISR, INST_BR, INST_IC, INST_IB;
     reg  [31: 0] MUX_IMEM;
     always @(*) begin:_MUX_IMEM_ //Drive instruction from appropriate memory component
-        case (IMEM_ADDR[31:28])
-            4'b1100: MUX_IMEM = INST_ISR; //0xC => ISR
+        case (_hoti)
+            4'b1000: MUX_IMEM = INST_ISR; //0xC => ISR
             4'b0100: MUX_IMEM = INST_BR; //0x4 => BR
-            4'b0001: MUX_IMEM = INST_IC; //0x1 => IC
+            4'b0010: MUX_IMEM = INST_IC; //0x1 => IC
 `ifndef COLT45_STRICT
-            4'b0110: MUX_IMEM = INST_IB; //EXTRA: Scratchpad-IMEM: 0x6 => IB
+            4'b0001: MUX_IMEM = INST_IB; //XTRA: Scratchpad-IMEM: 0x6 => IB
 `endif
             default: MUX_IMEM = 0; //NOP
         endcase
     end
     assign IMEM_DATA = MUX_IMEM;
 
-    // MEMORY/MMIO ELEMENTS (straddle MW & F stages & interface outside CPU)
-//TODO: Move all mems into StageMW and just expose selected inst/data + IO-lines
 
-//TODO: Debug trailing "zero" on DDR send test output
-    //TODO: Ensure this doesn't trigger double-reads/writes from stall nuances
+    // MEMORY/MMIO ELEMENTS (straddle MW & F stages & interface outside CPU)
+
     //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
     assign dcache_addr = {4'h0, MemAddr__MW[27:0]},
         dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
@@ -293,7 +282,7 @@ module MIPS150 #(
     assign icache_addr = {4'h0, (_hot_IC) ? MemAddr__MW[27:0] : IMEM_ADDR[27:0]},
         icache_we   = (!stall && _hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
-        icache_re   = (!stall && _hoti_IC && !_hot_IC),
+        icache_re   = (!stall && hoti_IC_ && !_hot_IC),
         INST_IC     = icache_dout;
 //    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC =32'd0;
 
@@ -305,7 +294,7 @@ module MIPS150 #(
 
     // INSTRUCTION Fletch (sic :)
       .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-      /*.enb(1'b1)*/ .doutb(INST_ISR) //No use for _hoti_ISR
+      /*.enb(1'b1)*/ .doutb(INST_ISR) //No use for hoti_ISR_
     ) /* synthesis syn_noprune=1 */;
 
     bios_mem brom_bios
@@ -316,7 +305,7 @@ module MIPS150 #(
 
     // Instruction reading port (b)
       .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-        .enb(_hoti_BR), .doutb(INST_BR)
+        .enb(hoti_BR_), .doutb(INST_BR)
     ) /* synthesis syn_noprune=1 */;
 
     dmem_blk_ram bram_dmem
@@ -334,19 +323,21 @@ module MIPS150 #(
 
     // INSTRUCTION Fletch (sic :)
       .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-      /*.enb(1'b1)*/ .doutb(INST_IB) //No use for _hoti_IB
+      /*.enb(1'b1)*/ .doutb(INST_IB) //No use for hoti_IB_
     ) /* synthesis syn_noprune=1 */;
 
     `BUS_SHAKE_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
-    MEMIOPlex memiomap
-    ( .clk(clk), .rst(rst),
-        .ena(!stall && _hot_IO), //NOTE: Manage "ena" as with actual memories
+    MemMapIO memmap_io
+    ( .clk(clk), .rst(rst), .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
         .addra(MemAddr__MW[13:2]),
         .DOUTA(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
-        //Mapped devices/info
-        .RVa_RX(UARX), .RVa_TX(UATX),
-        .CNT_Cycle(CNT_Cycle[31:0]), .CNT_Inst(CNT_Inst[31:0]), .CNT_RESET_(ResetCNT_MW_F_)
+        //Mapped devices
+        .RVa_RX(UARX),          .RVa_TX(UATX),
+        .RVa_RX_IRQ(IRQUART0),  .RVa_TX_IRQ(IRQUART1),
+        //Counters
+        .CNT_Cycle(CNT_Cycle[31:0]), .CNT_Inst(CNT_Inst[31:0]),
+        .CNT_RESET_(CNT_Reset_MW2F_)
     ) /* synthesis syn_noprune=1 */;
 
     UARTRVA #(.ClockFreq(ClockFreq)) uartrva
@@ -361,23 +352,21 @@ module MIPS150 #(
 
 //Shared between BRK and SCOPE
 
-wire [31:0] keywatch = {REGFILE_we,FWD_Allow,FWD_1,FWD_2,
-                            REGFILE_wa[3:0],
-                        REGFILE_ra1[3:0],
-                            REGFILE_ra2[3:0],
-                        _hot_IO,_hot_BR,_hot_IC,_hot_DC,
-                            _hot_ISR,_hot_IB,_hot_DB,PC_MW[30],
-                        _hoti_ISR,_hoti_IB,_hoti_BR,_hoti_IC,
-                            rst,DoException_DX_F_,DoBranch_DX_F_,stall
-                        };
-//TODO: "register" this (and other key state) to "preserve" it.
+wire [31:0] keywatch = {
+    REGFILE_we,FWD_Allow,FWD_1,FWD_2, REGFILE_wa[3:0],
+    REGFILE_ra1[3:0], REGFILE_ra2[3:0],
+    _hot_IO,_hot_BR,_hot_IC,_hot_DC,
+        _hot_ISR,_hot_IB,_hot_DB,PC_MW[30],
+    hoti_[3:0], rst,IRQPending,BRA_DoBranch_DX2F_,stall
+};
 
 assign trace = {
 // 3 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
-    PC_DX[31:0],        INST_DX[31:0],      CNT_Inst[31:0],     PCBranch_DX_F_[31:0],
+    PC_DX[31:0],        INST_DX[31:0],      CNT_Inst[31:0],     BRA_PCBranch_DX2F_[31:0],
     FWD_rd1[31:0],      FWD_rd2[31:0],      REGFILE_wd[31:0],   keywatch[31:0],
 
+//  DMEM_READ[31:0],    32'd0,              32'd0,              32'd0,
     RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_DB[31:0],
     MemAddr_MW[31:0],   MemAddr__MW[31:0],  _WDataMasked[31:0],
     {8'd0, 8'd0, 8'd0, _WriteMask,_ByteMask},
@@ -457,8 +446,8 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
         $display("%d]   /DX: %h %h", DBG_cycle, PC_F_, INST_F_);
         $display("%d]  /MW : %h<=%h", DBG_cycle, MemAddr__MW, MemWValue__MW);
         $display("%d]  /MW : %b", DBG_cycle, IControl__MW);
-        $display("%d] /F  : R[%h,%d]<=%h(%d)", DBG_cycle, WBKReg_MW_F_, WBKReg_MW_F_,
-                            WBKDat_MW_F_, WBKDat_MW_F_);
+        $display("%d] /F  : R[%h,%d]<=%h(%d)", DBG_cycle, WBK_Reg_MW2DX_, WBK_Reg_MW2DX_,
+                            WBK_Val_MW2DX_, WBK_Val_MW2DX_);
 
         DBG_cycle = DBG_cycle + 1;
         if (!stall) DBG_step = DBG_step + 1;
@@ -467,8 +456,7 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
 
         $display("%d]/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\\", DBG_cycle);
         $display("%d] RST: %d   STL: %d   STEP: %d", DBG_cycle, rst, stall, DBG_step);
-        // DoBranch_DX_F_
-        $display("%d]    /F: %h *%d", DBG_cycle, PCBranch_DX_F_, DoBranch_DX_F_);
+        $display("%d]    /F: %h *%d", DBG_cycle, BRA_PCBranch_DX2F_, BRA_DoBranch_DX2F_);
         $display("%d]  F/DX: %h %h #%d", DBG_cycle, PC_DX, INST_DX, CNT_Inst);
         $display("%d]DX/MW : %h <=%h", DBG_cycle, PC_MW, RegWValue_MW);
         $display("%d]      : %b", DBG_cycle, IControl_MW); // Make a task to break into fields

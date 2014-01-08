@@ -110,8 +110,7 @@ module ml505top
   wire [31:0]  icache_dout;
   wire         stall;
 // CP4+
-  wire         video_ready;
-//  wire         dvi_video_ready;
+  wire         video_ready; //"dvi_video_ready" probably just a leftover
   wire         video_valid;
   wire [23:0]  video;
 /* Probably leftover from pre-GraphicsController/RequestProcessor patch
@@ -255,8 +254,8 @@ module ml505top
         end
     end
 
-    assign man_stall_toggle = 1'b0; // or 1'b1 or GPIO_DIP[0] (for checkpoint#1)
-    assign any_stall = stall; // || man_stall || debug_stall_not_jog;
+    assign man_stall_toggle = GPIO_DIP[0]; // 1'b0: disable; 1'b1: always; GPIO_DIP[0] for checkpoint#1
+    assign any_stall = stall || man_stall;// || debug_stall_not_jog;
 
 
 `ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!

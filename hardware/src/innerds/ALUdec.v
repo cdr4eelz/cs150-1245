@@ -36,7 +36,7 @@ always @(*) begin
                 `NOR:   ALUop = `ALU_NOR;
                 `SLT:   ALUop = `ALU_SLT;
                 `SLTU:  ALUop = `ALU_SLTU;
-                `JR, `JALR: ALUop = `ALU_XXX;
+                `JR, `JALR: ALUop = `ALU_XXX; //NOTE: JUMP & R-type
                 default: $display("Untrapped ALU op: funct=%h  @%t", funct, $time);
             endcase end
 
@@ -53,8 +53,8 @@ always @(*) begin
         `XORI:  ALUop = `ALU_XOR;
         `LUI:   ALUop = `ALU_LUI;
 
-        // Jump-types (don't use ALU)
-        `J, `JAL, `BEQ, `BNE, `BLEZ, `BGTZ, `BLTZ: // See JUMP-R R-types above
+        // Jump-types (See JUMP-R R-types above also)
+        `J, `JAL, `BEQ, `BNE, `BLEZ, `BGTZ, `BLTZ:
             ALUop = `ALU_XXX;
 
         default:

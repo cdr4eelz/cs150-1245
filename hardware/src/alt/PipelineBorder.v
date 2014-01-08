@@ -1,5 +1,4 @@
 `include "cpuglobal.vh"
-//TODO: Split into two modules now that experimentation phase is over
 
 /*
 **  Abstraction of inter-stage register'd or latch'd value at pipeline stage borders
@@ -14,8 +13,6 @@ module PipelineBorder #(
     output reg [Width-1:0] Out
 );
 
-//TODO: Eliminate LATCHIEMUX use altogether
-//TODO: Try to LATCHIEMUX with regular sync element at end of it's combo-logic
 generate
     if (Mode == 3) begin:PASSTHRU
         always @(*) Out = In;

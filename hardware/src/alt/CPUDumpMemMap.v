@@ -1,6 +1,6 @@
 `include "cpuglobal.vh"
 
-module DumpMEMIOCPU #(
+module CPUDumpMemMap #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
     parameter COLT45_STEPMAX=0
@@ -63,7 +63,7 @@ module DumpMEMIOCPU #(
     );
 
 
-    wire [31: 0] OUT_BRa, OUT_BRb, OUT_DB, OUT_IB;
+    wire [31: 0] OUT_BRa, OUT_DB, OUT_IB;
     assign DATA_W = OUT_DB;
 
     // Key components indirectly wired elsewhere
@@ -72,8 +72,8 @@ module DumpMEMIOCPU #(
     ( .clka(clk), .addra(ADDR_W),
         .ena( ~stall), .douta(OUT_BRa),
       /*.wea(4'b0000), .dina(32'b0),*/
-      .clkb(clk), .addrb(ADDR_W),
-        .enb( ~stall), .doutb(OUT_BRb)
+      .clkb(clk), .addrb(12'd0),
+        .enb(1'b0), .doutb()
     );
 
     dmem_blk_ram bram_dmem
@@ -91,15 +91,16 @@ module DumpMEMIOCPU #(
     );
 
     `BUS_SHAKE_type(8)  UATX, UARX;
-    MEMIOPlex iomap_plex
+    wire IRQ_TX, IRQ_RX;
+    MemMapIO memmap_io
     ( .clk(clk), .rst(rst),
         .ena(~stall),
         .addra( (STATE === 2) ? 12'h002 : 12'h000 ),
         .wea  ( {3'b000, (STATE === 2)} ),
         .dina ( {24'b0, TX_Data} ),
-//      .rmask( {3'b000, (STATE !== 2)} ),
         .DOUTA( IOSTATUS ),
-        .RVa_TX (UATX), .RVa_RX(UARX)
+        .RVa_TX (UATX),         .RVa_RX(UARX),
+        .RVa_TX_IRQ(IRQ_TX),    .RVa_RX_IRQ(IRQ_RX)
     );
 
     UARTRVA #(
@@ -111,6 +112,12 @@ module DumpMEMIOCPU #(
 
 
 // synthesis translate_off
+
+    always@(posedge IRQ_TX or posedge IRQ_RX or negedge IRQ_TX or negedge IRQ_RX) begin
+        $display("IRQ0=%b IRQ1=%b", IRQ_TX, IRQ_RX);
+    end
+        
+
 generate if (COLT45_STEPMAX > 0) begin:_STEPS_
     integer DBG_CNT = 0;
     always@(posedge clk) begin

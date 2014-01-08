@@ -2,7 +2,7 @@
 
 `include "cpuglobal.vh"
 
-module DumpMemTestbench;
+module CPUDumpMemUARTTestbench;
     reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
     
@@ -24,7 +24,7 @@ module DumpMemTestbench;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    DumpMemCPU DUT
+    CPUDumpMemUART DUT
     (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),

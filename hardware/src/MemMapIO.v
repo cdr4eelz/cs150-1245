@@ -1,10 +1,8 @@
 `include "cpuglobal.vh"
 
-//TODO: All memories through here
-//TODO: RVA as easily duplicated submodule
-//TODO: Config address via registers/lines (simple, dedicated comparators)
+//TODO-XTRA: Config address via registers/lines (simple, dedicated comparators)
 
-module MEMIOPlex #(
+module MemMapIO #(
     parameter PREMATURE_BYTE=8'h3E, COLT45_SHAKE=0
 )(
     input clk, rst,
@@ -18,6 +16,7 @@ module MEMIOPlex #(
 
     // DOS SHAKES POR FAVOR
     inout `BUS_SHAKE_type(8) RVa_RX, RVa_TX,
+    output RVa_RX_IRQ, RVa_TX_IRQ,
 
     // Counter taps & reset
     input [31: 0] CNT_Cycle, CNT_Inst,
@@ -35,6 +34,14 @@ module MEMIOPlex #(
     wire [ 7: 0]    Tx_Data;    // OUT: Data to UART
     wire            Tx_Valid;   // OUT: We announce a byte
     wire            Tx_Ready;   // IN : UART can take a byte from us
+    // Prior clock state for "edge" -> "pulse" conversion
+    reg WAS_Rx_Valid, WAS_Tx_Ready;
+    always @(posedge clk) begin:_REG_WAS_
+        if (rst) {WAS_Rx_Valid,WAS_Tx_Ready} <= 0;
+        else {WAS_Rx_Valid,WAS_Tx_Ready} <= {Rx_Valid,Tx_Ready};
+    end
+    assign RVa_RX_IRQ = (Rx_Valid && !WAS_Rx_Valid);
+    assign RVa_TX_IRQ = (Tx_Ready && !WAS_Tx_Ready);
     // Drive these pre-clock (continuous drive) so other RVA sees them at clock
     assign Rx_Ready = isRead && (addra==12'h003);
     assign Tx_Valid = isWrite && (addra==12'h002);
@@ -44,6 +51,7 @@ module MEMIOPlex #(
 //    reg  [31: 0] CNT_Rx, CNT_Tx; //Minimal IO statistics
 
     assign CNT_RESET_ = isWrite && (addra==12'h006);
+
 
 /* if (COLT45_SHAKE) begin
             if (isRead) case (addra)
