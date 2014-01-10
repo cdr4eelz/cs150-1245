@@ -1,7 +1,7 @@
 #include "types.h"
 #include "uart.h"
 
-#define DATA (int32_t *) 0x10018000
+#define DATA (uint32_t *) 0x10018000
 
 // Subset of ascii.c
 #define DEFINE_TO_ASCII_HEX(type) \
@@ -33,20 +33,19 @@ DEFINE_TO_ASCII_HEX(uint32)
 // Minimal activities of mmult
 
 typedef void (*entry_t)(void);
-#define BUF_LEN 256
+#define BUF_LEN 128
 #define CNTUP 22
 
 int32_t countup0(void)
 {
     int32_t sum = 0;
-    uwrite_int8s("\r\nCount0...\r\n");
     for (uint32_t i = 0; i < CNTUP; i++) {
         sum += i;
     }
-    uwrite_int8s("WHEW!!!\r\n");
     return sum;
 }
 
+/*
 int32_t countup1(void)
 {
     int8_t *buf2 = (int8_t*) DATA;
@@ -78,54 +77,45 @@ int32_t countup2(void)
     uwrite_int8s("WHEW!!!\r\n");
     return sum;
 }
+*/
 
 int main(int argc, char**argv) {
     int8_t buffer[BUF_LEN];
     uint32_t result, time, instructions;
 
     uwrite_int8('=');
-    uwrite_int8s("]");
+    uwrite_int8s("][= ");
 
     uwrite_int8('0');
+    uwrite_int8s("\r\nCount0...\r\n");
     COUNTER_RST = 0;
     result = countup0();
     time = CYCLE_COUNTER;
     instructions = INSTRUCTION_COUNTER;
-    uwrite_int8s("Result: ");
+    uwrite_int8s("WHEW! \r\n");
+    uwrite_int8('R');
     uwrite_int8s(uint32_to_ascii_hex(result, buffer, BUF_LEN));
-    uwrite_int8s("\r\nCycle Count: ");
-    uwrite_int8s(uint32_to_ascii_hex(time, buffer, BUF_LEN));
-    uwrite_int8s("\r\nInstruction Count: ");
-    uwrite_int8s(uint32_to_ascii_hex(instructions, buffer, BUF_LEN));
+    uwrite_int8s(" : ");
+    uwrite_int8('R');
+    uwrite_int8s(uint32_to_ascii_hex(result, buffer, BUF_LEN));
     uwrite_int8s("\r\n");
 
-
-    uwrite_int8('1');
-    COUNTER_RST = 0;
-    result = countup1();
-    time = CYCLE_COUNTER;
-    instructions = INSTRUCTION_COUNTER;
-    uwrite_int8s("Result: ");
-    uwrite_int8s(uint32_to_ascii_hex(result, buffer, BUF_LEN));
-    uwrite_int8s("\r\nCycle Count: ");
+    uwrite_int8('C');
     uwrite_int8s(uint32_to_ascii_hex(time, buffer, BUF_LEN));
-    uwrite_int8s("\r\nInstruction Count: ");
-    uwrite_int8s(uint32_to_ascii_hex(instructions, buffer, BUF_LEN));
+    uwrite_int8s(" : ");
+    uwrite_int8('C');
+    uwrite_int8s(uint32_to_ascii_hex(time, buffer, BUF_LEN));
     uwrite_int8s("\r\n");
 
-
-    uwrite_int8('2');
-    COUNTER_RST = 0;
-    result = countup2();
-    time = CYCLE_COUNTER;
-    instructions = INSTRUCTION_COUNTER;
-    uwrite_int8s("Result: ");
-    uwrite_int8s(uint32_to_ascii_hex(result, buffer, BUF_LEN));
-    uwrite_int8s("\r\nCycle Count: ");
-    uwrite_int8s(uint32_to_ascii_hex(time, buffer, BUF_LEN));
-    uwrite_int8s("\r\nInstruction Count: ");
+    uwrite_int8('I');
     uwrite_int8s(uint32_to_ascii_hex(instructions, buffer, BUF_LEN));
+    uwrite_int8s(" : ");
+    uwrite_int8('I');
+    uwrite_int8s(uint32_to_ascii_hex(instructions, (char*)DATA, BUF_LEN));
     uwrite_int8s("\r\n");
+
+    uwrite_int8('\r');
+    uwrite_int8('\n');
 
     return 0;
 }

@@ -1,6 +1,6 @@
 KEYtag: BUG!/? STEP OPTImize TOOL CLeanUP ANALyze COOLcrossuse WANTtolearn
 
-BUG!    Execute code via I-cache flakey (especially if caches non-coherent)
+BUG!    Execute code via I-cache flakey (maybe but push/pop w/stall interaction?)
 BUG-    Reset is double applied with 2-cycle gap (init_done lag)
 BUG-    Timing errors (try separate PLLs, single-clock DDR, pull from sysgen, etc.)
 
@@ -16,6 +16,7 @@ STEP    ISR software
 STEP    PixelFeeder from DDR (optional cross-clock count-estimate)
 STEP    Reset deassert per-clock (and delay based on component)
 
+TOOL    Use speedy distmem and custom instructions for special internal debug data/triggers
 TOOL    Helper functions in scratch IMEM (link with smaller user code)
 TOOL    Cache-Flush, Break, Scope-trigger, etc. instructions (for testing/debugging)
 COOL    FSL link & instuctions (drop-in of/as uBlaze coprocs & use RVA tricks)

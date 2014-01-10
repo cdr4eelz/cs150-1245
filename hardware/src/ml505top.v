@@ -231,6 +231,28 @@ module ml505top
     .frame_interrupt(frame_interrupt)
 );
 
+
+    assign any_stall = stall || man_stall || debug_stall_not_jog;
+
+
+
+`ifdef COLT45_KILLFUN //Also helps text editor to hide this whole mess!
+//Gather DUPLICATES of the "disabled state" assigns here in case KILLFUN is used :(
+
+    assign {man_stall,man_stall_toggle,debug_stall_not_jog} = 0;
+
+    //COLT45_PLOP
+    assign {P_SERIAL1_TX,P_SERIAL2_TX} = 2'b11;
+
+    // COLT45_BRK
+    assign {debug_reset,debug_stall,debug_brk,debug_jog} = 0;
+    assign {BRK_MASTER,SERIAL_JTAG} = 0;
+
+    //COLT45_SCOPE
+    //  Just leave cs_icon line dangling (is inout)
+
+`else //! :: COLT45_KILLFUN
+
 // Debug stall with one-shot "jog"
     reg debug_jog_fired;
     always @(posedge cpu_clk_g) begin
@@ -253,12 +275,9 @@ module ml505top
             man_stall_reg <= 1'b0;
         end
     end
-
     assign man_stall_toggle = GPIO_DIP[0]; // 1'b0: disable; 1'b1: always; GPIO_DIP[0] for checkpoint#1
-    assign any_stall = stall || man_stall;// || debug_stall_not_jog;
+    assign man_stall = man_stall_reg;
 
-
-`ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
 
 //TODO: Move PLOP,BRK into MIPSY & tap specific lines; re-standardize ml505top.v
 
@@ -475,19 +494,6 @@ end else begin:_BRK_TOP_ELSE_
     assign {BRK_MASTER,SERIAL_JTAG} = 2'b00;
 end endgenerate //COLT45_BRK
 
-
-`else //! :: COLT45_KILLFUN
-//Gather DUPLICATES of the "disabled state" assigns here in case KILLFUN is used :(
-
-    //COLT45_PLOP
-    assign P_SERIAL1_TX = 1'b1, P_SERIAL2_TX = 1'b1;
-
-    // COLT45_BRK
-    assign {debug_reset,debug_stall,debug_brk,debug_jog} = 4'b0000;
-    assign {BRK_MASTER,SERIAL_JTAG} = 2'b00;
-
-    //COLT45_SCOPE
-    //  Just leave cs_icon line dangling (is inout)
 
 `endif //COLT45_KILLFUN
 
