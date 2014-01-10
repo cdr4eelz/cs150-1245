@@ -365,7 +365,7 @@ module Memory150(
 
      // assignments
     assign stall = d_stall || i_stall;
-
+assign frame_interrupt = i_stall;
     // For feeding pixels to the DVI module:
    
     PixelFeeder pixelfeed(
@@ -381,7 +381,7 @@ module Memory150(
         .video(video),
         .video_valid(video_valid),
         .video_ready(video_ready),
-        .frame_interrupt(frame_interrupt));
+        .frame_interrupt());
 
     FrameFiller framefill(
         .clk(cpu_clk_g),
@@ -454,7 +454,5 @@ module Memory150(
       .GP_CODE(cpu_gp_code),
       .GP_FRAME(cpu_gp_frame),
       .GP_valid(cpu_gp_valid));
-   
-				
-//initial $monitor("VID_READY: %b", video_ready);       
+
 endmodule

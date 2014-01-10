@@ -1,6 +1,6 @@
 KEYtag: BUG!/? STEP OPTImize TOOL CLeanUP ANALyze COOLcrossuse WANTtolearn
 
-BUG!    Copy code from scratch to "3" seems flakey (helped by 2nd copy to "2")
+BUG!    Execute code via I-cache flakey (especially if caches non-coherent)
 BUG-    Reset is double applied with 2-cycle gap (init_done lag)
 BUG-    Timing errors (try separate PLLs, single-clock DDR, pull from sysgen, etc.)
 
@@ -10,7 +10,7 @@ CLUP    Data vs control segregation
 CLUP    OPCODE (& almost everything) as parameters rather than `define
 CLUP    Top level `define -> localparam mappings
 
-STEP    More thorough instruction/asm/C tests
+STEP    More thorough instruction/asm/C tests (partly started)
 STEP    COP0 complete & test
 STEP    ISR software
 STEP    PixelFeeder from DDR (optional cross-clock count-estimate)

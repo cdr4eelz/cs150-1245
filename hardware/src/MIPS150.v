@@ -356,7 +356,7 @@ wire [31:0] keywatch = {
     REGFILE_we,FWD_Allow,FWD_1,FWD_2, REGFILE_wa[3:0],
     REGFILE_ra1[3:0], REGFILE_ra2[3:0],
     _hot_IO,_hot_BR,_hot_IC,_hot_DC,
-        _hot_ISR,_hot_IB,_hot_DB,PC_MW[30],
+        _hot_ISR,_hot_IB,_hot_DB,frame_interrupt,
     hoti_[3:0], rst,IRQPending,BRA_DoBranch_DX2F_,stall
 };
 
