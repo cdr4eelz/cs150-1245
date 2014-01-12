@@ -3,7 +3,8 @@
 
 #define DATA (int32_t *) 0x10018000
 
-// Subset of ascii.c
+// Subset of ascii.c:
+//   int8_t* uint32_to_ascii_hex(uint32_t x, int8_t* buf_ptr, uint32_t buf_len) -> buf_ptr[0]
 #define DEFINE_TO_ASCII_HEX(type) \
 int8_t* type##_to_ascii_hex(type##_t x, int8_t* buffer, uint32_t n) \
 { \
@@ -24,13 +25,12 @@ int8_t* type##_to_ascii_hex(type##_t x, int8_t* buffer, uint32_t n) \
 DEFINE_TO_ASCII_HEX(uint32)
 
 // Subset of benchmark.c
-
 #define COUNTER_RST (*((volatile uint32_t*) 0x80000018))
 #define CYCLE_COUNTER (*((volatile uint32_t*)0x80000010))
 #define INSTRUCTION_COUNTER (*((volatile uint32_t*)0x80000014))
 
 
-// Minimal software tests as bios
+// Minimal software tests as bios rom
 
 typedef volatile uint32_t *vint32_p;
 
@@ -51,7 +51,7 @@ uint32_t test_copy(int8_t* p_buf, uint32_t l_buf)
     return v; //Return above expected value stored to I&D, fetched from D
 }
 
-int main(int argc, char**argv) {
+void pios2() {
     int8_t buffer[BUF_LEN];
     uint32_t result, time, instructions;
 
@@ -78,6 +78,4 @@ int main(int argc, char**argv) {
     } while ((tval != ' ') && cnt--);
 
     uwrite_int8('*');
-L_HALT:
-    goto L_HALT;
 }

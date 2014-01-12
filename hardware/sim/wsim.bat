@@ -44,13 +44,18 @@ REM ../../src/request_fifo/*.v ^
 
 vlog -quiet +acc -source -nocovercells -sfcu -note vlog-2605 ^
      -lint -vlog01compat -nodeglitchalways ^
-  +incdir+../../src  ^  +incdir+../../src/dmem_blk_ram  ^  +incdir+../../src/imem_blk_ram  ^  +incdir+../../src/testbench  ^
+  +incdir+../../src  ^
+  +incdir+../../src/dmem_blk_ram  ^
+  +incdir+../../src/imem_blk_ram  ^
+  +incdir+../../src/testbench  ^
 -R -L unisims_ver ^
    -L unimacro_ver ^
    -L xilinxcorelib_ver ^
    -L secureip ^
    -pedanticerrors - ^
-../../src/*.v ^../../src/dmem_blk_ram/*.v ^../../src/imem_blk_ram/*.v ^
+../../src/*.v ^
+../../src/dmem_blk_ram/*.v ^
+../../src/imem_blk_ram/*.v ^
 ../../src/testbench/EchoTestbench.v
 
 vmake >Makefile

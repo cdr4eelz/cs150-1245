@@ -10,7 +10,7 @@ module MemMapIO #(
     // DAS BUS
     input ena, //ena is like "memory" style "enable port a"
     input [11: 0] addra, //Address for read or write (use zero if worried about side effects)
-    input [ 3: 0] wea, //Write enable byte mask together
+    input [ 3: 0] wea, //Write enable & byte mask together (ena must also be active for write)
     input [31: 0] dina, //Data in grabbed at clock edge if enabled
     output reg [31: 0] DOUTA, // REGISTER out (treat like synchronous memory)
 
@@ -23,8 +23,8 @@ module MemMapIO #(
     output CNT_RESET_
 );
 
-    wire isWrite = ena && (|wea);
-    wire isRead = ena && !(|wea);
+    wire isWrite = ena && (wea != 4'b0000);
+    wire isRead = ena && (wea == 4'b0000);
 
 //RVA-Pair operations
     // Forward patchwork (individual ready/valid lines to consolidated RVA SHAKE below):
