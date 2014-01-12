@@ -47,17 +47,15 @@ module MIPS150 #(
 
 /*
   NAMING CONVENTIONS: (might be inconsistent/in-flux though :)
-    SUFFIX for stage code (F, DX, MW) == (instFetch, Decode-Execute, Memory-WriteBack)
-    xxxSS_  : Value unstable during given stage (but stable at posedge exit)
-    Typical output of a stage/module (headed to next stage somehow).
-    xxx_SS  : Value stable during entire given stage (explicitly registered by pipeline).
-    Output of a prior stage after being registered by pipeline reg,
-    used as input to a given stage.
+    SUFFIX for stage code (F, DX, MW) == (instFetch, Decode/regread-eXecute, Memory-Writeback)
+    xxxSS_  : Value unstable during given stage (valid by end-of-cycle if !stall)...
+        Typical stage/module output headed via pipeline register to next stage.
+    xxx_SS  : Value stable during entire given stage including during stall...
+        Typical stage/module input via pipeline register from by "prior" stage or "feedback".
     xxx_SS_ : As with SS_ except is already REGISTER'd at exit of output stage.
-    OUTPUT is FROM an internal component that is unavoidably synchronous.
+WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (maybe not stallproof).
     xxx__SS : Redundant with xxxSS_ except is named relative to the inbound stage.
-    From this point of view, a stage is peering into it's prior stage's
-    value, getting a preview of the value before the clock strikes.
+        From this point of view, peeking into prior stage to setup pre-clock input to sync.
     INPUT is TO an internal component that is unavoidably synchronous.
 
     Internal to a stage (and sometimes for input/output interface):
@@ -126,7 +124,7 @@ module MIPS150 #(
     wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
     wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
     assign REGFILE_wa = WBK_Reg_MW2DX_, REGFILE_wd = WBK_Val_MW2DX_;
-    wire REGFILE_we = /*!stall &&*/ (REGFILE_wa != 0); // Mute "we" if "wa"==0 for signal clarity
+    wire REGFILE_we = !stall && (REGFILE_wa != 0); // Mute "we" if "wa"==0 for signal clarity */
     RegFile regfile
     ( .clk(clk),
         // Write is synchronous
@@ -135,10 +133,10 @@ module MIPS150 #(
         .ra1(REGFILE_ra1), .rd1(REGFILE_rd1),
         .ra2(REGFILE_ra2), .rd2(REGFILE_rd2)
     );
-    // FORWARDING calculation (a "virtual" behavior tacked onto REGFILE)
+    // FORWARDING calculation (rather like a bypass of REGFILE)
     wire FWD_Allow = WBK_CanFWD_MW2DX_; // Has already checked for "wa"==0 elsewhere
-    wire FWD_1 = (FWD_Allow) ? (REGFILE_wa == REGFILE_ra1) : 1'b0;
-    wire FWD_2 = (FWD_Allow) ? (REGFILE_wa == REGFILE_ra2) : 1'b0;
+    wire FWD_1 = FWD_Allow && (REGFILE_wa == REGFILE_ra1);
+    wire FWD_2 = FWD_Allow && (REGFILE_wa == REGFILE_ra2);
     wire [31: 0] #DD FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
     wire [31: 0] #DD FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 
@@ -188,7 +186,7 @@ module MIPS150 #(
     wire  [31: 0]   MemAddr_MW;
     wire  [31: 0]   RegWValue_MW;
     PipelineRegister #( .Width(`BUS_ICTL_width) )
-        PIPR_IControl_MW  ( .clk(clk), .rst(rst), .stall(stall),
+        PIPR_IControl_MW  ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(IControlDX_),   .Out(IControl_MW  ) );
     PipelineRegister #( .Width(32) )
         PIPR_MemAddr_MW   ( .clk(clk), .rst(rst), .stall(stall),
@@ -212,6 +210,7 @@ module MIPS150 #(
     StageMW s_MW
     ( //NOTE: Currently async: .clk(clk), .rst(rst), .stall(stall),
         //Inputs
+//TODO: Rework inputs to be minimal specific signals
         ._IControl  (IControl__MW),  .IControl   (IControl_MW),
         ._MemAddr   (MemAddr__MW),   .MemAddr    (MemAddr_MW),
         ._MemWValue (MemWValue__MW), .RegWValue  (RegWValue_MW),
@@ -219,6 +218,7 @@ module MIPS150 #(
         //Feedbacks to "prior" stages (forwarding & instruction fetch)
         .WBK_Reg_(WBK_Reg_MW2DX_), .WBK_Val_(WBK_Val_MW2DX_),
         .WBK_CanFWD_(WBK_CanFWD_MW2DX_),
+//TODO: Move most DMEM stuff elsewhere
         //Memory/MMIO "pre-clock" drives OUT
         ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
         ._hot_IB(_hot_IB), ._hot_DB(_hot_DB), //XTRA: Scratchpad
@@ -242,13 +242,13 @@ module MIPS150 #(
             default: hoti_ = 4'b0000;
         endcase
     end
-
-    wire hoti_BR_  = hoti_[2];
+    //Not all instruction-fetch "drives" usable by memories themselves
+    wire hoti_BR_  = hoti_[2]; //TODO: Consider this for PCinBIOS test
     wire hoti_IC_  = hoti_[1];
 
     wire [ 3: 0] _hoti;
     PipelineRegister #( .Width(4) )
-        PIPR_HOTI ( .clk(clk), .rst(rst), .stall(1'b0),
+        PIPR_HOTI ( .clk(clk), .rst(rst), .stall(stall),
                     .In(hoti_), .Out(_hoti) );
 
     wire [31: 0] INST_ISR, INST_BR, INST_IC, INST_IB;
@@ -266,23 +266,25 @@ module MIPS150 #(
     end
     assign IMEM_DATA = MUX_IMEM;
 
-
     // MEMORY/MMIO ELEMENTS (straddle MW & F stages & interface outside CPU)
+
+//TODO: Apply selector to _WriteMask with repeat-concat and an AND
+//TODO: Ideally generate "isRead" signal WHILE generating _WriteMask
 
     //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
     assign dcache_addr = {4'h0, MemAddr__MW[27:0]},
         dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
         dcache_din  = _WDataMasked,
-        dcache_re   = (/*!stall &&*/ _hot_DC) && !(|_WriteMask),
+        dcache_re   = (!stall && _hot_DC) && !(|_WriteMask),
         RData_DC    = dcache_dout;
 //    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
 
     //NOTE: Both _hot_DC && _hot_IC ARE allowed to be active simultaneously for WRITE
     //      but writability rules prevent INST-read & DATA-write collision
-    assign icache_addr = {4'h0, (_hot_IC) ? MemAddr__MW[27:0] : IMEM_ADDR[27:0]},
-        icache_we   = (!stall && _hot_IC) ? (_WriteMask) : 4'b0000,
+    assign icache_addr = {4'h0, (hoti_IC_) ? IMEM_ADDR[27:0] : MemAddr__MW[27:0]},
+        icache_we   = (!stall && !hoti_IC_ && _hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
-        icache_re   = (/*!stall &&*/ hoti_IC_ && !_hot_IC),
+        icache_re   = (!stall && hoti_IC_),
         INST_IC     = icache_dout;
 //    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
 

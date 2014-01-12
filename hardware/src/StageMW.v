@@ -113,7 +113,6 @@ module StageMW (
     assign WBK_Reg_     = DestReg; //ZERO when no register writeback is happening
     assign WBK_Val_     = (DestReg == 5'd0) ? `UNKNOWN(32)
                             : ( (isMemRead) ? DataLoad : RegWValue ); //Jump-Link uses RegWValue
-    assign WBK_CanFWD_  = (DestReg == 5'd0) ? `UNKNOWN(1)
-                            : ( !isMemRead ); //Covers CopRead too (forwarding allowed)
+    assign WBK_CanFWD_  = (DestReg != 5'd0) && !isMemRead; //Covers CopRead too (forwarding allowed)
 
 endmodule
