@@ -126,7 +126,7 @@ module MIPS150 #(
     wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
     wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
     assign REGFILE_wa = WBK_Reg_MW2DX_, REGFILE_wd = WBK_Val_MW2DX_;
-    wire REGFILE_we = !stall && (REGFILE_wa != 0); // Mute "we" if "wa"==0 for signal clarity
+    wire REGFILE_we = /*!stall &&*/ (REGFILE_wa != 0); // Mute "we" if "wa"==0 for signal clarity
     RegFile regfile
     ( .clk(clk),
         // Write is synchronous
@@ -248,7 +248,7 @@ module MIPS150 #(
 
     wire [ 3: 0] _hoti;
     PipelineRegister #( .Width(4) )
-        PIPR_HOTI ( .clk(clk), .rst(rst), .stall(stall),
+        PIPR_HOTI ( .clk(clk), .rst(rst), .stall(1'b0),
                     .In(hoti_), .Out(_hoti) );
 
     wire [31: 0] INST_ISR, INST_BR, INST_IC, INST_IB;
@@ -273,7 +273,7 @@ module MIPS150 #(
     assign dcache_addr = {4'h0, MemAddr__MW[27:0]},
         dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
         dcache_din  = _WDataMasked,
-        dcache_re   = (!stall && _hot_DC) && !(|_WriteMask),
+        dcache_re   = (/*!stall &&*/ _hot_DC) && !(|_WriteMask),
         RData_DC    = dcache_dout;
 //    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
 
@@ -282,9 +282,9 @@ module MIPS150 #(
     assign icache_addr = {4'h0, (_hot_IC) ? MemAddr__MW[27:0] : IMEM_ADDR[27:0]},
         icache_we   = (!stall && _hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
-        icache_re   = (!stall && hoti_IC_ && !_hot_IC),
+        icache_re   = (/*!stall &&*/ hoti_IC_ && !_hot_IC),
         INST_IC     = icache_dout;
-//    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC =32'd0;
+//    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
 
     isr_mem bram_isr
     ( .clka(clk), .ena(!stall && _hot_ISR),
