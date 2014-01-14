@@ -4,7 +4,6 @@
 #include "types.h"
 
 #define URECV_CTRL (*((volatile uint32_t*)0x80000004) & 0x01)
-
 #define URECV_DATA (*((volatile uint32_t*)0x8000000c) & 0xff)
 
 #define UTRAN_CTRL (*((volatile uint32_t*)0x80000000) & 0x01)

@@ -5,7 +5,7 @@
 
 module MemMapIO #(
     parameter BADNESS=1, BAD_WORD=32'hFED1C007, BAD_BYTE=8'h11,
-    parameter COLT45_SHAKE=1
+    parameter COLT45_SHAKE=1, COLT45_POLLS=0
 )(
     input clk, rst,
 
@@ -92,8 +92,8 @@ module MemMapIO #(
 generate if (COLT45_SHAKE)
     always @(posedge clk) begin:_SHAKE_MSG_
         if (isRead) case (addra)
-            12'h000: $display("MEMIO: Poll Tx (%b)   @%t", Tx_Ready, $time);
-            12'h001: $display("MEMIO: Poll Rx (%b)   @%t", Rx_Valid, $time);
+            12'h000: if (COLT45_POLLS) $display("MEMIO: Poll Tx (%b)   @%t", Tx_Ready, $time);
+            12'h001: if (COLT45_POLLS) $display("MEMIO: Poll Rx (%b)   @%t", Rx_Valid, $time);
             12'h003: $display("MEMIO: Rx Shake (0x%h, %d, '%c')   @%t", Rx_Data, Rx_Data, Rx_Data, $time);
             12'h004: $display("MEMIO: Read Cycles (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
             12'h005: $display("MEMIO: Read Steps (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
