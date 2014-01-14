@@ -12,7 +12,10 @@
 
 #define DSTR "This is just a simple test. Memory contents are echoed to UART constantly. Ideally the values will make it. Reset can be an issue but we shall cee (sic).  "
 
+__attribute__ ((aligned))
 const char rodata[] = "ReaDoNLy: " DSTR;
+
+__attribute__ ((aligned))
 char data[] = "xyz pdq: UNSEEN"; //Not initialized unless loader or _start do something
 
 //NOTE: This is coded awkwardly in order to minimize reads from memory during preamble

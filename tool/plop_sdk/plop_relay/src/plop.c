@@ -77,7 +77,9 @@ u16 TxFromBuf(u8 *pB, u8 *pW, u8 *pH, u8 **ppT, int u_TX, u8 nl2cr, u16 maxBurst
 // --- GLOBALS --- (Tune linker to ensure heap/stack/code don't crowd out globals)
 #define D2M_SIZE    (12 * 1024)
 #define M2D_SIZE    ( 4 * 1024)
-u8 D2M_BUF[D2M_SIZE];   // TODO: Figure out pragma to align to word (or bigger)
+__attribute__ ((aligned))
+u8 D2M_BUF[D2M_SIZE];
+__attribute__ ((aligned))
 u8 M2D_BUF[M2D_SIZE];
 
 int main()

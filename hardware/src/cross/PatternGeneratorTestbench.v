@@ -30,7 +30,7 @@ module PatternGeneratorTestbench;
       .CLOCK_HZ(CLK_HZ),
       .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
       .SCENES_PER_SEC(20) //Quick rate to keep sim duration short
-    ) DUT (
+    ) dut (
       .clock(clock),
       .reset(reset),
 

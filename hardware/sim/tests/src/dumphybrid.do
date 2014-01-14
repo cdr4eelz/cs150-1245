@@ -1,5 +1,5 @@
-start EchoTestbenchCaches
-file copy -force ../../../software/echo_c/echo_c.inst.mif bios_mem.mif
+start EchoTestbenchHybrid
+file copy -force ../../../software/dumpmem_s/dumpmem_s.inst.mif bios_mem.mif
 file copy -force ../../../software/dumpmem_i/dumpmem_i.inst.mif imem_blk_ram.mif
 file copy -force ../../../software/dumpmem_i/dumpmem_i.data.mif dmem_blk_ram.mif
 file copy -force ../../../software/isr/nada.mif isr_mem.mif
@@ -12,4 +12,4 @@ add wave EchoTestbenchCaches/DUT/regfile/*
 add wave EchoTestbenchCaches/DUT/s_F/*
 add wave EchoTestbenchCaches/DUT/s_DX/*
 add wave EchoTestbenchCaches/DUT/s_MW/*
-run 10000us
+run 20000us

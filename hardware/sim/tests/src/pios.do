@@ -14,4 +14,4 @@ add wave EchoTestbenchCaches/DUT/s_MW/*
 add wave EchoTestbenchCaches/DUT/regfile/*
 add wave EchoTestbenchCaches/DUT/cop0/*
 add wave EchoTestbenchCaches/DUT/memmap_io/*
-run 180000us
+run 20000us

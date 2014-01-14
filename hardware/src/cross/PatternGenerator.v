@@ -1,6 +1,7 @@
 module PatternGenerator #(
     parameter CLOCK_HZ = 50_000_000,
     parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600,
+//    parameter SCREEN_WIDTH = 640, SCREEN_HEIGHT = 480,
     parameter SCENES_PER_SEC = 1
 ) (
     // Controller interface
@@ -12,9 +13,6 @@ module PatternGenerator #(
     output video_valid,
     input video_ready
 );
-    //Compute ideal sceen duration as # of rows (might not fall on frame boundary)
-    localparam SCENE_TICKS = CLOCK_HZ / SCENES_PER_SEC;
-
     reg validRGB;
     reg [23: 0] curRGB, nextRGB;
     reg [31: 0] curCOL, curROW, curFRAME;
@@ -23,13 +21,17 @@ module PatternGenerator #(
 
     assign video = curRGB;
     assign video_valid = validRGB;
-    wire advanceRVA = video_valid && video_ready; //reset will trump this
+    assign advanceRVA = video_valid && video_ready; //reset will trump this
+
+    //Compute ideal sceen duration as # of rows (might not fall on frame boundary)
+    localparam SCENE_TICKS = CLOCK_HZ / SCENES_PER_SEC;
 
     //Could use fast-counter/pixelrange util instead of our own
     wire rollCOL = (curCOL >= SCREEN_WIDTH-1);
     wire rollROW = (curROW >= SCREEN_HEIGHT-1);
 
-    wire [2:0] idx = {curSCENE, curROW[3], curCOL[4]}; //Scene in MSB
+    wire [2:0] scale = curFRAME[6:4];
+    wire [2:0] idx = {curSCENE, curROW[scale], curCOL[scale+1]}; //Scene in MSB
 
     always @(posedge clock) begin
         if (reset) begin

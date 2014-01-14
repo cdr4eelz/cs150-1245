@@ -1,29 +1,36 @@
 module ml505top
 (
-  input        FPGA_SERIAL_RX,
-  output       FPGA_SERIAL_TX,
-  input        GPIO_SW_C,
-//input        GPIO_SW_S,
-  input [7:0]  GPIO_DIP, //TEAM45: Minor custom mods for debug
-  input        USER_CLK,
+  // Reference Clock (50MHz) & board reset (elimated)
+  input         USER_CLK,
+//input         USER_RST,
 
-  output [7:0] GPIO_LED,
+  // UART (serial)
+  input         FPGA_SERIAL_RX,
+  output        FPGA_SERIAL_TX,
 
+  // GPIO (Switches & LEDs)
+  input   [7:0] GPIO_DIP,
+  input   [4:0] GPIO_COMPPB,
+  output  [4:0] GPIO_COMPLED,
+  output  [7:0] GPIO_LED,
+
+  // DDR via MIG
   output [12:0] DDR2_A,
-  output [1:0]  DDR2_BA,
+  output  [1:0] DDR2_BA,
   output        DDR2_CAS_B,
   output        DDR2_CKE,
-  output [1:0]  DDR2_CLK_N,
-  output [1:0]  DDR2_CLK_P,
+  output  [1:0] DDR2_CLK_N,
+  output  [1:0] DDR2_CLK_P,
   output        DDR2_CS_B,
   inout  [63:0] DDR2_D,
-  output [7:0]  DDR2_DM,
-  inout  [7:0]  DDR2_DQS_N,
-  inout  [7:0]  DDR2_DQS_P,
+  output  [7:0] DDR2_DM,
+  inout   [7:0] DDR2_DQS_N,
+  inout   [7:0] DDR2_DQS_P,
   output        DDR2_ODT,
   output        DDR2_RAS_B,
   output        DDR2_WE_B,
-    
+
+  // DVI Controller
   output [11:0] DVI_D,
   output        DVI_DE,
   output        DVI_H,
@@ -31,12 +38,33 @@ module ml505top
   output        DVI_V,
   output        DVI_XCLK_N,
   output        DVI_XCLK_P,
-  
   inout         IIC_SCL_VIDEO,
-  inout         IIC_SDA_VIDEO
+  inout         IIC_SDA_VIDEO,
+
+  // ZBT SRAM Controller
+  input         SRAM_CLK_FB,
+  output        SRAM_CLK,
+  output        SRAM_WE_B,
+  output        SRAM_CS_B,
+  output        SRAM_ADV_LD_B,
+  output        SRAM_MODE,
+  output        SRAM_OE_B,
+  output  [3:0] SRAM_BW,
+  output [17:0] SRAM_A,
+  inout  [31:0] SRAM_D,
+
+  // VGA Capture
+  input   [7:0] VGA_RED, VGA_GREEN, VGA_BLUE,
+  input         VGA_DATA_CLK,
+  input         VGA_HSOUT,
+  input         VGA_VSOUT
 );
 
-wire any_stall;
+//Declare a couple custom signals & rename GPIO
+wire any_stall, GPIO_SW_C;
+assign GPIO_COMPLED = GPIO_COMPPB;
+assign GPIO_SW_C = GPIO_COMPPB[0];
+
 
   reg [3:0]  reset_r = 4'b0;
   reg [25:0] count_r = 26'b0;
@@ -278,7 +306,7 @@ wire any_stall;
   );
 
 
-//TEAM45: Minor custom mods for debug
+//TEAM45: A few minor custom mods for debug
 
     wire stall_toggle;
     Debouncer #(
@@ -306,5 +334,17 @@ wire any_stall;
     assign GPIO_LED = {3'b0, stall_toggle, any_stall,
                              stall, pll_lock, init_done};
 //  assign GPIO_LED = {5'b0, stall, pll_lock, init_done};
+
+
+//CROSS: SRAM driver from FALL13
+    assign SRAM_CLK=0;
+    assign SRAM_WE_B=1;
+    assign SRAM_CS_B=1;
+    assign SRAM_ADV_LD_B=1;
+    assign SRAM_MODE=0;
+    assign SRAM_OE_B=1;
+    assign SRAM_BW=4'hF;
+    assign SRAM_A=0;
+    assign SRAM_D=32'dz;
 
 endmodule
