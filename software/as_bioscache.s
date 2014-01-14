@@ -19,7 +19,7 @@ _start:
     lui     $k0, 0
     lui     $k1, 0
     lui     $gp, 0x1000 # Fun: pull from LD (not used anyway)
-    lui     $fp, 0      # Fun: passing xtra args above here
+    lui     $fp, 0x1001 # Fun: passing xtra args above here
     lui     $sp, 0x1001 # 0000 Fun: pull from LD not hardcode
     lui     $ra, 0x4000 # 0000 In case of unexpected return
     j       main

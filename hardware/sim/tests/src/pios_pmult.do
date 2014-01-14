@@ -12,6 +12,6 @@ add wave EchoTestbenchCaches/DUT/s_F/*
 add wave EchoTestbenchCaches/DUT/s_DX/*
 add wave EchoTestbenchCaches/DUT/s_MW/*
 add wave EchoTestbenchCaches/DUT/regfile/*
-add wave EchoTestbenchCaches/DUT/cop0/*
+#add wave EchoTestbenchCaches/DUT/cop0/*
 add wave EchoTestbenchCaches/DUT/memmap_io/*
-run 50000us
+run 300ms
