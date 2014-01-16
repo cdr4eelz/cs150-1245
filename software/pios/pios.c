@@ -66,19 +66,19 @@ int main(void)
         uwrite_int8(' ');
     }
 
-    if (0) { // Workaround: Copy to I-Cache only
+    if (1) { // Workaround: Copy to I-Cache only
         uint32_t xor = copy_xor(CODE_SRC, ICACHE, CODE_LEN);
         uwrite_int8('#');
         if (1) uwrite_int8s(uint32_to_ascii_hex(xor, buffer, BUFFER_LEN));
         uwrite_int8('-');
     }
-    if (1) { // Workaround: Copy to D-Cache only
+    if (0) { // Workaround: Copy to D-Cache only
         uint32_t xor = copy_xor(CODE_SRC, DCACHE, CODE_LEN);
         uwrite_int8('$');
         if (1) uwrite_int8s(uint32_to_ascii_hex(xor, buffer, BUFFER_LEN));
         uwrite_int8('-');
     }
-    if (1) { // Dump D-Cache
+    if (0) { // Dump D-Cache
         show_block(DCACHE, buffer, BUFFER_LEN);
     }
 

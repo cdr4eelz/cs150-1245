@@ -83,16 +83,18 @@ int main(int argc, char**argv) {
     int8_t buffer[BUF_LEN];
     uint32_t result, time, instructions;
 
+if (0) {
     uwrite_int8('=');
     uwrite_int8s("][= ");
 
     uwrite_int8('0');
-    uwrite_int8s("\r\nCount0...\r\n");
+//  uwrite_int8s("\r\nCount0...\r\n");
+}
     COUNTER_RST = 0;
     result = countup0();
     time = CYCLE_COUNTER;
     instructions = INSTRUCTION_COUNTER;
-    uwrite_int8s("WHEW! \r\n");
+//  uwrite_int8s("WHEW! \r\n");
     uwrite_int8('R');
     uwrite_int8s(uint32_to_ascii_hex(result, buffer, BUF_LEN));
     uwrite_int8s(" : ");

@@ -355,23 +355,27 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 //Shared between BRK and SCOPE
 
 wire [31:0] keywatch = {
-    REGFILE_we,FWD_Allow,FWD_1,FWD_2, REGFILE_wa[3:0],
-    REGFILE_ra1[3:0], REGFILE_ra2[3:0],
-    _hot_IO,_hot_BR,_hot_IC,_hot_DC,
-        _hot_ISR,_hot_IB,_hot_DB,frame_interrupt,
-    hoti_[3:0], rst,IRQPending,BRA_DoBranch_DX2F_,stall
+    REGFILE_we,REGFILE_wa[4:0],REGFILE_ra2[4:0], REGFILE_ra1[4:0],
+    FWD_Allow,FWD_2,FWD_1,frame_interrupt,
+        _hot_IO,_hot_BR,_hot_IC,_hot_DC,
+        hoti_[3:0],
+        rst,IRQPending,BRA_DoBranch_DX2F_,stall
 };
 
 assign trace = {
 // 3 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
     // 0 \\             // 1 \\             // 2 \\             // 3 \\
     PC_DX[31:0],        INST_DX[31:0],      CNT_Inst[31:0],     BRA_PCBranch_DX2F_[31:0],
-    FWD_rd1[31:0],      FWD_rd2[31:0],      REGFILE_wd[31:0],   keywatch[31:0],
+    REGFILE_wd[31:0],   FWD_rd2[31:0],      FWD_rd1[31:0],      keywatch[31:0],
 
 //  DMEM_READ[31:0],    32'd0,              32'd0,              32'd0,
     RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_DB[31:0],
     MemAddr_MW[31:0],   MemAddr__MW[31:0],  _WDataMasked[31:0],
-    {8'd0, 8'd0, 8'd0, _WriteMask,_ByteMask},
+    {   _hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
+        icache_we, 3'd0,dcache_re,
+        dcache_we, 3'd0,icache_re,
+        _WriteMask ,_ByteMask
+    },
 
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
     {41'd0,IControlDX_[22:0]},              {41'd0,IControl_MW[22:0]},

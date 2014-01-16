@@ -1,8 +1,9 @@
+
+
 KEYtag: BUG!/? STEP OPTImize TOOL CLeanUP ANALyze COOLcrossuse WANTtolearn
 
-BUG!    Execute code via I-cache flakey (maybe but push/pop w/stall interaction?)
+***BUG! Stall from non D-Cache source trips up D-Cache fetch process (grabs junk late)
 BUG-    Reset is double applied with 2-cycle gap (init_done lag)
-BUG-    Timing errors (try separate PLLs, single-clock DDR, pull from sysgen, etc.)
 
 CLUP    Revert ml505top as much as possible, move fanciness to sub/wrapper
 CLUP    Re-group/balance modules
@@ -13,23 +14,25 @@ CLUP    Top level `define -> localparam mappings
 STEP    More thorough instruction/asm/C tests (partly started)
 STEP    COP0 complete & test
 STEP    ISR software
-STEP    PixelFeeder from DDR (optional cross-clock count-estimate)
-STEP    Reset deassert per-clock (and delay based on component)
+STEP    PixelFeeder from DDR (or SRAM if arbiter works)
 
 TOOL    Use speedy distmem and custom instructions for special internal debug data/triggers
 TOOL    Helper functions in scratch IMEM (link with smaller user code)
 TOOL    Cache-Flush, Break, Scope-trigger, etc. instructions (for testing/debugging)
 COOL    FSL link & instuctions (drop-in of/as uBlaze coprocs & use RVA tricks)
 COOL    PixelFeeder as FSL (more cross-use even FIR with MIPS?)
+COOL    RegFile swapout (coprocessor?)
 
 WRAP    Retro-patch prior checkpoints?
 WRAP    Writeup highlighting cross-project & extra-credit work
 WRAP    Prune/cherry-pick git repo
 
-ANAL    Track down flop styling (CE, SET/RESET, etc)
+ANAL    Track down flop styling (CE, SET/RESET, etc) especially finnicky SLR32 or whatever
 ANAL    Any "gated" clocks vs. clock-enable?
 OPTI    Avoid If based priority logic (maybe even for Reset signals?) flatten & muxlike
+OPTI    Reset deassert per-clock (and delay based on component)
 OPTI    Cautious resource sharing?
+OPTI    Timing related adjustments: Separate PLLs, single-clock DDR, pull from sysgen, etc.
 
 WANT    Figure out Post-Synthesis Simulation
 WANT    Use FPGAEditor and LOC/RLOC tricks in select spots
@@ -60,4 +63,13 @@ OLD?    ???Don't use OUTPUT as internal signal too???
 ::LESSONS::
     Questionable tricks (short-term not worth long-term)
     Control/Datapath useful (though difficult for big pipeline CPU)
+
     
+Press on to visual aspects:
+    Will dumping DDR buffer make all code malfunction until bug fixed???
+    Can Arbie be completed quickly & SDRAM swapped in (or augmented)???
+    Could graphics processor be tacked onto a microblaze?
+    Could FIR be tacked on to MIPSY?
+
+Scans of data from key books.
+

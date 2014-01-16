@@ -1,0 +1,56 @@
+#####################################################################
+# ChipScope Example Token File
+#
+# Tokens are in the form NAME=VALUE where NAME is the token name and
+# VALUE is the token value (hex, binary, or decimal).
+#
+# Values are hex by default. To specify a radix for the value,
+# append \b (binary), \u (unsigned decimal), \h (hex) to the value.
+# So valid token definitions would be
+#    MEM_WRITE=c5\h
+#    MEM_READ=1101\b
+#####################################################################
+
+@FILE_VERSION=1.0.0
+
+# If you want the default token (when no matches are found)
+# to be something other than HEX, uncomment the following
+# line and set the @DEFAULT_TOKEN to something useful.
+#@DEFAULT_TOKEN=
+
+#
+# Begin token definitions
+#
+
+-=0\u
+at=1\u
+v0=2\u
+v1=3\u
+a0=4\u
+a1=5\u
+a2=6\u
+a3=7\u
+t0=8\u
+t1=9\u
+t2=10\u
+t3=11\u
+t4=12\u
+t5=13\u
+t6=14\u
+t7=15\u
+s0=16\u
+s1=17\u
+s2=18\u
+s3=19\u
+s4=20\u
+s5=21\u
+s6=22\u
+s7=23\u
+t8=24\u
+t9=25\u
+k0=26\u
+k1=27\u
+gp=28\u
+sp=29\u
+s8=30\u
+ra=31\u
