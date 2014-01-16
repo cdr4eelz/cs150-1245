@@ -1,0 +1,23 @@
+RST, STL, STD
+PCBranch
+INT, BRA
+PC_DX, INST_DX
+K_wa, K_ra1/2
+REG_wd
+K_rf
+REG_fw1/2
+K_hot
+M__ADDR
+M_wm, M_wd, M__hot
+M_ADDR
+RData_IO/DC/DB/BR
+M_bm
+DC_f
+DC_we
+IC_f
+IC_we
+IMEM_ADDR
+IMEM_SEL
+IMEM_DATA
+CNT_Step/Stall
+CTL_DX_/WM

@@ -133,7 +133,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         .ra1(REGFILE_ra1), .rd1(REGFILE_rd1),
         .ra2(REGFILE_ra2), .rd2(REGFILE_rd2)
     );
-    // FORWARDING calculation (rather like a bypass of REGFILE)
+    // FORWARDING calculation
     wire FWD_Allow = WBK_CanFWD_MW2DX_; // Has already checked for "wa"==0 elsewhere
     wire FWD_1 = FWD_Allow && (REGFILE_wa == REGFILE_ra1);
     wire FWD_2 = FWD_Allow && (REGFILE_wa == REGFILE_ra2);
@@ -161,7 +161,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     `BUS_ICTL_type IControlDX_;
     wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_;
     StageDX s_DX
-    ( //NOTE: Currently async: .clk(clk), .rst(rst), .stall(stall),
+    ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
         //Async regfile reads & COP access
         .REG_R1_(REGFILE_ra1), .REG_D1_(FWD_rd1),
         .REG_R2_(REGFILE_ra2), .REG_D2_(FWD_rd2),
@@ -208,7 +208,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [31: 0] _WDataMasked;
     wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
     StageMW s_MW
-    ( //NOTE: Currently async: .clk(clk), .rst(rst), .stall(stall),
+    ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
         //Inputs
 //TODO: Rework inputs to be minimal specific signals
         ._IControl  (IControl__MW),  .IControl   (IControl_MW),
@@ -273,18 +273,18 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
     //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
     assign dcache_addr = {4'h0, MemAddr__MW[27:0]},
-        dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
+        dcache_we   = (/*!stall &&*/ _hot_DC) ? (_WriteMask) : 4'b0000,
         dcache_din  = _WDataMasked,
-        dcache_re   = (!stall && _hot_DC) && !(|_WriteMask),
+        dcache_re   = (/*!stall &&*/ _hot_DC) && !(|_WriteMask),
         RData_DC    = dcache_dout;
 //    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
 
     //NOTE: Both _hot_DC && _hot_IC ARE allowed to be active simultaneously for WRITE
     //      but writability rules prevent INST-read & DATA-write collision
     assign icache_addr = {4'h0, (hoti_IC_) ? IMEM_ADDR[27:0] : MemAddr__MW[27:0]},
-        icache_we   = (!stall && !hoti_IC_ && _hot_IC) ? (_WriteMask) : 4'b0000,
+        icache_we   = (/*!stall &&*/ !hoti_IC_ && _hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
-        icache_re   = (!stall && hoti_IC_),
+        icache_re   = (/*!stall &&*/ hoti_IC_),
         INST_IC     = icache_dout;
 //    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
 

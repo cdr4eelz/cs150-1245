@@ -27,8 +27,6 @@ module StageMW (
     input  [31: 0] RData_IO, RData_BR, RData_DC, RData_DB
 );
 
-//TODO: Move almost all to instruction decode (makes pre/post clock activities legitimate)
-
 // _IControl taps
     wire [1:0] _MemShift;
     wire _isMemWrite, _isMemRead;
@@ -113,6 +111,7 @@ module StageMW (
     assign WBK_Reg_     = DestReg; //ZERO when no register writeback is happening
     assign WBK_Val_     = (DestReg == 5'd0) ? `UNKNOWN(32)
                             : ( (isMemRead) ? DataLoad : RegWValue ); //Jump-Link uses RegWValue
-    assign WBK_CanFWD_  = (DestReg != 5'd0) && !isMemRead; //Covers CopRead too (forwarding allowed)
+    assign WBK_CanFWD_  = (DestReg == 5'd0) ? 1'b0
+                            : ( (isMemRead) ? 1'b0 : 1'b1 ); //Covers CopRead too (forwarding allowed)
 
 endmodule
