@@ -64,6 +64,7 @@ module ml505top
 wire any_stall, GPIO_SW_C;
 assign GPIO_COMPLED = GPIO_COMPPB;
 assign GPIO_SW_C = GPIO_COMPPB[0];
+wire [31:0] DBG_MEM150;
 
 
   reg [3:0]  reset_r = 4'b0;
@@ -251,7 +252,8 @@ assign GPIO_SW_C = GPIO_COMPPB[0];
       .cpu_gp_code(gp_code),
       .cpu_gp_frame(gp_frame),
       .cpu_gp_valid(gp_valid),
-      .frame_interrupt(frame_interrupt)
+      .frame_interrupt(frame_interrupt),
+.DBG_MEM150(DBG_MEM150)
     );
   
   // MIPS 150 CPU
@@ -274,7 +276,8 @@ assign GPIO_SW_C = GPIO_COMPPB[0];
     .gp_code(cpu_gp_code),
     .gp_frame(cpu_gp_frame),
     .gp_valid(cpu_gp_valid),
-    .frame_interrupt(frame_interrupt)
+    .frame_interrupt(frame_interrupt),
+.DBG_MEM150(DBG_MEM150)
   ); //add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
 
   DVI #(

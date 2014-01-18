@@ -54,16 +54,16 @@ module Memory150(
                output [31:0] icache_dout,
                output        stall,
 
-		  
                // DVI interface:
                output [23:0] video,
                output        video_valid,
                input         video_ready,
 
-	       input [31:0] cpu_gp_code,
+               input [31:0] cpu_gp_code,
                input [31:0] cpu_gp_frame,
-	       input cpu_gp_valid,
-	       output frame_interrupt
+               input cpu_gp_valid,
+               output frame_interrupt,
+output [31:0] DBG_MEM150
              );
 
     parameter SIM_ONLY = 1'b0;
@@ -365,9 +365,8 @@ module Memory150(
 
      // assignments
     assign stall = d_stall || i_stall;
-assign frame_interrupt = i_stall;
+
     // For feeding pixels to the DVI module:
-   
     PixelFeeder pixelfeed(
         .cpu_clk_g(cpu_clk_g),
         .clk50_g(clk50_g), //NOTE: Was cpu_clk_g in skeleton
@@ -381,7 +380,7 @@ assign frame_interrupt = i_stall;
         .video(video),
         .video_valid(video_valid),
         .video_ready(video_ready),
-        .frame_interrupt());
+        .frame_interrupt(frame_interrupt));
 
     FrameFiller framefill(
         .clk(cpu_clk_g),
@@ -454,5 +453,17 @@ assign frame_interrupt = i_stall;
       .GP_CODE(cpu_gp_code),
       .GP_FRAME(cpu_gp_frame),
       .GP_valid(cpu_gp_valid));
+
+
+assign DBG_MEM150 = {
+    d_stall, d_wdf_full, d_af_full, d_rdf_valid,
+        1'b0, d_wdf_wr_en, d_af_wr_en, d_rdf_rd_en,
+    i_stall, i_wdf_full, i_af_full, i_rdf_valid,
+        1'b0, i_wdf_wr_en, i_af_wr_en, i_rdf_rd_en,
+    stall, wdf_full, af_full, rdf_dout_valid,
+        1'b0, wdf_wr_en, af_wr_en, rdf_rd_en,
+8'd0 /*pixel_af_full, pixel_rdf_valid, pixel_af_wr_en, pixel_rdf_rd_en,
+        filler_af_full, filler_wdf_full, filler_af_wr_en, filler_wdf_wr_en*/
+};
 
 endmodule

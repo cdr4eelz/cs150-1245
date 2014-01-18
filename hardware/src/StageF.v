@@ -25,7 +25,7 @@ module StageF #(
     //Instruction related counters & reset (synchronous)
     input _ResetCounters,
     output reg [(COUNTERWIDTH-1):0] CNT_CYCLE, CNT_INST, CNT_STALL,
-    output reg WAS_STALL, WAS_INST
+    output reg WAS_RUNNING, WAS_STALL, WAS_INST, WAS_BRANCH
 );
 
     reg [(PCWIDTH-1):0] REG_PC, PC4, MUX_PCNEXT;
@@ -56,8 +56,8 @@ module StageF #(
 
 
     always @(posedge clk) begin:_REG_WAS_
-        if (rst || _ResetCounters) {WAS_STALL,WAS_INST} <= 0;
-        else {WAS_STALL,WAS_INST} <= {stall,!stall};
+        if (rst) {WAS_RUNNING,WAS_STALL,WAS_INST,WAS_BRANCH} <= 0;
+        else {WAS_RUNNING,WAS_STALL,WAS_INST,WAS_BRANCH} <= {1'b1,stall,!stall,_DoBranch};
     end
 
     always @(posedge clk) begin:_COUNT_CYCLE_

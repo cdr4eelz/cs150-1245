@@ -32,7 +32,9 @@ module MIPS150 #(
     output [31:0] gp_code,
     output [31:0] gp_frame,
     output gp_valid,
-    input frame_interrupt
+    input frame_interrupt,
+
+input [31:0] DBG_MEM150
 );
 
 // CP4+
@@ -90,7 +92,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [31: 0] PC_F_;
     wire [31: 0] INST_F_;
     wire [63: 0] CNT_Cycle, CNT_Inst, CNT_Stall;
-    wire WAS_Stall, WAS_Inst;
+    wire WAS_Running, WAS_Stall, WAS_Inst, WAS_Branch;
     wire [31: 0] IMEM_ADDR;
     wire [31: 0] IMEM_DATA;
     StageF #(
@@ -104,7 +106,8 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         .PC_(PC_F_), .INST_(INST_F_),
         //CPU Counters & Prior-state flags
         .CNT_CYCLE(CNT_Cycle), .CNT_INST(CNT_Inst), .CNT_STALL(CNT_Stall),
-        .WAS_STALL(WAS_Stall), .WAS_INST(WAS_Inst),
+        .WAS_RUNNING(WAS_Running), .WAS_INST(WAS_Inst),
+        .WAS_STALL(WAS_Stall), .WAS_BRANCH(WAS_Branch),
         //Instruction memory taps
         .IMEM_ADDR(IMEM_ADDR), .IMEM_Data(IMEM_DATA)
     );
@@ -273,7 +276,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
     //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
     assign dcache_addr = {4'h0, MemAddr__MW[27:0]},
-        dcache_we   = (/*!stall &&*/ _hot_DC) ? (_WriteMask) : 4'b0000,
+        dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
         dcache_din  = _WDataMasked,
         dcache_re   = (/*!stall &&*/ _hot_DC) && !(|_WriteMask),
         RData_DC    = dcache_dout;
@@ -282,9 +285,9 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     //NOTE: Both _hot_DC && _hot_IC ARE allowed to be active simultaneously for WRITE
     //      but writability rules prevent INST-read & DATA-write collision
     assign icache_addr = {4'h0, (hoti_IC_) ? IMEM_ADDR[27:0] : MemAddr__MW[27:0]},
-        icache_we   = (/*!stall &&*/ !hoti_IC_ && _hot_IC) ? (_WriteMask) : 4'b0000,
+        icache_we   = (!stall && !hoti_IC_ && _hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
-        icache_re   = (/*!stall &&*/ hoti_IC_),
+        icache_re   = (!stall && hoti_IC_),
         INST_IC     = icache_dout;
 //    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
 
@@ -356,7 +359,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
 wire [31:0] keywatch = {
     REGFILE_we,REGFILE_wa[4:0],REGFILE_ra2[4:0], REGFILE_ra1[4:0],
-    FWD_Allow,FWD_2,FWD_1,frame_interrupt,
+    FWD_Allow,FWD_2,FWD_1,DBG_MEM150[31],
         _hot_IO,_hot_BR,_hot_IC,_hot_DC,
         hoti_[3:0],
         rst,IRQPending,BRA_DoBranch_DX2F_,stall
@@ -374,14 +377,16 @@ assign trace = {
     {   _hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
         icache_we, 3'd0,dcache_re,
         dcache_we, 3'd0,icache_re,
-        _WriteMask ,_ByteMask
+        _WriteMask ,WAS_Running,WAS_Stall,WAS_Inst,WAS_Branch
     },
 
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
     {41'd0,IControlDX_[22:0]},              {41'd0,IControl_MW[22:0]},
 
     PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[63:0],
-    CNT_Inst[63:0],                         CNT_Stall[63:0]
+    DBG_MEM150[31:0],   32'd0,              32'd0,
+    {   8'd0, 8'd0, 8'd0, 8'd0
+    }
 };
 
 
