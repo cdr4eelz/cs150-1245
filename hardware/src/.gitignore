@@ -5,6 +5,7 @@ tmp/
 /mig_af/
 /mig_rdf/
 /mig_wdf/
+/pixel_fifo/
 /cache_data_blk_ram/
 /cache_tag_blk_ram/
 /mig_v3_36/scooper/

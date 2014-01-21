@@ -20,6 +20,9 @@ echo "Building RDF" | tee -a $LOG
 echo "Building WDF" | tee -a $LOG
 (cd mig_wdf/ && ezcore) | tee -a $LOG
 
+echo "Building PixelFifo" | tee -a $LOG
+(cd pixel_fifo/ && ezcore) | tee -a $LOG
+
 
 echo "::END build" >> $LOG
 
