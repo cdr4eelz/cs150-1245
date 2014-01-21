@@ -1,5 +1,5 @@
-set MODULE PatternGeneratorTestbench
+set MODULE SramArbiterTestbench
 start $MODULE
 add wave $MODULE/*
 add wave $MODULE/dut/*
-run 125ms
+run 100us

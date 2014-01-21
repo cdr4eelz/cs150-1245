@@ -178,7 +178,7 @@ module FPGA_TOP_ML505(
   `endif
   
   // -- |Static Image| ---------------------------------------------------------
-//  `define STATIC_IMAGE_ENABLE
+  `define STATIC_IMAGE_ENABLE
 
   wire stc_img_clock;
   wire stc_img_enable;
@@ -208,7 +208,7 @@ module FPGA_TOP_ML505(
   `endif
 
   // -- |Image Buffer Writer| --------------------------------------------------
-//  `define IMAGE_WRITER_ENABLE
+  `define IMAGE_WRITER_ENABLE
   
   `ifdef IMAGE_WRITER_ENABLE
     localparam N_PIXEL = 480000;
@@ -256,7 +256,7 @@ module FPGA_TOP_ML505(
   `endif // IMAGE_WRITER_ENABLE
 
   // -- |Image Buffer Reader| --------------------------------------------------
-//  `define IMAGE_READER_ENABLE
+  `define IMAGE_READER_ENABLE
 
   `ifdef IMAGE_READER_ENABLE
     wire dvi_clock;
@@ -291,8 +291,32 @@ module FPGA_TOP_ML505(
       .data_valid(dvi_data_valid));
   `endif
   
+  // -- |PatternGenerator| --------------------------------------------------
+  //`define PATTERN_GENERATOR_ENABLE
+
+  `ifdef PATTERN_GENERATOR_ENABLE
+    wire dvi_clock;
+    assign dvi_clock = clk_50M;
+
+    wire [23:0] dvi_video;
+    wire dvi_video_valid, dvi_video_ready;
+
+    PatternGenerator #(
+      .CLOCK_HZ(DVIClockFreq),
+      .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600),
+      .SCENES_PER_SEC(1) )
+    pg (
+      .clock(dvi_clock),
+      .reset(reset),
+
+      .video(dvi_video),
+      .video_valid(dvi_video_valid),
+      .video_ready(dvi_video_ready)
+    );
+  `endif //  `ifdef PATTERN_GENERATOR_ENABLE
+
   // -- |SRAM Arbiter| ---------------------------------------------------------
-//  `define SRAM_ARBITER_ENABLE
+  `define SRAM_ARBITER_ENABLE
 
   `ifdef SRAM_ARBITER_ENABLE
 
@@ -350,30 +374,6 @@ module FPGA_TOP_ML505(
       .sram_data_out_valid(sram_data_out_valid));
   `endif // SRAM_ARBITER_ENABLE
   
-  // -- |PatternGenerator| --------------------------------------------------
-  `define PATTERN_GENERATOR_ENABLE
-
-  `ifdef PATTERN_GENERATOR_ENABLE
-    wire dvi_clock;
-    assign dvi_clock = clk_50M;
-
-    wire [23:0] dvi_video;
-    wire dvi_video_valid, dvi_video_ready;
-
-    PatternGenerator #(
-      .CLOCK_HZ(DVIClockFreq),
-      .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600),
-      .SCENES_PER_SEC(1) )
-    pg (
-      .clock(dvi_clock),
-      .reset(reset),
-
-      .video(dvi_video),
-      .video_valid(dvi_video_valid),
-      .video_ready(dvi_video_ready)
-    );
-  `endif //  `ifdef PATTERN_GENERATOR_ENABLE
-
   // -- [DVI Controller] ----------------------------------------------------
   `define DVI_ENABLE
   
@@ -419,7 +419,7 @@ module FPGA_TOP_ML505(
   `endif // DVI_ENABLE
   
   // -- |SRAM Controller| ------------------------------------------------------
-//  `define SRAM_ENABLE 
+  `define SRAM_ENABLE 
   
   `ifdef SRAM_ENABLE
     SRAM sram(

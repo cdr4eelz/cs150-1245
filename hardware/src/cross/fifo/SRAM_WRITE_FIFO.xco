@@ -1,7 +1,7 @@
 ##############################################################
 #
 # Xilinx Core Generator version 14.6
-# Date: Tue Oct 22 23:36:58 2013
+# Date: Tue Jan 21 04:44:29 2014
 #
 ##############################################################
 #
@@ -145,7 +145,7 @@ CSET input_depth_wrch=16
 CSET interface_type=Native
 CSET output_data_width=54
 CSET output_depth=16
-CSET overflow_flag=false
+CSET overflow_flag=true
 CSET overflow_flag_axi=false
 CSET overflow_sense=Active_High
 CSET overflow_sense_axi=Active_High
@@ -186,12 +186,12 @@ CSET tid_width=8
 CSET tkeep_width=4
 CSET tstrb_width=4
 CSET tuser_width=4
-CSET underflow_flag=false
+CSET underflow_flag=true
 CSET underflow_flag_axi=false
 CSET underflow_sense=Active_High
 CSET underflow_sense_axi=Active_High
 CSET use_clock_enable=false
-CSET use_dout_reset=false
+CSET use_dout_reset=true
 CSET use_embedded_registers=false
 CSET use_extra_logic=false
 CSET valid_flag=true
@@ -210,4 +210,4 @@ CSET wuser_width=1
 MISC pkg_timestamp=2012-11-19T12:39:56Z
 # END Extra information
 GENERATE
-# CRC: cf91b3b3
+# CRC: b0e60ee5
