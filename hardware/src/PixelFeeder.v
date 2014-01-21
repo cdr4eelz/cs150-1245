@@ -101,7 +101,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     assign af_wr_en = (next_state == FETCH); //If next_state==FETCH, fetch occurs end of THIS cycle!
     assign af_addr_din = {7'd0, {fr,~fr}, head_y, head_x, 2'b0};
     assign frame_interrupt = (fr != fr_r); // Fires right after request gets queued (not resp or pix)
-    wire last_x = (head_x >= (((800/2)-1) * 2));
+    wire last_x = (head_x >= (((800/8)-1) * 8));
     wire last_y = (head_y >= (600-1));
     reg  [64:0] pixel_count;
 
@@ -131,10 +131,11 @@ $display("PIX:%0d  X:%0d Y:%0d", pixel_count, head_x, head_y);
                     fr <= ~fr; head_y <= 0; head_x <= 0;
                 end else if (last_x) begin
                     head_y <= head_y + 1; head_x <= 0;
+$display("PEND:%0d", pend);
                 end else begin
-                    head_x <= head_x + 2;
+                    head_x <= head_x + 8;
                 end
-                pixel_count <= pixel_count + 2;
+                pixel_count <= pixel_count + 8;
             end
         end
     end

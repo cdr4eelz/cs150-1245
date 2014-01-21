@@ -36,7 +36,8 @@ integer frame_count = 0;
 always @(posedge cpu_clk_g) begin
     if (frame_interrupt) begin
         frame_count = frame_count + 1;
-        if (frame_count >= 2) $finish();
+        $display("Frame#%0d", frame_count);
+        if (frame_count > 2) $finish();
     end
 end
 
@@ -45,12 +46,13 @@ initial begin
     rdf_valid = 0; af_full = 1; video_ready = 0;
     rdf_dout = {32'd0, 32'd0, 32'd0, 32'd0};
 
-    repeat (5) @( posedge cpu_clk_g );
+    repeat (5) @(posedge cpu_clk_g);
     Reset = 0;
     @(negedge cpu_clk_g);
     rdf_valid = 1; af_full = 0; video_ready = 1;
 
-    $monitor("ADDR: %h  INT:%b  F#%0d", af_addr_din[(30-7):12], frame_interrupt, frame_count);
+    $monitor("ADDR:%b %h  INT:%b  F#%0d", af_addr_din[23:22],
+                af_addr_din[21:12], frame_interrupt, frame_count);
 end
 
 endmodule
