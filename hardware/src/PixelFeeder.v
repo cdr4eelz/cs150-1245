@@ -1,8 +1,7 @@
 /* This module keeps a FIFO filled that then outputs to the DVI module. */
-//TODO: Make test patterns selectable via software (and keypress)
 
 module PixelFeeder #(
-    parameter COLT45_TESTPAT=1
+    parameter COLT45_TESTPAT=0
 ) (                 //System:
                     input          cpu_clk_g,
                     input          clk50_g, // DVI Clock
@@ -25,26 +24,16 @@ module PixelFeeder #(
     localparam IDLE = 1'b0;
     localparam FETCH = 1'b1;
 
-    localparam PIXFO_CAPACITY = 256; //Max # 128-bit writes to fill
-    localparam PIXFO_TARGET = PIXFO_CAPACITY - 7; //1 af req => 2 x 128-bit rdf => 8 x 32-bit pixfo rd
+    localparam PIXFO_CAPACITY = 128; //Max # 256-bit chunks that can be in pixel_fifo
+    localparam PIXFO_TARGET = PIXFO_CAPACITY - 5; //1 af req => 2 x 128-bit rdf => 8 x 32-bit pixfo rd
 
-    localparam FRAME0_SEL = 2'b01, FRAME1_SEL = 2'b10;
-    //localparam FRAME0_BASE = 32'h1040_0000, FRAME1_BASE = 32'h1080_0000;
-    //address = {8'h10, framesel, y, x, 2’b0}  _01 or _10 framesel are high bits of 4 or 8 in base.
-
-    // 1-request => 2-responses => 8-pixels (all 256-bits).
-    // Don't care about individual pixels in PixelFeeder!
-
+    // 1-request to wf => 2-responses on rdf => 8-pixels out of fifo (all 256-bits).
+    //    Don't care about individual pixels in PixelFeeder!
     // pixel_fifo is 128-bit write (2K depth) and 32-bit read (8K depth).
-    // Forced to grab rdf output or lose it, no back-pressure opportunity there.
-
-    // Counting pixel_fifo available space CPU-clocked side in large chunks.  The chunks
+    //    Forced to grab rdf output or lose it, no back-pressure opportunity there.
+    // pixel_fifo available space tracked on CPU-clocked side in large chunks.  The chunks
     //    serve to reduce inter-clock signal rate, keep counters small (but separate),
-    //    and create a hysteresis.  Synchronizing with acknowledge technique (4-cycle or
-    //    whatever) though if glitches 
-
-    //Traverse row & col, flip source frame & fire interrupt (pulse) between.
-    //Once arbiter gives attention, a read will ensure (two chunks). (mimic "Cache.v")
+    //    and create a hysteresis.  Synchronizing with 4-cycle signal/acknowledge loop.
 
 // Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13)
     reg  chunk_inc; //From DVI-clock realm
@@ -56,7 +45,7 @@ module PixelFeeder #(
     /* We drop the first frame to allow the buffer to fill with data from
     * DDR2. This gives alignment of the frame. */
     reg  [31:0] ignore_count;
-    reg  [ 3:0] count_dviread; //Rolls over for each 16 pixel "read-chunk"
+    reg  [ 3:0] count_dviread; //Rolls over on every 16 pixel "read-chunk"
     reg  rst_clk50, running_reg, chunk_ack_clk50;
 
     always @(posedge clk50_g) begin
@@ -70,7 +59,7 @@ module PixelFeeder #(
             if (video_ready && running_reg && (ignore_count != 0)) begin
                 ignore_count <= ignore_count - 32'b1;
             end if (video_ready && running_reg) begin
-                count_dviread <= count_dviread+1;
+                count_dviread <= count_dviread + 1;
                 if (&count_dviread) chunk_inc <= 1'b1; //Set on rollover
                 else if (chunk_ack_clk50) chunk_inc <= 1'b0;
             end else if (chunk_ack_clk50) chunk_inc <= 1'b0;
@@ -82,6 +71,7 @@ module PixelFeeder #(
     wire [31:0] feeder_dout;
     wire feeder_den, feeder_full, feeder_empty;
     wire [127:0] feeder_din;
+    assign rdf_rd_en = 1'b1; //Never clog the shared read FIFO
 
     pixel_fifo feeder_fifo(
     	.rst(rst), //Depending on coregen settings, reset is synchronized internally
@@ -100,24 +90,52 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 
 // CPU-Clocked region (cpu_clk_g)
 
-    wire [30:0] next_addr;
-    wire [ 9:0] head_y = 10'd0, head_x = 10'd0;
-    assign next_addr = {7'b000_0000, FRAME0_SEL, head_y, head_x, 2'b00};
-    reg chunk_inc_clkCPU;
+    reg chunk_inc_clkCPU; //chunk is 16 x 32-bit fifo reads (from 2 mig_af requests)
+    reg [7:0] pend, pend_next; //pending mig_af requests (represent 256-bits each)
+    wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
+
+    reg fr, fr_r; // 0/1 turns into _01/_10 below (0x1040_0000 or 0x1080_0000 frame base)
+    reg [9:0] head_y, head_x;
+    reg state;
+    wire next_state = ((state == IDLE) && (pend < PIXFO_TARGET) && !af_full) ? FETCH : IDLE;
+    assign af_wr_en = (next_state == FETCH); //If next_state==FETCH, fetch occurs end of THIS cycle!
+    assign af_addr_din = {7'd0, {fr,~fr}, head_y, head_x, 2'b0};
+    assign frame_interrupt = (fr != fr_r); // Fires right after request gets queued (not resp or pix)
+
+    always @(*) begin
+        case ( {chunk_edge, af_wr_en} ) //chunk reduces by 2, fetch increases by 1
+            2'b11: pend_next = pend - 1; //-2 +1
+            2'b10: pend_next = pend - 2; //-2
+            2'b01: pend_next = pend + 1; //   +1
+            default: pend_next = pend;
+        endcase
+    end
 
     always @(posedge cpu_clk_g) begin
         if (rst) begin
-            chunk_inc_clkCPU <= 0;
-            chunk_ack <= 0;
+            {chunk_inc_clkCPU, chunk_ack, pend} <= 0;
+            state <= IDLE;
+            {fr, fr_r, head_y, head_x} <= 0;
         end else begin
             chunk_inc_clkCPU <= chunk_inc;
             chunk_ack <= chunk_inc_clkCPU;
+            pend <= pend_next;
+            state <= next_state;
+            fr_r <= fr;
+            if (af_wr_en) begin //Advance x/y/frame (right AFTER end of this cycle)
+                if (head_x == ((800/8)-1)) begin
+                    if (head_y == (600-1)) begin
+                        fr <= ~fr;
+                        head_y <= 0;
+                    end else head_y <= head_y + 1;
+                    head_x <= 0;
+                end else head_x <= head_x + 8;
+            end
         end
     end
 
     assign feeder_den = rdf_valid, feeder_din = rdf_dout; //DDR-read to PIX-write
     assign video_valid = running_reg, video = feeder_dout[23:0];
-
 
 end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
 // *** Simple test pattern output through the FIFO ***
@@ -142,6 +160,7 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
         8'd0, sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]
     };
     assign video_valid = running_reg, video = feeder_dout[23:0];
+    assign af_wr_en = 1'b0;
 
 
 end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
@@ -169,19 +188,3 @@ end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
 end endgenerate
 
 endmodule
-
-/* RAMBLINGS:
-
-    DDR "FIFOs" are simply muxed to shared FIFOs that we don't get to stall, without
-    any individual buffering.  We are forced to grab (or lose) anything coming back
-    on rdf_out, hence the direct tie of rdf_rd_en & pixel_fifo.wr_en to rdf_valid
-    and futility of using pixel_fifo.full checking.  We face an increment of 256-bits
-    for each 1 request on af_addr_din accepted...turning into 2 responses (128-bits each)
-    eventually out of rdf_dout...turning into 8 reads (32-bits each) out of DVI clocked
-    side of pixel_fifo.  We have advantage of 1-to-8 ratio DDR requests to DVI reads at
-    either identical or comparable clock rates.  One obvious trick is to rebuild the
-    pixel_fifo to include either counter or range assertion support...but I guess we are
-    meant to confront issue ourselves to grasp it best.  I'm using a simple signal/ack
-    whereby the DVI side informs the CPU-clocked side of chunks of read data...allowing
-    a coarse-grain count to be kept at the request initiating spot.
-*/
