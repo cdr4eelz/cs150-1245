@@ -131,7 +131,7 @@ $display("PIX:%0d  X:%0d Y:%0d", pixel_count, head_x, head_y);
                     fr <= ~fr; head_y <= 0; head_x <= 0;
                 end else if (last_x) begin
                     head_y <= head_y + 1; head_x <= 0;
-$display("PEND:%0d", pend);
+$display("PIX:%0d  PEND:%0d", pixel_count, pend);
                 end else begin
                     head_x <= head_x + 8;
                 end

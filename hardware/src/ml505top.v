@@ -309,8 +309,9 @@ wire [31:0] DBG_MEM150;
   );
 
 
-//TEAM45: A few minor custom mods for debug
+//Minor mods for debug (like old dip stall toggle from prior checkpoint)
 
+generate if (0) begin:_STALL_DIP_
     wire stall_toggle;
     Debouncer #(
         .Width(16) // 2^16 / 50MHz => apprx 1.3 ms?
@@ -336,7 +337,10 @@ wire [31:0] DBG_MEM150;
     assign any_stall = stall || man_stall_reg;
     assign GPIO_LED = {3'b0, stall_toggle, any_stall,
                              stall, pll_lock, init_done};
-//  assign GPIO_LED = {5'b0, stall, pll_lock, init_done};
+end else begin:_STALL_MEMONLY_
+    assign any_stall = stall;
+    assign GPIO_LED = {5'b0, stall, pll_lock, init_done};
+end endgenerate
 
 
 //CROSS: SRAM driver from FALL13
