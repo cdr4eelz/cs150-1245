@@ -274,11 +274,17 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 //TODO: Apply selector to _WriteMask with repeat-concat and an AND
 //TODO: Ideally generate "isRead" signal WHILE generating _WriteMask
 
+reg [31:0] P_dcache_addr;
+reg P_dcache_re;
+always @(posedge clk) begin
+    P_dcache_addr <= dcache_addr;
+    P_dcache_re <= dcache_re;
+end
     //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
-    assign dcache_addr = {4'h0, MemAddr__MW[27:0]},
+    assign dcache_addr = (stall) ? P_dcache_addr : {4'h0, MemAddr__MW[27:0]},
         dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
         dcache_din  = _WDataMasked,
-        dcache_re   = (/*!stall &&*/ _hot_DC) && !(|_WriteMask),
+        dcache_re   = (stall) ? P_dcache_re : (/*!stall &&*/ _hot_DC) && (_WriteMask == 4'b0000),
         RData_DC    = dcache_dout;
 //    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
 
@@ -375,8 +381,8 @@ assign trace = {
     RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_DB[31:0],
     MemAddr_MW[31:0],   MemAddr__MW[31:0],  _WDataMasked[31:0],
     {   _hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
-        icache_we, 3'd0,dcache_re,
-        dcache_we, 3'd0,icache_re,
+        dcache_we, 3'd0,dcache_re,
+        icache_we, 3'd0,icache_re,
         _WriteMask ,WAS_Running,WAS_Stall,WAS_Inst,WAS_Branch
     },
 
