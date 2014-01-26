@@ -137,7 +137,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         .ra2(REGFILE_ra2), .rd2(REGFILE_rd2)
     );
     // FORWARDING calculation
-    wire FWD_Allow = WBK_CanFWD_MW2DX_; // Has already checked for "wa"==0 elsewhere
+    wire FWD_Allow = (REGFILE_wa != 0) ? WBK_CanFWD_MW2DX_ : 1'b0;
     wire FWD_1 = FWD_Allow && (REGFILE_wa == REGFILE_ra1);
     wire FWD_2 = FWD_Allow && (REGFILE_wa == REGFILE_ra2);
     wire [31: 0] #DD FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
@@ -161,7 +161,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     //TODO: Pick correct PC to stash at right time (utilize branch)
 
     // Declare outputs of DX stage
-    wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_;
+    wire [31: 0] MemAddrDX_, RegWValueDX_, MemWValueDX_;
     wire [ 4: 0] DestRegDX_;
     wire [ 1: 0] MemShiftDX_;
     wire         MemToRegDX_, MemWriteDX_;
@@ -173,11 +173,13 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         .CopAddr(CopAddr), .CopOut(CopOut), .CopInHot(CopInHot),
         //Stage Inputs
         ._PC(PC_DX), ._INST(INST_DX),
+        //Global control signals
+        .DestReg_(DestRegDX_),
+        .MemShift_(MemShiftDX_), .MemSigned_( /*Unimplemented*/ ),
+        .MemToReg_(MemToRegDX_), .MemWrite_(MemWriteDX_),
         //Stage Outputs
-        .MemAddr_(MemAddrDX_),  .MemWValue_(MemWValueDX_),
-        .RegWValue_(RegWValueDX_),
-        .MemToReg_(MemToRegDX_), .MemShift_(MemShiftDX_),
-        .MemWrite_(MemWriteDX_), .DestReg_(DestRegDX_),
+        .MemAddr_(MemAddrDX_), .RegWValue_(RegWValueDX_),
+        .MemWValue_(MemWValueDX_),
         //Feedback outputs
         .DOBranch_(BRA_DoBranch_DX2F_), .PCBranch_(BRA_PCBranch_DX2F_)
     );
@@ -190,24 +192,24 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire  [ 1: 0]   MemShift_MW;
     wire            MemToReg_MW;
     PipelineRegister #( .Width(32) )
-        PIPR_MemAddr_MW   ( .clk(clk), .rst(rst), .stall(stall),
+        PIPR_MemAddr_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(MemAddrDX_  ),  .Out(MemAddr_MW   ) );
     PipelineRegister #( .Width(32) )
-        PIPR_RegWValue_MW ( .clk(clk), .rst(rst), .stall(stall),
+        PIPR_RegWValue_MW ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(RegWValueDX_),  .Out(RegWValue_MW ) );
     PipelineRegister #( .Width(5) )
-        PIPR_DestReg_MW   ( .clk(clk), .rst(rst), .stall(stall),
+        PIPR_DestReg_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(DestRegDX_ ),  .Out(DestReg_MW   ) );
     PipelineRegister #( .Width(2) )
-        PIPR_MemShift_MW  ( .clk(clk), .rst(rst), .stall(stall),
+        PIPR_MemShift_MW  ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(MemShiftDX_),  .Out(MemShift_MW  ) );
     PipelineRegister #( .Width(1) )
-        PIPR_MemToReg_MW  ( .clk(clk), .rst(rst), .stall(stall),
+        PIPR_MemToReg_MW  ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(MemToRegDX_),  .Out(MemToReg_MW  ) );
 //Debug use only
     wire  [31: 0]   PC_MW;
     PipelineRegister #( .Width(32) ) //NOTE: Only need 1 bit, but full value nice for debugging
-        PIPR_PC_MW        ( .clk(clk), .rst(rst), .stall(stall),
+        PIPR_PC_MW        ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(PC_DX       ),  .Out(PC_MW        ) );
 //=============<<< PIPELINE-BORDER: DX/M |===============
 
@@ -263,7 +265,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
     wire [ 3: 0] _hoti;
     PipelineRegister #( .Width(4) )
-        PIPR_HOTI ( .clk(clk), .rst(rst), .stall(stall),
+        PIPR_HOTI ( .clk(clk), .rst(1'b0), .stall(stall),
                     .In(hoti_), .Out(_hoti) );
 
     wire [31: 0] INST_ISR, INST_BR, INST_IC, INST_IB;

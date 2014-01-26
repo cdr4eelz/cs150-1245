@@ -24,13 +24,14 @@ module StageMW (
 
     // Memory/IO drives
     output reg _hot_IO,_hot_BR,_hot_DC,_hot_IB,_hot_DB,_hot_IC,_hot_ISR,
-    output [ 3: 0] _ByteMask, _WriteMask,
+    output [ 3: 0] _WriteMask,
     output [31: 0] _WDataMasked,
     input  [31: 0] RData_IO, RData_BR, RData_DC, RData_DB
 );
 
-    wire  [ 3: 0] _Target   = _MemAddr[31:28];
-    wire  [ 1: 0] _SubIndex = _MemAddr[ 1: 0];
+    wire [3:0] _Target   = _MemAddr[31:28];
+    wire [1:0] _SubIndex = _MemAddr[ 1: 0];
+    wire [3:0] _ByteMask;
 
 // Compute some mask bytes/bits/values
 //    assign _ByteMask    = (   4'b1111) << (_MemShift  ) >> (_SubIndex  );
@@ -90,10 +91,12 @@ module StageMW (
     );
 
 // WBK outputs (including "can forward" signal)
-    assign WBK_Reg_     = DestReg_MW; //ZERO when no register writeback is happening
-    assign WBK_Val_     = (DestReg_MW == 5'd0) ? `UNKNOWN(32)
-                            : ( (MemToReg_MW) ? DataLoad : RegWValue_MW ); //Jump-Link uses RegWValue_MW
-    assign WBK_CanFWD_  = (DestReg_MW == 5'd0) ? 1'b0
-                            : ( (MemToReg_MW) ? 1'b0 : 1'b1 ); //Covers CopRead too (forwarding allowed)
+    assign WBK_Reg_     = DestReg_MW; //Is ZERO when no register writeback is happening
+    assign WBK_Val_     = `UNKWIFN( //Jump-Link uses RegWValue_MW
+                            (MemToReg_MW) ? DataLoad : RegWValue_MW
+                            , 32, DestReg_MW != 0);
+    assign WBK_CanFWD_  = `UNKWIFN( //Covers CopRead too (forwarding allowed)
+                            (MemToReg_MW) ?     1'b0 : 1'b1
+                            ,  1, DestReg_MW != 0);
 
 endmodule

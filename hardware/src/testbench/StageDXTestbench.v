@@ -8,50 +8,39 @@ module StageDXTestbench;
     // No Clock Signal
 
     reg [31:0] REGFILE [0:31];
-    `BUS_ICTL_type IControlDX_;
 
     //Ignoring control line outputs
     //Just focusing on datapath stuff
-    reg [31:0] PC;
-    reg [31:0] Inst;
+    reg [31:0] PC_DX;
+    reg [31:0] INST_DX;
     wire [31:0] ALUOut;
     wire [31:0] RTValue;
     wire [31:0] JumpPC;
     wire        DoJump;
 
+    wire [ 4:0 ] DestReg_;
+    wire [ 1:0 ] MemShift_;
+    wire MemSigned_, MemToReg_, MemWrite_;
+
     wire [ 4: 0] REG_ra1, REG_ra2;
     wire [31: 0] #1 REG_rd1, REG_rd2;
     assign REG_rd1 = REGFILE[REG_ra1], REG_rd2 = REGFILE[REG_ra2];
-    wire [31: 0] ALUOutDX_, R2ValueDX_, PCPLUS8DX_;
     StageDX DUT
     ( //.clk(1'bx), .rst(1'bx), .stall(1'bx),
-        .REG_R1_    (REG_ra1),          .REG_R2_    (REG_ra2),
-        .REG_D1_    (REG_rd1),          .REG_D2_    (REG_rd2),
-        .CopInHot(), .CopAddr(), .CopOut(32'd0),
-        //Inputs
-        ._PC        (PC),               ._INST      (Inst),
-        //Outputs
-        .IControl_  (IControlDX_),
-        .MemAddr_   (),
-        .RegWValue_ (ALUOut),
-        .MemWValue_ (RTValue),
-        //Feedbacks
-        .DOBranch_  (DoJump),           .PCBranch_  (JumpPC)
-    );
-
-    wire ALUSrcA_, ALUSrcB_, MemToReg, MemWrite, MSigned, ISigned, Jump_, JR_, Link_;
-    wire ISigned_, MSigned_, MemToReg_, MemWrite_;
-    wire [ 4:0 ] DestReg_;
-    wire [ 1:0 ] MemShift_;
-    wire [ 3:0 ] ALUOp_;
-    wire [ 2:0 ] CmpOp_;
-    BUS_ICTL_tap BUS_ICTL
-    ( ._BUS_(IControlDX_),
-        .ALUOp(ALUOp_), .ALUSrcA(ALUSrcA_), .ALUSrcB(ALUSrcB_),
-        .ISigned(ISigned_), .MSigned(MSigned_), .CmpOp(CmpOp_),
-        .Jump(Jump_), .JR(JR_), .Link(Link_),
-        .MemToReg(MemToReg_), .MemWrite(MemWrite_), .MemShift(MemShift_),
-        .DestReg(DestReg_)
+        .REG_R1_(REG_ra1),  .REG_D1_(REG_rd1),
+        .REG_R2_(REG_ra2),  .REG_D2_(REG_rd2),
+        .CopAddr(), .CopOut(32'd0), .CopInHot(),
+        //Stage Inputs
+        ._PC(PC_DX), ._INST(INST_DX),
+        //Global control signals
+        .DestReg_(DestReg_),
+        .MemShift_(MemShift_), .MemSigned_(MemSigned_ /*Unimplemented*/ ),
+        .MemToReg_(MemToReg_), .MemWrite_(MemWrite_),
+        //Stage Outputs
+        .MemAddr_(), .RegWValue_(ALUOut),
+        .MemWValue_(RTValue),
+        //Feedback outputs
+        .DOBranch_(DoJump), .PCBranch_(JumpPC)
     );
 
     integer step = 0;
@@ -61,10 +50,10 @@ module StageDXTestbench;
         reg [31:0] pc;
         begin
             step = step + 1;
-            pc = PC; PC = 32'bz; Inst = 32'bz;
+            pc = PC_DX; PC_DX = 32'bz; INST_DX = 32'bz;
             #1;
-            PC = pc; Inst = inst;
-            $display("DX>: PC=%h  INST=%h", PC, Inst);
+            PC_DX = pc; INST_DX = inst;
+            $display("DX>: PC_DX=%h  INST=%h", PC_DX, INST_DX);
             #9;
             $display("DX<: ALU=%h(%d) RT=%h(%d), JPC=%h",
             ALUOut, ALUOut, RTValue, RTValue, JumpPC);
@@ -122,7 +111,7 @@ module StageDXTestbench;
     // Testing logic:
     initial begin
         // Basic reset setup
-        PC = 0;
+        PC_DX = 0;
         exec_inst(32'd0);
 
         //Write to $r1 and $r2 and $ra
@@ -220,12 +209,12 @@ module StageDXTestbench;
 
         exec_inst({`BEQ, 5'd1, 5'd4, 16'h0ABE});
         check_jumping(1);
-        check_jump(PC + 4 + 16'h2AF8);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
 
         exec_inst({`BEQ, 5'd1, 5'd1, 16'h0ABE});
         check_jumping(1);
-        check_jump(PC + 4 + 16'h2AF8);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
         exec_inst({`BEQ, 5'd1, 5'd2, 16'h0ABE});
         check_jumping(0);
@@ -235,17 +224,17 @@ module StageDXTestbench;
 
         exec_inst({`BNE, 5'd1, 5'd2, 16'h0ABE});
         check_jumping(1);
-        check_jump(PC + 4 + 16'h2AF8);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
         xx = `BLEZ;
         $display("BLEZ: %b %b %b %b %b", xx, xx[5:3], xx[2:1], ~|xx[5:3], ~^xx[2:1]);
         exec_inst({`BLEZ, 5'd0, 5'b00000, 16'h0ABE});
         check_jumping(1);
-        check_jump(PC + 4 + 16'h2AF8);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
         exec_inst({`BLEZ, 5'd5, 5'b00000, 16'h0ABE});
         check_jumping(1);
-        check_jump(PC + 4 + 16'h2AF8);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
         exec_inst({`BLEZ, 5'd2, 5'b00000, 16'h0ABE});
         check_jumping(0);
@@ -255,7 +244,7 @@ module StageDXTestbench;
 
         exec_inst({`BGTZ, 5'd2, 5'b00000, 16'h0ABE});
         check_jumping(1);
-        check_jump(PC + 4 + 16'h2AF8);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
         exec_inst({`BGTZ, 5'd5, 5'b00000, 16'h0ABE});
         check_jumping(0);
@@ -268,16 +257,16 @@ module StageDXTestbench;
 
         exec_inst({`BLTZ, 5'd5, 5'b00000, 16'h0ABE});
         check_jumping(1);
-        check_jump(PC + 4 + 16'h2AF8);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
         //Really BGEZ
         exec_inst({`BLTZ, 5'd0, 5'b00001, 16'h0ABE});
         check_jumping(1);
-        check_jump(PC + 4 + 16'h2AF8);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
         exec_inst({`BLTZ, 5'd2, 5'b00001, 16'h0ABE});
         check_jumping(1);
-        check_jump(PC + 4 + 16'h2AF8);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
         exec_inst({`BLTZ, 5'd5, 5'b00001, 16'h0ABE});
         check_jumping(0);
@@ -286,11 +275,11 @@ module StageDXTestbench;
 
         //Test jumps
         exec_inst({`J, 26'h0DEC0DE});
-        check_jump({PC[31:28], 28'h37B0378});
+        check_jump({PC_DX[31:28], 28'h37B0378});
         check_jumping(1);
 
         exec_inst({`JAL, 26'h0DEC0DE});
-        check_jump({PC[31:28], 28'h37B0378});
+        check_jump({PC_DX[31:28], 28'h37B0378});
         check_jumping(1);
 
         exec_inst({`RTYPE, 5'd1, 5'b00000, 5'b00000, 5'b00000, `JR});

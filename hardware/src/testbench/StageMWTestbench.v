@@ -7,7 +7,6 @@ module StageMWTestbench;
 
     wire clk, rst, stall;
     
-    `BUS_ICTL_type      _IControl, IControl;
     `BUS_SHAKE_type(8) UARX, UATX; // Ready-Valid 
 
     reg    [31:0]   INST_ADDR, MemAddr, RegWValue;

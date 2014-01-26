@@ -3,10 +3,7 @@
 
 `define COLT45_DD 0
 
-//TODO: Tack "valid" bit onto control lines instead/in-addition-to `UNKNOWN trick.
-//TODO: Substitution macro rather than `UNKNOWN(size) macro.
-
-// Useful for tagging signals (especially bus borne signals) with a foul state in simulation
+//NOTE:Trick for tagging signals with foul state in simulation which propagates when misued
 `define NOUNKLE         1
 `define UNCLEBIT        1'b0
 // synthesis translate_off
@@ -15,17 +12,10 @@
 //`define UNCLEBIT        1'bz
 //`define NOUNKLE         0
 // synthesis translate_on
-`define UNKNOWN(WxW)    {WxW{ (`UNCLEBIT) }}
-//TODO: Ensure the repetition operator above is working as expected!
 
-
-//tuninput.23{MemToReg.1,DestReg.5,MemWrite.1,MemShift.2,MSigned.1,
-//            ALUSrcA.1,ALUSrcB.1,ALUOp.4,ISigned.1,CmpOp.3,Jump.1,JR.1,Link.1}
-//tunoutput.0{}
-`define BUS_ICTL_width      ((1+5+1+2+1+1+1+4+1+3+1+1+1)+(0)) /* =23 */
-`define BUS_ICTL_type       wire [(`BUS_ICTL_width-1):0]
-`define ICTL__IN(       BUS)BUS [22: 0]
-//`define ICTL__OUT(      BUS)BUS [xx:23]
+//TODO: Use super-wide constant bus trick rather than requiring width???
+`define UNKNOWN(WxW)            ( {WxW{ (`UNCLEBIT) }} )
+`define UNKWIFN(VxV,WxW,BxB)    ( ((BxB)||`NOUNKLE) ? (VxV) : `UNKNOWN(WxW) )
 
 
 //tuninput  {DataValid.1, Data.DIw}

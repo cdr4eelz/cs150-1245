@@ -1,66 +1,68 @@
 `include "cpuglobal.vh"
 `include "opcode.vh"
 
+//TODO: Eliminate PC junk from decode (especially an ADDER)!!!
+
 module InstructionControl #(
     parameter DD=`COLT45_DD
 )(
+    // Inputs to decode (PC to pin down branch/jump)
     input [31:0 ] _inst,
-    input [31:0 ] _pc,
-
+    // Global or post-DX control signals
     output [ 1:0 ] MemShift,
-    output [ 2:0 ] CmpOp,
     output [ 4:0 ] DestReg,
+    output         MemSigned, MemToReg, MemWrite,
+    // Values consumed mostly by DX stage
     output [ 3:0 ] ALUOp,
-    output         ISigned, MSigned, MemToReg, MemWrite,
-                   Jump, JR, Link, ALUSrcA, ALUSrcB,
-
-    output [31:0 ] SIMMED,
-    output [31:0 ] UIMMED,
-    output [31:0 ] SHAMT,
-    output [ 4:0 ] SRC1,
-    output [ 4:0 ] SRC2,
-
-    output [31:0 ] PCTARGET,
-    output [31:0 ] PCBRANCH,
-
+    output [ 2:0 ] CmpOp,
+    output         ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link,
+    output [31:0 ] SIMMED, UIMMED,
+    output [27:0 ] NEARADDR,
+    output [ 4:0 ] SRC1, SRC2, SHAMT,
+    // COP0 additions
     output [ 4:0 ] COPADDR,
     output COPREAD, COPWRITE
-//  output [15:0 ] FAULT
 );
 
+    // Some simple functions (not too powerful, just for experience)
     function [31:0] SEXT16_32;
         input [15:0] in16;
         SEXT16_32 = {{16{in16[15]}}, in16};
     endfunction
-
     function [31:0] ZEXT16_32;
         input [15:0] in16;
         ZEXT16_32 = {16'b0, in16};
     endfunction
 
+    // OPCODE and major categories
+    wire isRType, isSType, isJType, isIType;
     wire [ 5: 0] _opcode_ = _inst[31:26];
-
-    wire isRType, isCType, isJType, isIType;
     assign isRType  = (_opcode_[5:0] == 6'b000000);
-    assign isCType  = (_opcode_[5:0] == 6'b010000); //ISR//
+    assign isSType  = (_opcode_[5:0] == 6'b010000); //COP0 "type" (maybe any "special" opcodes???)
     assign isJType  = (_opcode_[5:1] == 5'b00001_);
-    assign isIType  = !(isRType || isCType || isJType);
+    assign isIType  = !(isRType || isSType || isJType);
 
-    //TODO: Utilize the `TVALID(valid-expr,value) optional concat/unknown trick
+    // Simple peal-off wire ranges
     wire [ 4: 0] _rs_, _rt_, _rd_, _shamt_;
     wire [ 5: 0] _funct_;
     wire [15: 0] _immediate_;
     wire [25: 0] _nearaddr_;
-    assign _rs_         = (isRType || isIType || isCType) ? _inst[25:21] : `UNKNOWN(5); // !isJType
-    assign _rt_         = (isRType || isIType || isCType) ? _inst[20:16] : `UNKNOWN(5);
-    assign _rd_         = (isRType || isCType) ? _inst[15:11] : `UNKNOWN(5);
-    assign _shamt_      = (isRType) ? _inst[10:6 ] : `UNKNOWN(5);
-    assign _funct_      = (isRType) ? _inst[ 5:0 ] : `UNKNOWN(6);
-    assign _immediate_  = (isIType) ? _inst[15:0 ] : `UNKNOWN(16);
-    assign _nearaddr_   = (isJType) ? _inst[25:0 ] : `UNKNOWN(26);
+    assign _rs_         = `UNKWIFN( _inst[25:21]
+                            ,  5, isRType || isIType || isSType); // !isJType
+    assign _rt_         = `UNKWIFN( _inst[20:16]
+                            ,  5, isRType || isIType || isSType);
+    assign _rd_         = `UNKWIFN( _inst[15:11]
+                            ,  5, isRType || isSType);
+    assign _shamt_      = `UNKWIFN( _inst[10:6 ]
+                            ,  5, isRType);
+    assign _funct_      = `UNKWIFN( _inst[ 5:0 ]
+                            ,  6, isRType);
+    assign _immediate_  = `UNKWIFN( _inst[15:0 ]
+                            , 16, isIType);
+    assign _nearaddr_   = `UNKWIFN( _inst[25:0 ]
+                            , 26, isJType);
 
-    // Pre-computations for clarity (partly distilled out by logic simplification?)
-    // These characteristics could come from lookup table
+    // These characteristics could come from lookup table but this is more enlightening!
     wire #DD isMemory, isMStore, isMLoad, isIComp, isISigned, isMSigned;
     wire #DD isCopRead, isCopWrite; //ISR//
     assign isMemory    = (_opcode_[5:4] == 2'b10);
@@ -69,8 +71,8 @@ module InstructionControl #(
     assign isIComp     = (_opcode_[5:3] == 3'b001);
     assign isISigned   = (isMemory || (isIComp && !_opcode_[2]));
     assign isMSigned   = (isMemory && !isMStore && !_opcode_[1] && !_opcode_[2]);
-    assign isCopRead   = (isCType && (_rs_ == `COP0_FROM));
-    assign isCopWrite  = (isCType && (_rs_ == `COP0_TO));
+    assign isCopRead   = (isSType && (_rs_ == `COP0_FROM));
+    assign isCopWrite  = (isSType && (_rs_ == `COP0_TO));
     wire #DD isRShift, isRShiftI, isRShiftR, isROther;
     assign isRShift    = (isRType && (_funct_[5:3] == 3'b000));
     assign isRShiftI   = (isRShift && (_funct_[2] == 1'b0));
@@ -88,18 +90,13 @@ module InstructionControl #(
     assign isBranchX   = (_opcode_[5:1] == 5'b00010);
     assign isBranch0   = (isBGELTZ || (_opcode_[5:1] == 5'b00011));
 
-//  assign IPCODE   = (isRType) ? _funct_ : (isBGELTZ) ? _rt_ : `UNKNOWN(6);
-//  assign SOFFSET  = (isMemory) ? (SEXT16_32(_immediate_)) : `UNKNOWN(32);
     assign SIMMED   = SEXT16_32(_immediate_);
     assign UIMMED   = ZEXT16_32(_immediate_);
-    assign SHAMT    = (isRShiftI) ? _shamt_ : `UNKNOWN(5);
+    assign SHAMT    = (isRShiftI) ? _shamt_ : 5'd0;
     assign SRC1     = (!isJType && !isRShiftI) ? _rs_ : 5'd0;
     assign SRC2     = (isBranch0) ? 5'd0 :
                        (isROther || isBranchX || isRShift || isMStore || isCopWrite)
                            ? _rt_ : 5'd0;
-
-    assign PCTARGET = (isIJump) ? {_pc[31:28], _nearaddr_, 2'b00} : `UNKNOWN(32);
-    assign PCBRANCH = (isBranch) ? (_pc + 4 + (SEXT16_32(_immediate_) << 2)) : `UNKNOWN(32);
 
     assign COPADDR  = (isCopRead || isCopWrite) ? _rd_ : 5'd0;
     assign COPREAD  = isCopRead;
@@ -111,16 +108,10 @@ module InstructionControl #(
         .ALUop(ALUOp)
     );
 
-// These might do better to be "flattened" in case statements...
-    assign MemShift = (isMemory)
-                        ? (~_opcode_[1:0]) // ~x == 3-x, like 1's complement!
-                        : `UNKNOWN(2);
-    assign CmpOp    = (isBSimple)
-                        ? _opcode_[2:0]
-                        : ( (isBGELTZ)
-                            ? (_opcode_[2:0] << _rt_[0]) //TODO: Strange formula :(
-                            : ((isJump) ? 3'b011 : 3'b000) //TODO: Use constant names!
-                        );
+    assign MemSigned = isMSigned, MemToReg = isMLoad, MemWrite = isMStore;
+    assign MemShift = `UNKWIFN(
+                        (~_opcode_[1:0])
+                        ,  2, isMemory); // ~x == 3-x (1's complement)
     assign DestReg  = (isJump)
                         ? ( (isLink) // JUMP-LINK to $ra else $0
                             ? 5'd31
@@ -130,8 +121,14 @@ module InstructionControl #(
                             : ( (isMLoad || isIComp || isCopRead ) ? _rt_ : 5'd0)
                         );
 
-    assign ISigned = isISigned, MSigned = isMSigned, MemToReg = isMLoad,
-            MemWrite = isMStore, Jump = isJump, JR = isRJump, Link = isLink,
-            ALUSrcA = isRShiftI, ALUSrcB = (isMemory || isIComp);
+    assign ISigned = isISigned, Jump = isJump, JR = isRJump, Link = isLink,
+            ALUSrcA = isRShiftI, ALUSrcB = (isMemory || isIComp),
+            NEARADDR = {_nearaddr_,2'b00};
+    assign CmpOp    = (isBSimple)
+                        ? _opcode_[2:0]
+                        : ( (isBGELTZ)
+                            ? (_opcode_[2:0] << _rt_[0]) //TODO: Strange formula :(
+                            : ((isJump) ? 3'b011 : 3'b000) //TODO: Use constant names!
+                        );
 
 endmodule

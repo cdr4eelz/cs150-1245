@@ -2,7 +2,6 @@
 
 KEYtag: BUG!/? STEP OPTImize TOOL CLeanUP ANALyze COOLcrossuse WANTtolearn
 
-***BUG! Stall from non D-Cache source trips up D-Cache fetch process (grabs junk late)
 BUG-    Reset is double applied with 2-cycle gap (init_done lag)
 
 CLUP    Revert ml505top as much as possible, move fanciness to sub/wrapper
@@ -11,7 +10,6 @@ CLUP    Data vs control segregation
 CLUP    OPCODE (& almost everything) as parameters rather than `define
 CLUP    Top level `define -> localparam mappings
 
-STEP    More thorough instruction/asm/C tests (partly started)
 STEP    COP0 complete & test
 STEP    ISR software
 STEP    PixelFeeder from DDR (or SRAM if arbiter works)
@@ -27,8 +25,8 @@ WRAP    Retro-patch prior checkpoints?
 WRAP    Writeup highlighting cross-project & extra-credit work
 WRAP    Prune/cherry-pick git repo
 
-ANAL    Track down flop styling (CE, SET/RESET, etc) especially finnicky SLR32 or whatever
-ANAL    Any "gated" clocks vs. clock-enable?
+OPTI    Track down flop styling (CE, SET/RESET, etc) especially finnicky SLR32 (non-RST)
+OPTI    Any "gated" clocks vs. clock-enable?
 OPTI    Avoid If based priority logic (maybe even for Reset signals?) flatten & muxlike
 OPTI    Reset deassert per-clock (and delay based on component)
 OPTI    Cautious resource sharing?
@@ -39,16 +37,14 @@ WANT    Use FPGAEditor and LOC/RLOC tricks in select spots
 WANT    Rebuild custom GCC tools (without clang, with clang)
 WANT    Try simple dual-processing arrangement
 
-OLD?    ???Don't use OUTPUT as internal signal too???
-
 
 ::EXTRAS::
-    Memory patching with .bmm file tricks
+    Memory patching with .bmm file tricks (also objcopy re-linking)
     SCRATCHPAD memory kept active
     BIOS "cp", "dump"
     PLOP for serial forwarding & other tricks
     BRKTAP for debug stepping & monitoring
-    Research (revisions?) of timing, MIG details, uBlaze, etc.
+    Research timing constraints, MIG details, uBlaze, etc.
 
 
 ::TROUBLESHOOT STEPS (when sim/synth discrep)::

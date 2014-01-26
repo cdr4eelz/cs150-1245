@@ -49,9 +49,9 @@ module MemMapIO #(
     // Drive these pre-clock (continuous drive) so other RVA sees them at clock
     assign Rx_Ready = isRead && (addra==12'h003);
     assign Tx_Valid = isWrite && (addra==12'h002);
-    assign Tx_Data  = (BADNESS && Tx_Valid) ? dina[7:0] : BAD_BYTE;
-    //Loses a byte if Tx_Valid && !Tx_Ready
-    //Reads junk if Rx_Ready && !Rx_Valid
+    assign Tx_Data  = (BADNESS && !Tx_Valid) ? BAD_BYTE : dina[7:0];
+    //NOTE:Loses a byte if Tx_Valid && !Tx_Ready
+    //NOTE:Reads junk if Rx_Ready && !Rx_Valid
 
     // Stats & Counters
 //    reg  [31: 0] CNT_Rx, CNT_Tx; //Minimal IO statistics
@@ -66,12 +66,12 @@ module MemMapIO #(
             12'h003: MUX_DOUTA = {24'd0, Rx_Data};
             12'h004: MUX_DOUTA = CNT_Cycle[31:0];
             12'h005: MUX_DOUTA = CNT_Inst[31:0];
-            default: MUX_DOUTA = BAD_WORD;
+            default: MUX_DOUTA = (BADNESS) ? BAD_WORD : 32'd0;
         endcase
     end
     always @(posedge clk) begin:_REG_DOUTA_
-        if (rst) DOUTA <= 0;
-        else if (isRead) DOUTA <= MUX_DOUTA;
+        //NOTE:Avoid unnecessary resets -- if (rst) DOUTA <= 0; else
+        if (isRead) DOUTA <= MUX_DOUTA;
     end
 
 
