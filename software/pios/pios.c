@@ -58,7 +58,7 @@ int main(void)
         show_block(DCACHE, buffer, BUFFER_LEN);
     }
 
-    if (0) { // Copy from ScratchPad DMEM to I/D-Cache (simultaneous write)
+    if (1) { // Copy from ScratchPad DMEM to I/D-Cache (simultaneous write)
         //pmult currently about 0x0800, mmult currently about 0x1800
         uint32_t xor = copy_xor(CODE_SRC, XCACHE, CODE_LEN);
         uwrite_int8('@');
@@ -66,7 +66,7 @@ int main(void)
         uwrite_int8(' ');
     }
 
-    if (1) { // Workaround: Copy to I-Cache only
+    if (0) { // Workaround: Copy to I-Cache only
         uint32_t xor = copy_xor(CODE_SRC, ICACHE, CODE_LEN);
         uwrite_int8('#');
         if (1) uwrite_int8s(uint32_to_ascii_hex(xor, buffer, BUFFER_LEN));
@@ -78,7 +78,7 @@ int main(void)
         if (1) uwrite_int8s(uint32_to_ascii_hex(xor, buffer, BUFFER_LEN));
         uwrite_int8('-');
     }
-    if (0) { // Dump D-Cache
+    if (1) { // Dump D-Cache
         show_block(DCACHE, buffer, BUFFER_LEN);
     }
 

@@ -38,10 +38,10 @@ void store(uint32_t address, uint32_t length)
     }
 }
 
-void show_block(uint32_t address, int8_t* bufMEM, uint32_t bufLEN)
+void show_block(uint32_t address, uint8_t numWords, int8_t* bufMEM, uint32_t bufLEN)
 {
     volatile uint32_t* p = (volatile uint32_t*)(address);
-    for (uint32_t i = 0; i < 16; i++) {
+    for (uint32_t i = 0; i < numWords; i++) {
         if ((i%4)==0) {
             uwrite_int8s("\r\n");
             uwrite_int8s(uint32_to_ascii_hex((uint32_t) p, bufMEM, bufLEN));
@@ -70,7 +70,7 @@ uint32_t copy_xor(uint32_t pSRC, uint32_t pDST, uint32_t length)
 
 
 #define BUFFER_LEN 128
-#define VERSION_CHAR '1'
+#define VERSION_CHAR '2'
 
 typedef void (*entry_t)(void);
 
@@ -80,12 +80,14 @@ int main(void)
     uwrite_int8(VERSION_CHAR);
     uwrite_int8s("]\r\n\r\n");
 
+    int8_t buffer[BUFFER_LEN];
+    uint32_t stash_addr1 = 0x10000000;
+
     for ( ; ; ) {
         uwrite_int8(VERSION_CHAR);
         uwrite_int8('>');
         uwrite_int8(' ');
 
-        int8_t buffer[BUFFER_LEN];
         int8_t* input = read_token(buffer, BUFFER_LEN, " \x0d");
 
         if (strcmp(input, "file") == 0) {
@@ -141,8 +143,14 @@ int main(void)
             *p = byte;
         } else if (strcmp(input, "dump") == 0) {
             uint32_t address = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+            if (address == 0) {
+                address = stash_addr1;
+                stash_addr1 += (16 * 4);
+            } else {
+                stash_addr1 = address;
+            }
 
-            show_block(address, buffer, BUFFER_LEN);
+            show_block(address, 16, buffer, BUFFER_LEN);
             uwrite_int8s("\r\n");
         } else if (strcmp(input, "cp") == 0) {
             uint32_t a_src = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
