@@ -161,42 +161,49 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     //TODO: Pick correct PC to stash at right time (utilize branch)
 
     // Declare outputs of DX stage
-    `BUS_ICTL_type IControlDX_;
     wire [31: 0] MemAddrDX_, MemWValueDX_, RegWValueDX_;
+    wire [ 4: 0] DestRegDX_;
+    wire [ 1: 0] MemShiftDX_;
+    wire         MemToRegDX_, MemWriteDX_;
     StageDX s_DX
     ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
         //Async regfile reads & COP access
-        .REG_R1_(REGFILE_ra1), .REG_D1_(FWD_rd1),
-        .REG_R2_(REGFILE_ra2), .REG_D2_(FWD_rd2),
+        .REG_R1_(REGFILE_ra1),  .REG_D1_(FWD_rd1),
+        .REG_R2_(REGFILE_ra2),  .REG_D2_(FWD_rd2),
         .CopAddr(CopAddr), .CopOut(CopOut), .CopInHot(CopInHot),
         //Stage Inputs
         ._PC(PC_DX), ._INST(INST_DX),
         //Stage Outputs
-        .IControl_(IControlDX_),
-        .MemAddr_(MemAddrDX_), .MemWValue_(MemWValueDX_),
+        .MemAddr_(MemAddrDX_),  .MemWValue_(MemWValueDX_),
         .RegWValue_(RegWValueDX_),
+        .MemToReg_(MemToRegDX_), .MemShift_(MemShiftDX_),
+        .MemWrite_(MemWriteDX_), .DestReg_(DestRegDX_),
         //Feedback outputs
         .DOBranch_(BRA_DoBranch_DX2F_), .PCBranch_(BRA_PCBranch_DX2F_)
     );
 
 
-//=============--- "PIPELINE"-PEEK: DX/M ---=============
-    `BUS_ICTL_type  IControl__MW = IControlDX_;
-    wire  [31: 0]   MemAddr__MW = MemAddrDX_;
-    wire  [31: 0]   MemWValue__MW = MemWValueDX_;
 //===============| PIPELINE-BORDER: DX/M >>>=============
-    `BUS_ICTL_type IControl_MW;
     wire  [31: 0]   MemAddr_MW;
     wire  [31: 0]   RegWValue_MW;
-    PipelineRegister #( .Width(`BUS_ICTL_width) )
-        PIPR_IControl_MW  ( .clk(clk), .rst(1'b0), .stall(stall),
-                            .In(IControlDX_),   .Out(IControl_MW  ) );
+    wire  [ 4: 0]   DestReg_MW;
+    wire  [ 1: 0]   MemShift_MW;
+    wire            MemToReg_MW;
     PipelineRegister #( .Width(32) )
         PIPR_MemAddr_MW   ( .clk(clk), .rst(rst), .stall(stall),
                             .In(MemAddrDX_  ),  .Out(MemAddr_MW   ) );
     PipelineRegister #( .Width(32) )
         PIPR_RegWValue_MW ( .clk(clk), .rst(rst), .stall(stall),
                             .In(RegWValueDX_),  .Out(RegWValue_MW ) );
+    PipelineRegister #( .Width(5) )
+        PIPR_DestReg_MW   ( .clk(clk), .rst(rst), .stall(stall),
+                            .In(DestRegDX_ ),  .Out(DestReg_MW   ) );
+    PipelineRegister #( .Width(2) )
+        PIPR_MemShift_MW  ( .clk(clk), .rst(rst), .stall(stall),
+                            .In(MemShiftDX_),  .Out(MemShift_MW  ) );
+    PipelineRegister #( .Width(1) )
+        PIPR_MemToReg_MW  ( .clk(clk), .rst(rst), .stall(stall),
+                            .In(MemToRegDX_),  .Out(MemToReg_MW  ) );
 //Debug use only
     wire  [31: 0]   PC_MW;
     PipelineRegister #( .Width(32) ) //NOTE: Only need 1 bit, but full value nice for debugging
@@ -207,26 +214,31 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     // MEMORY/MMIO patchwork lines ("setups" prefixed with "_", "results" not)
     wire _hot_ISR, _hot_IO, _hot_BR, _hot_IC, _hot_DC;
     wire _hot_IB, _hot_DB;
-    wire [ 3: 0] _WriteMask, _ByteMask;
+    wire [ 3: 0] _WriteMask;
     wire [31: 0] _WDataMasked;
     wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
     StageMW s_MW
     ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
         //Inputs
 //TODO: Rework inputs to be minimal specific signals
-        ._IControl  (IControl__MW),  .IControl   (IControl_MW),
-        ._MemAddr   (MemAddr__MW),   .MemAddr    (MemAddr_MW),
-        ._MemWValue (MemWValue__MW), .RegWValue  (RegWValue_MW),
+        ._MemAddr   (MemAddrDX_),      ._MemWValue (MemWValueDX_),
+        ._MemShift  (MemShiftDX_),     ._MemToReg  (MemToRegDX_),
+        ._MemWrite  (MemWriteDX_),
         ._PCinBIOS  (PC_DX[31:28]==4'b0100), //Borrow value from other stage (close enough)
+
+        .MemAddr_MW (MemAddr_MW),       .RegWValue_MW(RegWValue_MW),
+        .DestReg_MW (DestReg_MW),       .MemShift_MW (MemShift_MW ),
+        .MemToReg_MW(MemToReg_MW),
+
         //Feedbacks to "prior" stages (forwarding & instruction fetch)
-        .WBK_Reg_(WBK_Reg_MW2DX_), .WBK_Val_(WBK_Val_MW2DX_),
+        .WBK_Reg_   (WBK_Reg_MW2DX_),   .WBK_Val_(WBK_Val_MW2DX_),
         .WBK_CanFWD_(WBK_CanFWD_MW2DX_),
 //TODO: Move most DMEM stuff elsewhere
         //Memory/MMIO "pre-clock" drives OUT
         ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
         ._hot_IB(_hot_IB), ._hot_DB(_hot_DB), //XTRA: Scratchpad
         ._hot_IC(_hot_IC), ._hot_ISR(_hot_ISR), //Write-only via I-Cache (keep fetch consistent later)
-        ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked), ._ByteMask(_ByteMask),
+        ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked),
         //Memory/MMIO "post-clock" results IN
         .RData_IO(RData_IO), .RData_BR(RData_BR), .RData_DC(RData_DC),
         .RData_DB(RData_DB)
@@ -281,7 +293,7 @@ always @(posedge clk) begin
     P_dcache_re <= dcache_re;
 end
     //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
-    assign dcache_addr = (stall) ? P_dcache_addr : {4'h0, MemAddr__MW[27:0]},
+    assign dcache_addr = (stall) ? P_dcache_addr : {4'h0, MemAddrDX_[27:0]},
         dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
         dcache_din  = _WDataMasked,
         dcache_re   = (stall) ? P_dcache_re : (/*!stall &&*/ _hot_DC) && (_WriteMask == 4'b0000),
@@ -290,7 +302,7 @@ end
 
     //NOTE: Both _hot_DC && _hot_IC ARE allowed to be active simultaneously for WRITE
     //      but writability rules prevent INST-read & DATA-write collision
-    assign icache_addr = {4'h0, (hoti_IC_) ? IMEM_ADDR[27:0] : MemAddr__MW[27:0]},
+    assign icache_addr = {4'h0, (hoti_IC_) ? IMEM_ADDR[27:0] : MemAddrDX_[27:0]},
         icache_we   = (!stall && !hoti_IC_ && _hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
         icache_re   = (!stall && hoti_IC_),
@@ -299,7 +311,7 @@ end
 
     isr_mem bram_isr
     ( .clka(clk), .ena(!stall && _hot_ISR),
-        .addra(MemAddr__MW[13:2]),
+        .addra(MemAddrDX_[13:2]),
       /*.douta(RData_IB),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),
 
@@ -310,7 +322,7 @@ end
 
     bios_mem brom_bios
     ( .clka(clk), .ena(!stall && _hot_BR),
-        .addra(MemAddr__MW[13:2]),
+        .addra(MemAddrDX_[13:2]),
         .douta(RData_BR),//OUT-32
       /*.wea(_WriteMask), .dina(_WDataMasked),*/
 
@@ -321,14 +333,14 @@ end
 
     dmem_blk_ram bram_dmem
     ( .clka(clk), .ena(!stall && _hot_DB),
-        .addra(MemAddr__MW[13:2]),
+        .addra(MemAddrDX_[13:2]),
         .douta(RData_DB),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked)
     ) /* synthesis syn_noprune=1 */;
 
     imem_blk_ram bram_imem
     ( .clka(clk), .ena(!stall && _hot_IB),
-        .addra(MemAddr__MW[13:2]),
+        .addra(MemAddrDX_[13:2]),
       /*.douta(RData_IB),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),
 
@@ -340,7 +352,7 @@ end
     `BUS_SHAKE_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
     MemMapIO memmap_io
     ( .clk(clk), .rst(rst), .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
-        .addra(MemAddr__MW[13:2]),
+        .addra(MemAddrDX_[13:2]),
         .DOUTA(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
         //Mapped devices
@@ -379,7 +391,7 @@ assign trace = {
 
 //  DMEM_READ[31:0],    32'd0,              32'd0,              32'd0,
     RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_DB[31:0],
-    MemAddr_MW[31:0],   MemAddr__MW[31:0],  _WDataMasked[31:0],
+    MemAddr_MW[31:0],   MemAddrDX_[31:0],  _WDataMasked[31:0],
     {   _hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
         dcache_we, 3'd0,dcache_re,
         icache_we, 3'd0,icache_re,
@@ -387,7 +399,7 @@ assign trace = {
     },
 
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
-    {41'd0,IControlDX_[22:0]},              {41'd0,IControl_MW[22:0]},
+    64'd0,                                  64'd0,
 
     PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[63:0],
     DBG_MEM150[31:0],   32'd0,              32'd0,
@@ -448,7 +460,7 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
         $strobe ("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         if (rst) begin
             DBG_cycle = 'bz;  DBG_step = 'bz;
-            if (COLT45_CONTROL) $monitor(" (%d) CTL DX %b", DBG_cycle, IControlDX_);
+//            if (COLT45_CONTROL) $monitor(" (%d) CTL DX %b", DBG_cycle, IControlDX_);
         end else if (DBG_cycle[0] === 1'bz) begin
             DBG_cycle = 0;  DBG_step = 0;
         end
@@ -461,8 +473,8 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
         if (FWD_2) $display(" *FWD2:      >>%h(%d)", FWD_rd2, FWD_rd2);
 
         $display("%d]   /DX: %h %h", DBG_cycle, PC_F_, INST_F_);
-        $display("%d]  /MW : %h<=%h", DBG_cycle, MemAddr__MW, MemWValue__MW);
-        $display("%d]  /MW : %b", DBG_cycle, IControl__MW);
+        $display("%d]  /MW : %h<=%h", DBG_cycle, MemAddrDX_, MemWValueDX_);
+//        $display("%d]  /MW : %b", DBG_cycle, IControlDX_);
         $display("%d] /F  : R[%h,%d]<=%h(%d)", DBG_cycle, WBK_Reg_MW2DX_, WBK_Reg_MW2DX_,
                             WBK_Val_MW2DX_, WBK_Val_MW2DX_);
 
@@ -476,7 +488,7 @@ generate if (COLT45_STEPMAX) begin:_STEPS_
         $display("%d]    /F: %h *%d", DBG_cycle, BRA_PCBranch_DX2F_, BRA_DoBranch_DX2F_);
         $display("%d]  F/DX: %h %h #%d", DBG_cycle, PC_DX, INST_DX, CNT_Inst);
         $display("%d]DX/MW : %h <=%h", DBG_cycle, PC_MW, RegWValue_MW);
-        $display("%d]      : %b", DBG_cycle, IControl_MW); // Make a task to break into fields
+//        $display("%d]      : %b", DBG_cycle, IControl_MW); // Make a task to break into fields
         $strobe ("%d] -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -", DBG_cycle);
     end
 end endgenerate //COLT45_STEPMAX
@@ -506,9 +518,9 @@ generate if (COLT45_MEMWRITE) begin:_MEMWRITE_
     always@(posedge clk) if (!stall && |_WriteMask) begin
         // Plan to log these into a sequential list of critical actions (for stricter testing)
         $display("** [%h,%d] <= %h(%d) {%b}",
-            MemAddr__MW, MemAddr__MW, _WDataMasked, _WDataMasked, _WriteMask);
+            MemAddrDX_, MemAddrDX_, _WDataMasked, _WDataMasked, _WriteMask);
         $display("** TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b IB=%b DB=%b",
-            MemAddr__MW[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
+            MemAddrDX_[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
     end
 end endgenerate
 
@@ -517,14 +529,14 @@ generate if (COLT45_SCRATCH) begin:_SCRATCH_
         $display("\n=============");
         DUMP_PC();
         $display("TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b IB=%b DB=%b",
-            MemAddr__MW[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
+            MemAddrDX_[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
         if (|_WriteMask) begin
             regfile.DUMP();
             $display("[%h,%d] <<= %h(%d) {%b}",
-                MemAddr__MW, MemAddr__MW, _WDataMasked, _WDataMasked, _WriteMask);
+                MemAddrDX_, MemAddrDX_, _WDataMasked, _WDataMasked, _WriteMask);
         end else begin
             $display("[%h,%d] ==> %h(%d)",
-                MemAddr__MW, MemAddr__MW, RData_DB, RData_DB);
+                MemAddrDX_, MemAddrDX_, RData_DB, RData_DB);
         end
         $display("=============\n");
     end

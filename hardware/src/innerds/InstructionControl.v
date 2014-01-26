@@ -7,7 +7,12 @@ module InstructionControl #(
     input [31:0 ] _inst,
     input [31:0 ] _pc,
 
-    output `BUS_ICTL_type IControl_,
+    output [ 1:0 ] MemShift,
+    output [ 2:0 ] CmpOp,
+    output [ 4:0 ] DestReg,
+    output [ 3:0 ] ALUOp,
+    output         ISigned, MSigned, MemToReg, MemWrite,
+                   Jump, JR, Link, ALUSrcA, ALUSrcB,
 
     output [31:0 ] SIMMED,
     output [31:0 ] UIMMED,
@@ -101,23 +106,22 @@ module InstructionControl #(
     assign COPWRITE = isCopWrite;
 
     // Embed existing ALUDecoder from lab
-    wire [ 3: 0] #DD ALUop;
     ALUdec ALUDecoder(
         .opcode(_opcode_), .funct(_funct_),
-        .ALUop(ALUop)
+        .ALUop(ALUOp)
     );
 
 // These might do better to be "flattened" in case statements...
-    wire [1:0] MemShift = (isMemory)
+    assign MemShift = (isMemory)
                         ? (~_opcode_[1:0]) // ~x == 3-x, like 1's complement!
                         : `UNKNOWN(2);
-    wire [2:0] CmpOp    = (isBSimple)
+    assign CmpOp    = (isBSimple)
                         ? _opcode_[2:0]
                         : ( (isBGELTZ)
                             ? (_opcode_[2:0] << _rt_[0]) //TODO: Strange formula :(
                             : ((isJump) ? 3'b011 : 3'b000) //TODO: Use constant names!
                         );
-    wire [4:0] DestReg  = (isJump)
+    assign DestReg  = (isJump)
                         ? ( (isLink) // JUMP-LINK to $ra else $0
                             ? 5'd31
                             : 5'd0)
@@ -126,14 +130,8 @@ module InstructionControl #(
                             : ( (isMLoad || isIComp || isCopRead ) ? _rt_ : 5'd0)
                         );
 
-    `BUS_ICTL_type delayIControl;
-    assign #DD IControl_ = delayIControl;
-    BUS_ICTL_tun BUS_ICTL
-    ( ._BUS_(delayIControl),
-        .ISigned( isISigned ), .MSigned( isMSigned ), .DestReg( DestReg ),
-        .MemToReg( isMLoad ), .MemWrite( isMStore ), .MemShift( MemShift ),
-        .ALUOp( ALUop ), .ALUSrcA( isRShiftI ), .ALUSrcB( isMemory || isIComp ),
-        .Jump( isJump ), .JR( isRJump ), .Link( isLink ), .CmpOp( CmpOp )
-    );
+    assign ISigned = isISigned, MSigned = isMSigned, MemToReg = isMLoad,
+            MemWrite = isMStore, Jump = isJump, JR = isRJump, Link = isLink,
+            ALUSrcA = isRShiftI, ALUSrcB = (isMemory || isIComp);
 
 endmodule

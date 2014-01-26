@@ -15,13 +15,13 @@ module StageDX(
     input  [31: 0] _PC,
     input  [31: 0] _INST,
 
-    // Outputs (decode / generic instruction cascade)
-    output `BUS_ICTL_type IControl_,
-
     // Outputs (Execute related computations)
     output [31: 0] MemAddr_,
     output [31: 0] MemWValue_,
     output [31: 0] RegWValue_,
+    output [ 4: 0] DestReg_,
+    output [ 1: 0] MemShift_,
+    output         MemToReg_, MemWrite_,
     output [31: 0] PCBranch_,
     output         DOBranch_
 );
@@ -36,26 +36,23 @@ module StageDX(
     wire [31: 0] R1 = REG_D1_,  R2      = REG_D2_; // Redeclare to clarify dependencies...
     // SEE: CopAddr & CopOut (for asynchronous drives)
 
+    // Tap control signals used inside DX
+    wire ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link;
+    wire [ 3: 0] ALUOp;
+    wire [ 2: 0] CmpOp;
     InstructionControl decodeControl(
         ._pc(_PC), ._inst(_INST),
 
-        .IControl_(IControl_),
+        .ALUOp(ALUOp), .ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB),
+        .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR), .Link(Link),
+        .MSigned(),
+        .DestReg(DestReg_), .MemShift(MemShift_),
+        .MemToReg(MemToReg_), .MemWrite(MemWrite_),
 
         .SIMMED(SIMMED), .UIMMED(UIMMED),
         .SHAMT(SHAMT), .SRC1(SRC1), .SRC2(SRC2),
         .PCTARGET(PCTARGET), .PCBRANCH(PCBRANCH),
         .COPREAD(COPREAD), .COPWRITE(CopInHot), .COPADDR(CopAddr) //ISR//
-    );
-
-    // Tap control signals used inside DX
-    wire ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link;
-    wire [ 3: 0] ALUOp;
-    wire [ 2: 0] CmpOp;
-    BUS_ICTL_tap BUS_ICTL
-    ( ._BUS_(IControl_), // Unused (explicitly listed to make warnings meaningful)
-        .ALUOp(ALUOp), .ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB),
-        .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR), .Link(Link),
-        .MemToReg(),.DestReg(),.MemWrite(),.MemShift(),.MSigned()
     );
 
     wire [31: 0] ALUResult;
