@@ -97,7 +97,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [31: 0] INST_F_;
     wire [63: 0] CNT_Cycle, CNT_Inst, CNT_Stall, CNT_BRANCH, CNT_ISR;
     wire WAS_Running, WAS_Stall, WAS_Inst, WAS_Branch, WAS_ISR;
-    wire DO_ISR = BRA_IRQPending_DX2F_ && !(WAS_Branch || WAS_ISR); //Check STALL???
+    wire DO_ISR = BRA_IRQPending_DX2F_ && !(stall || WAS_Branch || WAS_ISR);
     StageF #(
         .COUNTERWIDTH(64)
     ) s_F ( .clk(clk), .rst(rst), .stall(stall),
@@ -151,7 +151,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [31: 0] CopOut;
     wire CopInHot, IRQUART0, IRQUART1;
     COP0150 cop0 (
-        .Clock(clk), .Reset(rst), .Enable(1'b1), //TODO:CONFIRM Enabled even during stall???
+        .Clock(clk), .Reset(rst), .Enable(1'b1), //NOTE:Individual activities adhere to stall
         .DataAddress(CopAddr), //IN-5 (Cop Register to read/write)
         .DataOut(CopOut), //OUT-32 (Injected into StageDX.RegWValue_)
         .DataInEnable(!stall && CopInHot), //IN (mtc0)
@@ -428,16 +428,19 @@ assign trace = {
     {   _hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
         dcache_we, 3'd0,dcache_re,
         icache_we, 3'd0,icache_re,
-        _WriteMask ,WAS_ISR,WAS_Stall,WAS_Inst,WAS_Branch
+        _WriteMask, WAS_ISR,WAS_Stall,WAS_Inst,WAS_Branch
     },
 
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
-    DMEM_ADDR[31:0],    DMEM_DATA[31:0],    64'd0,
+    DMEM_ADDR[31:0],    DMEM_DATA[31:0],    CopOut[31:0],
+    {   8'd0, 8'd0,
+        DO_ISR,CopInHot,IRQUART0,IRQUART1, BRA_IRQPending_DX2F_,!stall,!WAS_Branch,!WAS_ISR,
+        3'd0, CopAddr[4:0]
+    },
 
     PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[63:0],
-    DBG_MEM150[31:0],   32'd0,              32'd0,
-    {   8'd0, 8'd0, 8'd0, 8'd0
-    }
+    DBG_MEM150[31:0],   CNT_BRANCH[31:0],   CNT_ISR[31:0],
+    {   8'd0, 8'd0, 8'd0, 8'd0 }
 };
 
 
