@@ -11,6 +11,7 @@ module StageMW (
 
     // Inputs held stable during our stage for us
     input  [ 1: 0]  MemShift_MW, MemAddrShift_MW,
+    input  [31: 0]  RDataRaw,
     input  [ 4: 0]  DestReg_MW,
     input           MemToReg_MW,
     input  [31: 0]  RegWValue_MW,
@@ -22,8 +23,7 @@ module StageMW (
 
     // Memory/IO drives
     output [ 3: 0] _WriteMask,
-    output [31: 0] _WDataMasked,
-    input  [31: 0] RDataRaw
+    output [31: 0] _WDataMasked
 );
 
     wire [3:0] _ByteMask;

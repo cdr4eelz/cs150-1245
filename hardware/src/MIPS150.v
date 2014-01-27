@@ -3,9 +3,10 @@
 module MIPS150 #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
-    parameter COLT45_BRK=0, COLT45_SCOPE=1,
-    parameter COLT45_SCRATCH=0, COLT45_PC=0,
-    parameter COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
+                BOOTPC=32'h4000_0000, //NOTE: h6000_0000 for SCRATCH_IMEM
+                ISRPC=32'hC000_0180,
+    parameter COLT45_BRK=0, COLT45_SCOPE=1, COLT45_SCRATCH=0, COLT45_PC=0,
+                COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
     input clk,
     input rst,
@@ -83,35 +84,43 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     // Forward declare feedback related wires (other key wires declared just prior to use, ALAP)
     wire         #DD BRA_DoBranch_DX2F_;
     wire [31: 0] #DD BRA_PCBranch_DX2F_;
+    wire         #DD BRA_IRQPending_DX2F_;
     wire [ 4: 0] #DD WBK_Reg_MW2DX_;
     wire [31: 0] #DD WBK_Val_MW2DX_;
     wire         #DD WBK_CanFWD_MW2DX_;
     wire         #DD CNT_Reset_MW2F_;
 
+    // Memory lines
+    wire [31: 0] IMEM_ADDR, DMEM_ADDR;
+    wire [31: 0] IMEM_DATA, DMEM_DATA;
+
     // Declare outputs of F stage
-    wire [31: 0] PC_F_;
+    wire [31: 0] PC_F_, _PC_F_, _IMEM_ADDR_F_;
     wire [31: 0] INST_F_;
-    wire [63: 0] CNT_Cycle, CNT_Inst, CNT_Stall;
-    wire WAS_Running, WAS_Stall, WAS_Inst, WAS_Branch;
-    wire [31: 0] IMEM_ADDR;
-    wire [31: 0] IMEM_DATA;
+    wire [63: 0] CNT_Cycle, CNT_Inst, CNT_Stall, CNT_BRANCH, CNT_ISR;
+    wire DO_ISR, WAS_Running, WAS_Stall, WAS_Inst, WAS_Branch, WAS_ISR;
     StageF #(
-        .BOOTPC(32'h4000_0000), //NOTE: h6000_0000 for SCRATCH_IMEM
+        .BOOTPC(BOOTPC),
         .COUNTERWIDTH(64)
     ) s_F ( .clk(clk), .rst(rst), .stall(stall),
         //Inputs (feedback from other stages)
         ._DoBranch(BRA_DoBranch_DX2F_), ._PCBranch(BRA_PCBranch_DX2F_),
-        ._ResetCounters(CNT_Reset_MW2F_),
+        ._ResetCounters(CNT_Reset_MW2F_), ._DoISR(DO_ISR),
         //Outputs (toward next stage)
-        .PC_(PC_F_), .INST_(INST_F_),
+        .PC_(_PC_F_), .INST_(INST_F_),
         //CPU Counters & Prior-state flags
         .CNT_CYCLE(CNT_Cycle), .CNT_INST(CNT_Inst), .CNT_STALL(CNT_Stall),
+        .CNT_BRANCH(CNT_BRANCH), .CNT_ISR(CNT_ISR),
         .WAS_RUNNING(WAS_Running), .WAS_INST(WAS_Inst),
-        .WAS_STALL(WAS_Stall), .WAS_BRANCH(WAS_Branch),
+        .WAS_STALL(WAS_Stall), .WAS_BRANCH(WAS_Branch), .WAS_ISR(WAS_ISR),
         //Instruction memory taps
-        .IMEM_ADDR(IMEM_ADDR), .IMEM_Data(IMEM_DATA)
+        .IMEM_ADDR(_IMEM_ADDR_F_), .IMEM_Data(IMEM_DATA)
     );
 
+    // ISR Control and Patchwork (Could be inside StageF instead)
+    assign DO_ISR = BRA_IRQPending_DX2F_ && !(WAS_Branch || WAS_ISR); //STALL???
+    assign IMEM_ADDR = (DO_ISR) ? ISRPC : _IMEM_ADDR_F_; // CROSSOVER for pre-fetch
+    assign PC_F_ = (WAS_ISR) ? ISRPC : _PC_F_; // CROSSOVER for post-fetch
 
 //=============--- "PIPELINE"-PEEK: F/DX ---=============
     wire [31: 0] PC_DX, INST_DX;
@@ -146,19 +155,18 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     // COPROCESSOR async-read via DX-stage (like REGFILE) but sync-write from REGFORWARD
     wire [ 4: 0] CopAddr;
     wire [31: 0] CopOut;
-    wire CopInHot, IRQUART0, IRQUART1, IRQPending;
+    wire CopInHot, IRQUART0, IRQUART1;
     COP0150 cop0 (
-        .Clock(clk), .Reset(rst), .Enable(1'b0), //TODO: ENABLE! Disable until handled?
+        .Clock(clk), .Reset(rst), .Enable(1'b1), //TODO:CONFIRM Enabled even during stall???
         .DataAddress(CopAddr), //IN-5 (Cop Register to read/write)
         .DataOut(CopOut), //OUT-32 (Injected into StageDX.RegWValue_)
-        .DataInEnable(CopInHot), //IN (mtc0)
+        .DataInEnable(!stall && CopInHot), //IN (mtc0)
         .DataIn(FWD_rd2), //IN-32 (Always fed, only used if enabled)
-        .InterruptedPC(PC_DX), //IN-32 (PC_DX or similar)
-        .InterruptHandled(1'b0), //IN (Acknowledge the branch is happening)
-        .InterruptRequest(IRQPending), //OUT (Like a branch to fixed address)
+        .InterruptedPC(_PC_F_), //IN-32 (_PC_F_ was supersceeded by ISRPC)
+        .InterruptHandled(!stall && WAS_ISR), //IN (Acknowledge the ISR is happening)
+        .InterruptRequest(BRA_IRQPending_DX2F_), //OUT (Like a branch to fixed address)
         .UART0Request(IRQUART0), .UART1Request(IRQUART1) //IN (edge detect "pulse")
     );
-    //TODO: Pick correct PC to stash at right time (utilize branch)
 
     // Declare outputs of DX stage
     wire [31: 0] MemAddrDX_, RegWValueDX_, MemWValueDX_;
@@ -186,6 +194,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
 
 //===============| PIPELINE-BORDER: DX/M >>>=============
+    assign DMEM_ADDR = MemAddrDX_;
     wire  [31: 0]   MemAddr_MW;
     wire  [31: 0]   RegWValue_MW;
     wire  [ 4: 0]   DestReg_MW;
@@ -215,8 +224,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
     // MEMORY/MMIO patchwork lines ("setups" prefixed with "_", "results" not)
     wire [ 3: 0] _WriteMask;
-    wire [31: 0] _WDataMasked, DMEM_DATA;
-    wire [31: 0] DMEM_ADDR = MemAddrDX_;
+    wire [31: 0] _WDataMasked;
     StageMW s_MW
     ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
         // Inputs (pre-clock setup)
@@ -224,14 +232,14 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         ._MemWValue(MemWValueDX_), ._MemWrite(MemWriteDX_),
         // Inputs (post-clock results)
         .MemShift_MW(MemShift_MW), .MemAddrShift_MW(MemAddr_MW[1:0]),
+        .RDataRaw(DMEM_DATA),
         .DestReg_MW(DestReg_MW), .MemToReg_MW(MemToReg_MW),
         .RegWValue_MW(RegWValue_MW),
         //Feedbacks to "prior" stages (forwarding & instruction fetch)
         .WBK_Reg_(WBK_Reg_MW2DX_), .WBK_Val_(WBK_Val_MW2DX_),
         .WBK_CanFWD_(WBK_CanFWD_MW2DX_),
         //Memory/MMIO "pre-clock" drives OUT/IN
-        ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked),
-        .RDataRaw(DMEM_DATA)
+        ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked)
     );
 
 
@@ -412,7 +420,7 @@ wire [31:0] keywatch = {
     FWD_Allow,FWD_2,FWD_1,DBG_MEM150[31],
         _hot_IO,_hot_BR,_hot_IC,_hot_DC,
         hoti_[3:0],
-        rst,IRQPending,BRA_DoBranch_DX2F_,stall
+        rst,BRA_IRQPending_DX2F_,BRA_DoBranch_DX2F_,stall
 };
 
 assign trace = {
@@ -426,7 +434,7 @@ assign trace = {
     {   _hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
         dcache_we, 3'd0,dcache_re,
         icache_we, 3'd0,icache_re,
-        _WriteMask ,WAS_Running,WAS_Stall,WAS_Inst,WAS_Branch
+        _WriteMask ,WAS_ISR,WAS_Stall,WAS_Inst,WAS_Branch
     },
 
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
