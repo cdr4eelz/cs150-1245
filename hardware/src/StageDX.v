@@ -34,7 +34,7 @@ module StageDX(
     wire [31: 0] SIMMED, UIMMED;
     wire [27: 0] NEARADDR;
     wire [ 4: 0] SRC1, SRC2, SHAMT;
-    wire ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, COPREAD;
+    wire ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, Branch, COPREAD;
     wire [ 3: 0] ALUOp;
     wire [ 2: 0] CmpOp;
 
@@ -51,7 +51,7 @@ module StageDX(
         .MemSigned(MemSigned_),
         // Standard control signals only used locally
         .ALUOp(ALUOp), .ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB),
-        .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR), .Link(Link),
+        .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR), .Link(Link), .Branch(Branch),
         // Locally used special values
         .SIMMED(SIMMED), .UIMMED(UIMMED), .NEARADDR(NEARADDR),
         .SRC1(SRC1), .SRC2(SRC2), .COPWRITE(CopInHot), .COPADDR(CopAddr),
@@ -81,7 +81,7 @@ module StageDX(
 
     // Stage results (other than control signals passed through)
     assign DOBranch_    = (Jump || takeBranch); //NOTE: Relies on CmpOp to suppress takeBranch
-    assign PCBranch_    = (Jump) ? (JR ? R1 : PCTARGET) : PCBRANCH;
+    assign PCBranch_    = (Jump) ? (JR ? R1 : PCTARGET) : (Branch ? PCBRANCH : `UNKNOWN(32));
     assign MemAddr_     = ALUResult;
     assign MemWValue_   = R2;
     assign RegWValue_   = (Link) ? LINKADDR : ( (COPREAD) ? CopOut : ALUResult );

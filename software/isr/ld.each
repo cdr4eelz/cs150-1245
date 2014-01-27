@@ -2,8 +2,5 @@ SECTIONS
 {
   /* DATA not accessible for ISR block-ram */
   . = 0xC0000000;
-  .text : { *(.entry) }
-  . = 0xC0000180;
-  .text : { *(.isr) }
   .text : { *(.text) }
 }

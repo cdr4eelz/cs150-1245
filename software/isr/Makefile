@@ -1,4 +1,5 @@
-DUMPOPTS ?= -D --disassembler-options=reg-names=numeric,no-aliases
+DUMPOPTS ?= -xsD
+# --disassembler-options=reg-names=numeric,no-aliases
 
 ASMOPTS = --warn -g -ahlsgm=$(patsubst %.s,%.list,$<)
 
@@ -10,13 +11,9 @@ SCOES := $(SELFS:%.elf=%.coe)
 SVEES := $(SELFS:%.elf=%.v)
 DUMPS := $(SELFS:%.elf=%.dump)
 
-default: mifs coes
+default: mifs coes dumps
 
-all: objs elfs mifs coes vees dumps multi
-
-multi: objs
-	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T ld.multi $(SOBJS) -o multi.elf
-	mips-objdump $(DUMPOPTS) multi.elf > multi.dump
+all: objs elfs mifs coes vees dumps
 
 %.dump: %.elf
 	mips-objdump $(DUMPOPTS) $< > $@
@@ -57,5 +54,5 @@ dumps: $(DUMPS)
 clean:
 	rm -f *.elf *.bin *.mif *.coe *.v *.o *.ld *.dump *.list
 
-.PHONY: clean multi all elfs objs mifs coes vees dumps
+.PHONY: clean all elfs objs mifs coes vees dumps
 

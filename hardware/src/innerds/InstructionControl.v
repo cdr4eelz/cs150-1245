@@ -15,7 +15,7 @@ module InstructionControl #(
     // Values consumed mostly by DX stage
     output [ 3:0 ] ALUOp,
     output [ 2:0 ] CmpOp,
-    output         ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link,
+    output         ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, Branch,
     output [31:0 ] SIMMED, UIMMED,
     output [27:0 ] NEARADDR,
     output [ 4:0 ] SRC1, SRC2, SHAMT,
@@ -121,7 +121,7 @@ module InstructionControl #(
                             : ( (isMLoad || isIComp || isCopRead ) ? _rt_ : 5'd0)
                         );
 
-    assign ISigned = isISigned, Jump = isJump, JR = isRJump, Link = isLink,
+    assign ISigned = isISigned, Jump = isJump, JR = isRJump, Link = isLink, Branch = isBranch,
             ALUSrcA = isRShiftI, ALUSrcB = (isMemory || isIComp),
             NEARADDR = {_nearaddr_,2'b00};
     assign CmpOp    = (isBSimple)

@@ -3,8 +3,6 @@
 module MIPS150 #(
     parameter DD=`COLT45_DD,
     parameter ClockFreq=50_000_000,
-                BOOTPC=32'h4000_0000, //NOTE: h6000_0000 for SCRATCH_IMEM
-                ISRPC=32'hC000_0180,
     parameter COLT45_BRK=0, COLT45_SCOPE=1, COLT45_SCRATCH=0, COLT45_PC=0,
                 COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
@@ -95,32 +93,28 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [31: 0] IMEM_DATA, DMEM_DATA;
 
     // Declare outputs of F stage
-    wire [31: 0] PC_F_, _PC_F_, _IMEM_ADDR_F_;
+    wire [31: 0] PC_F_, PCNEXT_F_;
     wire [31: 0] INST_F_;
     wire [63: 0] CNT_Cycle, CNT_Inst, CNT_Stall, CNT_BRANCH, CNT_ISR;
-    wire DO_ISR, WAS_Running, WAS_Stall, WAS_Inst, WAS_Branch, WAS_ISR;
+    wire WAS_Running, WAS_Stall, WAS_Inst, WAS_Branch, WAS_ISR;
+    wire DO_ISR = BRA_IRQPending_DX2F_ && !(WAS_Branch || WAS_ISR); //Check STALL???
     StageF #(
-        .BOOTPC(BOOTPC),
         .COUNTERWIDTH(64)
     ) s_F ( .clk(clk), .rst(rst), .stall(stall),
         //Inputs (feedback from other stages)
         ._DoBranch(BRA_DoBranch_DX2F_), ._PCBranch(BRA_PCBranch_DX2F_),
         ._ResetCounters(CNT_Reset_MW2F_), ._DoISR(DO_ISR),
         //Outputs (toward next stage)
-        .PC_(_PC_F_), .INST_(INST_F_),
+        .PC_(PC_F_), .INST_(INST_F_), .PCNEXT_(PCNEXT_F_),
         //CPU Counters & Prior-state flags
         .CNT_CYCLE(CNT_Cycle), .CNT_INST(CNT_Inst), .CNT_STALL(CNT_Stall),
         .CNT_BRANCH(CNT_BRANCH), .CNT_ISR(CNT_ISR),
         .WAS_RUNNING(WAS_Running), .WAS_INST(WAS_Inst),
         .WAS_STALL(WAS_Stall), .WAS_BRANCH(WAS_Branch), .WAS_ISR(WAS_ISR),
         //Instruction memory taps
-        .IMEM_ADDR(_IMEM_ADDR_F_), .IMEM_Data(IMEM_DATA)
+        .IMEM_ADDR(IMEM_ADDR), .IMEM_Data(IMEM_DATA)
     );
 
-    // ISR Control and Patchwork (Could be inside StageF instead)
-    assign DO_ISR = BRA_IRQPending_DX2F_ && !(WAS_Branch || WAS_ISR); //STALL???
-    assign IMEM_ADDR = (DO_ISR) ? ISRPC : _IMEM_ADDR_F_; // CROSSOVER for pre-fetch
-    assign PC_F_ = (WAS_ISR) ? ISRPC : _PC_F_; // CROSSOVER for post-fetch
 
 //=============--- "PIPELINE"-PEEK: F/DX ---=============
     wire [31: 0] PC_DX, INST_DX;
@@ -162,7 +156,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         .DataOut(CopOut), //OUT-32 (Injected into StageDX.RegWValue_)
         .DataInEnable(!stall && CopInHot), //IN (mtc0)
         .DataIn(FWD_rd2), //IN-32 (Always fed, only used if enabled)
-        .InterruptedPC(_PC_F_), //IN-32 (_PC_F_ was supersceeded by ISRPC)
+        .InterruptedPC(PCNEXT_F_), //IN-32 (PCNEXT_F_ was supersceeded by ISRPC)
         .InterruptHandled(!stall && WAS_ISR), //IN (Acknowledge the ISR is happening)
         .InterruptRequest(BRA_IRQPending_DX2F_), //OUT (Like a branch to fixed address)
         .UART0Request(IRQUART0), .UART1Request(IRQUART1) //IN (edge detect "pulse")
@@ -430,7 +424,7 @@ assign trace = {
     REGFILE_wd[31:0],   FWD_rd2[31:0],      FWD_rd1[31:0],      keywatch[31:0],
 
     RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_DB[31:0],
-    MemAddr_MW[31:0],   MemAddrDX_[31:0],  _WDataMasked[31:0],
+    MemAddr_MW[31:0],   MemAddrDX_[31:0],   _WDataMasked[31:0],
     {   _hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
         dcache_we, 3'd0,dcache_re,
         icache_we, 3'd0,icache_re,

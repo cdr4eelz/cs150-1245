@@ -7,7 +7,8 @@
 
 module StageF #(
     parameter PCWIDTH=32, INSTWIDTH=32, COUNTERWIDTH=32,
-    parameter BOOTPC=32'h4000_0000 // BIOS base address
+    parameter BOOTPC=32'h4000_0000, //NOTE: h6000_0000 for SCRATCH_IMEM
+                ISRPC=32'hC000_0180
 )(
     input clk, rst, stall,
 
@@ -16,7 +17,7 @@ module StageF #(
     input  [  (PCWIDTH-1):0] _PCBranch,
 
     //Outputs
-    output [  (PCWIDTH-1):0] PC_,
+    output [  (PCWIDTH-1):0] PC_, PCNEXT_,
     output [(INSTWIDTH-1):0] INST_,
 
     //Instruction memory taps
@@ -51,9 +52,14 @@ module StageF #(
         endcase
     end
 
-    assign PC_ = REG_PC;
+    reg [(PCWIDTH-1):0] REG_PCNEXT;
+    always @(posedge clk) begin:_REG_PCNEXT_
+        REG_PCNEXT <= MUX_PCNEXT; //After DoISR, remembers the "replaced" PC
+    end
+
+    assign PC_ = REG_PC, PCNEXT_ = REG_PCNEXT;
     assign INST_ = IMEM_Data;
-    assign IMEM_ADDR = MUX_PCNEXT;
+    assign IMEM_ADDR = (_DoISR) ? ISRPC : MUX_PCNEXT; //Fetch & advance to ISRPC
 
 
     always @(posedge clk) begin:_REG_WAS_
