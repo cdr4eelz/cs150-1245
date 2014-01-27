@@ -214,36 +214,24 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 //=============<<< PIPELINE-BORDER: DX/M |===============
 
     // MEMORY/MMIO patchwork lines ("setups" prefixed with "_", "results" not)
-    wire _hot_ISR, _hot_IO, _hot_BR, _hot_IC, _hot_DC;
-    wire _hot_IB, _hot_DB;
     wire [ 3: 0] _WriteMask;
-    wire [31: 0] _WDataMasked;
-    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
+    wire [31: 0] _WDataMasked, DMEM_DATA;
+    wire [31: 0] DMEM_ADDR = MemAddrDX_;
     StageMW s_MW
     ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
-        //Inputs
-//TODO: Rework inputs to be minimal specific signals
-        ._MemAddr   (MemAddrDX_),      ._MemWValue (MemWValueDX_),
-        ._MemShift  (MemShiftDX_),     ._MemToReg  (MemToRegDX_),
-        ._MemWrite  (MemWriteDX_),
-        ._PCinBIOS  (PC_DX[31:28]==4'b0100), //Borrow value from other stage (close enough)
-
-        .MemAddr_MW (MemAddr_MW),       .RegWValue_MW(RegWValue_MW),
-        .DestReg_MW (DestReg_MW),       .MemShift_MW (MemShift_MW ),
-        .MemToReg_MW(MemToReg_MW),
-
+        // Inputs (pre-clock setup)
+        ._MemShift(MemShiftDX_), ._MemAddrShift(DMEM_ADDR[1:0]),
+        ._MemWValue(MemWValueDX_), ._MemWrite(MemWriteDX_),
+        // Inputs (post-clock results)
+        .MemShift_MW(MemShift_MW), .MemAddrShift_MW(MemAddr_MW[1:0]),
+        .DestReg_MW(DestReg_MW), .MemToReg_MW(MemToReg_MW),
+        .RegWValue_MW(RegWValue_MW),
         //Feedbacks to "prior" stages (forwarding & instruction fetch)
-        .WBK_Reg_   (WBK_Reg_MW2DX_),   .WBK_Val_(WBK_Val_MW2DX_),
+        .WBK_Reg_(WBK_Reg_MW2DX_), .WBK_Val_(WBK_Val_MW2DX_),
         .WBK_CanFWD_(WBK_CanFWD_MW2DX_),
-//TODO: Move most DMEM stuff elsewhere
-        //Memory/MMIO "pre-clock" drives OUT
-        ._hot_IO(_hot_IO), ._hot_BR(_hot_BR), ._hot_DC(_hot_DC),
-        ._hot_IB(_hot_IB), ._hot_DB(_hot_DB), //XTRA: Scratchpad
-        ._hot_IC(_hot_IC), ._hot_ISR(_hot_ISR), //Write-only via I-Cache (keep fetch consistent later)
+        //Memory/MMIO "pre-clock" drives OUT/IN
         ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked),
-        //Memory/MMIO "post-clock" results IN
-        .RData_IO(RData_IO), .RData_BR(RData_BR), .RData_DC(RData_DC),
-        .RData_DB(RData_DB)
+        .RDataRaw(DMEM_DATA)
     );
 
 
@@ -263,15 +251,40 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire hoti_BR_  = hoti_[2]; //TODO: Consider this for PCinBIOS test
     wire hoti_IC_  = hoti_[1];
 
-    wire [ 3: 0] _hoti;
-    PipelineRegister #( .Width(4) )
-        PIPR_HOTI ( .clk(clk), .rst(1'b0), .stall(stall),
-                    .In(hoti_), .Out(_hoti) );
+    wire PCinBIOSDX_ = (PC_DX[31:28]==4'b0100); //Borrow value from other stage (close enough)
+    reg _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_ISR;
+    reg _hot_IB, _hot_DB;
+    always @(*) begin
+        {_hot_IO,_hot_BR,_hot_DC,_hot_IB,_hot_DB,_hot_IC,_hot_ISR} = 0;
+        if (MemToRegDX_ || MemWriteDX_) begin
+            case (DMEM_ADDR[31:28])
+                4'b1000: _hot_IO = 1'b1;
+                4'b0100: _hot_BR = !MemWriteDX_; //Read-only
+                4'b0011: begin
+                        _hot_DC = 1'b1;
+                        _hot_IC = MemWriteDX_ && PCinBIOSDX_;
+                    end
+                4'b0010: _hot_IC = MemWriteDX_ && PCinBIOSDX_;
+                4'b0001: _hot_DC = 1'b1;
+`ifndef COLT45_STRICT
+                4'b0110: _hot_IB = MemWriteDX_; //XTRA: Scratchpad-DMEM
+                4'b0101: _hot_DB = 1'b1; //XTRA: Scratchpad-DMEM
+`endif //(!) COLT45_STRICT
+                4'b1100: _hot_ISR = MemWriteDX_; //ISR//
+            endcase
+        end
+    end
+
+
+reg [3:0] P_hoti;
+always @(posedge clk) begin:_REG_HOTI_
+    if (!stall) P_hoti <= hoti_;
+end
 
     wire [31: 0] INST_ISR, INST_BR, INST_IC, INST_IB;
     reg  [31: 0] MUX_IMEM;
     always @(*) begin:_MUX_IMEM_ //Drive instruction from appropriate memory component
-        case (_hoti)
+        case (P_hoti)
             4'b1000: MUX_IMEM = INST_ISR; //0xC => ISR
             4'b0100: MUX_IMEM = INST_BR; //0x4 => BR
             4'b0010: MUX_IMEM = INST_IC; //0x1 => IC
@@ -282,6 +295,23 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         endcase
     end
     assign IMEM_DATA = MUX_IMEM;
+
+    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
+    reg [31:0] MUX_DMEM; // Registered elsewhere (is just a reg here because of always@*)
+    always @(*) begin:_MUX_DMEM_
+        case (MemAddr_MW[31:28])
+            4'b1000: MUX_DMEM = RData_IO;
+            4'b0100: MUX_DMEM = RData_BR;
+            4'b0011: MUX_DMEM = RData_DC;
+            4'b0001: MUX_DMEM = RData_DC;
+`ifndef COLT45_STRICT //TODO: Ensure no other references to these if STRICT mode!
+            4'b0101: MUX_DMEM = RData_DB; // Scratchpad-RAM
+`endif
+            default: MUX_DMEM = 32'd0;
+        endcase // CAUTIOUS trapping of EVERY case
+    end
+    assign DMEM_DATA = MUX_DMEM;
+
 
     // MEMORY/MMIO ELEMENTS (straddle MW & F stages & interface outside CPU)
 
@@ -295,7 +325,7 @@ always @(posedge clk) begin
     P_dcache_re <= dcache_re;
 end
     //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
-    assign dcache_addr = (stall) ? P_dcache_addr : {4'h0, MemAddrDX_[27:0]},
+    assign dcache_addr = (stall) ? P_dcache_addr : {4'h0, DMEM_ADDR[27:0]},
         dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
         dcache_din  = _WDataMasked,
         dcache_re   = (stall) ? P_dcache_re : (/*!stall &&*/ _hot_DC) && (_WriteMask == 4'b0000),
@@ -304,7 +334,7 @@ end
 
     //NOTE: Both _hot_DC && _hot_IC ARE allowed to be active simultaneously for WRITE
     //      but writability rules prevent INST-read & DATA-write collision
-    assign icache_addr = {4'h0, (hoti_IC_) ? IMEM_ADDR[27:0] : MemAddrDX_[27:0]},
+    assign icache_addr = {4'h0, (hoti_IC_) ? IMEM_ADDR[27:0] : DMEM_ADDR[27:0]},
         icache_we   = (!stall && !hoti_IC_ && _hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
         icache_re   = (!stall && hoti_IC_),
@@ -313,7 +343,7 @@ end
 
     isr_mem bram_isr
     ( .clka(clk), .ena(!stall && _hot_ISR),
-        .addra(MemAddrDX_[13:2]),
+        .addra(DMEM_ADDR[13:2]),
       /*.douta(RData_IB),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),
 
@@ -324,7 +354,7 @@ end
 
     bios_mem brom_bios
     ( .clka(clk), .ena(!stall && _hot_BR),
-        .addra(MemAddrDX_[13:2]),
+        .addra(DMEM_ADDR[13:2]),
         .douta(RData_BR),//OUT-32
       /*.wea(_WriteMask), .dina(_WDataMasked),*/
 
@@ -335,14 +365,14 @@ end
 
     dmem_blk_ram bram_dmem
     ( .clka(clk), .ena(!stall && _hot_DB),
-        .addra(MemAddrDX_[13:2]),
+        .addra(DMEM_ADDR[13:2]),
         .douta(RData_DB),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked)
     ) /* synthesis syn_noprune=1 */;
 
     imem_blk_ram bram_imem
     ( .clka(clk), .ena(!stall && _hot_IB),
-        .addra(MemAddrDX_[13:2]),
+        .addra(DMEM_ADDR[13:2]),
       /*.douta(RData_IB),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),
 
@@ -354,7 +384,7 @@ end
     `BUS_SHAKE_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
     MemMapIO memmap_io
     ( .clk(clk), .rst(rst), .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
-        .addra(MemAddrDX_[13:2]),
+        .addra(DMEM_ADDR[13:2]),
         .DOUTA(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
         //Mapped devices
@@ -391,7 +421,6 @@ assign trace = {
     PC_DX[31:0],        INST_DX[31:0],      CNT_Inst[31:0],     BRA_PCBranch_DX2F_[31:0],
     REGFILE_wd[31:0],   FWD_rd2[31:0],      FWD_rd1[31:0],      keywatch[31:0],
 
-//  DMEM_READ[31:0],    32'd0,              32'd0,              32'd0,
     RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_DB[31:0],
     MemAddr_MW[31:0],   MemAddrDX_[31:0],  _WDataMasked[31:0],
     {   _hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
@@ -401,7 +430,7 @@ assign trace = {
     },
 
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
-    64'd0,                                  64'd0,
+    DMEM_ADDR[31:0],    DMEM_DATA[31:0],    64'd0,
 
     PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[63:0],
     DBG_MEM150[31:0],   32'd0,              32'd0,
