@@ -97,7 +97,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [31: 0] INST_F_;
     wire [63: 0] CNT_Cycle, CNT_Inst, CNT_Stall, CNT_BRANCH, CNT_ISR;
     wire WAS_Running, WAS_Stall, WAS_Inst, WAS_Branch, WAS_ISR;
-    wire DO_ISR = BRA_IRQPending_DX2F_ && !(stall || WAS_Branch || WAS_ISR);
+    wire INST_CouldBranch_F_, DO_ISR;
     StageF #(
         .COUNTERWIDTH(64)
     ) s_F ( .clk(clk), .rst(rst), .stall(stall),
@@ -114,6 +114,10 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         //Instruction memory taps
         .IMEM_ADDR(IMEM_ADDR), .IMEM_Data(IMEM_DATA)
     );
+    InstructionPreview previewFetch(
+        ._inst(INST_F_), .couldBranch(INST_CouldBranch_F_)
+    );
+    assign DO_ISR = {BRA_IRQPending_DX2F_,stall,INST_CouldBranch_F_,WAS_Branch,WAS_ISR} == 5'b10000;
 
 
 //=============--- "PIPELINE"-PEEK: F/DX ---=============
@@ -434,7 +438,7 @@ assign trace = {
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
     DMEM_ADDR[31:0],    DMEM_DATA[31:0],    CopOut[31:0],
     {   8'd0, 8'd0,
-        DO_ISR,CopInHot,IRQUART0,IRQUART1, BRA_IRQPending_DX2F_,!stall,!WAS_Branch,!WAS_ISR,
+        DO_ISR,CopInHot,IRQUART0,IRQUART1, !INST_CouldBranch_F_,!stall,!WAS_Branch,!WAS_ISR,
         3'd0, CopAddr[4:0]
     },
 

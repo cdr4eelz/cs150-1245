@@ -1,12 +1,10 @@
 `include "cpuglobal.vh"
 `include "opcode.vh"
 
-//TODO: Eliminate PC junk from decode (especially an ADDER)!!!
-
 module InstructionControl #(
     parameter DD=`COLT45_DD
 )(
-    // Inputs to decode (PC to pin down branch/jump)
+    // Input instruction to decode (PC pinds down branch/jump target later)
     input [31:0 ] _inst,
     // Global or post-DX control signals
     output [ 1:0 ] MemShift,
@@ -64,7 +62,7 @@ module InstructionControl #(
 
     // These characteristics could come from lookup table but this is more enlightening!
     wire #DD isMemory, isMStore, isMLoad, isIComp, isISigned, isMSigned;
-    wire #DD isCopRead, isCopWrite; //ISR//
+    wire #DD isCopRead, isCopWrite;
     assign isMemory    = (_opcode_[5:4] == 2'b10);
     assign isMLoad     = (_opcode_[5:3] == 3'b100);
     assign isMStore    = (_opcode_[5:3] == 3'b101);
