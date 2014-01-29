@@ -163,9 +163,15 @@ isr_ret:            #EXPECT: $k1 == new Status; #Set Status then return to EPC
 
 
 ISR_TIMER:
-    mfc0    $k1, Count              #LO-word of cycles-since-start
+    mfc0    $k1, Compare
+    li      $k0, K_TIMER_CYC
+    addu    $k1, $k1, $k0          #Advance to next compare value on which to fire...
+    mtc0    $k1, Compare            #...without adjusting Count (avoid skewing things).
+    mfc0    $k1, Count              #LO-word of cycles-since-start (grab early)
     la      $k0, SM_BASE
+    sw      $ra, OW_STASH1($k0)     #$ra=>STASH1
     sw      $k1, OW_COUNT($k0)      #=>SHARED memory
+
 #Constant division tricks & 64-bit pre-truncated HI/LO contributions)!
 # /50M ~= *((21.5 * 2^4) //2^30) //2^4   (truncate 4-bit remainder)
     srl     $k1, $k1, 22            #Seed the accumulator
@@ -186,10 +192,8 @@ ISR_TIMER:
     addu    $k1, $k1, $k0
     sll     $k0, $k0, 2
     addu    $k1, $k1, $k0           #Fixed-point 24.4-bit SECONDS-since-start, into $k1
-#    la      $k0, SM_BASE
-#    sw      $k1, OW_STASH0($k0)     #=>STASH0
     srl     $k1, $k1, 4             #Truncate to 24-bit integer seconds, into $k1
-#The above seems to work great for divinding by 50M quickly and pseudo 64-bit!
+#The above works great for divinding by 50M quickly and pseudo 64-bit!
 
 # /60 ~= *1092  //2^16  (16-bit remainder to recover second-hand later)
 # <2+<4+<6 >>16 = Minutes
@@ -199,40 +203,65 @@ ISR_TIMER:
     sll     $k0, $k0, 4
     addu    $k1, $k1, $k0           #Fixed-point 16.16-bit MINUTES-since-start, into $k1
     la      $k0, SM_BASE
-    sw      $k1, OW_STASH1($k0)     #=>STASH1
+    sw      $k1, OW_STASH0($k0)     #=>STASH0
     srl     $k1, $k1, 16            #Truncate to integer MINUTE-HAND, into $k1
-    la      $k0, SM_BASE
-    sb      $k1, OB_MINUTE($k0)     #=>SHARED memory
+    andi    $k1, $k1, 0b00111111    #6-bit value
+    sll     $k1, $k1, 16            #shift into high half
+    lw      $k1, OW_STASH0($k0)     #<=STASH0 #WARN:MEMORY-REG SWAP
+    sw      $k1, OW_STASH0($k0)     #D; #WARN:LOAD-STORE CROSSOVER; #$s0=>STASH0
 
 #0x0000FFFF <6-<2 >>16 = Seconds
-    la      $k0, SM_BASE            #Restore fixed-point MINUTES-since-start
-    lw      $k1, OW_STASH1($k0)     #<=STASH1
-    nop                             #D;
     andi    $k0, $k1, 0xFFFF        #Grab fractional remainder only, into $k0
     sll     $k1, $k0, 6             #Seed the accumulator
     sll     $k0, $k0, 2             #Reshift original fewer bits (could also right shift without loss)
     subu    $k1, $k1, $k0           #Subtract since was a consolidated run-of-ones optimization
     srl     $k1, $k1, 16            #Truncate to integer SECOND-HAND, into $k0
+    andi    $k1, $k1, 0b00111111    #6-bit value
     sltiu   $k0, $k1, 60            #Use flag to avoid branch (just for fun)
     addu    $k0, $k1, $k0           #Add 1 only if less than 60 (catch accidental rounding up)
     addiu   $k1, $k0, -1            #Subtract 1 always (back to 0:59 range), into $k1
+
+#overlay upper & low binary halves
+    la      $k0, SM_BASE
+    lw      $k0, OW_STASH0($k0)     #<=STASH0
+    nop                             #D;
+    or      $k1, $k1, $k0
+
+#convert each half simultaneously to BCD (two digits each)
+    jal     _rollBCD
+    sll     $k1, $k1, 1             #D; #shift 1/6
+    jal     _rollBCD
+    sll     $k1, $k1, 1             #D; #shift 2/6
+    jal     _rollBCD
+    sll     $k1, $k1, 1             #D; #shift 3/6
+    jal     _rollBCD
+    sll     $k1, $k1, 1             #D; #shift 4/6
+    jal     _rollBCD
+    sll     $k1, $k1, 1             #D; #shift 5/6
+#    sll     $k1, $k1, 1             #shift 6/6
+#    srl     $k1, $k1, 6             #align to lower two BCD digits
+    srl     $k1, $k1, (6-1)         #shift 6/6 #align to lower two BCD digits
+    la      $k0, SM_BASE
+    sb      $k1, OB_SECOND($k0)
+    srl     $k1, $k1, 16            #align to upper two BCD digits
+    sb      $k1, OB_MINUTE($k0)     #D;
+
+#check if we skip output
     la      $k0, SM_BASE
     lbu     $k1, OB_FLAGS($k0)
-    sb      $k1, OB_SECOND($k0)     #D; #WARN:LOAD-STORE CROSSOVER; #=>SHARED memory
+    nop                             #D;
     andi    $k1, $k1, MF_TIMER
-    beq     $k1, $zero, timer_done
+    beq     $k1, $zero, timer_unstash
 
 #TODO: Send time as "mm:ss"
     ori     $k1, $zero, '+'
     la      $k0, MM_BASE
     sb      $k1, OB_UATX_DATA($k0)
 
-timer_done:
-    li      $k0, K_TIMER_CYC
-    mfc0    $k1, Compare
-    addu    $k1, $k1, $k0           #Advance to next compare value on which to fire...
-    mtc0    $k1, Compare            #...without adjusting Count (avoid skewing things).
-    lui     $k1, 0xFFFF             #Because !M_TIMER won't sign extend with "andi", just use lui/ori
+timer_unstash:
+    la      $k0, SM_BASE
+    lw      $ra, OW_STASH1($k0)     #$ra<=STASH1
+    lui     $k1, 0xFFFF             #D; #NOTE: !M_TIMER won't sign extend with "andi"
     j       isr_ret_cause
     ori     $k1, $zero, !M_TIMER    #D;
 #END ISR_TIMER.
@@ -349,6 +378,36 @@ _uatx_done:
     j       isr_ret_cause           #D;
     addiu   $k1, $zero, !M_UATX     #D;
 #END ISR_UATX.
+
+
+_rollBCD:               #EXPECT: $k1 == BCD scratch
+    andi    $k0, $k1, (0xF << 6)
+    sltiu   $k0, $k0, (0x5 << 6)
+    bne     $k0, $zero, _less00
+    andi    $k0, $k1, (0xF << 10)   #D; #needn't include addiu contribution
+    addiu   $k1, $k1, (0x3 << 6)
+_less00:
+    sltiu   $k0, $k0, (0x5 << 10)
+    bne     $k0, $zero, _less10
+    srl     $k0, $k1, (16 + 6)      #D; #needn't include addiu contribution
+    addiu   $k1, $k1, (0x3 << 10)
+_less10:
+    andi    $k0, $k0, 0xF
+    sltiu   $k0, $k0, 0x5
+    bne     $k0, $zero, _less20
+    lui     $k0, (3 << 6)           #D; #only used if no branch
+    addu    $k1, $k1, $k0
+_less20:
+    srl     $k0, $k1, (16 + 10)
+    andi    $k0, $k0, 0xF
+    sltiu   $k0, $k0, 0x5
+    bne     $k0, $zero, _less30
+    lui     $k0, (3 << 10)          #D; #only used if no branch
+    jr      $ra
+    addu    $k1, $k1, $k0           #D;
+_less30:
+    jr      $ra
+    nop
 
 
     ori     $k1, $zero, '+'
