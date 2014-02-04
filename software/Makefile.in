@@ -10,9 +10,10 @@ CSRCS ?= $(wildcard *.c)
 SSRCS ?= $(wildcard *.s) $(START)
 
 OBJS = $(POBJS) $(COBJS) $(SOBJS)
+SOBJS = $(SSRCS:%.s=%.s.o)
 POBJS = $(PSRCS:%.p=%.p.llvm.s.o)
 COBJS = $(CSRCS:%.c=%.c.llvm.s.o)
-SOBJS = $(SSRCS:%.s=%.s.o)
+#COBJS = $(CSRCS:%.c=%.c.o)
 
 
 all: elf dump $(SECS)
@@ -27,8 +28,10 @@ bins: $(SECS:%=$(TARGET).%.bin)
 
 .PRECIOUS: %.s %.c.llvm.s
 
+
 $(TARGET).elf: $(OBJS)
 	mips-gcc -static $(LIBOPTS) -G0 -T $(LDSRC) $^ -o $@
+	mips-strip -R .pdr -R .comment -R .reginfo $@
 	chmod -x $@
 
 %.data.bin: %.elf
@@ -46,16 +49,6 @@ $(TARGET).elf: $(OBJS)
 %.data.dump: %.elf
 	mips-objdump -j .data $^ -xS >$@
 
-#%.both.bin: %.elf
-#	mips-objcopy -j .both -p -O binary $^ $@
-#	chmod -x $@
-#%.both.bin: %.data.bin %.inst.bin
-#	truncate -s 16K $@
-#	cat $^ > $@
-#%.both.mem: %.data.bin %.inst.bin
-#	bin2mem     0 < $*.data.bin > $@
-#	bin2mem 16384 < $*.inst.bin | sed s/^@00000000/@00004000/ >> $@
-
 %.mif: %.bin
 	bin2mif < $^ > $@
 
@@ -67,6 +60,10 @@ $(TARGET).elf: $(OBJS)
 
 %.v: %.bin
 	bin2rom < $^ > $@
+
+
+%.c.o: %.c
+	mips-gcc -std=gnu99 -c $< -o $@
 
 %.c.llvm: %.c
 	clang -static -emit-llvm -S -o $<.llvm $<

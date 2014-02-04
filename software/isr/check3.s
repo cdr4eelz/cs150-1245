@@ -3,6 +3,7 @@
 
 # The location of these entries is forced below
 .global ENTRY10X10, ISR0180
+
 # Misc constants
 .equiv  K_MAGICW,       0xE3BEEF10      #Arbitrary indicator value
 .equiv  K_CPU_HZ,       (50000000)      #50 MHz
@@ -46,8 +47,7 @@
 .equiv  M_DATA_BYTE,    0x000F
 
 # SHARED memory locations
-#TODO: Make SM_BASE upper-short only so "lui" is sufficient
-.equiv  SM_BASE,    0x10003000  #Some agreed upon spot in memory
+.equiv  SM_BASE,    0x10002000  #Some agreed upon spot in memory
 .equiv  OW_MAGIC,       0x0000  #4-byte: Arbitrary value for sanity check
 .equiv  OB_FLAGS,       0x0004  #1-byte: flag bitmask
 .equiv   MF_TIMER,        0x01      #TIMER output enabled
@@ -64,13 +64,6 @@
 .equiv  K_BUFSIZEB,     0x0020          #...extending 32-bytes then...
 .equiv  SM_BUFLAST, (SM_BUFBASE+K_BUFSIZEB-1)   #...ends here (inclusive) or just...
 .equiv  SM_BUFPAST, (SM_BUFBASE+K_BUFSIZEB)     #...before here (non-inclusive).
-
-# FOR lui/ori
-#TODO: macros for HI LO instead
-.equiv  MM_BASE_hi,     (((MM_BASE) >> 16) & 0x0000FFFF)
-.equiv  MM_BASE_lo,     ((MM_BASE) & 0x0000FFFF)
-.equiv  SM_BASE_hi,     (((SM_BASE) >> 16) & 0x0000FFFF)
-.equiv  SM_BASE_lo,     ((SM_BASE) & 0x0000FFFF)
 
 
 # Simple function/jump table for JAL-based callins (like manually from BIOS)
@@ -354,8 +347,8 @@ ISR_UARX:
     ori     $k0, $k1, 0b00100100    #D; #force don't-cares to 1's
     xori    $k0, $k0, 0b01110110    #toggle 1's from "match"
     bne     $k0, $zero, _uarx_done  #covers "RVrv" characters simultaneously!
-    lui     $k0, SM_BASE_hi         #D;
-    ori     $k0, SM_BASE_lo
+    lui     $k0, %hi(SM_BASE)       #D;
+    ori     $k0, $k0, %lo(SM_BASE)
     j       _uarx_done
     sb      $k1, OB_STATE($k0)      #D; #store STATE for application to see
 
@@ -421,10 +414,10 @@ ISR_UATX:
     la      $k1, SM_BUFPAST
     sltu    $k1, $s0, $k1           #detect wraparound
     bne     $k1, $zero, _uatx_nowrap
-    lui     $k0, SM_BASE_hi         #D; #1st half of "la" (always used)
+    lui     $k0, %hi(SM_BASE)       #D; #1st half of "la" (always used)
     la      $s0, SM_BUFBASE
 _uatx_nowrap:
-    ori     $k0, $k0, SM_BASE_lo    #2nd half of "la" (reached eather way)
+    ori     $k0, $k0, %lo(SM_BASE)  #2nd half of "la" (reached eather way)
 #    la      $k0, SM_BASE
     sw      $s0, OW_TAIL($k0)       #REG: $s0 free; #update real TAIL pointer (in memory)
 _uatx_unstash:
@@ -475,9 +468,9 @@ SEND:               #EXPECT: $k1 = char-to-send; #FOUL: $ra, $k0, $k1
     nop                             #D;
     andi    $k0, $k0, M_RVA_BIT
     beq     $k0, $zero, _send_enqueue
-    lui     $k0, MM_BASE_hi         #D; #1st half of "la" (used only if branch)
+    lui     $k0, %hi(MM_BASE)       #D; #1st half of "la" (used only if branch)
 #TODO: If queue not empty, enqueue new & send HEAD instead
-    ori     $k0, $k0, MM_BASE_lo    #2nd half of "la"
+    ori     $k0, $k0, %lo(MM_BASE)  #2nd half of "la"
     sb      $k1, OB_UATX_DATA($k0)  #UART xmit, immediately
     jr      $ra
     nop                             #D;
@@ -492,10 +485,10 @@ _send_enqueue:
     la      $k0, SM_BUFPAST
     slt     $k0, $k1, $k0
     bne     $k0, $zero, _no_wrap
-    lui     $k0, SM_BASE_hi         #D; #1st half of "la" (always used)
+    lui     $k0, %hi(SM_BASE)       #D; #1st half of "la" (always used)
     la      $k1, SM_BUFBASE
 _no_wrap:
-    ori     $k0, $k0, SM_BASE_lo    #2nd half of "la" (reached eather way)
+    ori     $k0, $k0, %lo(SM_BASE)  #2nd half of "la" (reached eather way)
     sw      $k1, OW_HEAD($k0)       #store HEAD
     jr      $ra
     nop                             #D;

@@ -1,3 +1,4 @@
 TARGET ?= example
+START = start.s
 
-include ../Makefile.gcc.in
+include ../Makefile.in

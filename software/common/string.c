@@ -13,7 +13,7 @@ int32_t strcmp(const int8_t* s0, const int8_t* s1)
     return 0;
 }
 
-unsigned long strlen(int8_t const * s)
+unsigned int strlen(int8_t const * s)
 {
     uint32_t i = 0;
     for ( ; s[i] != '\0'; i++) ;

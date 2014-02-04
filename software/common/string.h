@@ -4,6 +4,6 @@
 #include "types.h"
 
 int32_t strcmp(const int8_t* s0, const int8_t* s1);
-unsigned long strlen(int8_t const * s);
+unsigned int strlen(int8_t const * s);
 
 #endif
