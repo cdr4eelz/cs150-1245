@@ -174,44 +174,43 @@ ISR_TIMER:
     sw      $k1, OW_COUNT($k0)      #=>SHARED memory
 
 #Constant division tricks & 64-bit pre-truncated HI/LO contributions)!
-#cdiv /50M ~= *((21.5 * 2^4) //2^30) //2^4   (truncate 4-bit remainder)
-#cmul <5+<1+<2+<2 [>>4 postponed] (in reverse to hi-bits of lo-word: 30-4=26 26=22+2+2+1)
-    srl     $k1, $k1, 22            #Seed the accumulator
-    srl     $k0, $k1, 2             #...keep shifting $k0...
+.equiv MREMB, 24
+#cdiv /50M /60 ~= *(93825 //2^48) *2^MREMB     (include MREMB-bit remainder)
+#cmul <0+<7+<2-<3-<3+<1+ of lo-contrib, reversed (32-n) >16+>1+>3->3->2+>7+
+    srl     $k1, $k1, (32-MREMB)    #Seed the accumulator (first value added)
+    srl     $k0, $k1, 1             #...keep shifting in $k0...
     addu    $k1, $k1, $k0           #...and accumulating in $k1...
+    srl     $k0, $k0, 3
+    subu    $k1, $k1, $k0
+    srl     $k0, $k0, 3
+    subu    $k1, $k1, $k0
     srl     $k0, $k0, 2
     addu    $k1, $k1, $k0
-    srl     $k0, $k0, 1
+    srl     $k0, $k0, 7
     addu    $k1, $k1, $k0
     la      $k0, SM_BASE
-#cmul +<5+<1+<2+<2 >>4 (accumulate hi-word contribution into our 32-bit window & truncate)
+#cmul <0+<7+<2-<3-<3+<1+ of hi-contrib
     lw      $k0, OW_RTC($k0)        #HI-word of cycles-since-start
     nop                             #D;
-    sll     $k0, $k0, 5
+    sll     $k0, $k0, (MREMB-16)    #preshift to leave MREMB in remainder
+    addu    $k1, $k1, $k0
+    sll     $k0, $k0, 7
+    addu    $k1, $k1, $k0
+    sll     $k0, $k0, 2
+    subu    $k1, $k1, $k0
+    sll     $k0, $k0, 3
+    subu    $k1, $k1, $k0
+    sll     $k0, $k0, 3
     addu    $k1, $k1, $k0
     sll     $k0, $k0, 1
     addu    $k1, $k1, $k0
-    sll     $k0, $k0, 2
-    addu    $k1, $k1, $k0
-    sll     $k0, $k0, 2
-    addu    $k1, $k1, $k0           #Fixed-point 24.4-bit SECONDS-since-start, into $k1
-    srl     $k1, $k1, 4             #Truncate to 24-bit integer seconds, into $k1
-#Above is slick for divinding by 50M quickly and pseudo 64-bit!
 
-#cdiv /60 ~= *1092  //2^16  (16-bit remainder to recover second-hand later)
-#cmul <2+<4+<4 [>>16 postponed] (SECONDS-since-start => MINUTES-since-start)
-    sll     $k1, $k1, 2             #Seed the accumulator
-    sll     $k0, $k1, 4
-    addu    $k1, $k1, $k0
-    sll     $k0, $k0, 4
-    addu    $k1, $k1, $k0           #Fixed-point 16.16-bit MINUTES-since-start, into $k1
-
-#stash fixed-point result
+#stash fixed-point (32-MREMB).MREMB-bit MINUTES-since-start
     la      $k0, SM_BASE
     sw      $k1, OW_STASH0($k0)     #=>STASH0
 
 #truncate & move-HI MINUTE-HAND
-    srl     $k1, $k1, 16            #Truncate to integer MINUTE-HAND, into $k1
+    srl     $k1, $k1, MREMB            #Truncate to integer MINUTE-HAND, into $k1
     andi    $k1, $k1, 0b00111111    #6-bit value
     sll     $k1, $k1, 16            #shift into high half
 
@@ -219,23 +218,18 @@ ISR_TIMER:
     lw      $k1, OW_STASH0($k0)     #<=STASH0 #WARN:MEMORY-REG SWAP
     sw      $k1, OW_STASH0($k0)     #D; #WARN:LOAD-STORE CROSSOVER; #$s0=>STASH0
 
-#mask 0x0000FFFF cmul <6-<2 >>16 = Seconds  (fraction => remainder)
-    andi    $k0, $k1, 0xFFFF        #Grab fractional remainder only, into $k0
-    sll     $k1, $k0, 6             #Seed the accumulator
-    sll     $k0, $k0, 2             #Reshift original fewer bits (could also right shift without loss)
+#mask 0x0000FFFF & cmul *60 = <6+<2- = Seconds (fraction-of-minute => SECOND-HAND)
+    li      $k0, ((1 << MREMB)-1)
+    and     $k0, $k1, $k0           #Grab fractional remainder only
+    sll     $k1, $k0, (6-2)         #Seed the accumulator
+;    sll     $k0, $k0, (2-2)         #Re-shift original (avoids sub as accumulator seed if reversed)
     subu    $k1, $k1, $k0           #Subtract since was a consolidated run-of-ones optimization
-
-#truncate & clip SECOND-HAND
-    srl     $k1, $k1, 16            #Truncate to integer SECOND-HAND, into $k0
-    andi    $k1, $k1, 0b00111111    #6-bit value
-    sltiu   $k0, $k1, 60            #Use flag to avoid branch (just for fun)
-    addu    $k0, $k1, $k0           #Add 1 only if less than 60 (catch accidental rounding up)
-    addiu   $k1, $k0, -1            #Subtract 1 always (back to 0:59 range), into $k1
+    srl     $k1, $k1, (MREMB-2)        #Truncate to integer SECOND-HAND
 
 #overlay upper & low binary halves
     la      $k0, SM_BASE
     lw      $k0, OW_STASH0($k0)     #<=STASH0
-    nop                             #D;
+    andi    $k1, $k1, 0xFFFF        #D;
     or      $k1, $k1, $k0
 
 #double-dabble each half simultaneously to BCD (two digits each)
@@ -520,7 +514,14 @@ n*344 == n*10101 =(n<<4)+(n<<2)+(n<<0)
 <2+<4+<4 >>16 Minutes
 *60 = *111100 = *1000000 - *100
 0x00FF <6-<2 >>16 = Seconds
-
+------
+Reworked to divide by 60 at same time as 50K (to avoid accumulated precision mistake):
+/50M /60 ~= *93824.9923 /2^48 ; 93825 = 
+1_0110_1110_1000_0001 *(93825)
+1_011+_00-0_+000_000+ *(+2^0+2^7-2^9+2^12...)
++_+00-_00-0_+000_000+ *(+2^0+2^7-2^9-2^12+2^15+2^16) ;Shifts: R0+,R7+,R9-,R12-,R15+,R16+
+Arrange 16.16 fixed-point window on 64-bit result [x16|r16.r16|x16]: >>48 <<16 = >>32
+Lo-result contributions, backwards: R16+,R15+,R12-,R9-,R7+,R0+  ;Relative: R0+
 
 ::NOTES ON CASE STATEMENT OPTIMIZATION::
 
