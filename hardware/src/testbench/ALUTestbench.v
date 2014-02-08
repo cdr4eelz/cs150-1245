@@ -95,69 +95,70 @@ module ALUTestbench;
             funct = {$random} % 6'b111111;
 
             // Test load and store instructions (should add operands)
-            opcode = `LB;
+            opcode = `OP_LB;
             REFout = A + B; 
             #1;
             checkOutput(opcode, funct);
 
-            opcode = `LH;
+            opcode = `OP_LH;
             #1;
             checkOutput(opcode, funct);
 
-            opcode = `LW;
+            opcode = `OP_LW;
             #1;
             checkOutput(opcode, funct);
 
-            opcode = `LBU;
+            opcode = `OP_LBU;
             #1;
             checkOutput(opcode, funct);
 
-            opcode = `LHU;
+            opcode = `OP_LHU;
             #1;
             checkOutput(opcode, funct);
 
-            opcode = `SB;
+            opcode = `OP_SB;
             #1;
             checkOutput(opcode, funct);
 
-            opcode = `SH;
+            opcode = `OP_SH;
             #1;
             checkOutput(opcode, funct);
 
-            opcode = `SW;
+            opcode = `OP_SW;
             #1;
             checkOutput(opcode, funct);
 
 		// {ADDIU, SLTI, SLTIU, ANDI, ORI, XORI, LUI} SKIP:ADDI
-//		opcode = `ADDI;		REFout = $signed(A) + $signed(B);	#1; checkOutput(opcode, funct);
-		opcode = `ADDIU;	REFout = $unsigned(A) + $unsigned(B);	#1; checkOutput(opcode, funct);
-		opcode = `SLTI;		REFout =   $signed(A) <   $signed(B);	#1; checkOutput(opcode, funct);
-		opcode = `SLTIU;	REFout = $unsigned(A) < $unsigned(B);	#1; checkOutput(opcode, funct);
-		opcode = `ANDI;		REFout = A & B;				#1; checkOutput(opcode, funct);
-		opcode = `ORI;		REFout = A | B;				#1; checkOutput(opcode, funct);
-		opcode = `XORI;		REFout = A ^ B;				#1; checkOutput(opcode, funct);
-		opcode = `LUI;		REFout = B << 16;			#1; checkOutput(opcode, funct);
+//		opcode = `OP_ADDI;  REFout = $signed(A) + $signed(B);	#1; checkOutput(opcode, funct);
+		opcode = `OP_ADDIU; REFout = $unsigned(A) + $unsigned(B);	#1; checkOutput(opcode, funct);
+		opcode = `OP_SLTI;  REFout =   $signed(A) <   $signed(B);	#1; checkOutput(opcode, funct);
+		opcode = `OP_SLTIU; REFout = $unsigned(A) < $unsigned(B);	#1; checkOutput(opcode, funct);
+		opcode = `OP_ANDI;  REFout = A & B;				#1; checkOutput(opcode, funct);
+		opcode = `OP_ORI;   REFout = A | B;				#1; checkOutput(opcode, funct);
+		opcode = `OP_XORI;  REFout = A ^ B;				#1; checkOutput(opcode, funct);
+		opcode = `OP_LUI;   REFout = B << 16;			#1; checkOutput(opcode, funct);
 		
-		opcode = `RTYPE; // FUNCT = {SLL,SRL,SRA,SLLV,SRLV,SRAV,ADDU,SUBU,AND,OR,XOR,NOR,SLT,SLTU} SKIP:ADD/SUB
-		funct = `SLL;		REFout =           B  <<  A[4:0];	#1; checkOutput(opcode, funct);
-		funct = `SRL;		REFout = $unsigned(B) >>  A[4:0];	#1; checkOutput(opcode, funct);
-		funct = `SRA;		REFout =   $signed(B) >>> A[4:0];	#1; checkOutput(opcode, funct);
-		funct = `SLLV;		REFout =           B  <<  A[4:0];	#1; checkOutput(opcode, funct);
-		funct = `SRLV;		REFout = $unsigned(B) >>  A[4:0];	#1; checkOutput(opcode, funct);
-		funct = `SRAV;		REFout =   $signed(B) >>> A[4:0];	#1; checkOutput(opcode, funct);
-		funct = `ADDU;		REFout = $unsigned(A) + $unsigned(B);	#1; checkOutput(opcode, funct);
-		funct = `SUBU;		REFout = $unsigned(A) - $unsigned(B);	#1; checkOutput(opcode, funct);
-		funct = `AND;		REFout = A & B;				#1; checkOutput(opcode, funct);
-		funct = `OR;		REFout = A | B;				#1; checkOutput(opcode, funct);
-		funct = `XOR;		REFout = A ^ B;				#1; checkOutput(opcode, funct);
-		funct = `NOR;		REFout = ~(A | B);			#1; checkOutput(opcode, funct);
-		funct = `SLT;		REFout =   $signed(A) <   $signed(B);	#1; checkOutput(opcode, funct);
-		funct = `SLTU;		REFout = $unsigned(A) < $unsigned(B);	#1; checkOutput(opcode, funct);
+		opcode = `OP_SPECIAL;
+        // FUNCT = {SLL,SRL,SRA,SLLV,SRLV,SRAV,ADDU,SUBU,AND,OR,XOR,NOR,SLT,SLTU} SKIP:ADD/SUB
+		funct = `OF_SLL;    REFout =           B  <<  A[4:0];	#1; checkOutput(opcode, funct);
+		funct = `OF_SRL;    REFout = $unsigned(B) >>  A[4:0];	#1; checkOutput(opcode, funct);
+		funct = `OF_SRA;    REFout =   $signed(B) >>> A[4:0];	#1; checkOutput(opcode, funct);
+		funct = `OF_SLLV;   REFout =           B  <<  A[4:0];	#1; checkOutput(opcode, funct);
+		funct = `OF_SRLV;   REFout = $unsigned(B) >>  A[4:0];	#1; checkOutput(opcode, funct);
+		funct = `OF_SRAV;   REFout =   $signed(B) >>> A[4:0];	#1; checkOutput(opcode, funct);
+		funct = `OF_ADDU;   REFout = $unsigned(A) + $unsigned(B);	#1; checkOutput(opcode, funct);
+		funct = `OF_SUBU;   REFout = $unsigned(A) - $unsigned(B);	#1; checkOutput(opcode, funct);
+		funct = `OF_AND;    REFout = A & B;				#1; checkOutput(opcode, funct);
+		funct = `OF_OR;     REFout = A | B;				#1; checkOutput(opcode, funct);
+		funct = `OF_XOR;    REFout = A ^ B;				#1; checkOutput(opcode, funct);
+		funct = `OF_NOR;    REFout = ~(A | B);			#1; checkOutput(opcode, funct);
+		funct = `OF_SLT;    REFout =   $signed(A) <   $signed(B);	#1; checkOutput(opcode, funct);
+		funct = `OF_SLTU;   REFout = $unsigned(A) < $unsigned(B);	#1; checkOutput(opcode, funct);
         end
         ///////////////////////////////
         // Hard coded tests go here
         ///////////////////////////////
-	opcode = `SLTI;
+	opcode = `OP_SLTI;
 	A = $signed( 555); B = $signed( 555); REFout = 0;	#1; checkOutput(opcode, funct);
 	A = $signed( 554); B = $signed( 555); REFout = 1;	#1; checkOutput(opcode, funct);
 	A = $signed(-555); B = $signed(-555); REFout = 0;	#1; checkOutput(opcode, funct);
@@ -165,7 +166,7 @@ module ALUTestbench;
 	A = $signed(  -1); B = $signed(   0); REFout = 1;	#1; checkOutput(opcode, funct);
 	A = $signed(   0); B = $signed(  -1); REFout = 0;	#1; checkOutput(opcode, funct);
 	
-	opcode = `SLTIU;
+	opcode = `OP_SLTIU;
 	A = $signed( 555); B = $signed( 555); REFout = 0;	#1; checkOutput(opcode, funct);
 	A = $signed( 554); B = $signed( 555); REFout = 1;	#1; checkOutput(opcode, funct);
 	A = $signed(-555); B = $signed(-555); REFout = 0;	#1; checkOutput(opcode, funct);

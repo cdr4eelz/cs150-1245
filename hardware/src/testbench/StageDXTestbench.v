@@ -18,9 +18,9 @@ module StageDXTestbench;
     wire [31:0] JumpPC;
     wire        DoJump;
 
-    wire [ 4:0 ] DestReg_;
-    wire [ 1:0 ] MemShift_;
-    wire MemSigned_, MemToReg_, MemWrite_;
+    wire [ 4:0 ] DestReg;
+    wire [ 1:0 ] MemShift;
+    wire MemSigned, MemToReg, MemWrite;
 
     wire [ 4: 0] REG_ra1, REG_ra2;
     wire [31: 0] #1 REG_rd1, REG_rd2;
@@ -33,9 +33,9 @@ module StageDXTestbench;
         //Stage Inputs
         ._PC(PC_DX), ._INST(INST_DX),
         //Global control signals
-        .DestReg_(DestReg_),
-        .MemShift_(MemShift_), .MemSigned_(MemSigned_ /*Unimplemented*/ ),
-        .MemToReg_(MemToReg_), .MemWrite_(MemWrite_),
+        .DestReg_(DestReg),
+        .MemShift_(MemShift), .MemSigned_(MemSigned),
+        .MemToReg_(MemToReg), .MemWrite_(MemWrite),
         //Stage Outputs
         .MemAddr_(), .RegWValue_(ALUOut),
         .MemWValue_(RTValue),
@@ -50,13 +50,13 @@ module StageDXTestbench;
         reg [31:0] pc;
         begin
             step = step + 1;
-            pc = PC_DX; PC_DX = 32'bz; INST_DX = 32'bz;
+            pc = PC_DX; PC_DX = 32'bz; INST_DX = 32'd0;
             #1;
             PC_DX = pc; INST_DX = inst;
             $display("DX>: PC_DX=%h  INST=%h", PC_DX, INST_DX);
             #9;
-            $display("DX<: ALU=%h(%d) RT=%h(%d), JPC=%h",
-            ALUOut, ALUOut, RTValue, RTValue, JumpPC);
+            $display("DX<: DEST=%d ALU=%h(%d) RT=%h(%d), JPC=%h",
+            DestReg, ALUOut, ALUOut, RTValue, RTValue, JumpPC);
         end
     endtask
 
@@ -96,12 +96,10 @@ module StageDXTestbench;
     endtask
 
     task check_jumping;
-        input expected;
-        if (expected !== DoJump) begin
-            if (expected)
-                $display("Expected to jump, but got DoJump = %d instead", DoJump);
-            else
-                $display("Didn't expect to jump, but got DoJump = %d instead", DoJump);
+        input expected, expectlink;
+        if ({expected,expectlink} !== {DoJump,(DestReg != 0)}) begin
+            $display("Expected: J:%b,L:%b, but got J:%b,L:%b",
+                expected,expectlink, DoJump,(DestReg != 0));
             $finish();
         end
     endtask
@@ -119,182 +117,196 @@ module StageDXTestbench;
         li(5'd2, 32'h00000001);
         li(5'd31, 32'hFEDCBA98);
 
-        $display("Testing addition");
+        $display("\nTesting add/sub:");
 
-        //Compute $r1 + $r2
-        exec_inst({`RTYPE,5'd1,5'd2,5'd6,5'b00000,`ADDU});
+        $display("\nADDU $6, $1, $2  ($r1 + $r2)");
+        exec_inst({`OP_SPECIAL,5'd1,5'd2,5'd6,5'b00000, `OF_ADDU});
         check_alu(32'hBABECAFF);
 
-        //Compute $r1 - $r2
-        exec_inst({`RTYPE, 5'd1, 5'd2, 5'd6, 5'b00000, `SUBU});
+        $display("\nSUBU $6, $1, $2  ($r1 - $r2)");
+        exec_inst({`OP_SPECIAL, 5'd1, 5'd2, 5'd6, 5'b00000, `OF_SUBU});
         check_alu(32'hBABECAFD);
 
-        //Compute $r1 + (-1)
-        exec_inst({`ADDIU, 5'd1, 5'd7, 16'hffff});
+        $display("\nADDIU $7, $1, 0xffff  ($r1 + (-1))");
+        exec_inst({`OP_ADDIU, 5'd1, 5'd7, 16'hffff});
         check_alu(32'hBABECAFD);
 
-        //Compute $r1 + 10
-        exec_inst({`ADDIU, 5'd1, 5'd8, 16'd10});
+        $display("\nADDIU $8, $1, 0x000A  ($r1 + 10)");
+        exec_inst({`OP_ADDIU, 5'd1, 5'd8, 16'd10});
         check_alu(32'hBABECB08);
 
-        $display("Testing shifting");
+        $display("\nTesting shifts:");
 
-        //Compute $r1 << 4
-        exec_inst({`RTYPE, 5'b00000, 5'd1, 5'hA, 5'b00100, `SLL});
+        $display("\nSLL $10, $1, 4  ($r1 << 4)");
+        exec_inst({`OP_SPECIAL, 5'b00000, 5'd1, 5'hA, 5'b00100, `OF_SLL});
         check_alu(32'hABECAFE0);
 
-        //Compute $r1 >> 4 (logical)
-        exec_inst({`RTYPE, 5'b00000, 5'd1, 5'hB, 5'b00100, `SRL});
+        $display("\nSRL $11, $1, 4  ($r1 >> 4, logical)");
+        exec_inst({`OP_SPECIAL, 5'b00000, 5'd1, 5'hB, 5'b00100, `OF_SRL});
         check_alu(32'h0BABECAF);
 
-        //Compute $r1 >>> 4 (arithmetic)
-        exec_inst({`RTYPE, 5'b00000, 5'd1, 5'hC, 5'b00100, `SRA});
+        $display("\nSRA $12, $1, 4  ($r1 >>> 4, arithmetic)");
+        exec_inst({`OP_SPECIAL, 5'b00000, 5'd1, 5'hC, 5'b00100, `OF_SRA});
         check_alu(32'hFBABECAF);
 
         //Let's do variable-bit shifts
         li(5'd2, 32'h00000008);
 
-        //Compute $r1 << $r2 (8)
-        exec_inst({`RTYPE, 5'd2, 5'd1, 5'hD, 5'b00000, `SLLV});
+        $display("\nSLLV $13, $1, $2  ($r1 << $r2=8)");
+        exec_inst({`OP_SPECIAL, 5'd2, 5'd1, 5'hD, 5'b00000, `OF_SLLV});
         check_alu(32'hBECAFE00);
 
-        //Compute $r1 >> $r2 (logical, 8)
-        exec_inst({`RTYPE, 5'd2, 5'd1, 5'hE, 5'b00000, `SRLV});
+        $display("\nSRLV $14, $1, $2  ($r1 >> $r2=8, logical)");
+        exec_inst({`OP_SPECIAL, 5'd2, 5'd1, 5'hE, 5'b00000, `OF_SRLV});
         check_alu(32'h00BABECA);
 
-        //Compute $r1 >>> $r2 (arithmetic, 8)
-        exec_inst({`RTYPE, 5'd2, 5'd1, 5'hF, 5'b00000, `SRAV});
+        $display("\nSRAV $15, $1, $2  ($r1 >>> $r2=8, arithmetic)");
+        exec_inst({`OP_SPECIAL, 5'd2, 5'd1, 5'hF, 5'b00000, `OF_SRAV});
         check_alu(32'hFFBABECA);
 
         //Set $r2 back to 1
         li(5'd2, 32'h00000001);
 
 
-        $display("Testing LUI");
-
-        //Test LUI
-        exec_inst({`LUI, 5'b00000, 5'd0, 16'hBEEF});
+        $display("\nLUI $0, 0xBEEF (only ALU output, not reg value)");
+        exec_inst({`OP_LUI, 5'b00000, 5'd0, 16'hBEEF});
         check_alu(32'hBEEF0000);
 
-        $display("Testing comparisons");
-
-        //Test SLTI
+        $display("\nSLTI:");
         //positive comparison (1 vs 2)
-        exec_inst({`SLTI, 5'd2, 5'd0, 16'h0002});
+        exec_inst({`OP_SLTI, 5'd2, 5'd0, 16'h0002});
         check_alu(32'h00000001);
 
         //negative comparison (1 vs -1)
-        exec_inst({`SLTI, 5'd2, 5'd0, 16'hFFFF});
+        exec_inst({`OP_SLTI, 5'd2, 5'd0, 16'hFFFF});
         check_alu(32'h00000000);
-
-        $display("Testing load/store");
 
         //Test loads
         li(5'd3, 32'hCEDE0004);
 
-        //LB $r0, 0x0ABE($r3)
-        exec_inst({`LB, 5'd3, 5'd9, 16'h0ABE});
+        $display("\nLB $r0, 0x0ABE($r3)");
+        exec_inst({`OP_LB, 5'd3, 5'd9, 16'h0ABE});
         check_alu(32'hCEDE0AC2);
 
-        //SB $r1, 0x0ABE($r3)
-        exec_inst({`SB, 5'd3, 5'd1, 16'h0ABE});
+        $display("\nSB $r1, 0x0ABE($r3)");
+        exec_inst({`OP_SB, 5'd3, 5'd1, 16'h0ABE});
         check_alu(32'hCEDE0AC2);
         check_dout(32'hBABECAFE);
-
-        $display("Testing branches");
 
         //Test branches
         li(5'd4, 32'hBABECAFE);
         li(5'd5, 32'hFFFFFFFF);
 
-        exec_inst({`BEQ, 5'd1, 5'd4, 16'h0ABE});
-        check_jumping(1);
+        $display("\nBEQ:");
+        exec_inst({`OP_BEQ, 5'd1, 5'd4, 16'h0ABE});
+        check_jumping(1, 0);
         check_jump(PC_DX + 4 + 16'h2AF8);
 
-
-        exec_inst({`BEQ, 5'd1, 5'd1, 16'h0ABE});
-        check_jumping(1);
+        exec_inst({`OP_BEQ, 5'd1, 5'd1, 16'h0ABE});
+        check_jumping(1, 0);
         check_jump(PC_DX + 4 + 16'h2AF8);
 
-        exec_inst({`BEQ, 5'd1, 5'd2, 16'h0ABE});
-        check_jumping(0);
+        exec_inst({`OP_BEQ, 5'd1, 5'd2, 16'h0ABE});
+        check_jumping(0, 0);
 
-        exec_inst({`BNE, 5'd1, 5'd4, 16'h0ABE});
-        check_jumping(0);
+        $display("\nBNE:");
+        exec_inst({`OP_BNE, 5'd1, 5'd4, 16'h0ABE});
+        check_jumping(0, 0);
 
-        exec_inst({`BNE, 5'd1, 5'd2, 16'h0ABE});
-        check_jumping(1);
+        exec_inst({`OP_BNE, 5'd1, 5'd2, 16'h0ABE});
+        check_jumping(1, 0);
         check_jump(PC_DX + 4 + 16'h2AF8);
 
-        xx = `BLEZ;
+        $display("\nBLEZ:");
+        xx = `OP_BLEZ;
         $display("BLEZ: %b %b %b %b %b", xx, xx[5:3], xx[2:1], ~|xx[5:3], ~^xx[2:1]);
-        exec_inst({`BLEZ, 5'd0, 5'b00000, 16'h0ABE});
-        check_jumping(1);
+        exec_inst({`OP_BLEZ, 5'd0, 5'b00000, 16'h0ABE});
+        check_jumping(1, 0);
         check_jump(PC_DX + 4 + 16'h2AF8);
 
-        exec_inst({`BLEZ, 5'd5, 5'b00000, 16'h0ABE});
-        check_jumping(1);
+        exec_inst({`OP_BLEZ, 5'd5, 5'b00000, 16'h0ABE});
+        check_jumping(1, 0);
         check_jump(PC_DX + 4 + 16'h2AF8);
 
-        exec_inst({`BLEZ, 5'd2, 5'b00000, 16'h0ABE});
-        check_jumping(0);
+        exec_inst({`OP_BLEZ, 5'd2, 5'b00000, 16'h0ABE});
+        check_jumping(0, 0);
 
-        exec_inst({`BGTZ, 5'd0, 5'b00000, 16'h0ABE});
-        check_jumping(0);
+        $display("\nBGTZ:");
+        exec_inst({`OP_BGTZ, 5'd0, 5'b00000, 16'h0ABE});
+        check_jumping(0, 0);
 
-        exec_inst({`BGTZ, 5'd2, 5'b00000, 16'h0ABE});
-        check_jumping(1);
+        exec_inst({`OP_BGTZ, 5'd2, 5'b00000, 16'h0ABE});
+        check_jumping(1, 0);
         check_jump(PC_DX + 4 + 16'h2AF8);
 
-        exec_inst({`BGTZ, 5'd5, 5'b00000, 16'h0ABE});
-        check_jumping(0);
+        exec_inst({`OP_BGTZ, 5'd5, 5'b00000, 16'h0ABE});
+        check_jumping(0, 0);
 
-        exec_inst({`BLTZ, 5'd0, 5'b00000, 16'h0ABE});
-        check_jumping(0);
+        $display("\nBLTZ:");
+        exec_inst({`OP_REGIMM, 5'd0, `OR_BLTZ, 16'h0ABE});
+        check_jumping(0, 0);
 
-        exec_inst({`BLTZ, 5'd2, 5'b00000, 16'h0ABE});
-        check_jumping(0);
+        exec_inst({`OP_REGIMM, 5'd2, `OR_BLTZ, 16'h0ABE});
+        check_jumping(0, 0);
 
-        exec_inst({`BLTZ, 5'd5, 5'b00000, 16'h0ABE});
-        check_jumping(1);
+        exec_inst({`OP_REGIMM, 5'd5, `OR_BLTZ, 16'h0ABE});
+        check_jumping(1, 0);
         check_jump(PC_DX + 4 + 16'h2AF8);
 
-        //Really BGEZ
-        exec_inst({`BLTZ, 5'd0, 5'b00001, 16'h0ABE});
-        check_jumping(1);
+        $display("\nBLTZAL:");
+        exec_inst({`OP_REGIMM, 5'd2, `OR_BLTZAL, 16'h0ABE});
+        check_jumping(0, 0);
+
+        exec_inst({`OP_REGIMM, 5'd5, `OR_BLTZAL, 16'h0ABE});
+        check_jumping(1, 1);
         check_jump(PC_DX + 4 + 16'h2AF8);
 
-        exec_inst({`BLTZ, 5'd2, 5'b00001, 16'h0ABE});
-        check_jumping(1);
+        $display("\nBGEZ:");
+        exec_inst({`OP_REGIMM, 5'd0, `OR_BGEZ, 16'h0ABE});
+        check_jumping(1, 0);
         check_jump(PC_DX + 4 + 16'h2AF8);
 
-        exec_inst({`BLTZ, 5'd5, 5'b00001, 16'h0ABE});
-        check_jumping(0);
+        exec_inst({`OP_REGIMM, 5'd2, `OR_BGEZ, 16'h0ABE});
+        check_jumping(1, 0);
+        check_jump(PC_DX + 4 + 16'h2AF8);
 
-        $display("Testing jumps");
+        exec_inst({`OP_REGIMM, 5'd5, `OR_BGEZ, 16'h0ABE});
+        check_jumping(0, 0);
+
+        $display("\nBGEZAL:");
+        exec_inst({`OP_REGIMM, 5'd2, `OR_BGEZAL, 16'h0ABE});
+        check_jumping(1, 1);
+        check_jump(PC_DX + 4 + 16'h2AF8);
+
+        exec_inst({`OP_REGIMM, 5'd5, `OR_BGEZAL, 16'h0ABE});
+        check_jumping(0, 0);
 
         //Test jumps
-        exec_inst({`J, 26'h0DEC0DE});
+        $display("\nJ:");
+        exec_inst({`OP_J, 26'h0DEC0DE});
         check_jump({PC_DX[31:28], 28'h37B0378});
-        check_jumping(1);
+        check_jumping(1, 0);
 
-        exec_inst({`JAL, 26'h0DEC0DE});
+        $display("\nJAL:");
+        exec_inst({`OP_JAL, 26'h0DEC0DE});
         check_jump({PC_DX[31:28], 28'h37B0378});
-        check_jumping(1);
+        check_jumping(1, 1);
 
-        exec_inst({`RTYPE, 5'd1, 5'b00000, 5'b00000, 5'b00000, `JR});
+        $display("\nJR:");
+        exec_inst({`OP_SPECIAL, 5'd1, 5'b00000, 5'b00000, 5'b00000, `OF_JR});
         check_jump(32'hBABECAFE);
-        check_jumping(1);
-        exec_inst({`RTYPE, 5'd31, 5'b00000, 5'b00000, 5'b00000, `JR});
+        check_jumping(1, 0);
+        exec_inst({`OP_SPECIAL, 5'd31, 5'b00000, 5'b00000, 5'b00000, `OF_JR});
         check_jump(32'hFEDCBA98);
-        check_jumping(1);
+        check_jumping(1, 0);
 
-        exec_inst({`RTYPE, 5'd1, 5'b00000, 5'd0, 5'b00000, `JALR});
+        $display("\nJALR:");
+        exec_inst({`OP_SPECIAL, 5'd1, 5'b00000, 5'd0, 5'b00000, `OF_JALR});
         check_jump(32'hBABECAFE);
-        check_jumping(1);
-        exec_inst({`RTYPE, 5'd31, 5'b00000, 5'd0, 5'b00000, `JALR});
+        check_jumping(1, 1);
+        exec_inst({`OP_SPECIAL, 5'd31, 5'b00000, 5'd0, 5'b00000, `OF_JALR});
         check_jump(32'hFEDCBA98);
-        check_jumping(1);
+        check_jumping(1, 1);
 
         $display("All tests passed!");
         $finish();

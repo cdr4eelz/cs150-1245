@@ -14,13 +14,13 @@ module StageDX(
     input  [31: 0] _INST,
 
     // Global control signals
-    output [ 4: 0] DestReg_,
     output [ 1: 0] MemShift_,
     output         MemToReg_, MemWrite_, MemSigned_,
 
     // Outputs (Execute related computations)
     output [31: 0] MemAddr_,
     output [31: 0] MemWValue_,
+    output [ 4: 0] DestReg_,
     output [31: 0] RegWValue_,
 
     // Feedback to prior stages (branching)
@@ -31,10 +31,11 @@ module StageDX(
 //TODO: Avoid extra adders by passing pre-added PC value and/or sharing ALU
 
     // Decoded signals used locally in DX
-    wire [31: 0] SIMMED, UIMMED;
+    wire [15: 0] IMMED;
     wire [27: 0] NEARADDR;
     wire [ 4: 0] SRC1, SRC2, SHAMT;
     wire ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, Branch, COPREAD;
+    wire [ 4: 0] DestReg;
     wire [ 3: 0] ALUOp;
     wire [ 2: 0] CmpOp;
 
@@ -46,17 +47,30 @@ module StageDX(
     InstructionControl decodeControl(
         ._inst(_INST),
         // Global control signals
-        .DestReg(DestReg_), .MemShift(MemShift_),
+        .MemShift(MemShift_), .MemSigned(MemSigned_),
         .MemToReg(MemToReg_), .MemWrite(MemWrite_),
-        .MemSigned(MemSigned_),
         // Standard control signals only used locally
-        .ALUOp(ALUOp), .ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB),
+        .ALUOp(ALUOp), .ALUSrcA(ALUSrcA), .ALUSrcB(ALUSrcB), .DestReg(DestReg),
         .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR), .Link(Link), .Branch(Branch),
         // Locally used special values
-        .SIMMED(SIMMED), .UIMMED(UIMMED), .NEARADDR(NEARADDR),
+        .IMMED(IMMED), .NEARADDR(NEARADDR),
         .SRC1(SRC1), .SRC2(SRC2), .COPWRITE(CopInHot), .COPADDR(CopAddr),
         .SHAMT(SHAMT), .COPREAD(COPREAD)
     );
+
+    // Some simple functions (not too powerful, just for experience)
+    function [31:0] SEXT16_32;
+        input [15:0] in16;
+        SEXT16_32 = {{16{in16[15]}}, in16};
+    endfunction
+    function [31:0] ZEXT16_32;
+        input [15:0] in16;
+        ZEXT16_32 = {16'b0, in16};
+    endfunction
+
+    wire [31: 0] SIMMED, UIMMED;
+    assign SIMMED   = SEXT16_32(IMMED);
+    assign UIMMED   = ZEXT16_32(IMMED);
 
     wire [31: 0] ALUResult;
     ALU alu
@@ -84,6 +98,7 @@ module StageDX(
     assign PCBranch_    = (Jump) ? (JR ? R1 : PCTARGET) : (Branch ? PCBRANCH : `UNKNOWN(32));
     assign MemAddr_     = ALUResult;
     assign MemWValue_   = R2;
+    assign DestReg_     = (Branch && Link && !takeBranch) ? 5'd0 : DestReg; //Suppress WB on untaken BAL
     assign RegWValue_   = (Link) ? LINKADDR : ( (COPREAD) ? CopOut : ALUResult );
 
 endmodule

@@ -7,11 +7,7 @@ BUG-    Reset is double applied with 2-cycle gap (init_done lag)
 CLUP    Revert ml505top as much as possible, move fanciness to sub/wrapper
 CLUP    Re-group/balance modules
 CLUP    Data vs control segregation
-CLUP    OPCODE (& almost everything) as parameters rather than `define
-CLUP    Top level `define -> localparam mappings
 
-STEP    COP0 complete & test
-STEP    ISR software
 STEP    PixelFeeder from DDR (or SRAM if arbiter works)
 
 TOOL    Use speedy distmem and custom instructions for special internal debug data/triggers
@@ -34,7 +30,6 @@ OPTI    Timing related adjustments: Separate PLLs, single-clock DDR, pull from s
 
 WANT    Figure out Post-Synthesis Simulation
 WANT    Use FPGAEditor and LOC/RLOC tricks in select spots
-WANT    Rebuild custom GCC tools (without clang, with clang)
 WANT    Try simple dual-processing arrangement
 
 
@@ -45,7 +40,7 @@ WANT    Try simple dual-processing arrangement
     PLOP for serial forwarding & other tricks
     BRKTAP for debug stepping & monitoring
     Research timing constraints, MIG details, uBlaze, etc.
-
+    Rebuilt custom GCC tools (without clang)
 
 ::TROUBLESHOOT STEPS (when sim/synth discrep)::
     * Reverted to sparse CP2 top & framework *
