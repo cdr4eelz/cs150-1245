@@ -51,14 +51,16 @@ module InstructionControl #(
                             , 26, isJType);
 
     // These characteristics could come from lookup table but this is more enlightening!
-    wire isMemory, isMStore, isMLoad, isIComp;
+    wire isMemory, isMStore, isMLoad, isMSigned, isIComp, isICompS, isISigned;
     assign isMemory    = (_opcode_[5:4] == 2'b10____);
-    assign isMLoad     = (_opcode_[5:3] == 3'b100___);
     assign isMStore    = (_opcode_[5:3] == 3'b101___);
+    assign isMLoad     = (_opcode_[5:3] == 3'b100___);
+    assign isMSigned   = (_opcode_[5:1] == 5'b10000_);
     assign isIComp     = (_opcode_[5:3] == 3'b001___);
-    wire #DD isISigned, isMSigned, isCopRead, isCopWrite;
-    assign isISigned   = (isMemory || (isIComp && !_opcode_[2]));
-    assign isMSigned   = (isMemory && !isMStore && !_opcode_[1] && !_opcode_[2]);
+    assign isICompS    = (_opcode_[5:2] == 4'b0010__);
+    assign isISigned   = (isICompS || isMemory);
+    wire #DD isCopRead, isCopWrite;
+    //assign isMSigned   = (isMemory && !isMStore && !_opcode_[1] && !_opcode_[2]);
     assign isCopRead   = (isCType && (_rs_ == `OS_MFC0));
     assign isCopWrite  = (isCType && (_rs_ == `OS_MTC0));
     wire #DD isRShift, isRShiftI, isRShiftR, isROther;
