@@ -1,26 +1,47 @@
-CSRCS := $(wildcard *.c)
-COBJS := $(CSRCS:%.c=%.c.o)
+LDSTYLE ?= inject_basic
+LDSRC ?= ../link/$(LDSTYLE).ld
+START ?= ../link/$(LDSTYLE).s
+LIBOPTS ?= -nostartfiles -nostdlib -nodefaultlibs
 
-SSRCS := $(wildcard *.s)
-SOBJS := $(SSRCS:%.s=%.s.o)
+CSRCS ?= $(wildcard *.c)
+SSRCS ?= $(wildcard *.s) $(START)
 
-LDSRC := $(TARGET).ld
+OBJS = $(COBJS) $(SOBJS)
+COBJS = $(CSRCS:%.c=%.c.o)
+SOBJS = $(SSRCS:%.s=%.s.o)
 
-default: $(TARGET)
+M_PRE ?= mips-
 
-$(TARGET): $(COBJS) $(SOBJS)
-	mips-gcc -nostartfiles -nostdlib -nodefaultlibs -T $(LDSRC) $^ -o $@.elf
-	mips-strip -R .pdr -R .comment -R .reginfo $@.elf
-	mips-objcopy -O binary $(TARGET).elf $(TARGET).bin
-	bin2mif < $(TARGET).bin > $(TARGET).mif
-	bin2coe < $(TARGET).bin > $(TARGET).coe
-	bin2rom $(TARGET) 0 < $(TARGET).bin > $(TARGET).v
+default: $(TARGET).coe $(TARGET).mif $(TARGET).dump
+.SECONDARY:
+
+$(TARGET).elf: $(CSRCS) $(SSRCS)
+	$(M_PRE)gcc -std=gnu99 $(LIBOPTS) $^ -T $(LDSRC) -o $@
+#	$(M_PRE)strip -R .reginfo -R .comment -R .pdr $@
+
+#$(TARGET).elf: $(OBJS)
+#	$(M_PRE)gcc $(LIBOPTS) $^ -T $(LDSRC) -o $@
+#	$(M_PRE)strip -R .reginfo -R .comment -R .pdr $@
 
 %.c.o: %.c
-	mips-gcc -c $< -o $@
+	$(M_PRE)gcc -std=gnu99 -c $< -o $@
 
 %.s.o: %.s
-	mips-as $< -o $@
+	$(M_PRE)as $< -o $@
+
+%.dump: %.elf
+	$(M_PRE)objdump $^ -xsD >$@
+%.bin: %.elf
+	$(M_PRE)objcopy -j .text -p -O binary $< $@
+	chmod -x $@
+%.mif: %.bin
+	bin2mif < $< > $@
+%.coe: %.bin
+	bin2coe < $< > $@
+%.v: %.bin
+	bin2rom $% 0 < $< > $@
 
 clean:
-	rm -f $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).{bin,mif,v,coe}
+	rm -f *.o *.c.s *.elf *.bin *.mif *.coe *.v *.dump
+
+.phony: $(TARGET) clean

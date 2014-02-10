@@ -47,7 +47,7 @@
 .equiv  M_DATA_BYTE,    0x000F
 
 # SHARED memory locations
-.equiv  SM_BASE,    0x10002000  #Some agreed upon spot in memory
+.equiv  SM_BASE,    0x10010000  #Some agreed upon spot in memory
 .equiv  OW_MAGIC,       0x0000  #4-byte: Arbitrary value for sanity check
 .equiv  OB_FLAGS,       0x0004  #1-byte: flag bitmask
 .equiv   MF_TIMER,        0x01      #TIMER output enabled
@@ -58,9 +58,13 @@
 .equiv  OW_COUNT,       0x000C  #4-byte: COP0 Count register as of last TIMER interrupt
 .equiv  OW_STASH0,      0x0010  #4-byte: ISR reserved (save registers or temps)
 .equiv  OW_STASH1,      0x0014  #4-byte:        "
-.equiv  OW_HEAD,        0x0018  #4-byte: Byte-Pointer   (valid from SM_BUFBASE..SM_BUFLAST)
-.equiv  OW_TAIL,        0x001C  #4-byte:        "       (if HEAD==TAIL, then empty)
-.equiv  SM_BUFBASE, (SM_BASE+0x0020)    #UART FIFO buffer starts here (inclusive)...
+.equiv  OW_STASH2,      0x0018  #4-byte:        "
+.equiv  OW_STASH3,      0x001C  #4-byte:        "
+.equiv  OW_BUFSIZE,     0x0020  #4-byte: Size of buffer (just for double-check)
+.equiv  OW_HEAD,        0x0024  #4-byte: Byte-Pointer   (valid from SM_BUFBASE..SM_BUFLAST)
+.equiv  OW_TAIL,        0x0028  #4-byte:        "       (if HEAD==TAIL, then empty)
+# fill 1-word 0x002C
+.equiv  SM_BUFBASE, (SM_BASE+0x0030)    #UART FIFO buffer starts here (inclusive)...
 .equiv  K_BUFSIZEB,     0x0020          #...extending 32-bytes then...
 .equiv  SM_BUFLAST, (SM_BUFBASE+K_BUFSIZEB-1)   #...ends here (inclusive) or just...
 .equiv  SM_BUFPAST, (SM_BUFBASE+K_BUFSIZEB)     #...before here (non-inclusive).
@@ -69,21 +73,33 @@
 # Simple function/jump table for JAL-based callins (like manually from BIOS)
 .=0x0000
 ENTRY10X10:
-    j       DO_INIT
+    b       DO_INIT
     li      $a0, 0x0000
 
 .=0x0010
-DO_ENABLE:      #Squeeze entry!
-    ori     $t0, $zero, (M_TIMER | M_RTC | M_UATX | M_UARX | M_GLOBAL)  #Enable ALL we know
+DO_ENABLE_MOST: #Squeeze entry!
+    ori     $t0, $zero, (M_TIMER | M_RTC | M_UATX | M_GLOBAL)  #Enable ALL but RX
     mfc0    $v0, Status             #Return replaced status
     jr      $ra
     mtc0    $t0, Status             #D;
 
 .=0x0020
+DO_ENABLE_ALL:  #Squeeze entry!
+    ori     $t0, $zero, (M_TIMER | M_RTC | M_UATX | M_UARX | M_GLOBAL)  #Enable ALL we know
+    mfc0    $v0, Status             #Return replaced status
+    jr      $ra
+    mtc0    $t0, Status             #D;
+
+.=0x0030
 DO_DISABLE:     #Squeeze entry!
     mfc0    $v0, Status             #Return replaced status
     jr      $ra
     mtc0    $zero, Status           #D; #Disable absolutely everything!
+
+.=0x0040
+DO_SEND:        #Squeeze entry!
+    b           USER_SEND
+    nop
 
 # Rest of table is one big dummy function returning -1
 .org (0x0100 - 8), 0 #NOPs
@@ -92,7 +108,7 @@ DO_DISABLE:     #Squeeze entry!
 
 
 DO_INIT:
-##Prologue
+##Prologue (is a "leaf")
 #    addiu   $sp, $sp, -8
 #    sw      $ra, 4($sp)
 #Body
@@ -103,12 +119,12 @@ DO_INIT:
     sw      $zero, 0x0004($t0)      #(flags, minute, second, state)
     sw      $zero, OW_RTC($t0)
     sw      $zero, OW_COUNT($t0)
-    sw      $zero, OW_STASH0($t0)
-    sw      $zero, OW_STASH1($t0)
+    li      $t1, K_BUFSIZEB
+    sw      $t1, OW_BUFSIZE($t0)
     la      $t1, SM_BUFBASE         #Reset HEAD & TAIL to BASE of buffer
     sw      $t1, OW_HEAD($t0)
     sw      $t1, OW_TAIL($t0)
-    li      $t1, K_MAGICW           #Set magic value
+    li      $t1, K_MAGICW           #Set magic value last
     sw      $t1, OW_MAGIC($t0)
     mtc0    $zero, Count            #Count from zero
     li      $t1, K_TIMER_CYC        #...up to first timer interval
@@ -305,7 +321,7 @@ timer_unstash:
     la      $k0, SM_BASE
     lw      $ra, OW_STASH1($k0)     #$ra<=STASH1
     lui     $k1, 0xFFFF             #D; #NOTE: !M_TIMER won't sign extend with "andi"
-    j       isr_ret_cause
+    b       isr_ret_cause
     ori     $k1, $zero, !M_TIMER    #D;
 
 #END: ISR_TIMER.
@@ -317,7 +333,7 @@ ISR_RTC:
     nop                             #D;
     addiu   $k0, $k0, 1             #Increment clock
     sw      $k0, OW_RTC($k1)
-    j       isr_ret_cause
+    b       isr_ret_cause
     addiu   $k1, $zero, !M_RTC      #D;
 
 #END: ISR_RTC.
@@ -343,7 +359,7 @@ ISR_UARX:
     bne     $k0, $zero, _uarx_done  #covers "RVrv" characters simultaneously!
     lui     $k0, %hi(SM_BASE)       #D;
     ori     $k0, $k0, %lo(SM_BASE)
-    j       _uarx_done
+    b       _uarx_done
     sb      $k1, OB_STATE($k0)      #D; #store STATE for application to see
 
 _uarx_enable:
@@ -351,7 +367,7 @@ _uarx_enable:
     lbu     $k1, OB_FLAGS($k0)
     nop                             #D;
     ori     $k1, $k1, MF_TIMER
-    j       _uarx_done
+    b       _uarx_done
     sb      $k1, OB_FLAGS($k0)      #D;
 
 _uarx_disable:
@@ -360,17 +376,17 @@ _uarx_disable:
     nop                             #D;
     andi    $k1, $k1, !MF_TIMER
     sb      $k1, OB_FLAGS($k0)
-#    j       _uarx_done
+#    b       _uarx_done
 #    nop                             #D;
 #FALLTHROUGH...
 
 _uarx_done:
-    j       isr_ret_cause
+    b       isr_ret_cause
     addiu   $k1, $zero, !M_UARX     #D;
 
 _uarx_abort:
     mtc0    $zero, Cause            #blast the Cause register!
-    j       isr_ret                 #expects new Status in $k1
+    b       isr_ret   #expects new Status in $k1
     ori     $k1, $zero, 0           #D; #disable everything
 
 #END: ISR_UARX.
@@ -418,7 +434,7 @@ _uatx_unstash:
     la      $k0, SM_BASE
     lw      $s0, OW_STASH0($k0)     #$s0<=STASH0
 _uatx_done:
-    j       isr_ret_cause           #D;
+    b       isr_ret_cause           #D; (load-delay slot on $s0 when fallthrough)
     addiu   $k1, $zero, !M_UATX     #D;
 
 #END: ISR_UATX.
@@ -456,7 +472,23 @@ _less30:
 #END: ROLL_BCD.
 
 
-SEND:               #EXPECT: $k1 = char-to-send; #FOUL: $ra, $k0, $k1
+USER_SEND:
+    li      $t0, ~M_GLOBAL
+    mfc0    $t1, Status
+    and     $t0, $t1, $t0
+    mtc0    $t0, Status             #Interrupts disabled, now use $k0/$k1
+    or      $t0, $zero, $ra         #Stash $ra in $t0
+    bal     SEND
+    or      $k1, $zero, $a0         #D; $k1 = char-to-send from $a0 of regular function
+#    ori     $t1, $t1, M_GLOBAL
+    or      $ra, $zero, $t0         #Restore $ra
+    jr      $ra
+    mtc0    $t1, Status             #D;
+
+#END: USER_SEND.
+
+
+SEND:               #EXPECT: $k1 = char-to-send; #FOUL: $k0, $k1
     la      $k0, MM_BASE
     lw      $k0, OW_UATX_READY($k0)
     nop                             #D;

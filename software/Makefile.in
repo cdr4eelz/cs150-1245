@@ -3,7 +3,7 @@ LDSRC ?= ../link/$(LDSTYLE).ld
 START ?= ../link/$(LDSTYLE).s
 LIBOPTS ?= -nostartfiles -nostdlib -nodefaultlibs
 
-OUTS ?= mif coe mem # "dump v"
+OUTS ?= mif coe # "mem dump v"
 SECS ?= data inst
 PSRCS ?= $(wildcard *.p)
 CSRCS ?= $(wildcard *.c)
@@ -30,8 +30,8 @@ bins: $(SECS:%=$(TARGET).%.bin)
 
 
 $(TARGET).elf: $(OBJS)
-	mips-gcc -static $(LIBOPTS) -G0 -T $(LDSRC) $^ -o $@
-	mips-strip -R .pdr -R .comment -R .reginfo $@
+	mips-gcc -static $(LIBOPTS) -T $(LDSRC) $^ -o $@ -G 0 -mno-gpopt
+#	mips-strip -R .pdr -R .comment -R .reginfo $@
 	chmod -x $@
 
 %.data.bin: %.elf
@@ -65,17 +65,14 @@ $(TARGET).elf: $(OBJS)
 %.c.o: %.c
 	mips-gcc -std=gnu99 -c $< -o $@
 
-%.c.llvm: %.c
-	clang -static -emit-llvm -S -o $<.llvm $<
-
-%.c.llvm.s: %.c.llvm
-	llc -relocation-model=static -march=mips -o $<.s $<
+%.c.llvm.s: %.c
+	clang -cc1 -triple mips-unknown-elf -mrelocation-model static -S -o $@ $<
 
 %.s.o: %.s
 	mips-as $< -o $<.o
 
 clean:
-	rm -f $(POBJS) $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).*.bin $(TARGET).*.mif $(TARGET).*.coe $(TARGET).*.mem $(TARGET).*.v $(TARGET).dump $(TARGET).*.dump *.o *.llvm.s
+	rm -f *.o *.llvm *.elf *.bin *.mif *.coe *.mem *.v *.dump *.llvm.s
 
 .PHONY: clean
 
