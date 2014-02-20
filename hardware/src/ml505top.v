@@ -204,7 +204,7 @@ wire [31:0] DBG_MEM150;
   wire         line_y1_valid;
   wire         line_trigger;
   
-  wire fb0;
+//  wire fb0;
    wire frame_interrupt;
    wire [31:0] gp_code;
    wire [31:0] gp_frame;
@@ -309,9 +309,11 @@ wire [31:0] DBG_MEM150;
   );
 
 
+`ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
+
 //Minor mods for debug (like old dip stall toggle from prior checkpoint)
 
-generate if (0) begin:_STALL_DIP_
+generate if (1) begin:_STALL_DIP_
     wire stall_toggle;
     Debouncer #(
         .Width(16) // 2^16 / 50MHz => apprx 1.3 ms?
@@ -344,14 +346,46 @@ end endgenerate
 
 
 //CROSS: SRAM driver from FALL13
+  // -- |SRAM Controller| ------------------------------------------------------
+  `define SRAM_ENABLE
+
+  `ifdef SRAM_ENABLE
+    SRAM sram(
+      .clock(cpu_clk_g),
+      .reset(rst),
+      .addr_valid(sram_addr_valid),
+      .ready(sram_ready),
+      .addr(sram_addr),
+      .data_in(sram_data_in),
+      .write_mask(sram_write_mask),
+      .data_out(sram_data_out),
+      .data_out_valid(sram_data_out_valid),
+
+      .sram_clk_fb(SRAM_CLK_FB),
+      .sram_clk(SRAM_CLK),
+      .sram_cs_l(SRAM_CS_B),
+      .sram_we_l(SRAM_WE_B),
+      .sram_mode(SRAM_MODE),
+      .sram_adv_ld_l(SRAM_ADV_LD_B),
+      .sram_oe_l(SRAM_OE_B),
+      .sram_data(SRAM_D),
+      .sram_addr(SRAM_A),
+      .sram_bw_l(SRAM_BW));
+  `else
     assign SRAM_CLK=0;
-    assign SRAM_WE_B=1;
     assign SRAM_CS_B=1;
-    assign SRAM_ADV_LD_B=1;
+    assign SRAM_WE_B=1;
     assign SRAM_MODE=0;
+    assign SRAM_ADV_LD_B=1;
     assign SRAM_OE_B=1;
-    assign SRAM_BW=4'hF;
-    assign SRAM_A=0;
     assign SRAM_D=32'dz;
+    assign SRAM_A=0;
+    assign SRAM_BW=4'hF;
+  `endif // SRAM_ENABLE
+
+`else
+    assign any_stall = stall;
+    assign GPIO_LED = {5'b0, stall, pll_lock, init_done};
+`endif // COLT45_KILLFUN
 
 endmodule

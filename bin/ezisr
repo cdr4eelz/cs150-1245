@@ -1,0 +1,18 @@
+#!/bin/bash
+
+REP=${HOME}/team45
+BIT=${REP}/hardware/build/ml505top/ml505top.bit
+ISR=${REP}/software/isr/isr3.coe
+APP=${REP}/software/check3/check3.inst.coe
+
+reset
+(cd ~/team45/software/isr && make clean && make)
+(cd ~/team45/software/check3 && make clean && make)
+
+ezimpact ${BIT}
+sleep 1
+coe_to_serial ${ISR} c0000000
+sleep 1
+coe_to_serial ${APP} 10000000
+sleep 1
+screen $SERIALTTY 115200

@@ -62,7 +62,7 @@ int main(void)
         //pmult currently about 0x0800, mmult currently about 0x1800
         uint32_t xor = copy_xor(CODE_SRC, XCACHE, CODE_LEN);
         uwrite_int8('@');
-        if (1) uwrite_int8s(uint32_to_ascii_hex(xor, buffer, BUFFER_LEN));
+        if (0) uwrite_int8s(uint32_to_ascii_hex(xor, buffer, BUFFER_LEN));
         uwrite_int8(' ');
     }
 
@@ -78,7 +78,7 @@ int main(void)
         if (1) uwrite_int8s(uint32_to_ascii_hex(xor, buffer, BUFFER_LEN));
         uwrite_int8('-');
     }
-    if (1) { // Dump D-Cache
+    if (0) { // Dump D-Cache
         show_block(DCACHE, buffer, BUFFER_LEN);
     }
 

@@ -18,7 +18,7 @@ module PixelFeeder #(
                     output         video_valid,
                     input          video_ready,
 
-		    output frame_interrupt);
+            output frame_interrupt);
 
     // Hint: States
     localparam IDLE = 1'b0;
@@ -49,9 +49,9 @@ module PixelFeeder #(
     reg  rst_clk50, running_reg, chunk_ack_clk50;
 
     always @(posedge clk50_g) begin
-        rst_clk50 <= rst; //Synchronize to DVI-clock
-        if (rst_clk50) begin //Use synchronized reset
-            ignore_count <= 32'd480000; // 600*800 
+        //rst_clk50 <= rst; //Synchronize to DVI-clock
+        if (rst /* || rst_clk50*/) begin //Use synchronized reset
+            ignore_count <= 32'd480000; // 600*800
             {running_reg, chunk_ack_clk50, count_dviread, chunk_inc} <= 0;
         end else begin
             running_reg <= 1'b1;
@@ -74,15 +74,15 @@ module PixelFeeder #(
     assign rdf_rd_en = 1'b1; //Never clog the shared read FIFO
 
     pixel_fifo feeder_fifo(
-    	.rst(rst), //Depending on coregen settings, reset is synchronized internally
-    	.wr_clk(cpu_clk_g),
-    	.wr_en(feeder_den), //rdf_valid
-    	.din(feeder_din), //rdf_dout
-    	.full(feeder_full),
-    	.rd_clk(clk50_g),
-    	.rd_en(video_ready && running_reg && (ignore_count == 0)),
-    	.dout(feeder_dout),
-    	.empty(feeder_empty));
+        .rst(rst), //Depending on coregen settings, reset is synchronized internally
+        .wr_clk(cpu_clk_g),
+        .wr_en(feeder_den), //rdf_valid
+        .din(feeder_din), //rdf_dout
+        .full(feeder_full),
+        .rd_clk(clk50_g),
+        .rd_en(video_ready && running_reg && (ignore_count == 0)),
+        .dout(feeder_dout),
+        .empty(feeder_empty));
 
 
 generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
@@ -90,23 +90,26 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 
 // CPU-Clocked region (cpu_clk_g)
 
+    reg [64:0] pixel_count;
     reg chunk_inc_clkCPU; //chunk is 16 x 32-bit fifo reads (from 2 mig_af requests)
     reg [7:0] pend, pend_next; //pending mig_af requests (represent 256-bits each)
-    wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
-
-    reg fr, fr_r; // 0/1 turns into _01/_10 below (0x1040_0000 or 0x1080_0000 frame base)
     reg [9:0] head_y, head_x;
     reg state;
-    wire next_state = ((state == IDLE) && (pend < PIXFO_TARGET) && !af_full) ? FETCH : IDLE;
-    assign af_wr_en = (next_state == FETCH); //If next_state==FETCH, fetch occurs end of THIS cycle!
-    assign af_addr_din = {7'd0, {fr,~fr}, head_y, head_x, 2'b0};
-    assign frame_interrupt = (fr != fr_r); // Fires right after request gets queued (not resp or pix)
+    reg fr, fr_r; // 0/1 turns into _01/_10 below (0x1040_0000 or 0x1080_0000 frame base)
+
+    wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
     wire last_x = (head_x >= (((800/8)-1) * 8));
     wire last_y = (head_y >= (600-1));
-    reg  [64:0] pixel_count;
+    wire [31:0] head_addr = {8'h10, 2'b01/*fr,~fr*/, head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
+    wire next_state = (pend < PIXFO_TARGET) ? FETCH : IDLE; //Try to FETCH until semi-saturate the FIFO
+    wire af_advance = af_wr_en && !af_full;
+
+    assign af_addr_din = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
+    assign af_wr_en = (state == FETCH); //Declare that we want to write an address (but might not happen)
+    assign frame_interrupt = (fr != fr_r); //Fires right after request gets queued (not resp or pix)
 
     always @(*) begin
-        case ( {chunk_edge, af_wr_en} ) //chunk reduces by 2, fetch increases by 1
+        case ( {chunk_edge, af_advance} ) //chunk reduces by 2, fetch increases by 1
             2'b11: pend_next = pend - 1; //-2 +1
             2'b10: pend_next = pend - 2; //-2
             2'b01: pend_next = pend + 1; //   +1
@@ -125,23 +128,34 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
             pend <= pend_next;
             state <= next_state;
             fr_r <= fr;
-            if (af_wr_en) begin //Advance x/y/frame (right AFTER end of this cycle)
+            if (af_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
+                pixel_count <= pixel_count + 8;
                 if (last_y && last_x) begin
-$display("PIX:%0d  X:%0d Y:%0d", pixel_count, head_x, head_y);
                     fr <= ~fr; head_y <= 0; head_x <= 0;
                 end else if (last_x) begin
                     head_y <= head_y + 1; head_x <= 0;
-$display("PIX:%0d  PEND:%0d", pixel_count, pend);
                 end else begin
                     head_x <= head_x + 8;
                 end
-                pixel_count <= pixel_count + 8;
             end
         end
     end
 
     assign feeder_den = rdf_valid, feeder_din = rdf_dout; //DDR-read to PIX-write
     assign video_valid = running_reg, video = feeder_dout[23:0];
+
+// synthesis translate_off
+always @(posedge cpu_clk_g) begin
+    if (af_advance && ((head_x == 0) || (last_x && last_y))) begin
+        if (last_x && last_y) $display("LAST:");
+        $display("  aB:%08h aD:%08h  F:%b X:%03d Y:%03d  PEND:%03d PIX:%0d",
+                 head_addr, af_addr_din,
+                 fr, head_x, head_y,
+                 pend, pixel_count);
+    end
+end
+// synthesis translate_on
+
 
 end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
 // *** Simple test pattern output through the FIFO ***
@@ -194,3 +208,10 @@ end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
 end endgenerate
 
 endmodule
+
+/* Interesting BUG along the way when driving "af_wr_en" improperly here!!!
+    The RequestController doesn't give valid "full" signal unless we TRY to write an address...
+    ...so cannot adjust our af_wr_en based upon the af_full signal (like with direct FIFO access).
+
+WARNING:Xst:2170 - Unit ml505top : the following signal(s) form a combinatorial loop: mem_arch/pixel_af_wr_en, mem_arch/req_con/fifo_access<5>.
+*/

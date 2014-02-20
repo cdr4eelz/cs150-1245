@@ -32,14 +32,6 @@ PixelFeeder DUT (
     .frame_interrupt(frame_interrupt)
 );
 
-integer frame_count = 0;
-always @(posedge cpu_clk_g) begin
-    if (frame_interrupt) begin
-        frame_count = frame_count + 1;
-        $display("Frame#%0d", frame_count);
-        if (frame_count > 2) $finish();
-    end
-end
 
 initial begin
     Reset = 1;
@@ -51,8 +43,29 @@ initial begin
     @(negedge cpu_clk_g);
     rdf_valid = 1; af_full = 0; video_ready = 1;
 
-    $monitor("ADDR:%b %h  INT:%b  F#%0d", af_addr_din[23:22],
-                af_addr_din[21:12], frame_interrupt, frame_count);
+    //Runs until framecount is sufficient (see below)
+end
+
+
+integer frame_count = 0;
+wire [30:14] trigWatch = af_addr_din[30:14];
+reg [30:14] trigVal = 0;
+
+always @(posedge cpu_clk_g) begin
+    if (trigWatch !== trigVal) begin //Frame w/Leading-zeros & upper 5-bits of Y
+        $display("INT:%b F#%0d ADDR:%h  F:%0d Y:%0d X:%0d",
+                    frame_interrupt, frame_count, af_addr_din,
+                    af_addr_din[20:19], //Frame (2-bits)
+                    af_addr_din[18:09], //Y (10-bits)
+                    {af_addr_din[08:00], 1'b0} //X (9-bits & a zero)
+                );
+        trigVal <= trigWatch;
+    end
+    if (frame_interrupt) begin
+        frame_count <= frame_count + 1;
+        $display("\n*** Frame#%0d ***", frame_count);
+        if (frame_count > 2) $finish();
+    end
 end
 
 endmodule

@@ -39,3 +39,38 @@ module LineEngine(
     assign LE_ready = 1'b1;
 
 endmodule
+
+/*
+#define SWAP(x, y) (x ^= y ^= x ^= y)
+#define ABS(x) (((x)<0) ? -(x) : (x))
+
+void line(int x0, int y0, int x1, int y1) {
+    char steep = (ABS(y1 - y0) > ABS(x1 - x0)) ? 1 : 0;
+    if (steep) {
+        SWAP(x0, y0);
+        SWAP(x1, y1);
+    }
+    if (x0 > x1) {
+        SWAP(x0, x1);
+        SWAP(y0, y1);
+    }
+    int deltax = x1 - x0;
+    int deltay = ABS(y1 - y0);
+    int error = deltax / 2;
+    int ystep;
+    int y = y0
+    int x;
+    ystep = (y0 < y1) ? 1 : -1;
+    for (x = x0; x <= x1; x++) {
+        if (steep)
+            plot(y,x);
+        else
+            plot(x,y);
+        error = error - deltay;
+        if (error < 0) {
+            y += ystep;
+            error += deltax;
+        }
+    }
+}
+*/
