@@ -124,7 +124,7 @@ wire [31:0] DBG_MEM150;
 
     .CLKOUT5_DIVIDE(12),
     .CLKOUT5_DUTY_CYCLE(0.5),
-    .CLKOUT5_PHASE(0.0),
+    .CLKOUT5_PHASE(45.0),
 
     .COMPENSATION("SYSTEM_SYNCHRONOUS"),
     .DIVCLK_DIVIDE(4),
@@ -281,7 +281,7 @@ wire [31:0] DBG_MEM150;
   ); //add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
 
   DVI #(
-    .ClockFreq(                 50000000),
+    .ClockFreq(                 50_000_000),
     .Width(                     1040),   
     .FrontH(                    56),     
     .PulseH(                    120),    
@@ -291,7 +291,7 @@ wire [31:0] DBG_MEM150;
     .PulseV(                    6),      
     .BackV(                     23)      
   ) dvi(         
-    .Clock(                     cpu_clk_g),
+    .Clock(                     clk50_g), //NOTE: Was cpu_clk_g in skeleton
     .Reset(                     rst || ~init_done),
     .DVI_D(                     DVI_D),
     .DVI_DE(                    DVI_DE),

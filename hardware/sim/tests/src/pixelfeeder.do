@@ -5,4 +5,4 @@ file copy -force ../../../software/dumpmem_i/dumpmem_i.data.mif dmem_blk_ram.mif
 file copy -force ../../../software/isr/nada.mif isr_mem.mif
 add wave PixelFeederTestbench/*
 add wave PixelFeederTestbench/DUT/*
-run -a
+run 1000ms
