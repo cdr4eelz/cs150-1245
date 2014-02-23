@@ -28,6 +28,7 @@ module PixelFeeder #(
     localparam FETCH = 1'b1;
 
     localparam PIXFO_CAPACITY = (2048/2); //pixel_fifo max capacity (adjusted for 256-bit units)
+    localparam PIXFO_STARTUP = PIXFO_CAPACITY - 100; //fill to this point before running from FIFO
     localparam PIXFO_TARGET = PIXFO_CAPACITY - 5; //1 af req => 2 x 128-bit rdf => 8 x 32-bit pixfo rd
 
 //***CLOCK CROSSING STRATEGY***
@@ -41,30 +42,34 @@ module PixelFeeder #(
 
 // Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13)
     reg  chunk_inc; //From DVI-clock realm
-    reg  chunk_ack; //From CPU-clock realm
+    reg  chunk_ack, fifo_start; //From CPU-clock realm
     //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE
 
 // DVI-Clocked region (clk50_g)
 
-    reg  rst_clk50, chunk_ack_clk50;
-    always @(posedge clk50_g) begin
-        rst_clk50 <= rst; //Synchronize to DVI-clock (more for "release" than onset)
-        chunk_ack_clk50 <= chunk_ack; //Synchronize to DVI-clock
+    reg  rst_clk50, chunk_ack_clk50, fifo_start_clk50;
+    always @(posedge clk50_g) begin //Synchronize to DVI-clock
+        rst_clk50 <= rst; //More for timing the "release" nicely, rather than onset
+        chunk_ack_clk50 <= chunk_ack;
+        fifo_start_clk50 <= fifo_start;
     end
 
+    reg  isRunning;
     reg  [31:0] curCOL, curROW, curFRAME;
     wire advanceRVA = video_valid && video_ready; //reset will trump this
     wire rollCOL = (curCOL >= SCREEN_WIDTH-1); //Could use fast-counter/pixelrange
     wire rollROW = (curROW >= SCREEN_HEIGHT-1);
     always @(posedge clk50_g) begin
         if (rst_clk50) begin //Use synchronized reset
-            {curCOL, curROW, curFRAME} <= 0;
+            {curCOL, curROW, curFRAME, isRunning} <= 0;
         end else begin
             if (advanceRVA) begin //They got a pixel, move on!
                 case ({rollROW, rollCOL}) //Manage our col/row/frame/scene business
                     (2'b11): begin
                         curFRAME <= curFRAME+1;
                         {curCOL,curROW} <= {32'd0, 32'd0};
+                        //Switch to FIFO on frame boundary (maybe)
+                        if (fifo_start_clk50) isRunning <= 1'b1;
                     end
                     (2'b01): {curCOL,curROW} <= {32'd0, curROW+1};
                     //2'b10 just means we're ON last row but not yet at end
@@ -75,17 +80,14 @@ module PixelFeeder #(
     end
 
     reg  [ 3:0] count_dviread; //Rolls over on every 16 pixel "read-chunk"
-    reg  isRunning;
     wire feeder_valid = !rst_clk50;
     always @(posedge clk50_g) begin
         if (rst_clk50) begin //Use synchronized reset
-            {isRunning, count_dviread, chunk_inc} <= 0;
-        end if (video_ready) begin
-            if (isRunning) begin
-                if (&count_dviread) chunk_inc <= 1'b1; //Set on rollover
-                else if (chunk_ack_clk50) chunk_inc <= 1'b0;
-                count_dviread <= count_dviread + 1;
-            end
+            {count_dviread, chunk_inc} <= 0;
+        end if (video_ready && isRunning) begin
+            if (&count_dviread) chunk_inc <= 1'b1; //Set on rollover
+            else if (chunk_ack_clk50) chunk_inc <= 1'b0;
+            count_dviread <= count_dviread + 1;
         end
     end
 
@@ -107,7 +109,7 @@ module PixelFeeder #(
         .dout(feeder_raw),
         .empty(feeder_empty));
 
-    assign feeder_dout = (isRunning) ? feeder_raw : {7'hFF,curFRAME[7:0],curROW[7:0],curCOL[7:0]};
+    assign feeder_dout = (isRunning) ? feeder_raw : {curFRAME[14:0],1'b0,curROW[9:2],curCOL[9:2]};
     assign rdf_rd_en = 1'b1; //Really a "ready" signal, not standard FIFO "enable"
 
 generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
@@ -129,7 +131,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     wire last_x = (head_x >= (((800/8)-1) * 8));
     wire last_y = (head_y >= (600-1));
     wire [31:0] head_addr = {8'h10, 2'b01/*fr,~fr*/, head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
-    wire next_state = (pend < PIXFO_TARGET) ? FETCH : IDLE; //Try to FETCH until semi-saturate the FIFO
+    wire next_state = (pend < PIXFO_TARGET) ? FETCH : IDLE; //Fetch until semi-saturated
     wire af_advance = af_wr_en && !af_full;
 
     assign af_addr_din = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
@@ -147,7 +149,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 
     always @(posedge cpu_clk_g) begin
         if (rst) begin
-            {chunk_inc_clkCPU, chunk_ack, pend} <= 0;
+            {chunk_inc_clkCPU, chunk_ack, pend, fifo_start} <= 0;
             state <= IDLE;
             {fr, fr_r, head_y, head_x, pixel_count} <= 0;
         end else begin
@@ -156,6 +158,9 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
             pend <= pend_next;
             state <= next_state;
             fr_r <= fr;
+
+            if (pend_next > PIXFO_STARTUP) fifo_start <= 1'b1;
+
             if (af_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
                 pixel_count <= pixel_count + 8;
                 if (last_y && last_x) begin
