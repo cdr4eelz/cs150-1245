@@ -1,10 +1,10 @@
 /* This module keeps a FIFO filled that then outputs to the DVI module. */
 
 module PixelFeeder #(
-    parameter CLOCK_HZ = 50_000_000,
+//    parameter CLOCK_HZ = 50_000_000,
     parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600,
 //    parameter SCREEN_WIDTH = 640, SCREEN_HEIGHT = 480,
-    parameter COLT45_TESTPAT=0
+    parameter COLT45_NOFRAMES=0, COLT45_TESTPAT=0
 ) (                 //System:
                     input          cpu_clk_g,
                     input          clk50_g, // DVI Clock
@@ -39,37 +39,57 @@ module PixelFeeder #(
     // pixel_fifo available space tracked on CPU-clocked side in large chunks.  The chunks
     //    serve to reduce inter-clock signal rate, keep counters small (but separate),
     //    and create a hysteresis.  Synchronizing with 4-cycle signal/acknowledge loop.
+    //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE or TIG
 
 // Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13)
-    reg  chunk_inc; //From DVI-clock realm
-    reg  chunk_ack, fifo_start; //From CPU-clock realm
-    //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE
+    reg chunk_inc, chunk_ack, fifo_start;
+(* SHREG_EXTRACT="NO", ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
+    reg chunk_inc_clkCPU, chunk_ack_clk50, fifo_start_clk50, rst_clk50;
+
+    always @(posedge clk50_g) begin //Synchronize to DVI-clock
+        rst_clk50 <= rst; //More for timing the "release" nicely, rather than onset
+        if (rst_clk50)
+            {chunk_ack_clk50, fifo_start_clk50} <= 0;
+        else
+            {chunk_ack_clk50, fifo_start_clk50} <= {chunk_ack, fifo_start};
+    end
+
+    always @(posedge cpu_clk_g) begin //Synchronize to CPU-clock
+        if (rst)
+            chunk_inc_clkCPU <= 0;
+        else
+            chunk_inc_clkCPU <= chunk_inc;
+    end
+
 
 // DVI-Clocked region (clk50_g)
 
-    reg  rst_clk50, chunk_ack_clk50, fifo_start_clk50;
-    always @(posedge clk50_g) begin //Synchronize to DVI-clock
-        rst_clk50 <= rst; //More for timing the "release" nicely, rather than onset
-        chunk_ack_clk50 <= chunk_ack;
-        fifo_start_clk50 <= fifo_start;
-    end
-
-    reg  isRunning;
+    reg  isRunning, wasRunning, feeder_valid;
     reg  [31:0] curCOL, curROW, curFRAME;
+    reg  [ 3:0] count_dviread; //Rolls over on every 16 pixel "read-chunk"
+
     wire advanceRVA = video_valid && video_ready; //reset will trump this
     wire rollCOL = (curCOL >= SCREEN_WIDTH-1); //Could use fast-counter/pixelrange
     wire rollROW = (curROW >= SCREEN_HEIGHT-1);
+
     always @(posedge clk50_g) begin
         if (rst_clk50) begin //Use synchronized reset
-            {curCOL, curROW, curFRAME, isRunning} <= 0;
+            {curCOL, curROW, curFRAME} <= 0;
+            {feeder_valid, isRunning, wasRunning, count_dviread, chunk_inc} <= 0;
         end else begin
+            feeder_valid <= 1'b1;
+            wasRunning <= isRunning;
             if (advanceRVA) begin //They got a pixel, move on!
+                if (isRunning) begin //If running, inform other clock-realm of chunks
+                    if (&count_dviread) chunk_inc <= 1'b1; //Set on rollover
+                    else if (chunk_ack_clk50) chunk_inc <= 1'b0;
+                    count_dviread <= count_dviread + 1;
+                end
                 case ({rollROW, rollCOL}) //Manage our col/row/frame/scene business
                     (2'b11): begin
                         curFRAME <= curFRAME+1;
                         {curCOL,curROW} <= {32'd0, 32'd0};
-                        //Switch to FIFO on frame boundary (maybe)
-                        if (fifo_start_clk50) isRunning <= 1'b1;
+                        if (fifo_start_clk50) isRunning <= 1'b1; //Switch to FIFO on frame boundary
                     end
                     (2'b01): {curCOL,curROW} <= {32'd0, curROW+1};
                     //2'b10 just means we're ON last row but not yet at end
@@ -79,38 +99,28 @@ module PixelFeeder #(
         end
     end
 
-    reg  [ 3:0] count_dviread; //Rolls over on every 16 pixel "read-chunk"
-    wire feeder_valid = !rst_clk50;
-    always @(posedge clk50_g) begin
-        if (rst_clk50) begin //Use synchronized reset
-            {count_dviread, chunk_inc} <= 0;
-        end if (video_ready && isRunning) begin
-            if (&count_dviread) chunk_inc <= 1'b1; //Set on rollover
-            else if (chunk_ack_clk50) chunk_inc <= 1'b0;
-            count_dviread <= count_dviread + 1;
-        end
-    end
-
 
     // FIFO to buffer the reads with a write width of 128 and read width of 32. We try to fetch blocks
     // until the FIFO is full.
     wire [31:0] feeder_raw, feeder_dout;
     wire feeder_den, feeder_full, feeder_empty;
     wire [127:0] feeder_din;
+    wire [31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
     pixel_fifo feeder_fifo(
-        .rst(rst), //Reset is usually synchronized internally (when only 1 reset is present)
+        .rst(rst), //Internal syncronization across clock domains
         .wr_clk(cpu_clk_g),
         .wr_en(feeder_den), //rdf_valid
         .din(feeder_din), //rdf_dout
         .full(feeder_full),
         .rd_clk(clk50_g),
         .rd_en(video_ready && isRunning),
-        .dout(feeder_raw),
+        .dout(feeder_raw), //NOTE: First-word-fallthrough an no "valid" signal avail!
         .empty(feeder_empty));
 
-    assign feeder_dout = (isRunning) ? feeder_raw : {curFRAME[14:0],1'b0,curROW[9:2],curCOL[9:2]};
+    assign feeder_dout = (isRunning) ? feeder_raw : ignore_pixel;
     assign rdf_rd_en = 1'b1; //Really a "ready" signal, not standard FIFO "enable"
+
 
 generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 // *** Normal PixelFeeder activity (DDR -> FIFO) ***
@@ -118,20 +128,21 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     assign feeder_den = rdf_valid, feeder_din = rdf_dout; //DDR-read to PIX-write
     assign video_valid = feeder_valid, video = feeder_dout[23:0];
 
+
 // CPU-Clocked region (cpu_clk_g)
 
     reg [64:0] pixel_count;
-    reg chunk_inc_clkCPU; //chunk is 16 x 32-bit fifo reads (from 2 mig_af requests)
     reg [12:0] pend, pend_next; //pending mig_af requests (represent 256-bits each)
-    reg [9:0] head_y, head_x;
+    reg [ 9:0] head_y, head_x;
     reg state;
     reg fr, fr_r; // 0/1 turns into _01/_10 below (0x1040_0000 or 0x1080_0000 frame base)
 
+    //chunk is 16 x 32-bit fifo reads (from 2 mig_af requests)
     wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
     wire last_x = (head_x >= (((800/8)-1) * 8));
     wire last_y = (head_y >= (600-1));
-    wire [31:0] head_addr = {8'h10, 2'b01/*fr,~fr*/, head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
-    wire next_state = (pend < PIXFO_TARGET) ? FETCH : IDLE; //Fetch until semi-saturated
+    wire [ 1:0] framebits = (COLT45_NOFRAMES) ? 2'b01 : {fr,~fr};
+    wire [31:0] head_addr = {8'h10, framebits, head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
     wire af_advance = af_wr_en && !af_full;
 
     assign af_addr_din = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
@@ -147,17 +158,19 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
         endcase
     end
 
+    //Currently, this ensures an IDLE or more between FETCHs:
+    wire next_state = ((state == IDLE) && (pend < PIXFO_TARGET)) ? FETCH : IDLE;
+
     always @(posedge cpu_clk_g) begin
         if (rst) begin
-            {chunk_inc_clkCPU, chunk_ack, pend, fifo_start} <= 0;
+            {chunk_ack, pend, fifo_start} <= 0;
             state <= IDLE;
             {fr, fr_r, head_y, head_x, pixel_count} <= 0;
         end else begin
-            chunk_inc_clkCPU <= chunk_inc;
-            chunk_ack <= chunk_inc_clkCPU;
             pend <= pend_next;
             state <= next_state;
             fr_r <= fr;
+            chunk_ack <= chunk_inc_clkCPU;
 
             if (pend_next > PIXFO_STARTUP) fifo_start <= 1'b1;
 

@@ -24,7 +24,6 @@ PixelFeeder DUT (
 
 initial begin
     //Runs until framecount is sufficient (see below)
-    //TODO: Fiddle with af_full to mimic RequestController behavior under competition
 end
 
 
@@ -62,9 +61,10 @@ always @(posedge cpu_clk_g) begin
         {frame_count, memory_request, memory_response, memory_avail} <= 0;
     end else begin
         if (frame_interrupt) frame_count <= frame_count + 1;
-        if (af_wr_en && !af_full) memory_request <= memory_request + 1;
+        if (af_wr_en && !af_full) memory_request <= memory_request + 2; //NOTE:2-to-1 ratio
         if (rdf_rd_en && rdf_valid) memory_response <= memory_response + 1;
         memory_avail <= 1'b1; //~memory_avail;
+//TODO: Fiddle with memory_avail to mimic RequestController competition
     end
 end
 
@@ -72,10 +72,10 @@ always @(*) begin //Each is sensitive to memory_* signals
     rdf_valid = (memory_avail && ((memory_request - memory_response) > 0));
     af_full  = !(memory_avail && ((memory_request - memory_response) < 4));
     rdf_dout = (!rdf_valid) ? {4{32'h00FFFFFF}} : {
-            memory_request[31:24], memory_response[23:2], 2'd3,
-            memory_request[23:16], memory_response[23:2], 2'd2,
-            memory_request[15: 8], memory_response[23:2], 2'd1,
-            memory_request[ 7: 0], memory_response[23:2], 2'd0
+            memory_request[31:24], memory_response[21:0], 2'd0,
+            memory_request[23:16], memory_response[21:0], 2'd1,
+            memory_request[15: 8], memory_response[21:0], 2'd2,
+            memory_request[ 7: 0], memory_response[21:0], 2'd3
         };
 end
 

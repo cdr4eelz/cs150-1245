@@ -141,6 +141,8 @@ module ddr2_model (
     odt
 );
 
+//    `define x512Mb
+//    `define sg3
     `define x256Mb
     `define sg37E
     `define x16

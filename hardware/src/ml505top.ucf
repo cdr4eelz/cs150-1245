@@ -55,6 +55,14 @@ NET  "GPIO_DIP[6]"      LOC="AC25"  |  IOSTANDARD="LVCMOS18";
 NET  "GPIO_DIP[7]"      LOC="AC24"  |  IOSTANDARD="LVCMOS18";
 
 
+# Avoid false path on cross-clock synchronizers & reset
+INST "*/pixelfeed/*_clk50" TNM = "SYNC_TO_CLK50";
+INST "/rst_clk50" TNM = "SYNC_TO_CLK50";
+TIMESPEC "TS_SYNC_TO_CLK50" = FROM "cpu_clk" TO "SYNC_TO_CLK50" TIG;
+INST "*/pixelfeed/*_clkCPU" TNM = "SYNC_TO_CLKCPU";
+TIMESPEC "TS_SYNC_TO_CLKCPU" = FROM "clk50" TO "SYNC_TO_CLKCPU" TIG;
+
+
 ################################################################################
 # DVI
 ################################################################################

@@ -107,7 +107,7 @@ module mig_v3_61 #
                                        // burst length (in double words).
    parameter BURST_TYPE              = 0,       
                                        // burst type (=0 seq; =1 interleaved).
-   parameter CAS_LAT                 = 3,       
+   parameter CAS_LAT                 = 3,       //NOTE: WAS 4 at some point too!!!
                                        // CAS latency.
    parameter ECC_ENABLE              = 0,       
                                        // enable ECC (=1 enable).

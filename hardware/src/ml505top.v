@@ -67,6 +67,8 @@ assign GPIO_SW_C = GPIO_COMPPB[0];
 wire [31:0] DBG_MEM150;
 
 
+//NOTE: Constraints experimental/learning!!!
+(* SHREG_EXTRACT="NO", ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y0" *)
   reg [3:0]  reset_r = 4'b0;
   reg [25:0] count_r = 26'b0;
 
@@ -124,7 +126,7 @@ wire [31:0] DBG_MEM150;
 
     .CLKOUT5_DIVIDE(12),
     .CLKOUT5_DUTY_CYCLE(0.5),
-    .CLKOUT5_PHASE(45.0),
+    .CLKOUT5_PHASE(45.0), //NOTE: Was 0.0 in skeleton (using 45.0 for DVI deviation)
 
     .COMPENSATION("SYSTEM_SYNCHRONOUS"),
     .DIVCLK_DIVIDE(4),
@@ -149,9 +151,9 @@ wire [31:0] DBG_MEM150;
   BUFG  cpu_clk_buf  ( .I(cpu_clk),  .O(cpu_clk_g)  );
   BUFG  clk200_buf   ( .I(clk200),   .O(clk200_g)   );
   BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );
-  BUFG  clkdiv50_buf ( .I(clk50),    .O(clk50_g)    );
   BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
   BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
+  BUFG  clkdvi50_buf ( .I(clk50),    .O(clk50_g)    );
 
   always @(posedge cpu_clk_g)
   begin
@@ -168,6 +170,8 @@ wire [31:0] DBG_MEM150;
     :                      count_r + 1;
 
   // Reset shift register:
+//NOTE: Constraints experimental/learning!!!
+(* SHREG_EXTRACT="NO", ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y1" *)
   reg [2:0] rst_sr;
   wire fifo_reset; // fifo_reset resets fifos... reset_fifo is a fifo for the reset signal.
   assign fifo_reset = rst | (|rst_sr);
@@ -280,6 +284,11 @@ wire [31:0] DBG_MEM150;
 .DBG_MEM150(DBG_MEM150)
   ); //add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
 
+  reg rst_clk50;
+  always @(posedge clk50_g) begin //Synchronize to DVI-clock
+    rst_clk50 <= (rst || ~init_done);
+  end
+
   DVI #(
     .ClockFreq(                 50_000_000),
     .Width(                     1040),   
@@ -292,7 +301,7 @@ wire [31:0] DBG_MEM150;
     .BackV(                     23)      
   ) dvi(         
     .Clock(                     clk50_g), //NOTE: Was cpu_clk_g in skeleton
-    .Reset(                     rst || ~init_done),
+    .Reset(                     rst_clk50), //rst || ~init_done),
     .DVI_D(                     DVI_D),
     .DVI_DE(                    DVI_DE),
     .DVI_H(                     DVI_H),

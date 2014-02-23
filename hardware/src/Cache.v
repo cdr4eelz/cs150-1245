@@ -1,3 +1,5 @@
+//NOTE:COLT45: LITTLEWORDIAN allows natural ordering of 32-bit words within 256-bit DDR chunks
+
 //----------------------------------------------------------------------------
 // Module: Cache
 // Inputs:
@@ -26,7 +28,9 @@
 //----------------------------------------------------------------------------
 `include "cache.vh"
 
-module Cache(
+module Cache #(
+    parameter LITTLEWORDIAN=0 //Ordering of 32-bit words within each 256-bit DDR block (not byte ordering)
+)(
     input           clk,
     input           rst,
     input [31:0]    addr,
@@ -96,11 +100,13 @@ module Cache(
 
     reg [`SZ_CACHELINE-1:0] active_data_line;
 
-    wire [`SZ_OFFSET-1:0] offset  = addr[`IDX_ADDR_OFFSET];
+//  wire [`SZ_OFFSET-1:0] offset  = (LITTLEWORDIAN) ? ~addr[`IDX_ADDR_OFFSET]
+//                                                  : addr[`IDX_ADDR_OFFSET];
     wire [`SZ_INDEX-1:0] index    = addr[`IDX_ADDR_INDEX];
-    wire [`SZ_TAG-1:0] tag        = addr[`IDX_ADDR_TAG];
+//  wire [`SZ_TAG-1:0] tag        = addr[`IDX_ADDR_TAG];
 
-    wire [`SZ_OFFSET-1:0] offset_hold  = addr_hold[`IDX_ADDR_OFFSET];
+    wire [`SZ_OFFSET-1:0] offset_hold  = (LITTLEWORDIAN) ? ~addr_hold[`IDX_ADDR_OFFSET]
+                                                         : addr_hold[`IDX_ADDR_OFFSET];
     wire [`SZ_INDEX-1:0] index_hold    = addr_hold[`IDX_ADDR_INDEX];
     wire [`SZ_TAG-1:0] tag_hold        = addr_hold[`IDX_ADDR_TAG];
 

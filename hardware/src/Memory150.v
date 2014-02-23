@@ -318,7 +318,9 @@ output [31:0] DBG_MEM150
        );
    
     // The instruction cache:
-    Cache icache(
+    Cache #(
+        .LITTLEWORDIAN(1) //!SIM_ONLY
+    ) icache(
         .clk(cpu_clk_g),
         .rst(rst || ~init_done),
         .addr(icache_addr),
@@ -341,7 +343,9 @@ output [31:0] DBG_MEM150
     );
     
     // Data cache:
-     Cache dcache(
+    Cache #(
+        .LITTLEWORDIAN(1) //!SIM_ONLY
+    ) dcache(
         .clk(cpu_clk_g),
         .rst(rst || ~init_done),
         .addr(dcache_addr),
@@ -370,7 +374,7 @@ output [31:0] DBG_MEM150
     PixelFeeder pixelfeed(
         .cpu_clk_g(cpu_clk_g),
         .clk50_g(clk50_g), //NOTE: Was cpu_clk_g in skeleton
-        .rst(rst || ~init_done),
+        .rst(rst || ~init_done),// || SIM_ONLY), //Suppress PixelFeeder if simulating Memory150
         .rdf_valid(pixel_rdf_valid),
         .af_full(pixel_af_full),
         .rdf_dout(rdf_dout),

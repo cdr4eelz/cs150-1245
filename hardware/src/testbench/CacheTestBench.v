@@ -60,6 +60,8 @@ module CacheTestBench;
     wire clkdiv0_g;
     wire clk200;
     wire clk200_g;
+    wire clk50;
+    wire clk50_g;
     wire pll_lock;
     wire pll_fb;
 
@@ -83,33 +85,33 @@ module CacheTestBench;
     PLL_BASE
     #(
         .BANDWIDTH("OPTIMIZED"),
-        .CLKFBOUT_MULT(32),
+        .CLKFBOUT_MULT(24),
         .CLKFBOUT_PHASE(0.0),
         .CLKIN_PERIOD(10.0),
 
-        .CLKOUT0_DIVIDE(16),
+        .CLKOUT0_DIVIDE(12),
         .CLKOUT0_DUTY_CYCLE(0.5),
         .CLKOUT0_PHASE(0.0),
 
-        .CLKOUT1_DIVIDE(4),
+        .CLKOUT1_DIVIDE(3),
         .CLKOUT1_DUTY_CYCLE(0.5),
         .CLKOUT1_PHASE(0.0),
 
-        .CLKOUT2_DIVIDE(4),
+        .CLKOUT2_DIVIDE(3),
         .CLKOUT2_DUTY_CYCLE(0.5),
         .CLKOUT2_PHASE(0.0),
 
-        .CLKOUT3_DIVIDE(4),
+        .CLKOUT3_DIVIDE(3),
         .CLKOUT3_DUTY_CYCLE(0.5),
         .CLKOUT3_PHASE(90.0),
 
-        .CLKOUT4_DIVIDE(8),
+        .CLKOUT4_DIVIDE(6),
         .CLKOUT4_DUTY_CYCLE(0.5),
         .CLKOUT4_PHASE(0.0),
 
-        .CLKOUT5_DIVIDE(6),
+        .CLKOUT5_DIVIDE(12),
         .CLKOUT5_DUTY_CYCLE(0.5),
-        .CLKOUT5_PHASE(0.0),
+        .CLKOUT5_PHASE(45.0), //NOTE: Was 0.0 in skeleton (using 45.0 for DVI deviation)
 
         .COMPENSATION("SYSTEM_SYNCHRONOUS"),
         .DIVCLK_DIVIDE(4),
@@ -123,48 +125,20 @@ module CacheTestBench;
         .CLKOUT2(clk0),
         .CLKOUT3(clk90),
         .CLKOUT4(clkdiv0),
-        .CLKOUT5(),
+        .CLKOUT5(clk50),
         .LOCKED(pll_lock),
         .CLKFBIN(pll_fb),
         .CLKIN(user_clk_g),
         .RST(1'b0)
     );
 
-    IBUFG user_clk_buf
-    (
-        .I(Clock),
-        .O(user_clk_g)
-    );
-
-    BUFG cpu_clk_buf
-    (
-        .I(cpu_clk),
-        .O(cpu_clk_g)
-    );
-
-    BUFG clk200_buf
-    (
-        .I(clk200),
-        .O(clk200_g)
-    );
-
-    BUFG clk0_buf
-    (
-        .I(clk0),
-        .O(clk0_g)
-    );
-
-    BUFG clk90_buf
-    (
-        .I(clk90),
-        .O(clk90_g)
-    );
-
-    BUFG clkdiv0_buf
-    (
-        .I(clkdiv0),
-        .O(clkdiv0_g)
-    );
+    IBUFG user_clk_buf ( .I(Clock),     .O(user_clk_g) );
+    BUFG  cpu_clk_buf  ( .I(cpu_clk),   .O(cpu_clk_g)  );
+    BUFG  clk200_buf   ( .I(clk200),    .O(clk200_g)   );
+    BUFG  clk0_buf     ( .I(clk0),      .O(clk0_g)     );
+    BUFG  clk90_buf    ( .I(clk90),     .O(clk90_g)    );
+    BUFG  clkdiv0_buf  ( .I(clkdiv0),   .O(clkdiv0_g)  );
+    BUFG  clkdvi50_buf ( .I(clk50),     .O(clk50_g)    );
 
     mt4htf3264hy ddr2(
         .DDR2_A(DDR2_A),
@@ -188,6 +162,7 @@ module CacheTestBench;
         .clk200_g(clk200_g),
         .clkdiv0_g(clkdiv0_g),
         .clk90_g(clk90_g),
+        .clk50_g(clk50_g),
         .rst(Reset),
         .init_done(init_done),
         .DDR2_A(DDR2_A),
