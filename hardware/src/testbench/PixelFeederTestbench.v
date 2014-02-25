@@ -5,7 +5,7 @@
 module PixelFeederTestbench;
 
 //Clocks driven at bottom (to encourage use of the clk*_g signals only)
-wire rst, user_clk_g, cpu_clk_g, clk50_g, clk29_g;
+wire rst, user_clk_g, cpu_clk_g, dvi_clk_g, clk29_g;
 
 reg  rdf_valid, af_full, video_ready;
 reg  [127:0] rdf_dout;
@@ -14,7 +14,8 @@ wire [30:0]  af_addr_din;
 wire [23:0]  video;
 
 PixelFeeder DUT (
-    .cpu_clk_g(cpu_clk_g), .clk50_g(clk50_g), .rst(rst),
+    .cpu_clk_g(cpu_clk_g), .rst_cpu_bus(rst),
+    .dvi_clk_g(dvi_clk_g), .rst_dvi_bus(rst),
     .rdf_valid(rdf_valid), .rdf_rd_en(rdf_rd_en), .rdf_dout(rdf_dout),
     .af_full(af_full), .af_wr_en(af_wr_en), .af_addr_din(af_addr_din),
     .video_ready(video_ready), .video_valid(video_valid), .video(video),
@@ -31,12 +32,13 @@ reg [63:0] pixel_count, pixel_pace;
 reg [23:0] pixel_value;
 
 always @(posedge clk29_g) begin
-    if (!rst) pixel_pace = pixel_pace + 1; //NOTE: We cheat & reset this from other clock region
+    if (rst) pixel_pace <= 0;
+    else pixel_pace <= pixel_pace + 1; //Value is used from dvi_clk_g domain (just sim anyway)
 end
 
-always @(posedge clk50_g) begin
+always @(posedge dvi_clk_g) begin
     if (rst) begin
-        {video_ready, pixel_count, pixel_pace} = 0; //pace incremented elsewhere!
+        {video_ready, pixel_count} = 0; //pace incremented elsewhere!
     end else begin
         if (video_ready && video_valid) begin
             if ((pixel_count % (800*600/24)) == 0) begin
@@ -105,7 +107,7 @@ end
     initial Clock = 0;
     always #(5) Clock <= ~Clock; //100MHz (board clock rate)
 
-    wire pll_fb, pll_lock, cpu_clk, clk50, clk29;
+    wire pll_fb, pll_lock, cpu_clk, dvi_clk, clk29;
     PLL_BASE
     #(
         .BANDWIDTH("OPTIMIZED"),
@@ -145,7 +147,7 @@ end
     (
         .CLKFBOUT(pll_fb),
         .CLKOUT0(cpu_clk),
-        .CLKOUT1(clk50),
+        .CLKOUT1(dvi_clk),
         .CLKOUT2(clk29),
         .CLKOUT3(),
         .CLKOUT4(),
@@ -158,7 +160,7 @@ end
 
     IBUFG user_clk_buf ( .I(Clock),    .O(user_clk_g) );
     BUFG  cpu_clk_buf  ( .I(cpu_clk),  .O(cpu_clk_g)  );
-    BUFG  dvi_clk_buf  ( .I(clk50),    .O(clk50_g)    );
+    BUFG  dvi_clk_buf  ( .I(dvi_clk),  .O(dvi_clk_g)    );
     BUFG  clk29_buf    ( .I(clk29),    .O(clk29_g)    );
 
     assign rst = !pll_lock;

@@ -2,6 +2,7 @@
 #include "uart.h"
 #include "string.h"
 #include "memory.h"
+#include "graphics.h"
 
 int8_t* read_n(int8_t*b, uint32_t n) 
 {
@@ -93,6 +94,7 @@ int main(void)
         if (strcmp(input, "file") == 0) {
             uint32_t address = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
             uint32_t file_length = ascii_dec_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+
             store(address, file_length);
         } else if (strcmp(input, "jal") == 0) {
             uint32_t address = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));

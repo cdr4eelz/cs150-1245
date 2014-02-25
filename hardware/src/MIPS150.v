@@ -1,8 +1,8 @@
 `include "cpuglobal.vh"
 
 module MIPS150 #(
+    parameter CPU_FREQ = 50_000_000,
     parameter DD=`COLT45_DD,
-    parameter ClockFreq=50_000_000,
     parameter COLT45_BRK=0, COLT45_SCOPE=1, COLT45_SCRATCH=0, COLT45_PC=0,
                 COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
@@ -28,10 +28,10 @@ module MIPS150 #(
     input stall,
 
 // CP4+
+    input frame_interrupt,
     output [31:0] gp_code,
     output [31:0] gp_frame,
     output gp_valid,
-    input frame_interrupt,
 
 input [31:0] DBG_MEM150
 );
@@ -401,7 +401,7 @@ end
         .CNT_RESET_(CNT_Reset_MW2F_)
     ) /* synthesis syn_noprune=1 */;
 
-    UARTRVA #(.ClockFreq(ClockFreq)) uartrva
+    UARTRVA #(.ClockFreq(CPU_FREQ)) uartrva
     ( .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .UARX(UARX), //Receiver
         .UATX(UATX), .SOut(FPGA_SERIAL_TX) //Transmitter

@@ -1,321 +1,269 @@
-module ml505top
-(
-  // Reference Clock (50MHz) & board reset (elimated)
-  input         USER_CLK,
-//input         USER_RST,
+module ml505top #(
+    parameter CPU_FREQ = 50_000_000
+)(
+    // Reference Clock (100MHz) & board reset (elimated)
+    input         USER_CLK,
+//  input         USER_RST,
 
-  // UART (serial)
-  input         FPGA_SERIAL_RX,
-  output        FPGA_SERIAL_TX,
+    // UART (serial)
+    input         FPGA_SERIAL_RX,
+    output        FPGA_SERIAL_TX,
 
-  // GPIO (Switches & LEDs)
-  input   [7:0] GPIO_DIP,
-  input   [4:0] GPIO_COMPPB,
-  output  [4:0] GPIO_COMPLED,
-  output  [7:0] GPIO_LED,
+    // GPIO (Switches & LEDs)
+    input   [7:0] GPIO_DIP,
+    input   [4:0] GPIO_COMPPB,
+    output  [4:0] GPIO_COMPLED,
+    output  [7:0] GPIO_LED,
 
-  // DDR via MIG
-  output [12:0] DDR2_A,
-  output  [1:0] DDR2_BA,
-  output        DDR2_CAS_B,
-  output        DDR2_CKE,
-  output  [1:0] DDR2_CLK_N,
-  output  [1:0] DDR2_CLK_P,
-  output        DDR2_CS_B,
-  inout  [63:0] DDR2_D,
-  output  [7:0] DDR2_DM,
-  inout   [7:0] DDR2_DQS_N,
-  inout   [7:0] DDR2_DQS_P,
-  output        DDR2_ODT,
-  output        DDR2_RAS_B,
-  output        DDR2_WE_B,
+    // DDR via MIG
+    output [12:0] DDR2_A,
+    output  [1:0] DDR2_BA,
+    output        DDR2_CAS_B,
+    output        DDR2_CKE,
+    output  [1:0] DDR2_CLK_N,
+    output  [1:0] DDR2_CLK_P,
+    output        DDR2_CS_B,
+    inout  [63:0] DDR2_D,
+    output  [7:0] DDR2_DM,
+    inout   [7:0] DDR2_DQS_N,
+    inout   [7:0] DDR2_DQS_P,
+    output        DDR2_ODT,
+    output        DDR2_RAS_B,
+    output        DDR2_WE_B,
 
-  // DVI Controller
-  output [11:0] DVI_D,
-  output        DVI_DE,
-  output        DVI_H,
-  output        DVI_RESET_B,
-  output        DVI_V,
-  output        DVI_XCLK_N,
-  output        DVI_XCLK_P,
-  inout         IIC_SCL_VIDEO,
-  inout         IIC_SDA_VIDEO,
+    // DVI Controller
+    output [11:0] DVI_D,
+    output        DVI_DE,
+    output        DVI_H,
+    output        DVI_RESET_B,
+    output        DVI_V,
+    output        DVI_XCLK_N,
+    output        DVI_XCLK_P,
+    inout         IIC_SCL_VIDEO,
+    inout         IIC_SDA_VIDEO,
 
-  // ZBT SRAM Controller
-  input         SRAM_CLK_FB,
-  output        SRAM_CLK,
-  output        SRAM_WE_B,
-  output        SRAM_CS_B,
-  output        SRAM_ADV_LD_B,
-  output        SRAM_MODE,
-  output        SRAM_OE_B,
-  output  [3:0] SRAM_BW,
-  output [17:0] SRAM_A,
-  inout  [31:0] SRAM_D,
+    // ZBT SRAM Controller
+    input         SRAM_CLK_FB,
+    output        SRAM_CLK,
+    output        SRAM_WE_B,
+    output        SRAM_CS_B,
+    output        SRAM_ADV_LD_B,
+    output        SRAM_MODE,
+    output        SRAM_OE_B,
+    output  [3:0] SRAM_BW,
+    output [17:0] SRAM_A,
+    inout  [31:0] SRAM_D,
 
-  // VGA Capture
-  input   [7:0] VGA_RED, VGA_GREEN, VGA_BLUE,
-  input         VGA_DATA_CLK,
-  input         VGA_HSOUT,
-  input         VGA_VSOUT
+    // VGA Capture
+    input   [7:0] VGA_RED, VGA_GREEN, VGA_BLUE,
+    input         VGA_DATA_CLK,
+    input         VGA_HSOUT,
+    input         VGA_VSOUT
 );
 
 //Declare a couple custom signals & rename GPIO
 wire any_stall, GPIO_SW_C;
-assign GPIO_COMPLED = GPIO_COMPPB;
+assign GPIO_COMPLED = GPIO_COMPPB; //Compass LED lights mimic pushbuttons
 assign GPIO_SW_C = GPIO_COMPPB[0];
 wire [31:0] DBG_MEM150;
 
+    // PLL wires
+    wire user_clk_g, pll_lock, init_done;
+    wire cpu_clk_g, dvi_clk_g, clk200_g, clk0_g, clk90_g, clkdiv0_g;
+    reg  rst_pll, rst_cpu_mem, rst_cpu_bus, rst_dvi_bus, rst_cpu_cpu;
 
-//NOTE: Constraints experimental/learning!!!
-(* SHREG_EXTRACT="NO", ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y0" *)
-  reg [3:0]  reset_r = 4'b0;
-  reg [25:0] count_r = 26'b0;
+    // Memory150, CPU wires
+    wire [31:0] dcache_addr,    icache_addr;
+    wire [ 3:0] dcache_we,      icache_we;
+    wire        dcache_re,      icache_re;
+    wire [31:0] dcache_din,     icache_din;
+    wire [31:0] dcache_dout,    icache_dout;
+    wire        stall;
+    wire        video_ready;
+    wire        video_valid;
+    wire [23:0] video;
+    wire        frame_interrupt;
+    wire [31:0] gp_code;
+    wire [31:0] gp_frame;
+    wire        gp_valid;
+//  wire        fb0;
 
-  wire [3:0]  next_reset_r;
-  wire [25:0] next_count_r;
+//TODO:Move PLL & RESETs to module (maybe same as TestBenches use)
 
-  wire user_clk_g;
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y0" *)
+    reg  [ 3:0] reset_r;
+    always @(posedge user_clk_g) begin
+        reset_r <= {reset_r[2:0], GPIO_SW_C}; //Synchronize external button signal
+    end
 
-  wire cpu_clk;
-  wire cpu_clk_g;
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y1" *)
+    reg  [ 3:0] reset_advance; //A wee synchronization & debounce FF-chain
 
-  wire clk0;
-  wire clk0_g;
+    reg  [ 7:0] reset_count, reset_delay; //Count range for short delay
+    reg  [ 2:0] reset_stage = 0; //Numeric stage representation
 
-  wire clk90;
-  wire clk90_g;
+    wire [ 7:0] reset_lines = (8'hFF << reset_stage); //Shifting-HOT representation
+    wire [ 7:0] reset_watch_table = { //Criteria for advancing stage
+                    4'd0, 1'b1, init_done, pll_lock, 1'b1 };
+    wire reset_watch = (reset_watch_table >> reset_stage);
 
-  wire clkdiv0;
-  wire clkdiv0_g;
+    always @(posedge user_clk_g) begin
+        if ({pll_lock,reset_lines[1:0]} == 3'b000) begin //First 2 stages bootstrap pll_lock
+            {reset_stage, reset_advance, reset_count, reset_delay} <= 0;
+        end else begin
+            if (&reset_advance) begin
+                reset_stage <= reset_stage + 1;
+                reset_count <= reset_delay;
+                //TODO: Update reset_delay
+                reset_advance <= 0;
+            end else begin
+                reset_count <= reset_count - 1;
+                reset_advance <= {reset_advance[2:0], reset_watch};
+            end
+        end
+    end
 
-  wire clk200;
-  wire clk200_g;
-
-  wire pll_lock;
-
-  wire clk50;
-  wire clk50_g;
-
-  PLL_BASE
-  #(
-    .BANDWIDTH("OPTIMIZED"),
-    .CLKFBOUT_MULT(24),
-    .CLKFBOUT_PHASE(0.0),
-    .CLKIN_PERIOD(10.0),
-
-    .CLKOUT0_DIVIDE(12),
-    .CLKOUT0_DUTY_CYCLE(0.5),
-    .CLKOUT0_PHASE(0.0),
-
-    .CLKOUT1_DIVIDE(3),
-    .CLKOUT1_DUTY_CYCLE(0.5),
-    .CLKOUT1_PHASE(0.0),
-
-    .CLKOUT2_DIVIDE(3),
-    .CLKOUT2_DUTY_CYCLE(0.5),
-    .CLKOUT2_PHASE(0.0),
-
-    .CLKOUT3_DIVIDE(3),
-    .CLKOUT3_DUTY_CYCLE(0.5),
-    .CLKOUT3_PHASE(90.0),
-
-    .CLKOUT4_DIVIDE(6),
-    .CLKOUT4_DUTY_CYCLE(0.5),
-    .CLKOUT4_PHASE(0.0),
-
-    .CLKOUT5_DIVIDE(12),
-    .CLKOUT5_DUTY_CYCLE(0.5),
-    .CLKOUT5_PHASE(45.0), //NOTE: Was 0.0 in skeleton (using 45.0 for DVI deviation)
-
-    .COMPENSATION("SYSTEM_SYNCHRONOUS"),
-    .DIVCLK_DIVIDE(4),
-    .REF_JITTER(0.100)
-  )
-  user_clk_pll
-  (
-    .CLKFBOUT(pll_fb),
-    .CLKOUT0(cpu_clk),
-    .CLKOUT1(clk200),
-    .CLKOUT2(clk0),
-    .CLKOUT3(clk90),
-    .CLKOUT4(clkdiv0),
-    .CLKOUT5(clk50),
-    .LOCKED(pll_lock),
-    .CLKFBIN(pll_fb),
-    .CLKIN(user_clk_g),
-    .RST(1'b0)
-  );
-
-  IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
-  BUFG  cpu_clk_buf  ( .I(cpu_clk),  .O(cpu_clk_g)  );
-  BUFG  clk200_buf   ( .I(clk200),   .O(clk200_g)   );
-  BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );
-  BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
-  BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
-  BUFG  clkdvi50_buf ( .I(clk50),    .O(clk50_g)    );
-
-  always @(posedge cpu_clk_g)
-  begin
-    reset_r <= next_reset_r;
-    count_r <= next_count_r;
-  end
-
-  assign next_reset_r = {reset_r[2:0], GPIO_SW_C};
-
-  assign rst = (count_r == 26'b1) | ~pll_lock;
-
-  assign next_count_r
-    = (count_r == 26'b0) ? (reset_r[3] ? 26'b1 : 26'b0)
-    :                      count_r + 1;
-
-  // Reset shift register:
-//NOTE: Constraints experimental/learning!!!
-(* SHREG_EXTRACT="NO", ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y1" *)
-  reg [2:0] rst_sr;
-  wire fifo_reset; // fifo_reset resets fifos... reset_fifo is a fifo for the reset signal.
-  assign fifo_reset = rst | (|rst_sr);
-  always @(posedge cpu_clk_g) begin
-    rst_sr <= {rst_sr[1:0], rst};
-  end
+    always @(*) rst_pll = reset_lines[0] || (&reset_r); //USER-clock (already)
+    always @(posedge cpu_clk_g) begin //CPU-clock
+        rst_cpu_mem <= reset_lines[1];
+        rst_cpu_bus <= reset_lines[2];
+        rst_cpu_cpu <= reset_lines[3];
+    end
+    always @(posedge dvi_clk_g) begin //DVI-clock
+        rst_dvi_bus <= reset_lines[2];
+    end
 
 
-  wire  [31:0] dcache_addr;
-  wire  [31:0] icache_addr;
-  wire  [3:0]  dcache_we;
-  wire  [3:0]  icache_we;
-  wire         dcache_re;
-  wire         icache_re;
-  wire  [31:0] dcache_din;
-  wire  [31:0] icache_din;
-  wire [31:0]  dcache_dout;
-  wire [31:0]  instruction;
-  wire         stall;
-  wire         video_ready;
-  wire         dvi_video_ready;
-  wire         video_valid;
-  wire [23:0]  video;
-  wire [23:0]  filler_color;
-  wire         filler_ready;
-  wire         filler_valid;
-  wire         line_ready;
-  wire  [31:0] line_color;
-  wire  [9:0]  line_point;
-  wire         line_color_valid;
-  wire         line_x0_valid;
-  wire         line_y0_valid;
-  wire         line_x1_valid;
-  wire         line_y1_valid;
-  wire         line_trigger;
-  
-//  wire fb0;
-   wire frame_interrupt;
-   wire [31:0] gp_code;
-   wire [31:0] gp_frame;
-   wire        gp_valid;
-   
-  
-  Memory150 #(.SIM_ONLY(1'b0)) mem_arch(
-      .cpu_clk_g(cpu_clk_g),
-      .clk0_g(clk0_g),
-      .clk200_g(clk200_g),
-      .clkdiv0_g(clkdiv0_g),
-      .clk90_g(clk90_g),
-      .clk50_g(clk50_g),
-      .rst(fifo_reset),
-      .init_done(init_done),
-      .DDR2_A(DDR2_A),
-      .DDR2_BA(DDR2_BA),
-      .DDR2_CAS_B(DDR2_CAS_B),
-      .DDR2_CKE(DDR2_CKE),
-      .DDR2_CLK_N(DDR2_CLK_N),
-      .DDR2_CLK_P(DDR2_CLK_P),
-      .DDR2_CS_B(DDR2_CS_B),
-      .DDR2_D(DDR2_D),
-      .DDR2_DM(DDR2_DM),
-      .DDR2_DQS_N(DDR2_DQS_N),
-      .DDR2_DQS_P(DDR2_DQS_P),
-      .DDR2_ODT(DDR2_ODT),
-      .DDR2_RAS_B(DDR2_RAS_B),
-      .DDR2_WE_B(DDR2_WE_B),
-      .locked(pll_lock),
-      .dcache_addr(dcache_addr),     
-      .icache_addr(icache_addr),         
-      .dcache_we  (dcache_we  ),  
-      .icache_we  (icache_we  ),  
-      .dcache_re  (dcache_re  ),  
-      .icache_re  (icache_re  ),  
-      .dcache_din (dcache_din ), 
-      .icache_din (icache_din ), 
-      .dcache_dout(dcache_dout),
-      .icache_dout(instruction),
-      .stall      (stall      ),
-      .video      (video      ),
-      .video_ready(video_ready),
-      .video_valid(video_valid),
-      .cpu_gp_code(gp_code),
-      .cpu_gp_frame(gp_frame),
-      .cpu_gp_valid(gp_valid),
-      .frame_interrupt(frame_interrupt),
+    Memory150 #(
+        .SIM_ONLY(1'b0)
+    ) mem_arch (
+        .cpu_clk_g  (cpu_clk_g),
+        .dvi_clk_g  (dvi_clk_g),
+        .clk200_g   (clk200_g),
+        .clk0_g     (clk0_g),
+        .clkdiv0_g  (clkdiv0_g),
+        .clk90_g    (clk90_g),
+        .locked     (pll_lock),
+        .phy_init_done(init_done),
+        .rst_cpu_mem(rst_cpu_mem),
+        .rst_cpu_bus(rst_cpu_bus),
+        .rst_dvi_bus(rst_dvi_bus),
+
+        .DDR2_A(DDR2_A),
+        .DDR2_BA(DDR2_BA),
+        .DDR2_CAS_B(DDR2_CAS_B),
+        .DDR2_CKE(DDR2_CKE),
+        .DDR2_CLK_N(DDR2_CLK_N),
+        .DDR2_CLK_P(DDR2_CLK_P),
+        .DDR2_CS_B(DDR2_CS_B),
+        .DDR2_D(DDR2_D),
+        .DDR2_DM(DDR2_DM),
+        .DDR2_DQS_N(DDR2_DQS_N),
+        .DDR2_DQS_P(DDR2_DQS_P),
+        .DDR2_ODT(DDR2_ODT),
+        .DDR2_RAS_B(DDR2_RAS_B),
+        .DDR2_WE_B(DDR2_WE_B),
+
+        .dcache_addr(dcache_addr),
+        .icache_addr(icache_addr),
+        .dcache_we  (dcache_we  ),
+        .icache_we  (icache_we  ),
+        .dcache_re  (dcache_re  ),
+        .icache_re  (icache_re  ),
+        .dcache_din (dcache_din ),
+        .icache_din (icache_din ),
+        .dcache_dout(dcache_dout),
+        .icache_dout(icache_dout),
+        .stall      (stall      ),
+
+        .video          (video          ),
+        .video_ready    (video_ready    ),
+        .video_valid    (video_valid    ),
+        .frame_interrupt(frame_interrupt),
+        .cpu_gp_code    (gp_code        ),
+        .cpu_gp_frame   (gp_frame       ),
+        .cpu_gp_valid   (gp_valid       ),
 .DBG_MEM150(DBG_MEM150)
     );
-  
-  // MIPS 150 CPU
-  MIPS150 CPU(
-    .clk(cpu_clk_g),
-    .rst(rst || ~init_done),
-    .stall(any_stall),
-    .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-    .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
-    .dcache_addr (dcache_addr ),
-    .icache_addr (icache_addr ),
-    .dcache_we   (dcache_we   ),
-    .icache_we   (icache_we   ),
-    .dcache_re   (dcache_re   ),
-    .icache_re   (icache_re   ),
-    .dcache_din  (dcache_din  ),
-    .icache_din  (icache_din  ),
-    .dcache_dout (dcache_dout ),
-    .icache_dout (instruction ),
-    .gp_code(cpu_gp_code),
-    .gp_frame(cpu_gp_frame),
-    .gp_valid(cpu_gp_valid),
-    .frame_interrupt(frame_interrupt),
-.DBG_MEM150(DBG_MEM150)
-  ); //add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
 
-  reg rst_clk50;
-  always @(posedge clk50_g) begin //Synchronize to DVI-clock
-    rst_clk50 <= (rst || ~init_done);
-  end
+    // MIPS 150 CPU
+    MIPS150 #(
+        .CPU_FREQ(CPU_FREQ)
+    ) CPU (
+        .clk(cpu_clk_g),
+        .rst(rst_cpu_cpu),
+        .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
+        .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .dcache_addr (dcache_addr),
+        .icache_addr (icache_addr),
+        .dcache_we   (dcache_we  ),
+        .icache_we   (icache_we  ),
+        .dcache_re   (dcache_re  ),
+        .icache_re   (icache_re  ),
+        .dcache_din  (dcache_din ),
+        .icache_din  (icache_din ),
+        .dcache_dout (dcache_dout),
+        .icache_dout (icache_dout),
+        .stall       (any_stall  ),
+        .frame_interrupt(frame_interrupt),
+        .gp_code        (gp_code),
+        .gp_frame       (gp_frame),
+        .gp_valid       (gp_valid),
+        .DBG_MEM150(DBG_MEM150)
+    ); //add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
 
-  DVI #(
-    .ClockFreq(                 50_000_000),
-    .Width(                     1040),   
-    .FrontH(                    56),     
-    .PulseH(                    120),    
-    .BackH(                     64),    
-    .Height(                    666),    
-    .FrontV(                    37),      
-    .PulseV(                    6),      
-    .BackV(                     23)      
-  ) dvi(         
-    .Clock(                     clk50_g), //NOTE: Was cpu_clk_g in skeleton
-    .Reset(                     rst_clk50), //rst || ~init_done),
-    .DVI_D(                     DVI_D),
-    .DVI_DE(                    DVI_DE),
-    .DVI_H(                     DVI_H),
-    .DVI_V(                     DVI_V),
-    .DVI_RESET_B(               DVI_RESET_B),
-    .DVI_XCLK_N(                DVI_XCLK_N),
-    .DVI_XCLK_P(                DVI_XCLK_P),
-    .I2C_SCL_DVI(               IIC_SCL_VIDEO),
-    .I2C_SDA_DVI(               IIC_SDA_VIDEO),
-    /* Ready/Valid interface for 24-bit pixel values */
-    .Video(                     video),
-    .VideoReady(                video_ready),
-    .VideoValid(                video_valid)
-  );
+//RESOLUTION:          Width FrontH PulseH BackH Height FrontV PulseV BackV ClockFreq
+//  VGA  640x480@60Hz:  800    16     96    48    525     10      2    33    25175000
+// VESA  800x600@72Hz: 1040    56    120    64    666     37      6    23    50000000
+// VESA 1024x768@70Hz: 1328    24    136   144    806      3      6    29    75000000
+    DVI #(
+//      .Width ( 800), .FrontH( 16), .PulseH( 96), .BackH( 48), //  VGA  640x480@60Hz
+//      .Height( 525), .FrontV( 10), .PulseV(  2), .BackV( 33), .ClockFreq(25_175_000)
+        .Width (1040), .FrontH( 56), .PulseH(120), .BackH( 64), // VESA  800x600@72Hz
+        .Height( 666), .FrontV( 37), .PulseV(  6), .BackV( 23), .ClockFreq(50_000_000)
+//      .Width (1328), .FrontH( 24), .PulseH(136), .BackH(144), // VESA 1024x768@70Hz
+//      .Height( 806), .FrontV(  3), .PulseV(  6), .BackV( 29), .ClockFreq(75_000_000)
+    ) dvi (
+        .Clock(dvi_clk_g), .Reset(rst_dvi_bus), .DVI_RESET_B(DVI_RESET_B),
+        .DVI_D(DVI_D), .DVI_DE(DVI_DE), .DVI_H(DVI_H), .DVI_V(DVI_V),
+        .DVI_XCLK_N(DVI_XCLK_N), .DVI_XCLK_P(DVI_XCLK_P),
+        .I2C_SCL_DVI(IIC_SCL_VIDEO), .I2C_SDA_DVI(IIC_SDA_VIDEO), //Configuration IIC
+        .Video(     video      ), //Ready/Valid interface for 24-bit pixel values
+        .VideoReady(video_ready), .VideoValid(video_valid)
+    );
+
+    wire cpu_clk, dvi_clk, clk200, clk0, clk90, clkdiv0, pll_fb;
+    PLL_BASE #(
+        .CLKIN_PERIOD(  10.0), .CLKFBOUT_PHASE(0.0),
+        .CLKFBOUT_MULT( 24),
+        .DIVCLK_DIVIDE(  4),
+        .BANDWIDTH("OPTIMIZED"),
+        .CLKOUT0_DIVIDE(12),    .CLKOUT0_PHASE(  0.0),  .CLKOUT0_DUTY_CYCLE(0.5),
+        .CLKOUT1_DIVIDE(12),    .CLKOUT1_PHASE( 45.0),  .CLKOUT1_DUTY_CYCLE(0.5),
+        .CLKOUT2_DIVIDE( 3),    .CLKOUT2_PHASE(  0.0),  .CLKOUT2_DUTY_CYCLE(0.5),
+        .CLKOUT3_DIVIDE( 3),    .CLKOUT3_PHASE(  0.0),  .CLKOUT3_DUTY_CYCLE(0.5),
+        .CLKOUT4_DIVIDE( 3),    .CLKOUT4_PHASE( 90.0),  .CLKOUT4_DUTY_CYCLE(0.5),
+        .CLKOUT5_DIVIDE( 6),    .CLKOUT5_PHASE(  0.0),  .CLKOUT5_DUTY_CYCLE(0.5),
+        .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
+    ) user_clk_pll (
+        .CLKIN(user_clk_g), .RST(rst_pll), .LOCKED(pll_lock),
+        .CLKOUT0(cpu_clk),
+        .CLKOUT1(dvi_clk),
+        .CLKOUT2(clk200),
+        .CLKOUT3(clk0),
+        .CLKOUT4(clk90),
+        .CLKOUT5(clkdiv0),
+        .CLKFBIN(pll_fb),   .CLKFBOUT(pll_fb)
+    );
+    IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
+    BUFG  cpu_clk_buf  ( .I(cpu_clk),  .O(cpu_clk_g)  );
+    BUFG  dvi_clk_buf  ( .I(dvi_clk),  .O(dvi_clk_g)  );
+    BUFG  clk200_buf   ( .I(clk200),   .O(clk200_g)   );
+    BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );
+    BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
+    BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
 
 
 `ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
@@ -328,7 +276,7 @@ generate if (1) begin:_STALL_DIP_
         .Width(16) // 2^16 / 50MHz => apprx 1.3 ms?
     ) togglestall_debone (
         .Clock(cpu_clk_g),
-        .Reset(rst),
+        .Reset(rst_cpu_bus),
         .Enable(1'b1),
         .In(GPIO_DIP[0]),
         .Out(stall_toggle)
@@ -336,7 +284,7 @@ generate if (1) begin:_STALL_DIP_
 
     reg man_stall_reg; //TODO: Upgrade to "stall ring" from testbenches
     always@(posedge cpu_clk_g) begin:_MAN_STALL_REG_
-        if(rst) begin
+        if(rst_cpu_bus) begin
             man_stall_reg <= 1'b0;
         end else if (stall_toggle) begin
             man_stall_reg <= ~man_stall_reg;
@@ -359,9 +307,9 @@ end endgenerate
   `define SRAM_ENABLE
 
   `ifdef SRAM_ENABLE
-    SRAM sram(
+    SRAM sram (
       .clock(cpu_clk_g),
-      .reset(rst),
+      .reset(rst_cpu_mem),
       .addr_valid(sram_addr_valid),
       .ready(sram_ready),
       .addr(sram_addr),

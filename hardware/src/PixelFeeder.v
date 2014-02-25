@@ -5,23 +5,24 @@ module PixelFeeder #(
     parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600,
 //    parameter SCREEN_WIDTH = 640, SCREEN_HEIGHT = 480,
     parameter COLT45_NOFRAMES=0, COLT45_TESTPAT=0
-) (                 //System:
-                    input          cpu_clk_g,
-                    input          clk50_g, // DVI Clock
-                    input          rst,
-                    //DDR2 FIFOS:
-                    input          rdf_valid,
-                    input          af_full,
-                    input  [127:0] rdf_dout,
-                    output         rdf_rd_en,
-                    output         af_wr_en,
-                    output [30:0]  af_addr_din,
-                    // DVI module:
-                    output [23:0]  video,
-                    output         video_valid,
-                    input          video_ready,
-
-            output frame_interrupt);
+)(  //System:
+    input           cpu_clk_g,
+    input           rst_cpu_bus,
+    input           dvi_clk_g,
+    input           rst_dvi_bus,
+    //DDR2 FIFOS:
+    input           rdf_valid,
+    input           af_full,
+    input  [127:0]  rdf_dout,
+    output          rdf_rd_en,
+    output          af_wr_en,
+    output [ 30:0]  af_addr_din,
+    // DVI module:
+    output [ 23:0]  video,
+    output          video_valid,
+    input           video_ready,
+    output          frame_interrupt
+);
 
     // Hint: States
     localparam IDLE = 1'b0;
@@ -44,25 +45,18 @@ module PixelFeeder #(
 // Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13)
     reg chunk_inc, chunk_ack, fifo_start;
 (* SHREG_EXTRACT="NO", ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
-    reg chunk_inc_clkCPU, chunk_ack_clk50, fifo_start_clk50, rst_clk50;
+    reg chunk_inc_clkCPU, chunk_ack_clkDVI, fifo_start_clkDVI;
 
-    always @(posedge clk50_g) begin //Synchronize to DVI-clock
-        rst_clk50 <= rst; //More for timing the "release" nicely, rather than onset
-        if (rst_clk50)
-            {chunk_ack_clk50, fifo_start_clk50} <= 0;
-        else
-            {chunk_ack_clk50, fifo_start_clk50} <= {chunk_ack, fifo_start};
+    always @(posedge dvi_clk_g) begin //Synchronize to DVI-clock
+        {chunk_ack_clkDVI, fifo_start_clkDVI} <= {chunk_ack, fifo_start};
     end
 
     always @(posedge cpu_clk_g) begin //Synchronize to CPU-clock
-        if (rst)
-            chunk_inc_clkCPU <= 0;
-        else
-            chunk_inc_clkCPU <= chunk_inc;
+        chunk_inc_clkCPU <= chunk_inc;
     end
 
 
-// DVI-Clocked region (clk50_g)
+// DVI-Clocked region (dvi_clk_g)
 
     reg  isRunning, wasRunning, feeder_valid;
     reg  [31:0] curCOL, curROW, curFRAME;
@@ -72,8 +66,8 @@ module PixelFeeder #(
     wire rollCOL = (curCOL >= SCREEN_WIDTH-1); //Could use fast-counter/pixelrange
     wire rollROW = (curROW >= SCREEN_HEIGHT-1);
 
-    always @(posedge clk50_g) begin
-        if (rst_clk50) begin //Use synchronized reset
+    always @(posedge dvi_clk_g) begin
+        if (rst_dvi_bus) begin //Use synchronized reset
             {curCOL, curROW, curFRAME} <= 0;
             {feeder_valid, isRunning, wasRunning, count_dviread, chunk_inc} <= 0;
         end else begin
@@ -82,14 +76,14 @@ module PixelFeeder #(
             if (advanceRVA) begin //They got a pixel, move on!
                 if (isRunning) begin //If running, inform other clock-realm of chunks
                     if (&count_dviread) chunk_inc <= 1'b1; //Set on rollover
-                    else if (chunk_ack_clk50) chunk_inc <= 1'b0;
+                    else if (chunk_ack_clkDVI) chunk_inc <= 1'b0;
                     count_dviread <= count_dviread + 1;
                 end
                 case ({rollROW, rollCOL}) //Manage our col/row/frame/scene business
                     (2'b11): begin
                         curFRAME <= curFRAME+1;
                         {curCOL,curROW} <= {32'd0, 32'd0};
-                        if (fifo_start_clk50) isRunning <= 1'b1; //Switch to FIFO on frame boundary
+                        if (fifo_start_clkDVI) isRunning <= 1'b1; //Switch to FIFO on frame boundary
                     end
                     (2'b01): {curCOL,curROW} <= {32'd0, curROW+1};
                     //2'b10 just means we're ON last row but not yet at end
@@ -108,12 +102,12 @@ module PixelFeeder #(
     wire [31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
     pixel_fifo feeder_fifo(
-        .rst(rst), //Internal syncronization across clock domains
+        .rst(rst_cpu_bus), //Internal syncronization across clock domains
         .wr_clk(cpu_clk_g),
         .wr_en(feeder_den), //rdf_valid
         .din(feeder_din), //rdf_dout
         .full(feeder_full),
-        .rd_clk(clk50_g),
+        .rd_clk(dvi_clk_g),
         .rd_en(video_ready && isRunning),
         .dout(feeder_raw), //NOTE: First-word-fallthrough an no "valid" signal avail!
         .empty(feeder_empty));
@@ -162,7 +156,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     wire next_state = ((state == IDLE) && (pend < PIXFO_TARGET)) ? FETCH : IDLE;
 
     always @(posedge cpu_clk_g) begin
-        if (rst) begin
+        if (rst_cpu_bus) begin
             {chunk_ack, pend, fifo_start} <= 0;
             state <= IDLE;
             {fr, fr_r, head_y, head_x, pixel_count} <= 0;
@@ -209,7 +203,7 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
     reg [15:0] sweep_RGB;
     reg [63:0] sweep_cnt;
     always @(posedge cpu_clk_g) begin
-        if (rst) begin
+        if (rst_cpu_bus) begin
             sweep_RGB <= 16'hE2A2;
             sweep_cnt <= 0;
         end else if (feeder_den) begin
@@ -232,8 +226,8 @@ end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
     reg [15:0] sweep_RGB;
     assign video = {sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]};
     assign video_valid = 1'b1;
-    always @(posedge clk50_g) begin
-        if (rst_clk50) sweep_RGB <= 16'hE2A2;
+    always @(posedge dvi_clk_g) begin
+        if (rst_dvi_bus) sweep_RGB <= 16'hE2A2;
         else if (video_valid && video_ready) sweep_RGB <= sweep_RGB+5;
     end
 
@@ -245,7 +239,7 @@ end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
         .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600),
         .SCENES_PER_SEC(1)
     ) patgen (
-        .clock(clk50_g), .reset(rst_clk50),
+        .clock(dvi_clk_g), .reset(rst_dvi_bus),
         .video(video), .video_valid(video_valid),
         .video_ready(video_ready)
     );

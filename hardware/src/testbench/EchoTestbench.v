@@ -14,12 +14,12 @@ module EchoTestbench;
     wire        DataOutValid;
     reg         DataOutReady;
 
-    parameter HalfCycle = 5;
+    parameter HalfCycle = 10; //TODO: Change to 5 & use PLL
     parameter Cycle = 2*HalfCycle;
-    parameter ClockFreq = 50_000_000;
+    parameter CPU_FREQ = 50_000_000;
     parameter StallRingSize = 3;
     parameter StallRingInit = 'b00000000000000000001;
-    parameter StallFreq = ClockFreq * 2/3;
+    parameter StallFreq = CPU_FREQ * 2/3;
 
     parameter XMIT_DELAY_TICKS = 100 * Cycle, // 0 for no-delay, <0 for no-xmit
                 XMIT_STALL_CYCLES = 1000;
@@ -61,7 +61,7 @@ module EchoTestbench;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    MIPS150 #(.ClockFreq(ClockFreq)) DUT
+    MIPS150 #(.CPU_FREQ(CPU_FREQ)) DUT
     (   .clk(Clock), .rst(Reset), .stall( (1) ? Stall : 1'b0 ),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
@@ -72,7 +72,7 @@ module EchoTestbench;
     );
 /*
     // A shadow CPU using a gated clock
-    MIPS150 #(.ClockFreq(StallFreq)) DUT2
+    MIPS150 #(.CPU_FREQ(StallFreq)) DUT2
     (   .clk(StallClock), .rst(Reset), .stall(1'b0),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(xFPGA_SERIAL_TXx),
@@ -83,7 +83,7 @@ module EchoTestbench;
     );
 */
 
-    UART #( .ClockFreq(ClockFreq) ) uart
+    UART #( .ClockFreq(CPU_FREQ) ) uart
     ( .Clock(Clock), .Reset(Reset),
         .DataIn(          DataIn),
         .DataInValid(     DataInValid),

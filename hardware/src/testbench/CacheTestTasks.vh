@@ -115,13 +115,13 @@ begin
   if (cache_select === `DCACHE) begin
     writeNumD = writeNumD + 1; // debugging info
     $display("TB: d-Write #%0d start at %t", writeNumD, $time);
-    d_addr = task_addr;
+    dcache_addr = task_addr;
     dcache_din = task_cache_din;
     dcache_we = task_cache_we;
   end else if (cache_select === `ICACHE) begin
     writeNumI = writeNumI + 1; // debugging info
     $display("TB: i-Write #%0d start at %t", writeNumI, $time);
-    PC = task_addr;
+    icache_addr = task_addr;
     icache_din = task_cache_din;
     icache_we = task_cache_we;
   end else if (cache_select === `LINEENG) begin
@@ -155,13 +155,13 @@ begin
     StrRW = "d";
     readNumD = readNumD + 1; // debugging info
     TempReadWriteNum = readNumD;
-    d_addr = task_addr;
+    dcache_addr = task_addr;
     dcache_re = 1'b1;
   end else if (cache_select === `ICACHE) begin
     StrRW = "i";
     readNumI = readNumI + 1; // debugging info
     TempReadWriteNum = readNumI;
-    PC = task_addr;
+    icache_addr = task_addr;
     icache_re = 1'b1;
   end else begin
     StrRW = "";
