@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-int32_t strcmp(const int8_t* s0, const int8_t* s1);
-unsigned int strlen(int8_t const * s);
+int32_t strcmp150(const int8_t* s0, const int8_t* s1);
+int32_t strlen150(int8_t const * s);
 
 #endif

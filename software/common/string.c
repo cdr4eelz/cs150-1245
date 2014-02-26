@@ -1,6 +1,6 @@
 #include "string.h"
 
-int32_t strcmp(const int8_t* s0, const int8_t* s1)
+int32_t strcmp150(const int8_t* s0, const int8_t* s1)
 {
     for (uint32_t i = 0; ; i++) {
         if (s0[i] != s1[i]) {
@@ -13,7 +13,7 @@ int32_t strcmp(const int8_t* s0, const int8_t* s1)
     return 0;
 }
 
-unsigned int strlen(int8_t const * s)
+int32_t strlen150(int8_t const * s)
 {
     uint32_t i = 0;
     for ( ; s[i] != '\0'; i++) ;
