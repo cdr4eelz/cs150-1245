@@ -14,8 +14,8 @@ wire [30:0]  af_addr_din;
 wire [23:0]  video;
 
 PixelFeeder DUT (
-    .cpu_clk_g(cpu_clk_g), .rst_cpu_bus(rst),
-    .dvi_clk_g(dvi_clk_g), .rst_dvi_bus(rst),
+    .cpu_clk_g(cpu_clk_g), .cpu_rst_g(rst),
+    .dvi_clk_g(dvi_clk_g), .dvi_rst_g(rst), //TODO: Use rst for each clock domain
     .rdf_valid(rdf_valid), .rdf_rd_en(rdf_rd_en), .rdf_dout(rdf_dout),
     .af_full(af_full), .af_wr_en(af_wr_en), .af_addr_din(af_addr_din),
     .video_ready(video_ready), .video_valid(video_valid), .video(video),

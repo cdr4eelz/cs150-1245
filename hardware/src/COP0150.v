@@ -13,7 +13,9 @@ module COP0150(
     InterruptRequest,
 
     UART0Request,
-    UART1Request
+    UART1Request,
+    PixelFeederRequest,
+    GraphicsProcessorRequest
 );
 
 input                           Clock;
@@ -31,6 +33,8 @@ output                          InterruptRequest;
 
 input                           UART0Request;
 input                           UART1Request;
+input                           PixelFeederRequest;
+input                           GraphicsProcessorRequest;
 
 
 wire                            firetimer;
@@ -58,7 +62,9 @@ assign InterruptRequest = ie & |(im & ip);
 
 assign firetimer        = (count == compare);
 assign firertc          = (count == 32'hFFFF_FFFF);
-assign interrupts       = {firetimer, firertc, 2'b00, UART1Request, UART0Request};
+//assign interrupts     = {firetimer, firertc, 2'b00, UART1Request, UART0Request};
+assign interrupts       = {firetimer, firertc, PixelFeederRequest,
+                            GraphicsProcessorRequest, UART1Request, UART0Request};
 
 assign ip               = cause[15:10];
 assign im               = status[15:10];

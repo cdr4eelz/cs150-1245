@@ -82,10 +82,13 @@ wire [31:0] DBG_MEM150;
     wire        video_ready;
     wire        video_valid;
     wire [23:0] video;
+    wire [31:0] pf_frame;
+    wire        pf_valid;
     wire        frame_interrupt;
     wire [31:0] gp_code;
     wire [31:0] gp_frame;
     wire        gp_valid;
+    wire        gpcode_interrupt;
 //  wire        fb0;
 
 //TODO:Move PLL & RESETs to module (maybe same as TestBenches use)
@@ -181,10 +184,14 @@ wire [31:0] DBG_MEM150;
         .video          (video          ),
         .video_ready    (video_ready    ),
         .video_valid    (video_valid    ),
+        .cpu_pf_frame   (pf_frame       ),
+        .cpu_pf_valid   (pf_valid       ),
         .frame_interrupt(frame_interrupt),
         .cpu_gp_code    (gp_code        ),
         .cpu_gp_frame   (gp_frame       ),
         .cpu_gp_valid   (gp_valid       ),
+        .gpcode_interrupt(gpcode_interrupt),
+
 .DBG_MEM150(DBG_MEM150)
     );
 
@@ -207,11 +214,14 @@ wire [31:0] DBG_MEM150;
         .dcache_dout (dcache_dout),
         .icache_dout (icache_dout),
         .stall       (any_stall  ),
+        .pf_frame       (pf_frame),
+        .pf_valid       (pf_valid),
         .frame_interrupt(frame_interrupt),
         .gp_code        (gp_code),
         .gp_frame       (gp_frame),
         .gp_valid       (gp_valid),
-        .DBG_MEM150(DBG_MEM150)
+        .gpcode_interrupt(gpcode_interrupt),
+.DBG_MEM150(DBG_MEM150)
     ); //add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
 
 //RESOLUTION:          Width FrontH PulseH BackH Height FrontV PulseV BackV ClockFreq

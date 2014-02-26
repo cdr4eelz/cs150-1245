@@ -6,39 +6,35 @@ module MIPS150 #(
     parameter COLT45_BRK=0, COLT45_SCOPE=1, COLT45_SCRATCH=0, COLT45_PC=0,
                 COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
-    input clk,
-    input rst,
-
-    // Serial
-    input FPGA_SERIAL_RX,
-    output FPGA_SERIAL_TX,
-
+    input   clk,
+    input   rst,
+// Serial (UART)
+    input   FPGA_SERIAL_RX,
+    output  FPGA_SERIAL_TX,
 // CP2+
     // Memory system connections
-    output [31:0] dcache_addr,
-    output [31:0] icache_addr,
-    output [3:0] dcache_we,
-    output [3:0] icache_we,
-    output dcache_re,
-    output icache_re,
-    output [31:0] dcache_din,
-    output [31:0] icache_din,
-    input [31:0] dcache_dout,
-    input [31:0] icache_dout,
-    input stall,
-
+    output [ 31:0]  dcache_addr,
+    output [ 31:0]  icache_addr,
+    output [  3:0]  dcache_we,
+    output [  3:0]  icache_we,
+    output          dcache_re,
+    output          icache_re,
+    output [ 31:0]  dcache_din,
+    output [ 31:0]  icache_din,
+    input  [ 31:0]  dcache_dout,
+    input  [ 31:0]  icache_dout,
+    input           stall,
 // CP4+
-    input frame_interrupt,
-    output [31:0] gp_code,
-    output [31:0] gp_frame,
-    output gp_valid,
-
+    output [ 31:0]  pf_frame,
+    output          pf_valid,
+    input           frame_interrupt,
+    output [ 31:0]  gp_code,
+    output [ 31:0]  gp_frame,
+    output          gp_valid,
+    input           gpcode_interrupt,
+// Chipscoping...
 input [31:0] DBG_MEM150
 );
-
-// CP4+
-    assign gp_code=32'd0, gp_frame=32'd0;
-    assign gp_valid = 1'b0;
 
 //BRK tap (in transition)
     wire [0:1023] trace;
@@ -153,7 +149,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     // COPROCESSOR async-read via DX-stage (like REGFILE) but sync-write from REGFORWARD
     wire [ 4: 0] CopAddr;
     wire [31: 0] CopOut;
-    wire CopInHot, IRQUART0, IRQUART1;
+    wire CopInHot, uart0_irq, uart1_irq;
     COP0150 cop0 (
         .Clock(clk), .Reset(rst), .Enable(1'b1), //NOTE:Individual activities adhere to stall
         .DataAddress(CopAddr), //IN-5 (Cop Register to read/write)
@@ -163,7 +159,9 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         .InterruptedPC(PCNEXT_F_), //IN-32 (PCNEXT_F_ was supersceeded by ISRPC)
         .InterruptHandled(!stall && WAS_ISR), //IN (Acknowledge the ISR is happening)
         .InterruptRequest(BRA_IRQPending_DX2F_), //OUT (Like a branch to fixed address)
-        .UART0Request(IRQUART0), .UART1Request(IRQUART1) //IN (edge detect "pulse")
+        .UART0Request(uart0_irq), .UART1Request(uart1_irq), //IN (edge detect "pulse")
+        .PixelFeederRequest(frame_interrupt),
+        .GraphicsProcessorRequest(gpcode_interrupt)
     );
 
     // Declare outputs of DX stage
@@ -395,10 +393,13 @@ end
         .wea(_WriteMask), .dina(_WDataMasked),
         //Mapped devices
         .RVa_RX(UARX),          .RVa_TX(UATX),
-        .RVa_RX_IRQ(IRQUART0),  .RVa_TX_IRQ(IRQUART1),
+        .RVa_RX_IRQ(uart0_irq), .RVa_TX_IRQ(uart1_irq),
         //Counters
         .CNT_Cycle(CNT_Cycle[31:0]), .CNT_Inst(CNT_Inst[31:0]),
-        .CNT_RESET_(CNT_Reset_MW2F_)
+        .CNT_RESET_(CNT_Reset_MW2F_),
+        //PixelFeeder & GraphicsController
+        .PF_VALID(pf_valid), .PF_FRAME(pf_frame),
+        .GP_VALID(gp_valid), .GP_FRAME(gp_frame), .GP_CODE(gp_code)
     ) /* synthesis syn_noprune=1 */;
 
     UARTRVA #(.ClockFreq(CPU_FREQ)) uartrva
@@ -438,7 +439,7 @@ assign trace = {
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
     DMEM_ADDR[31:0],    DMEM_DATA[31:0],    CopOut[31:0],
     {   8'd0, 8'd0,
-        DO_ISR,CopInHot,IRQUART0,IRQUART1, !INST_CouldBranch_F_,!stall,!WAS_Branch,!WAS_ISR,
+        DO_ISR,CopInHot,uart0_irq,uart1_irq, !INST_CouldBranch_F_,!stall,!WAS_Branch,!WAS_ISR,
         3'd0, CopAddr[4:0]
     },
 

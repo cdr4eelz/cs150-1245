@@ -60,10 +60,13 @@ module Memory150 #(
     output [23:0] video,
     output        video_valid,
     input         video_ready,
+    input [31:0]  cpu_pf_frame,
+    input         cpu_pf_valid,
     output        frame_interrupt,
     input [31:0]  cpu_gp_code,
     input [31:0]  cpu_gp_frame,
     input         cpu_gp_valid,
+    output        gpcode_interrupt,
 
 output [31:0] DBG_MEM150
 );
@@ -381,9 +384,9 @@ output [31:0] DBG_MEM150
     // For feeding pixels to the DVI module:
     PixelFeeder pixelfeed(
         .cpu_clk_g(cpu_clk_g),
-        .rst_cpu_bus(rst_cpu_bus),
+        .cpu_rst_g(rst_cpu_bus),
         .dvi_clk_g(dvi_clk_g),
-        .rst_dvi_bus(rst_dvi_bus),
+        .dvi_rst_g(rst_dvi_bus),
         .rdf_valid(pixel_rdf_valid),
         .af_full(pixel_af_full),
         .rdf_dout(rdf_dout),
@@ -393,6 +396,8 @@ output [31:0] DBG_MEM150
         .video(video),
         .video_valid(video_valid),
         .video_ready(video_ready),
+        .PF_FRAME(cpu_pf_frame),
+        .PF_valid(cpu_pf_valid),
         .frame_interrupt(frame_interrupt)
     );
 
@@ -465,7 +470,8 @@ output [31:0] DBG_MEM150
         //CPU IO
         .GP_CODE(cpu_gp_code),
         .GP_FRAME(cpu_gp_frame),
-        .GP_valid(cpu_gp_valid)
+        .GP_valid(cpu_gp_valid),
+        .gpcode_interrupt(gpcode_interrupt)
     );
 
 assign DBG_MEM150 = {

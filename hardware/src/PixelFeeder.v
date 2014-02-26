@@ -4,33 +4,35 @@ module PixelFeeder #(
 //    parameter CLOCK_HZ = 50_000_000,
     parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600,
 //    parameter SCREEN_WIDTH = 640, SCREEN_HEIGHT = 480,
+    parameter PIXFO_CAPACITY = (2048/2), //pixel_fifo max capacity (adjusted for 256-bit units)
+    parameter PIXFO_STARTUP = PIXFO_CAPACITY - 100, //fill to this point before running from FIFO
+    parameter PIXFO_TARGET = PIXFO_CAPACITY - 5, //1 af req => 2 x 128-bit rdf => 8 x 32-bit pixfo rd
     parameter COLT45_NOFRAMES=0, COLT45_TESTPAT=0
 )(  //System:
     input           cpu_clk_g,
-    input           rst_cpu_bus,
+    input           cpu_rst_g,
     input           dvi_clk_g,
-    input           rst_dvi_bus,
-    //DDR2 FIFOS:
+    input           dvi_rst_g,
+    //DDR2 FIFOS (FIFO sides @posedge cpu_clk_g):
     input           rdf_valid,
     input           af_full,
     input  [127:0]  rdf_dout,
     output          rdf_rd_en,
     output          af_wr_en,
     output [ 30:0]  af_addr_din,
-    // DVI module:
+    // DVI module (to/from DVI driver @posedge dvi_clk_g):
     output [ 23:0]  video,
     output          video_valid,
     input           video_ready,
-    output          frame_interrupt
+    // FRAME control (to/from CPU @posedge cpu_clk_g):
+    input  [ 31:0]  PF_FRAME, //Address or Frame# for base of NEXT frame once this one is done
+    input           PF_valid, //Signal that new PF_FRAME is to be stored this clock cycle
+    output          frame_interrupt //1-cycle pulse after frame transition (except startup frame)
 );
 
     // Hint: States
     localparam IDLE = 1'b0;
     localparam FETCH = 1'b1;
-
-    localparam PIXFO_CAPACITY = (2048/2); //pixel_fifo max capacity (adjusted for 256-bit units)
-    localparam PIXFO_STARTUP = PIXFO_CAPACITY - 100; //fill to this point before running from FIFO
-    localparam PIXFO_TARGET = PIXFO_CAPACITY - 5; //1 af req => 2 x 128-bit rdf => 8 x 32-bit pixfo rd
 
 //***CLOCK CROSSING STRATEGY***
     // 1-request to wf => 2-responses on rdf => 8-pixels out of fifo (all 256-bits).
@@ -67,7 +69,7 @@ module PixelFeeder #(
     wire rollROW = (curROW >= SCREEN_HEIGHT-1);
 
     always @(posedge dvi_clk_g) begin
-        if (rst_dvi_bus) begin //Use synchronized reset
+        if (dvi_rst_g) begin //Use synchronized reset
             {curCOL, curROW, curFRAME} <= 0;
             {feeder_valid, isRunning, wasRunning, count_dviread, chunk_inc} <= 0;
         end else begin
@@ -102,7 +104,7 @@ module PixelFeeder #(
     wire [31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
     pixel_fifo feeder_fifo(
-        .rst(rst_cpu_bus), //Internal syncronization across clock domains
+        .rst(cpu_rst_g), //Internal syncronization across clock domains
         .wr_clk(cpu_clk_g),
         .wr_en(feeder_den), //rdf_valid
         .din(feeder_din), //rdf_dout
@@ -128,16 +130,16 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     reg [64:0] pixel_count;
     reg [12:0] pend, pend_next; //pending mig_af requests (represent 256-bits each)
     reg [ 9:0] head_y, head_x;
+    reg fr, fr_r; // Flag for frame transition
+    reg [ 5:0] framebits, frame_next; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
     reg state;
-    reg fr, fr_r; // 0/1 turns into _01/_10 below (0x1040_0000 or 0x1080_0000 frame base)
 
-    //chunk is 16 x 32-bit fifo reads (from 2 mig_af requests)
-    wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
+    wire [31:0] head_addr = {4'h1, framebits, head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
     wire last_x = (head_x >= (((800/8)-1) * 8));
     wire last_y = (head_y >= (600-1));
-    wire [ 1:0] framebits = (COLT45_NOFRAMES) ? 2'b01 : {fr,~fr};
-    wire [31:0] head_addr = {8'h10, framebits, head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
-    wire af_advance = af_wr_en && !af_full;
+    //1 chunk is 16 separate 32-bit fifo reads (4 mig_rdf responses, initiated by 2 mig_af requests)
+    wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
+    wire af_advance = af_wr_en && !af_full; //NOTE: Always af_full until we assert af_wr_en first!
 
     assign af_addr_din = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign af_wr_en = (state == FETCH); //Declare that we want to write an address (but might not happen)
@@ -156,22 +158,29 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     wire next_state = ((state == IDLE) && (pend < PIXFO_TARGET)) ? FETCH : IDLE;
 
     always @(posedge cpu_clk_g) begin
-        if (rst_cpu_bus) begin
+        if (cpu_rst_g) begin
             {chunk_ack, pend, fifo_start} <= 0;
             state <= IDLE;
-            {fr, fr_r, head_y, head_x, pixel_count} <= 0;
+            {frame_next, framebits, fr, fr_r, head_y, head_x, pixel_count} <= 0;
         end else begin
             pend <= pend_next;
             state <= next_state;
             fr_r <= fr;
             chunk_ack <= chunk_inc_clkCPU;
 
-            if (pend_next > PIXFO_STARTUP) fifo_start <= 1'b1;
+            if (pend_next > PIXFO_STARTUP) begin
+                fifo_start <= 1'b1;
+            end
+
+            if (PF_valid) begin
+                frame_next <= (|PF_FRAME[31:28]) ? PF_FRAME[27:22] : PF_FRAME[5:0]; //Either addr style
+            end
 
             if (af_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
                 pixel_count <= pixel_count + 8;
                 if (last_y && last_x) begin
                     fr <= ~fr; head_y <= 0; head_x <= 0;
+                    framebits <= frame_next;
                 end else if (last_x) begin
                     head_y <= head_y + 1; head_x <= 0;
                 end else begin
@@ -203,7 +212,7 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
     reg [15:0] sweep_RGB;
     reg [63:0] sweep_cnt;
     always @(posedge cpu_clk_g) begin
-        if (rst_cpu_bus) begin
+        if (cpu_rst_g) begin
             sweep_RGB <= 16'hE2A2;
             sweep_cnt <= 0;
         end else if (feeder_den) begin
@@ -227,7 +236,7 @@ end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
     assign video = {sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]};
     assign video_valid = 1'b1;
     always @(posedge dvi_clk_g) begin
-        if (rst_dvi_bus) sweep_RGB <= 16'hE2A2;
+        if (dvi_rst_g) sweep_RGB <= 16'hE2A2;
         else if (video_valid && video_ready) sweep_RGB <= sweep_RGB+5;
     end
 
@@ -239,7 +248,7 @@ end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
         .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600),
         .SCENES_PER_SEC(1)
     ) patgen (
-        .clock(dvi_clk_g), .reset(rst_dvi_bus),
+        .clock(dvi_clk_g), .reset(dvi_rst_g),
         .video(video), .video_valid(video_valid),
         .video_ready(video_ready)
     );

@@ -1,5 +1,21 @@
 `include "cpuglobal.vh"
 
+/*          Fetch/Read/Write table (blended with old Partition Table)
+        ADDR[31:28] TYPE    DEVICE      ACCESS              NOTES
+FETCH   4’b0001     PC      I-Cache     Exec/Write
+FETCH   4’b0100     PC      BIOS        Exec/Read
+FETCH   4’b1100     PC      isr_mem     Exec/Write
+
+READ    4’b00x1     Data    D-Cache     Read/Write
+READ    4’b0100     Data    BIOS        Read-only
+READ    4’b1000     Data    MMIO        Read/Write
+
+WRITE   4’b00x1     Data    D-Cache     Read/Write
+WRITE   4’b001x     Code    I-Cache     Exec/Write  Write iif PC[31:28]==4'b0100
+WRITE   4’b1000     Data    MMIO        Read/Write
+WRITE   4’b1100     Code    isr_mem     Exec/Write
+*/
+
 module StageMW (
 //NOTE:Currently just asynchronous "control" logic!
 //    input clk, rst, stall,
