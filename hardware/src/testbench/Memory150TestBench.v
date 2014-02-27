@@ -76,7 +76,7 @@ module Memory150TestBench;
         .clkdiv0_g  (clkdiv0_g),
         .clk90_g    (clk90_g),
         .locked     (pll_lock),
-        .phy_init_done(init_done),
+        .init_done  (init_done),
         .rst_cpu_mem(rst_cpu_mem),
         .rst_cpu_bus(rst_cpu_bus),
         .rst_dvi_bus(rst_dvi_bus),

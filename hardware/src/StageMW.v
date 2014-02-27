@@ -5,6 +5,7 @@
 FETCH   4’b0001     PC      I-Cache     Exec/Write
 FETCH   4’b0100     PC      BIOS        Exec/Read
 FETCH   4’b1100     PC      isr_mem     Exec/Write
+FETCH   4’b0110     PC      I-Scratch   Exec/Write  
 
 READ    4’b00x1     Data    D-Cache     Read/Write
 READ    4’b0100     Data    BIOS        Read-only
@@ -14,6 +15,9 @@ WRITE   4’b00x1     Data    D-Cache     Read/Write
 WRITE   4’b001x     Code    I-Cache     Exec/Write  Write iif PC[31:28]==4'b0100
 WRITE   4’b1000     Data    MMIO        Read/Write
 WRITE   4’b1100     Code    isr_mem     Exec/Write
+
+FCH/WR  4’b0110     Code    I-Scratch   Exec/Write  Optional "scratchpad" old IMEM
+RD/WR   4’b0101     Data    D-Scratch   Read/Write  Optional "scratchpad" old DMEM
 */
 
 module StageMW (

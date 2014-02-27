@@ -4,7 +4,7 @@
 //TODO-XTRA: Config address via registers/lines (simple, dedicated comparators)
 
 /*                          Table 2: I/O Memory Map
-ADDR-12 ADDRESS-32      FUNCTION        ACCESS  DATA ENCODING
+ADDR-12 ADDRESS-32      FUNCTION        ACCESS  DATA-ENCODING/DESC
 h000    32’h80000000    UART xmit cntl  Read    {31’b0, DataInReady}
 h001    32’h80000004    UART recv cntl  Read    {31’b0, DataOutValid}
 h002    32’h80000008    UART xmit data  Write   {24’b0, DataIn}
@@ -15,7 +15,7 @@ h006    32’h80000018    Reset counts    Write   N/A (any byte will trigger)
 h014    32’h80000050    PF_FRAME        Write   PixelFeeder frame# (ADDR is frame# * 0x0040_0000)
 h015    32’h80000058    GP_FRAME        Write   Stored, then "captured" along with GP_CODE on launch
 h016    32’h80000054    GP_CODE         Write   Write also launches GraphicsProcessor
---h017    32’h8000005C    GP_CONTROL      Rd/Wr   See PIX-bits below
+h017    32’h8000005C    Graphics cntl   Read    See PIX-bits below
 */
 //TODO: Translate address matches on "addra" into "one-hot" lines (maybe hierarchical)
 
@@ -24,23 +24,20 @@ module MemMapIO #(
     parameter COLT45_SHAKE=1, COLT45_POLLS=0
 )(
     input clk, rst,
-
-    // DAS BUS
+// DAS BUS:
     input           ena,    //ena is like "memory" style "enable port a"
     input  [11: 0]  addra,  //Address for read or write (use zero if worried about side effects)
     input  [ 3: 0]  wea,    //Write enable & byte mask together (ena must also be active for write)
     input  [31: 0]  dina,   //Data in grabbed at clock edge if enabled
     output reg [31:0] DOUTA,//DATA read (behaves like synchronous memory with registered output)
-
-    // DOS SHAKES POR FAVOR
+// DOS SHAKES POR FAVOR:
     inout `BUS_SHAKE_type(8) RVa_RX, RVa_TX,
     output RVa_RX_IRQ, RVa_TX_IRQ,
-
-    // Counter taps & reset pulse output
+// Counter taps & reset pulse output:
     input  [31: 0] CNT_Cycle, CNT_Inst,
     output CNT_RESET_,
-
-    // PixelFeeder & GraphicsProcessor control
+// PixelFeeder & GraphicsProcessor control:
+    input  [31: 0] graphics_status,
     output [31: 0] PF_FRAME, GP_FRAME, GP_CODE,
     output PF_VALID, GP_VALID
 );
@@ -101,7 +98,7 @@ module MemMapIO #(
             12'h003: MUX_DOUTA = {24'd0, Rx_Data};
             12'h004: MUX_DOUTA = CNT_Cycle[31:0];
             12'h005: MUX_DOUTA = CNT_Inst[31:0];
-//            12'h014: MUX_DOUTA = {31'd0, xyz};
+            12'h017: MUX_DOUTA = graphics_status;
             default: MUX_DOUTA = (BADNESS) ? BAD_WORD : 32'd0;
         endcase
     end

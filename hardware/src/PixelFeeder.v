@@ -13,20 +13,20 @@ module PixelFeeder #(
     input           cpu_rst_g,
     input           dvi_clk_g,
     input           dvi_rst_g,
-    //DDR2 FIFOS (FIFO sides @posedge cpu_clk_g):
+//DDR FIFOs (read-only) @cpu_clk_g:
     input           rdf_valid,
     input           af_full,
     input  [127:0]  rdf_dout,
     output          rdf_rd_en,
     output          af_wr_en,
     output [ 30:0]  af_addr_din,
-    // DVI module (to/from DVI driver @posedge dvi_clk_g):
+// DVI driver @dvi_clk_g:
     output [ 23:0]  video,
     output          video_valid,
     input           video_ready,
-    // FRAME control (to/from CPU @posedge cpu_clk_g):
-    input  [ 31:0]  PF_FRAME, //Address or Frame# for base of NEXT frame once this one is done
-    input           PF_valid, //Signal that new PF_FRAME is to be stored this clock cycle
+// FRAME control <=> CPU @cpu_clk_g:
+    input  [ 31:0]  PF_frame, //Address or Frame# for base of NEXT frame once this one is done
+    input           PF_valid, //Signal that new PF_frame is to be stored this clock cycle
     output          frame_interrupt //1-cycle pulse after frame transition (except startup frame)
 );
 
@@ -173,7 +173,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
             end
 
             if (PF_valid) begin
-                frame_next <= (|PF_FRAME[31:28]) ? PF_FRAME[27:22] : PF_FRAME[5:0]; //Either addr style
+                frame_next <= (|PF_frame[31:28]) ? PF_frame[27:22] : PF_frame[5:0]; //Either addr style
             end
 
             if (af_advance) begin //Advance x/y/frame (right AFTER end of this cycle)

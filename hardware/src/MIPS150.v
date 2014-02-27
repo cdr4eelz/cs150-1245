@@ -8,11 +8,10 @@ module MIPS150 #(
 )(
     input   clk,
     input   rst,
-// Serial (UART)
+// Serial (UART):
     input   FPGA_SERIAL_RX,
     output  FPGA_SERIAL_TX,
-// CP2+
-    // Memory system connections
+// Memory Caches:
     output [ 31:0]  dcache_addr,
     output [ 31:0]  icache_addr,
     output [  3:0]  dcache_we,
@@ -24,15 +23,16 @@ module MIPS150 #(
     input  [ 31:0]  dcache_dout,
     input  [ 31:0]  icache_dout,
     input           stall,
-// CP4+
+// Graphics:
+    input  [ 31:0]  graphics_status,
     output [ 31:0]  pf_frame,
     output          pf_valid,
     input           frame_interrupt,
     output [ 31:0]  gp_code,
     output [ 31:0]  gp_frame,
     output          gp_valid,
-    input           gpcode_interrupt,
-// Chipscoping...
+    input           gp_interrupt,
+// Chipscope cross-module tap:
 input [31:0] DBG_MEM150
 );
 
@@ -161,7 +161,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         .InterruptRequest(BRA_IRQPending_DX2F_), //OUT (Like a branch to fixed address)
         .UART0Request(uart0_irq), .UART1Request(uart1_irq), //IN (edge detect "pulse")
         .PixelFeederRequest(frame_interrupt),
-        .GraphicsProcessorRequest(gpcode_interrupt)
+        .GraphicsProcessorRequest(gp_interrupt)
     );
 
     // Declare outputs of DX stage
@@ -242,16 +242,16 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     reg [3:0] hoti_;
     always @(*) begin:_MUX_HOTI_ //Drive appropriate "activate" line for instruction fetch
         case (IMEM_ADDR[31:28])
-            4'b1100: hoti_ = 4'b1000; //0xC => ISR
-            4'b0100: hoti_ = 4'b0100; //0x4 => BR
-            4'b0001: hoti_ = 4'b0010; //0x1 => IC
+            4'b1100: hoti_ = 4'b1000;       //0xC => ISR
+            4'b0100: hoti_ = 4'b0100;       //0x4 => BR
+            4'b0001: hoti_ = 4'b0010;       //0x1 => IC
 `ifndef COLT45_STRICT
-            4'b0110: hoti_ = 4'b0001; //XTRA: Scratchpad-IMEM: 0x6 => IB
+            4'b0110: hoti_ = 4'b0001; //XTRA: 0x6 => IB (Scratch-IMEM)
 `endif
             default: hoti_ = 4'b0000;
         endcase
     end
-    //Not all instruction-fetch "drives" usable by memories themselves
+    //Not all instruction-fetch "drives" usable by memories (several are always enabled)
     wire hoti_BR_  = hoti_[2]; //TODO: Consider this for PCinBIOS test
     wire hoti_IC_  = hoti_[1];
 
@@ -262,17 +262,17 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         {_hot_IO,_hot_BR,_hot_DC,_hot_IB,_hot_DB,_hot_IC,_hot_ISR} = 0;
         if (MemToRegDX_ || MemWriteDX_) begin
             case (DMEM_ADDR[31:28])
-                4'b1000: _hot_IO = 1'b1;
-                4'b0100: _hot_BR = !MemWriteDX_; //Read-only
-                4'b0011: begin
+                4'b1000: _hot_IO = 1'b1;                        //  0x8
+                4'b0100: _hot_BR = !MemWriteDX_;        //Read-only 0x4
+                4'b0011: begin                                  //  0x3
                         _hot_DC = 1'b1;
                         _hot_IC = MemWriteDX_ && PCinBIOSDX_;
                     end
-                4'b0010: _hot_IC = MemWriteDX_ && PCinBIOSDX_;
-                4'b0001: _hot_DC = 1'b1;
+                4'b0010: _hot_IC = MemWriteDX_ && PCinBIOSDX_;  //  0x2
+                4'b0001: _hot_DC = 1'b1;                        //  0x1
 `ifndef COLT45_STRICT
-                4'b0110: _hot_IB = MemWriteDX_; //XTRA: Scratchpad-DMEM
-                4'b0101: _hot_DB = 1'b1; //XTRA: Scratchpad-DMEM
+                4'b0110: _hot_IB = MemWriteDX_; //XTRA:Scratch-IMEM 0x6
+                4'b0101: _hot_DB = 1'b1;        //XTRA:Scratch-DMEM 0x5
 `endif //(!) COLT45_STRICT
                 4'b1100: _hot_ISR = MemWriteDX_; //ISR//
             endcase
@@ -289,11 +289,11 @@ end
     reg  [31: 0] MUX_IMEM;
     always @(*) begin:_MUX_IMEM_ //Drive instruction from appropriate memory component
         case (P_hoti)
-            4'b1000: MUX_IMEM = INST_ISR; //0xC => ISR
-            4'b0100: MUX_IMEM = INST_BR; //0x4 => BR
-            4'b0010: MUX_IMEM = INST_IC; //0x1 => IC
+            4'b1000: MUX_IMEM = INST_ISR;       //0xC => ISR
+            4'b0100: MUX_IMEM = INST_BR;        //0x4 => BR
+            4'b0010: MUX_IMEM = INST_IC;        //0x1 => IC
 `ifndef COLT45_STRICT
-            4'b0001: MUX_IMEM = INST_IB; //XTRA: Scratchpad-IMEM: 0x6 => IB
+            4'b0001: MUX_IMEM = INST_IB; //XTRA:  0x6 => IB (Scratch-IMEM)
 `endif
             default: MUX_IMEM = 0; //NOP
         endcase
@@ -301,15 +301,15 @@ end
     assign IMEM_DATA = MUX_IMEM;
 
     wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
-    reg [31:0] MUX_DMEM; // Registered elsewhere (is just a reg here because of always@*)
+    reg  [31: 0] MUX_DMEM; //Registered elsewhere (just a reg for always@*)
     always @(*) begin:_MUX_DMEM_
         case (MemAddr_MW[31:28])
-            4'b1000: MUX_DMEM = RData_IO;
-            4'b0100: MUX_DMEM = RData_BR;
-            4'b0011: MUX_DMEM = RData_DC;
-            4'b0001: MUX_DMEM = RData_DC;
+            4'b1000: MUX_DMEM = RData_IO;                       //  0x8
+            4'b0100: MUX_DMEM = RData_BR;                       //  0x4
+            4'b0011: MUX_DMEM = RData_DC;                       //  0x3
+            4'b0001: MUX_DMEM = RData_DC;                       //  0x1
 `ifndef COLT45_STRICT //TODO: Ensure no other references to these if STRICT mode!
-            4'b0101: MUX_DMEM = RData_DB; // Scratchpad-RAM
+            4'b0101: MUX_DMEM = RData_DB;   //XTRA: Scratchpad-DMEM  0x5
 `endif
             default: MUX_DMEM = 32'd0;
         endcase // CAUTIOUS trapping of EVERY case
@@ -398,6 +398,7 @@ end
         .CNT_Cycle(CNT_Cycle[31:0]), .CNT_Inst(CNT_Inst[31:0]),
         .CNT_RESET_(CNT_Reset_MW2F_),
         //PixelFeeder & GraphicsController
+        .graphics_status(graphics_status),
         .PF_VALID(pf_valid), .PF_FRAME(pf_frame),
         .GP_VALID(gp_valid), .GP_FRAME(gp_frame), .GP_CODE(gp_code)
     ) /* synthesis syn_noprune=1 */;

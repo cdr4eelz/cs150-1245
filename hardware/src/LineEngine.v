@@ -1,42 +1,63 @@
 
 module LineEngine(
-  input                 clk,
-  input                 rst,
-  output                LE_ready,
-  // 8-bit each for RGB, and 8 bits zeros at the top
-  input [31:0]          LE_color,
-  input [9:0]           LE_point,
-  // Valid signals for the inputs
-  input                 LE_color_valid,
-  input                 LE_x0_valid,
-  input                 LE_y0_valid,
-  input                 LE_x1_valid,
-  input                 LE_y1_valid,
-  // Trigger signal - line engine should
-  // Start drawing the line
-  input                 LE_trigger,
-  // FIFO connections
-  input                 af_full,
-  input                 wdf_full,
-  
-  output [30:0]         af_addr_din,
-  output                af_wr_en,
-  output [127:0]        wdf_din,
-  output [15:0]         wdf_mask_din,
-  output                wdf_wr_en,
-
-  input [31:0] 		LE_frame_base
+    input           clk,
+    input           rst,
+//DDR FIFOs (write-only):
+    input           af_full,
+    input           wdf_full,
+    output  [ 30:0] af_addr_din,
+    output          af_wr_en,
+    output  [127:0] wdf_din,
+    output  [ 15:0] wdf_mask_din,
+    output          wdf_wr_en,
+//Line control <=> CPU:
+    output          LE_ready,
+    input           LE_color_valid,
+    input   [ 31:0] LE_color, //8-zeros, 3 x 8-bit R/G/B
+    input           LE_x0_valid,
+    input           LE_y0_valid,
+    input           LE_x1_valid,
+    input           LE_y1_valid,
+    input   [  9:0] LE_point, //Point data for 4 valids (x0,y0,x1,y1) above
+    input           LE_trigger, //Trigger drawing & frame_base capture
+    input   [ 31:0] LE_frame //Frame base (modulo 0x0040_0000)
 );
-
 
     // Implement Bresenham's line drawing algorithm here!
 
+    localparam S_DEAD       = 0;
+    localparam S_RESET      = 1;
+    localparam S_IDLE       = 2;
+    localparam S_LAUNCH     = 3;
+    localparam S_RUN        = 4;
+    localparam S_DONE       = 5;
 
-   
+    reg  [ 2:0] state = S_DEAD, state_next;
+    reg  [31:0] color;
+    reg  [ 9:0] x0, y0, x1, y1;
+    reg  [ 6:0] framebits;
+
+    assign LE_ready = (state == S_IDLE);
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) state <= S_RESET; //Avoid reset of registers guarded by state
+        else state <= state_next;
+    end
+
+    always @(posedge clk) begin
+        if (LE_ready) begin //Capture active inputs if not running
+            if (LE_color_valid) color <= LE_color;
+            if (LE_x0_valid) x0 <= LE_point;
+            if (LE_y0_valid) y0 <= LE_point;
+            if (LE_x1_valid) x1 <= LE_point;
+            if (LE_y1_valid) y1 <= LE_point;
+            if (LE_trigger) framebits <= LE_frame[27:22];
+        end
+    end
+
     // Remove these when you implement this module:
     assign af_wr_en = 1'b0;
     assign wdf_wr_en = 1'b0;
-    assign LE_ready = 1'b1;
 
 endmodule
 

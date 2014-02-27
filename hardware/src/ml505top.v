@@ -72,7 +72,7 @@ wire [31:0] DBG_MEM150;
     wire cpu_clk_g, dvi_clk_g, clk200_g, clk0_g, clk90_g, clkdiv0_g;
     reg  rst_pll, rst_cpu_mem, rst_cpu_bus, rst_dvi_bus, rst_cpu_cpu;
 
-    // Memory150, CPU wires
+    // Memory150
     wire [31:0] dcache_addr,    icache_addr;
     wire [ 3:0] dcache_we,      icache_we;
     wire        dcache_re,      icache_re;
@@ -88,11 +88,12 @@ wire [31:0] DBG_MEM150;
     wire [31:0] gp_code;
     wire [31:0] gp_frame;
     wire        gp_valid;
-    wire        gpcode_interrupt;
-//  wire        fb0;
+    wire        gp_interrupt;
+    wire [31:0] graphics_status;
+//  wire        fb0; ???Was this like pf_frame???
 
-//TODO:Move PLL & RESETs to module (maybe same as TestBenches use)
 
+//TODO:Use debouncer module on all buttons
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF",
        ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y0" *)
     reg  [ 3:0] reset_r;
@@ -100,6 +101,7 @@ wire [31:0] DBG_MEM150;
         reset_r <= {reset_r[2:0], GPIO_SW_C}; //Synchronize external button signal
     end
 
+//TODO:Move PLL & RESETs to module (maybe same as TestBenches use)
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF",
        ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y1" *)
     reg  [ 3:0] reset_advance; //A wee synchronization & debounce FF-chain
@@ -128,6 +130,7 @@ wire [31:0] DBG_MEM150;
         end
     end
 
+//TODO:Make a mini reset "tree" for distribution
     always @(*) rst_pll = reset_lines[0] || (&reset_r); //USER-clock (already)
     always @(posedge cpu_clk_g) begin //CPU-clock
         rst_cpu_mem <= reset_lines[1];
@@ -142,6 +145,7 @@ wire [31:0] DBG_MEM150;
     Memory150 #(
         .SIM_ONLY(1'b0)
     ) mem_arch (
+    // Clocks & Resets:
         .cpu_clk_g  (cpu_clk_g),
         .dvi_clk_g  (dvi_clk_g),
         .clk200_g   (clk200_g),
@@ -149,26 +153,26 @@ wire [31:0] DBG_MEM150;
         .clkdiv0_g  (clkdiv0_g),
         .clk90_g    (clk90_g),
         .locked     (pll_lock),
-        .phy_init_done(init_done),
+        .init_done  (init_done),
         .rst_cpu_mem(rst_cpu_mem),
         .rst_cpu_bus(rst_cpu_bus),
         .rst_dvi_bus(rst_dvi_bus),
-
-        .DDR2_A(DDR2_A),
-        .DDR2_BA(DDR2_BA),
-        .DDR2_CAS_B(DDR2_CAS_B),
-        .DDR2_CKE(DDR2_CKE),
-        .DDR2_CLK_N(DDR2_CLK_N),
-        .DDR2_CLK_P(DDR2_CLK_P),
-        .DDR2_CS_B(DDR2_CS_B),
-        .DDR2_D(DDR2_D),
-        .DDR2_DM(DDR2_DM),
-        .DDR2_DQS_N(DDR2_DQS_N),
-        .DDR2_DQS_P(DDR2_DQS_P),
-        .DDR2_ODT(DDR2_ODT),
-        .DDR2_RAS_B(DDR2_RAS_B),
-        .DDR2_WE_B(DDR2_WE_B),
-
+    // DDR2 pads:
+        .DDR2_A     (DDR2_A),
+        .DDR2_BA    (DDR2_BA),
+        .DDR2_CAS_B (DDR2_CAS_B),
+        .DDR2_CKE   (DDR2_CKE),
+        .DDR2_CLK_N (DDR2_CLK_N),
+        .DDR2_CLK_P (DDR2_CLK_P),
+        .DDR2_CS_B  (DDR2_CS_B),
+        .DDR2_D     (DDR2_D),
+        .DDR2_DM    (DDR2_DM),
+        .DDR2_DQS_N (DDR2_DQS_N),
+        .DDR2_DQS_P (DDR2_DQS_P),
+        .DDR2_ODT   (DDR2_ODT),
+        .DDR2_RAS_B (DDR2_RAS_B),
+        .DDR2_WE_B  (DDR2_WE_B),
+    // Cache <=> CPU interface:
         .dcache_addr(dcache_addr),
         .icache_addr(icache_addr),
         .dcache_we  (dcache_we  ),
@@ -180,18 +184,20 @@ wire [31:0] DBG_MEM150;
         .dcache_dout(dcache_dout),
         .icache_dout(icache_dout),
         .stall      (stall      ),
-
+    // DVI driver:
         .video          (video          ),
         .video_ready    (video_ready    ),
         .video_valid    (video_valid    ),
+    // Graphics <=> CPU interface:
+        .graphics_status(graphics_status),
         .cpu_pf_frame   (pf_frame       ),
         .cpu_pf_valid   (pf_valid       ),
         .frame_interrupt(frame_interrupt),
         .cpu_gp_code    (gp_code        ),
         .cpu_gp_frame   (gp_frame       ),
         .cpu_gp_valid   (gp_valid       ),
-        .gpcode_interrupt(gpcode_interrupt),
-
+        .gp_interrupt   (gp_interrupt   ),
+// Chipscope cross-module tap
 .DBG_MEM150(DBG_MEM150)
     );
 
@@ -201,8 +207,10 @@ wire [31:0] DBG_MEM150;
     ) CPU (
         .clk(cpu_clk_g),
         .rst(rst_cpu_cpu),
+    // Serial (UART):
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+    // Memory Caches:
         .dcache_addr (dcache_addr),
         .icache_addr (icache_addr),
         .dcache_we   (dcache_we  ),
@@ -214,15 +222,18 @@ wire [31:0] DBG_MEM150;
         .dcache_dout (dcache_dout),
         .icache_dout (icache_dout),
         .stall       (any_stall  ),
+    // Graphics:
+        .graphics_status(graphics_status),
         .pf_frame       (pf_frame),
         .pf_valid       (pf_valid),
         .frame_interrupt(frame_interrupt),
         .gp_code        (gp_code),
         .gp_frame       (gp_frame),
         .gp_valid       (gp_valid),
-        .gpcode_interrupt(gpcode_interrupt),
+        .gp_interrupt   (gp_interrupt),
+// Chipscope cross-module tap:
 .DBG_MEM150(DBG_MEM150)
-    ); //add GP_CODE, GP_FRAME, and GP_valid io here and pixel feeder interrupt
+    );
 
 //RESOLUTION:          Width FrontH PulseH BackH Height FrontV PulseV BackV ClockFreq
 //  VGA  640x480@60Hz:  800    16     96    48    525     10      2    33    25175000

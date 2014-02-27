@@ -1,60 +1,57 @@
-//  The _xmsgs/xst.xmsgs created by coregen seems a viable place to get the tail of these paths (besides examiniation with data2mem or fpga_editor or planAhead).
+//  The _xmsgs/xst.xmsgs created by coregen seems a viable place to get the tail of these paths
+//    (besides examiniation with data2mem or fpga_editor or planAhead).
 
 // RAMB36 is blockram with parity (32-bits data + 4-bits parity, one-per-byte)
 // In each BRAM, each lane is 4K (5120 w/parity) for total 16K (20480 w/parity)
 
-// Note the slight difference in paths between the lanes:
+// Note the difference in paths between the lanes (also different for CoreGen versions):
 // CPU/brom_bios                vs. CPU/bram_dmem           vs. CPU/bram_imem
 // TRUE_DP.SINGLE_PRIM36.TDP    vs. SP.SINGLE_PRIM36.SP     vs. SDP.SINGLE_PRIM36.TDP
 
 ADDRESS_MAP MIPSY PPC405 0
 
-// THE FAKE CONSOLIDATED MEMORY SPAN makes it easier to use the tools to punch it:
-    ADDRESS_SPACE BRAM_BOTH COMBINED WORD_ADDRESSING [0x00000000:0x00007FFF]
-
-    ADDRESS_RANGE RAMB36
-//  ADDRESS_SPACE BRAM_DATA RAMB36 WORD_ADDRESSING [0x10000000:0x10003FFF]
+//OPTIONAL FAKE CONSOLIDATED MEMORY SPAN makes it easier to use the tools to punch it:
+//  ADDRESS_SPACE BRAM_BOTH COMBINED WORD_ADDRESSING [0x00000000:0x00007FFF]
+//  ADDRESS_RANGE RAMB36
+    ADDRESS_SPACE BRAM_DMEM RAMB36 WORD_ADDRESSING [0x50000000:0x50003FFF]
         BUS_BLOCK
-            CPU/bram_dmem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [35:27] OUTPUT = DMEM3.mem  LOC = X2Y8;
-            CPU/bram_dmem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[2].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [26:18] OUTPUT = DMEM2.mem  LOC = X1Y5;
-            CPU/bram_dmem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[1].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [17:9]  OUTPUT = DMEM1.mem  LOC = X1Y9;
-            CPU/bram_dmem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[0].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP  [8:0]  OUTPUT = DMEM0.mem  LOC = X0Y4;
+            CPU/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [35:27] OUTPUT = DMEM3.mem  LOC = X3Y7;
+            CPU/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [26:18] OUTPUT = DMEM2.mem  LOC = X3Y9;
+            CPU/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [17:9]  OUTPUT = DMEM1.mem  LOC = X3Y12;
+            CPU/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP  [8:0]  OUTPUT = DMEM0.mem  LOC = X3Y11;
         END_BUS_BLOCK;
-//  END_ADDRESS_SPACE;
-    END_ADDRESS_RANGE;
-
-    ADDRESS_RANGE RAMB36
-//  ADDRESS_SPACE BRAM_INST RAMB36 WORD_ADDRESSING [0x20000000:0x20003FFF]
-        BUS_BLOCK
-            CPU/bram_imem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [35:27] OUTPUT = IMEM3.mem  LOC = X1Y4;
-            CPU/bram_imem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[2].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [26:18] OUTPUT = IMEM2.mem  LOC = X1Y1;
-            CPU/bram_imem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[1].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = IMEM1.mem  LOC = X1Y3;
-            CPU/bram_imem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[0].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = IMEM0.mem  LOC = X0Y5;
-        END_BUS_BLOCK;
-//  END_ADDRESS_SPACE;
-    END_ADDRESS_RANGE;
-
     END_ADDRESS_SPACE;
+//  END_ADDRESS_RANGE;
 
+//  ADDRESS_RANGE RAMB36
+    ADDRESS_SPACE BRAM_IMEM RAMB36 WORD_ADDRESSING [0x60000000:0x60003FFF]
+        BUS_BLOCK
+            CPU/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [35:27] OUTPUT = IMEM3.mem  LOC = X4Y7;
+            CPU/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [26:18] OUTPUT = IMEM2.mem  LOC = X2Y7;
+            CPU/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = IMEM1.mem  LOC = X2Y6;
+            CPU/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = IMEM0.mem  LOC = X3Y5;
+        END_BUS_BLOCK;
+    END_ADDRESS_SPACE;
+//  END_ADDRESS_RANGE;
+//  END_ADDRESS_SPACE;
 
 // BIOS ROM:
     ADDRESS_SPACE BROM_BIOS RAMB36 WORD_ADDRESSING [0x40000000:0x40003FFF]
         BUS_BLOCK
-            CPU/brom_bios/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [35:27] OUTPUT = BMEM3.mem  LOC = X2Y9;
-            CPU/brom_bios/BU2/U0/blk_mem_generator/valid.cstr/ramloop[2].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [26:18] OUTPUT = BMEM2.mem  LOC = X1Y7;
-            CPU/brom_bios/BU2/U0/blk_mem_generator/valid.cstr/ramloop[1].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = BMEM1.mem  LOC = X1Y8;
-            CPU/brom_bios/BU2/U0/blk_mem_generator/valid.cstr/ramloop[0].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = BMEM0.mem  LOC = X1Y6;
+            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [35:27] OUTPUT = BMEM3.mem  LOC = X3Y8;
+            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [26:18] OUTPUT = BMEM2.mem  LOC = X3Y13;
+            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = BMEM1.mem  LOC = X3Y10;
+            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = BMEM0.mem  LOC = X2Y14;
         END_BUS_BLOCK;
     END_ADDRESS_SPACE;
-
 
 // ISR RAM:
     ADDRESS_SPACE BRAM_ISR RAMB36 WORD_ADDRESSING [0xC0000000:0xC0003FFF]
         BUS_BLOCK
-            CPU/bram_isr/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [35:27] OUTPUT = ISRM3.mem  LOC = X1Y2;
-            CPU/bram_isr/BU2/U0/blk_mem_generator/valid.cstr/ramloop[2].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [26:18] OUTPUT = ISRM2.mem  LOC = X1Y0;
-            CPU/bram_isr/BU2/U0/blk_mem_generator/valid.cstr/ramloop[1].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = ISRM1.mem  LOC = X0Y3;
-            CPU/bram_isr/BU2/U0/blk_mem_generator/valid.cstr/ramloop[0].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = ISRM0.mem  LOC = X0Y6;
+            CPU/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [35:27] OUTPUT = ISRM3.mem  LOC = X3Y6;
+            CPU/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [26:18] OUTPUT = ISRM2.mem  LOC = X2Y8;
+            CPU/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = ISRM1.mem  LOC = X2Y4;
+            CPU/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = ISRM0.mem  LOC = X3Y4;
         END_BUS_BLOCK;
     END_ADDRESS_SPACE;
 

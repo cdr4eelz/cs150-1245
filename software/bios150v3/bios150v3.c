@@ -152,18 +152,18 @@ int main(void)
             swfill(color, frame);
         } else if (strcmp150(input, "swline") == 0) {
             uint32_t color = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
-            uint16_t x0 = ascii_hex_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
-            uint16_t y0 = ascii_hex_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
-            uint16_t x1 = ascii_hex_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
-            uint16_t y1 = ascii_hex_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t x0 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t y0 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t x1 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t y1 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
             uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
 
             swline(color, x0, y0, x1, y1, frame);
 
         } else if (strcmp150(input, "swpixel") == 0) {
             uint32_t color = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
-            uint16_t x = ascii_hex_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
-            uint16_t y = ascii_hex_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t x = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t y = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
             uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
 
             swpixel(color, x, y, frame);

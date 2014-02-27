@@ -17,13 +17,13 @@ SdkExportBmmBit: 1
 SdkExportDir: SDK/SDK_Export
 InsertNoPads: 0
 WarnForEAArch: 1
-HdlLang: VHDL
-SimModel: TIMING
+HdlLang: verilog
+SimModel: behavioral
 ExternalMemSim: 0
 UcfFile: data/system.ucf
 EnableParTimingError: 1
 ShowLicenseDialog: 1
 BInfo: 
 Processor: microblaze_0
-ElfImp: workspace/memtest/Debug/memtest.elf
+ElfImp: 
 ElfSim: 

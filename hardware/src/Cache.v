@@ -29,7 +29,7 @@
 `include "cache.vh"
 
 module Cache #(
-    parameter LITTLEWORDIAN=0 //Ordering of 32-bit words within each 256-bit DDR block (not byte ordering)
+    parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
     input           clk,
     input           rst,

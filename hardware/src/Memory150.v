@@ -14,60 +14,59 @@
 module Memory150 #(
     parameter SIM_ONLY = 1'b0
 )(
-    // Clocks & reset:
-    input         cpu_clk_g,
-    input         dvi_clk_g,
-    input         clk200_g,
-    input         clk0_g,
-    input         clkdiv0_g,
-    input         clk90_g,
-    input         locked,
-    input         rst_cpu_mem,
-    output        phy_init_done,
-    input         rst_cpu_bus,
-    input         rst_dvi_bus,
-
-    // DDR2 Interface:
-    output [12:0] DDR2_A,
-    output [1:0]  DDR2_BA,
-    output        DDR2_CAS_B,
-    output        DDR2_CKE,
-    output [1:0]  DDR2_CLK_N,
-    output [1:0]  DDR2_CLK_P,
-    output        DDR2_CS_B,
-    inout  [63:0] DDR2_D,
-    output [7:0]  DDR2_DM,
-    inout  [7:0]  DDR2_DQS_N,
-    inout  [7:0]  DDR2_DQS_P,
-    output        DDR2_ODT,
-    output        DDR2_RAS_B,
-    output        DDR2_WE_B,
-
-    // Cache <=> CPU interface
-    input  [31:0] dcache_addr,
-    input  [31:0] icache_addr,
-    input  [3:0]  dcache_we,
-    input  [3:0]  icache_we,
-    input         dcache_re,
-    input         icache_re,
-    input  [31:0] dcache_din,
-    input  [31:0] icache_din,
-    output [31:0] dcache_dout,
-    output [31:0] icache_dout,
-    output        stall,
-
-    // DVI interface:
-    output [23:0] video,
-    output        video_valid,
-    input         video_ready,
-    input [31:0]  cpu_pf_frame,
-    input         cpu_pf_valid,
-    output        frame_interrupt,
-    input [31:0]  cpu_gp_code,
-    input [31:0]  cpu_gp_frame,
-    input         cpu_gp_valid,
-    output        gpcode_interrupt,
-
+// Clocks & Resets:
+    input           cpu_clk_g,
+    input           dvi_clk_g,
+    input           clk200_g,
+    input           clk0_g,
+    input           clkdiv0_g,
+    input           clk90_g,
+    input           locked,
+    input           rst_cpu_mem,
+    output          init_done,
+    input           rst_cpu_bus,
+    input           rst_dvi_bus,
+// DDR2 Interface:
+    output  [12:0]  DDR2_A,
+    output  [ 1:0]  DDR2_BA,
+    output          DDR2_CAS_B,
+    output          DDR2_CKE,
+    output  [ 1:0]  DDR2_CLK_N,
+    output  [ 1:0]  DDR2_CLK_P,
+    output          DDR2_CS_B,
+    inout   [63:0]  DDR2_D,
+    output  [ 7:0]  DDR2_DM,
+    inout   [ 7:0]  DDR2_DQS_N,
+    inout   [ 7:0]  DDR2_DQS_P,
+    output          DDR2_ODT,
+    output          DDR2_RAS_B,
+    output          DDR2_WE_B,
+// Cache <=> CPU Interface:
+    input   [31:0]  dcache_addr,
+    input   [31:0]  icache_addr,
+    input   [ 3:0]  dcache_we,
+    input   [ 3:0]  icache_we,
+    input           dcache_re,
+    input           icache_re,
+    input   [31:0]  dcache_din,
+    input   [31:0]  icache_din,
+    output  [31:0]  dcache_dout,
+    output  [31:0]  icache_dout,
+    output          stall,
+// DVI Interface:
+    output  [23:0]  video,
+    output          video_valid,
+    input           video_ready,
+// Graphics <=> CPU Interface:
+    output  [31:0]  graphics_status,
+    input   [31:0]  cpu_pf_frame,
+    input           cpu_pf_valid,
+    output          frame_interrupt,
+    input   [31:0]  cpu_gp_code,
+    input   [31:0]  cpu_gp_frame,
+    input           cpu_gp_valid,
+    output          gp_interrupt,
+// Chipscope cross-module tap:
 output [31:0] DBG_MEM150
 );
 
@@ -127,7 +126,6 @@ output [31:0] DBG_MEM150
     wire [30:0]  filler_addr_din;
     wire         filler_af_wr_en;
     wire [15:0]  filler_wdf_mask_din;
-// wire [31:0]  filler_frame;
 
     // Line Engine <=> RequestController wires:
     wire         line_af_full;
@@ -137,7 +135,6 @@ output [31:0] DBG_MEM150
     wire [30:0]  line_addr_din;
     wire         line_af_wr_en;
     wire [15:0]  line_wdf_mask_din;
-// wire [31:0]  line_frame;
 
     // Graphics Command Processor <=> RequestController wires:
     wire         cmd_rdf_rd_en;
@@ -174,7 +171,7 @@ output [31:0] DBG_MEM150
         .clkdiv0(clkdiv0_g),
         .locked(locked),
         .sys_rst_n(~rst_cpu_mem),
-        .phy_init_done(phy_init_done),
+        .phy_init_done(init_done),
         .clk0_tb(ddr2_clock_tb),
         .rst0_tb(rst_tb),
 
@@ -387,16 +384,19 @@ output [31:0] DBG_MEM150
         .cpu_rst_g(rst_cpu_bus),
         .dvi_clk_g(dvi_clk_g),
         .dvi_rst_g(rst_dvi_bus),
+    //DDR FIFOs (read-only):
         .rdf_valid(pixel_rdf_valid),
         .af_full(pixel_af_full),
         .rdf_dout(rdf_dout),
         .rdf_rd_en(pixel_rdf_rd_en),
         .af_wr_en(pixel_af_wr_en),
         .af_addr_din(pixel_af_addr_din),
+    // DVI driver:
         .video(video),
         .video_valid(video_valid),
         .video_ready(video_ready),
-        .PF_FRAME(cpu_pf_frame),
+    // FRAME control <=> CPU:
+        .PF_frame(cpu_pf_frame),
         .PF_valid(cpu_pf_valid),
         .frame_interrupt(frame_interrupt)
     );
@@ -404,8 +404,7 @@ output [31:0] DBG_MEM150
     FrameFiller framefill(
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
-        .valid(filler_valid),
-        .color(filler_color),
+    //DDR FIFOs (write-only):
         .af_full(filler_af_full),
         .wdf_full(filler_wdf_full),
         .wdf_din(filler_wdf_din),
@@ -413,14 +412,26 @@ output [31:0] DBG_MEM150
         .af_addr_din(filler_addr_din),
         .af_wr_en(filler_af_wr_en),
         .wdf_mask_din(filler_wdf_mask_din),
-        .ready(filler_ready),
-        .FF_frame_base(filler_frame)
+    //Fill control <=> CPU:
+        .FF_ready(filler_ready),
+        .FF_valid(filler_valid),
+        .FF_color(filler_color),
+        .FF_frame(filler_frame)
     );
 
     // For CP5:
     LineEngine le(
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
+    //DDR FIFOs (write-only):
+        .af_full(line_af_full),
+        .wdf_full(line_wdf_full),
+        .af_addr_din(line_addr_din),
+        .af_wr_en(line_af_wr_en),
+        .wdf_din(line_wdf_din),
+        .wdf_mask_din(line_wdf_mask_din),
+        .wdf_wr_en(line_wdf_wr_en),
+    //Line control <=> CPU:
         .LE_ready(line_ready),
         .LE_color(line_color),
         .LE_point(line_point),
@@ -430,21 +441,21 @@ output [31:0] DBG_MEM150
         .LE_x1_valid(line_x1_valid),
         .LE_y1_valid(line_y1_valid),
         .LE_trigger(line_trigger),
-        .af_full(line_af_full),
-        .wdf_full(line_wdf_full),
-        .af_addr_din(line_addr_din),
-        .af_wr_en(line_af_wr_en),
-        .wdf_din(line_wdf_din),
-        .wdf_mask_din(line_wdf_mask_din),
-        .wdf_wr_en(line_wdf_wr_en),
-        .LE_frame_base(line_frame)
+        .LE_frame(line_frame)
     );
 
     //For CP5:
     GraphicsProcessor graphicsprocessor(
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
-        //line engine IO
+    //DDR FIFOs (read-only):
+        .rdf_valid(cmd_rdf_valid),
+        .af_full(cmd_af_full),
+        .rdf_dout(rdf_dout),
+        .rdf_rd_en(cmd_rdf_rd_en),
+        .af_wr_en(cmd_af_wr_en),
+        .af_addr_din(cmd_addr_din),
+    //LineEngine interface:
         .LE_ready(line_ready),
         .LE_color(line_color),
         .LE_point(line_point),
@@ -455,23 +466,17 @@ output [31:0] DBG_MEM150
         .LE_y1_valid(line_y1_valid),
         .LE_trigger(line_trigger),
         .LE_frame(line_frame),
-        //frame filler IO
+    //FrameFiller interface:
         .FF_ready(filler_ready),
         .FF_valid(filler_valid),
         .FF_color(filler_color),
         .FF_frame(filler_frame),
-        //DRAM request controller interface
-        .rdf_valid(cmd_rdf_valid),
-        .af_full(cmd_af_full),
-        .rdf_dout(rdf_dout),
-        .rdf_rd_en(cmd_rdf_rd_en),
-        .af_wr_en(cmd_af_wr_en),
-        .af_addr_din(cmd_addr_din),
-        //CPU IO
-        .GP_CODE(cpu_gp_code),
-        .GP_FRAME(cpu_gp_frame),
+    //CPU interface:
+        .GP_ready(gp_ready),
         .GP_valid(cpu_gp_valid),
-        .gpcode_interrupt(gpcode_interrupt)
+        .GP_frame(cpu_gp_frame),
+        .GP_code(cpu_gp_code),
+        .GP_interrupt(gp_interrupt)
     );
 
 assign DBG_MEM150 = {
