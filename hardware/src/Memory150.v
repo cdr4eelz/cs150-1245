@@ -76,11 +76,11 @@ output [31:0] DBG_MEM150
     wire         af_afull;
     wire         af_full;
     wire         af_valid;
-    wire [33:0]  af_dout;
+    wire [ 33:0] af_dout;
     wire         wdf_valid;
     wire [143:0] wdf_dout;
 
-    wire [15:0]  wdf_mask_din;
+    wire [ 15:0] wdf_mask_din;
     wire [127:0] wdf_din;
     wire         wdf_wr_en;
     wire         wdf_full;
@@ -93,8 +93,8 @@ output [31:0] DBG_MEM150
     wire [127:0] rdf_dout;
     wire [127:0] ddr2_rd_dout;
 
-    wire [2:0]   af_cmd_din;
-    wire [30:0]  af_addr_din;
+    wire [  2:0] af_cmd_din;
+    wire [ 30:0] af_addr_din;
     wire         af_wr_en;
     wire         af_rd_en;
 
@@ -103,18 +103,18 @@ output [31:0] DBG_MEM150
     wire         i_af_full,      d_af_full;
     wire         i_wdf_full,     d_wdf_full;
     wire         i_rdf_rd_en,    d_rdf_rd_en;
-    wire [2:0]   i_af_cmd_din,   d_af_cmd_din;
-    wire [30:0]  i_af_addr_din,  d_af_addr_din;
+    wire [  2:0] i_af_cmd_din,   d_af_cmd_din;
+    wire [ 30:0] i_af_addr_din,  d_af_addr_din;
     wire         i_af_wr_en,     d_af_wr_en;
     wire [127:0] i_wdf_din,      d_wdf_din;
-    wire [15:0]  i_wdf_mask_din, d_wdf_mask_din;
+    wire [ 15:0] i_wdf_mask_din, d_wdf_mask_din;
     wire         i_wdf_wr_en,    d_wdf_wr_en;
     wire         i_stall,        d_stall;
 
     // PixelFeeder <=> RequestController wires:
     wire         pixel_rdf_rd_en;
     wire         pixel_af_wr_en;
-    wire [30:0]  pixel_af_addr_din;
+    wire [ 30:0] pixel_af_addr_din;
     wire         pixel_af_full;
     wire         pixel_rdf_valid;
 
@@ -123,47 +123,75 @@ output [31:0] DBG_MEM150
     wire         filler_wdf_full;
     wire [127:0] filler_wdf_din;
     wire         filler_wdf_wr_en;
-    wire [30:0]  filler_addr_din;
+    wire [ 30:0] filler_addr_din;
     wire         filler_af_wr_en;
-    wire [15:0]  filler_wdf_mask_din;
+    wire [ 15:0] filler_wdf_mask_din;
 
     // Line Engine <=> RequestController wires:
     wire         line_af_full;
     wire         line_wdf_full;
     wire [127:0] line_wdf_din;
     wire         line_wdf_wr_en;
-    wire [30:0]  line_addr_din;
+    wire [ 30:0] line_addr_din;
     wire         line_af_wr_en;
-    wire [15:0]  line_wdf_mask_din;
+    wire [ 15:0] line_wdf_mask_din;
 
     // Graphics Command Processor <=> RequestController wires:
     wire         cmd_rdf_rd_en;
     wire         cmd_af_wr_en;
-    wire [30:0]  cmd_addr_din;
+    wire [ 30:0] cmd_addr_din;
     wire         cmd_rdf_valid;
     wire         cmd_af_full;
 
     // Graphics Command Processor <=> Frame Filler wires:
-    wire [23:0]  filler_color;
+    wire [ 31:0] filler_color;
     wire         filler_ready;
     wire         filler_valid;
-    wire [31:0]  filler_frame;
+    wire [ 31:0] filler_frame;
 
     // Graphics Command Processor <=> Line Engine wires:
     wire         line_ready;
-    wire  [31:0] line_color;
-    wire  [9:0]  line_point;
+    wire [ 31:0] line_color;
+    wire [  9:0] line_point;
     wire         line_color_valid;
     wire         line_x0_valid;
     wire         line_y0_valid;
     wire         line_x1_valid;
     wire         line_y1_valid;
     wire         line_trigger;
-    wire [31:0]  line_frame;
+    wire [ 31:0] line_frame;
+
+// Extra feedback status from graphics controllers
+    wire [  5:0] pf_feedframe, gp_procframe;
+    wire         gp_ready;
+
+    assign graphics_status = {
+        2'b00, pf_feedframe[5:0],
+        6'b0000_00, video_ready, video_valid, //TODO:Sample/count recent activity instead
+        2'b00, gp_procframe[5:0],
+        5'b0000_0, line_ready, filler_ready, gp_ready
+    };
+
+assign DBG_MEM150 = {
+    d_stall, d_wdf_full, d_af_full, d_rdf_valid,
+        1'b0, d_wdf_wr_en, d_af_wr_en, d_rdf_rd_en,
+    i_stall, i_wdf_full, i_af_full, i_rdf_valid,
+        1'b0, i_wdf_wr_en, i_af_wr_en, i_rdf_rd_en,
+    stall, wdf_full, af_full, rdf_dout_valid,
+        1'b0, wdf_wr_en, af_wr_en, rdf_rd_en,
+8'd0 /*pixel_af_full, pixel_rdf_valid, pixel_af_wr_en, pixel_rdf_rd_en,
+        filler_af_full, filler_wdf_full, filler_af_wr_en, filler_wdf_wr_en*/
+};
+
 
    // DDR2 module:
     mig_v3_61 #(
-        .SIM_ONLY(SIM_ONLY)
+        .SIM_ONLY(SIM_ONLY),
+        .CAS_LAT(3), //Seen 3 or 4...seems like 3 is ok
+        .BURST_LEN(4), //TODO: Try 8
+        .APPDATA_WIDTH(128),
+        .CLK_PERIOD(5000), //200MHz=5000 (DDR400)
+        .RST_ACT_LOW(1) //Maybe flip this to avoid inversion
     ) ddr2(
         .clk200(clk200_g),
         .clk0(clk0_g),
@@ -398,7 +426,8 @@ output [31:0] DBG_MEM150
     // FRAME control <=> CPU:
         .PF_frame(cpu_pf_frame),
         .PF_valid(cpu_pf_valid),
-        .frame_interrupt(frame_interrupt)
+        .PF_feedframe(pf_feedframe),
+        .PF_interrupt(frame_interrupt)
     );
 
     FrameFiller framefill(
@@ -476,18 +505,8 @@ output [31:0] DBG_MEM150
         .GP_valid(cpu_gp_valid),
         .GP_frame(cpu_gp_frame),
         .GP_code(cpu_gp_code),
+        .GP_procframe(gp_procframe),
         .GP_interrupt(gp_interrupt)
     );
-
-assign DBG_MEM150 = {
-    d_stall, d_wdf_full, d_af_full, d_rdf_valid,
-        1'b0, d_wdf_wr_en, d_af_wr_en, d_rdf_rd_en,
-    i_stall, i_wdf_full, i_af_full, i_rdf_valid,
-        1'b0, i_wdf_wr_en, i_af_wr_en, i_rdf_rd_en,
-    stall, wdf_full, af_full, rdf_dout_valid,
-        1'b0, wdf_wr_en, af_wr_en, rdf_rd_en,
-8'd0 /*pixel_af_full, pixel_rdf_valid, pixel_af_wr_en, pixel_rdf_rd_en,
-        filler_af_full, filler_wdf_full, filler_af_wr_en, filler_wdf_wr_en*/
-};
 
 endmodule

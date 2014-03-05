@@ -2,6 +2,7 @@ tmp/
 /[di]mem_blk_ram/
 /bios_mem/
 /isr_mem/
+/gpcode_fifo/
 /mig_af/
 /mig_rdf/
 /mig_wdf/

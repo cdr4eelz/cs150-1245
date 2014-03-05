@@ -391,7 +391,7 @@ end
         .addra(DMEM_ADDR[13:2]),
         .DOUTA(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
-        //Mapped devices
+        //Mapped RVA devices
         .RVa_RX(UARX),          .RVa_TX(UATX),
         .RVa_RX_IRQ(uart0_irq), .RVa_TX_IRQ(uart1_irq),
         //Counters

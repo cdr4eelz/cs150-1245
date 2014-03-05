@@ -1,4 +1,6 @@
-module FrameFiller(
+module FrameFiller #(
+    parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600
+)(
     input           clk,
     input           rst,
 //DDR FIFOs (write-only):
@@ -12,32 +14,49 @@ module FrameFiller(
 //Fill control <=> CPU:
     output          FF_ready,
     input           FF_valid,
-    input  [ 23:0]  FF_color,
+    input  [ 31:0]  FF_color,
     input  [ 31:0]  FF_frame //NOTE: Requires 32-byte alignment (low 5-bit stripped)
 );
 
 //Your code goes here. GL HF DD DS
-/*
+
 //NOTE: DDR addressible to 64-bit "resolution", meaning lo 3-bits of address stripped.
-//      Also, 4x64=256-bits are accessed at a time, so ideal alignment is 32-bytes (lo 5-bits zero)
+//      Also, 4x64=256-bits accessed per request, so ideal is 32-byte align (lo 5-bits zero).
+//      Chosen approach simply imposes 32-byte alignment by clipping the frame base address.
 
-//This approach imposes 16-byte alignment on the frame-buffer since it always sends
-//  a pair of 8-byte values for each address AND uses the address to implicitly know
-//  which of the pair is being sent.  In theory, the beginning & end of the frame-buffer
-//  could be dealt with specially to get the alignment down to 4-bytes, and even the
-//  "color" could be pre-shifted if one insisted on no byte-alignment (no need for that)!
+    //TODO:Teach offsets/edges for rectangle boundaries later...
+    localparam S_DEAD   = 2'b00;
+    localparam S_IDLE   = 2'b01;
+    localparam S_RUN    = 2'b10;
 
-//State ends up being implicit in the address which is currently 
-localparam S_IDLE = 1'd0, S_RUNNING = 1'd1;
+    reg  [ 1:0] ns, cs = S_DEAD;
+    reg  [31:0] color;
+    reg  [ 5:0] framebits;
+    reg  [ 9:0] y, x;
+    wire [ 9:0] L = 0, R = SCREEN_WIDTH  - 1;
+    wire [ 9:0] T = 0, B = SCREEN_HEIGHT - 1;
+    wire lastX = (x > R); //TODO:Use special compare
+    wire lastY = (y > B);
+    wire mem_ready = (!af_full && !wdf_full);
+    assign FF_ready  = (cs == S_IDLE);
+    assign FF_start  = (FF_ready && FF_valid);
+    assign af_wr_en  = (cs == S_RUN && !x[2]); //Skip address on odds's
+    assign wdf_wr_en = (cs == S_RUN); //Data & mask on odd & even
+    assign wdf_din = {4{color}}; //Replicate same color on each write
+    assign wdf_mask_din = {4{4'b0000}}; //Write all bytes on every write
 
-reg state; //Just an "isRunning" indicator
-reg [31:0] addr;
-reg [127:0] wdf_din,
+    always @(posedge clk) begin
+        if (rst) cs <= S_IDLE;
+        else if (FF_start) cs <= S_RUN;
+        else if (mem_ready && lastX && lastY) cs <= S_IDLE;
 
-wire isMemoryReady = !af_full && !wdf_full;
-*/
-    assign wdf_wr_en = 1'b0;
-    assign af_wr_en  = 1'b0;
-    assign ready     = 1'b1;
+        if (FF_start) {color, framebits} <= {FF_color, FF_frame[27:22]};
+
+        if (FF_start) y <= T;
+        else if (mem_ready && lastX) y <= y+1;
+
+        if (FF_start || (mem_ready && lastX)) x <= {L[9:3],3'b00};
+        else if (mem_ready) x <= x + 4;
+    end
 
 endmodule

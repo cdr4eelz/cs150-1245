@@ -26,8 +26,9 @@ module PixelFeeder #(
     input           video_ready,
 // FRAME control <=> CPU @cpu_clk_g:
     input  [ 31:0]  PF_frame, //Address or Frame# for base of NEXT frame once this one is done
-    input           PF_valid, //Signal that new PF_frame is to be stored this clock cycle
-    output          frame_interrupt //1-cycle pulse after frame transition (except startup frame)
+    input           PF_valid, //Signal new PF_frame is to be captured this clock cycle
+    output [  5:0]  PF_feedframe, //Frame being actively used for the feed
+    output          PF_interrupt //1-cycle pulse after frame transition (except startup frame)
 );
 
     // Hint: States
@@ -42,9 +43,9 @@ module PixelFeeder #(
     // pixel_fifo available space tracked on CPU-clocked side in large chunks.  The chunks
     //    serve to reduce inter-clock signal rate, keep counters small (but separate),
     //    and create a hysteresis.  Synchronizing with 4-cycle signal/acknowledge loop.
-    //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE or TIG
+    //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE and/or TIG
 
-// Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13)
+// Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13 for chunks)
     reg chunk_inc, chunk_ack, fifo_start;
 (* SHREG_EXTRACT="NO", ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
     reg chunk_inc_clkCPU, chunk_ack_clkDVI, fifo_start_clkDVI;
@@ -98,10 +99,10 @@ module PixelFeeder #(
 
     // FIFO to buffer the reads with a write width of 128 and read width of 32. We try to fetch blocks
     // until the FIFO is full.
-    wire [31:0] feeder_raw, feeder_dout;
-    wire feeder_den, feeder_full, feeder_empty;
+    wire [ 31:0] feeder_raw, feeder_dout;
     wire [127:0] feeder_din;
-    wire [31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
+    wire         feeder_den, feeder_full, feeder_empty;
+    wire [ 31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
     pixel_fifo feeder_fifo(
         .rst(cpu_rst_g), //Internal syncronization across clock domains
@@ -143,7 +144,8 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 
     assign af_addr_din = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign af_wr_en = (state == FETCH); //Declare that we want to write an address (but might not happen)
-    assign frame_interrupt = (fr != fr_r); //Fires right after request gets queued (not resp or pix)
+    assign PF_feedframe = framebits;
+    assign PF_interrupt = (fr != fr_r); //Fires right after request gets queued (not resp or pix)
 
     always @(*) begin
         case ( {chunk_edge, af_advance} ) //chunk reduces by 2, fetch increases by 1

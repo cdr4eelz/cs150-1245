@@ -359,7 +359,7 @@ module RequestController(
     assign d_af_full  = fifo_access == D_ACCESS ?  af_full || wdf_full : 1'b1;
     assign d_wdf_full = fifo_access == D_ACCESS ? wdf_full || af_full : 1'b1;
 
-    assign filler_af_full  = fifo_access == FILLER_ACCESS  ? wdf_full || af_full : 1'b1;
+    assign filler_af_full  = fifo_access == FILLER_ACCESS  ? af_full || wdf_full : 1'b1;
     assign filler_wdf_full = fifo_access == FILLER_ACCESS  ? wdf_full || af_full : 1'b1;
 
     assign line_af_full  = fifo_access == LINE_ACCESS  ? af_full || wdf_full : 1'b1;

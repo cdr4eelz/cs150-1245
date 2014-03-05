@@ -22,7 +22,7 @@ module GraphicsProcessorTestbench();
 
     reg         FF_ready;
     wire        FF_valid;
-    wire [23:0] FF_color;
+    wire [31:0] FF_color;
     wire [31:0] FF_frame;
 
     reg         LE_ready;
@@ -40,6 +40,7 @@ module GraphicsProcessorTestbench();
     reg         GP_valid;
     reg  [31:0] GP_frame;
     reg  [31:0] GP_code;
+    reg  [ 5:0] GP_proccode;
     wire        GP_interrupt;
 //  wire bsel;
 
@@ -73,8 +74,9 @@ module GraphicsProcessorTestbench();
     //GraphicsProcessor control signals
         .GP_ready(GP_ready),
         .GP_valid(GP_valid),
-        .GP_code(GP_code),
         .GP_frame(GP_frame),
+        .GP_code(GP_code),
+        .GP_procframe(GP_procframe),
         .GP_interrupt(GP_interrupt)
     );
 
