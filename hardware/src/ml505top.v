@@ -11,8 +11,8 @@ module ml505top #(
 
     // GPIO (Switches & LEDs)
     input   [7:0] GPIO_DIP,
-    input   [4:0] GPIO_COMPPB,
-    output  [4:0] GPIO_COMPLED,
+    input   [4:0] GPIO_COMPPB,  // [0:4] is [CENSW]
+    output  [4:0] GPIO_COMPLED, // [0:4] is [CENSW]
     output  [7:0] GPIO_LED,
 
     // DDR via MIG
@@ -52,7 +52,7 @@ module ml505top #(
     output        SRAM_OE_B,
     output  [3:0] SRAM_BW,
     output [17:0] SRAM_A,
-    inout  [31:0] SRAM_D,
+    inout  [35:0] SRAM_D,
 
     // VGA Capture
     input   [7:0] VGA_RED, VGA_GREEN, VGA_BLUE,

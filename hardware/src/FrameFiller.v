@@ -5,17 +5,17 @@ module FrameFiller #(
     input           rst,
 //DDR FIFOs (write-only):
     input           af_full,
-    input           wdf_full,
-    output [127:0]  wdf_din,
-    output          wdf_wr_en,
-    output [ 30:0]  af_addr_din,
     output          af_wr_en,
+    output [ 30:0]  af_addr_din,
+    input           wdf_full,
+    output          wdf_wr_en,
     output [ 15:0]  wdf_mask_din,
+    output [127:0]  wdf_din,
 //Fill control <=> CPU:
-    output          FF_ready,
-    input           FF_valid,
-    input  [ 31:0]  FF_color,
-    input  [ 31:0]  FF_frame //NOTE: Requires 32-byte alignment (low 5-bit stripped)
+    output          FF_ready, //Can start issuing values/trigger
+    input           FF_valid,   //Trigger drawing (FF_frame & FF_color captured)
+    input  [ 31:0]  FF_color,   //8-zeros, 3 x 8-bit R/G/B
+    input  [ 31:0]  FF_frame    //Frame-base (modulo 0x0040_0000)
 );
 
 //Your code goes here. GL HF DD DS
@@ -35,8 +35,8 @@ module FrameFiller #(
     reg  [ 9:0] y, x;
     wire [ 9:0] L = 0, R = SCREEN_WIDTH  - 1;
     wire [ 9:0] T = 0, B = SCREEN_HEIGHT - 1;
-    wire lastX = (x > R); //TODO:Use special compare
-    wire lastY = (y > B);
+    wire lastX = (x > (R-4));
+    wire lastY = (y > (B-1));
     wire mem_ready = (!af_full && !wdf_full);
     assign FF_ready  = (cs == S_IDLE);
     assign FF_start  = (FF_ready && FF_valid);
@@ -53,10 +53,10 @@ module FrameFiller #(
         if (FF_start) {color, framebits} <= {FF_color, FF_frame[27:22]};
 
         if (FF_start) y <= T;
-        else if (mem_ready && lastX) y <= y+1;
+        else if (mem_ready && lastX) y <= (y + 1);
 
         if (FF_start || (mem_ready && lastX)) x <= {L[9:3],3'b00};
-        else if (mem_ready) x <= x + 4;
+        else if (mem_ready) x <= (x + 4);
     end
 
 endmodule

@@ -9,6 +9,7 @@
 
 module LineEngineTestbench();
 
+    parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;
     localparam Cycle = 2*HalfCycle;
     reg  Clock, rst;
@@ -16,17 +17,15 @@ module LineEngineTestbench();
     always #(HalfCycle) Clock= ~Clock;
 
     wire            LE_ready;
-    // 8-bit each for RGB
-    reg  [ 31:0]    LE_color;
-    reg  [  9:0]    LE_point;
-    // Valid signals for the regs
     reg             LE_color_valid;
+    reg  [ 31:0]    LE_color;   // 8-bits zeros then 8-bit each for RGB
     reg             LE_x0_valid;
     reg             LE_y0_valid;
     reg             LE_x1_valid;
     reg             LE_y1_valid;
-    // Trigger signal - line engine should start drawing the line
-    reg             LE_trigger;
+    reg  [  9:0]    LE_point;
+    reg             LE_trigger; // Trigger signal - line engine should start drawing
+    reg  [ 31:0]    LE_frame;   // Frame base (clipped to multiple of 0x0040_0000)
     // FIFO connections
     reg             af_full;
     reg             wdf_full;
@@ -36,8 +35,6 @@ module LineEngineTestbench();
     wire [127:0]    wdf_din;
     wire [ 15:0]    wdf_mask_din;
     wire            wdf_wr_en;
-    // Frame base (clipped to multiple of 0x0040_0000)
-    reg  [ 31:0]    LE_frame; //Captured on LE_trigger
 
 
     wire [  9:0]    x, y, xdiff, ydiff;
@@ -112,11 +109,12 @@ module LineEngineTestbench();
         input [9:0] y1;
         input [31:0] color;
     begin
-        LE_color = color;
         while (!LE_ready) #(Cycle); // wait for LE_ready
+        LE_color = color;
         LE_color_valid = 1'b1;
         #(Cycle);
         LE_color_valid = 1'b0;
+        LE_color = 32'bz;
         LE_point = x0;
         LE_x0_valid = 1'b1;
         #(Cycle);
@@ -131,8 +129,11 @@ module LineEngineTestbench();
         LE_x1_valid = 1'b0;
         LE_y1_valid = 1'b1;
         LE_point = y1;
+        LE_frame = 32'h1040_0000;
         LE_trigger  = 1'b1;
         #(Cycle);
+        LE_point = 32'bz;
+        LE_frame = 32'bz;
         LE_y1_valid = 1'b0;
         LE_trigger  = 1'b0;
         #(Cycle);

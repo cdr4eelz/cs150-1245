@@ -1,23 +1,34 @@
 #NOTE: RE-MERGED with XUP5.ucf and MIG from partgen output known to be clean/running.
 #NOTE: Layout style and extra goodies like DRIVE, SLEW, PULLDOWN brought in from other examples.
-#NOTE: Part seems to be -53E rather than -667...and maybe sim settings were wrong elsewhere too?
+#NOTE: DDR2 run at speed like -53E but rated -667 (for example CAS=3 for slower rate vs. 4)
+
+#NET  "PIEZO_SPEAKER"    LOC="G30";   # Bank 15, Vcco=1.8V, DCI using 49.9 ohm resistors
+#NET  "AUDIO_BIT_CLK"    LOC="AF18";  # Bank 4, Vcco=3.3V, No DCI
+#NET  "AUDIO_SDATA_IN"   LOC="AE18";  # Bank 4, Vcco=3.3V, No DCI
+#NET  "AUDIO_SDATA_OUT"  LOC="AG16";  # Bank 4, Vcco=3.3V, No DCI
+#NET  "AUDIO_SYNC"       LOC="AF19";  # Bank 4, Vcco=3.3V, No DCI
 
 
 # BOARD CLOCK & RESET
 NET  "USER_CLK"         LOC="AH15"  |  IOSTANDARD="LVCMOS33";
 NET  "USER_CLK"     TNM_NET = "USER_CLK";
 TIMESPEC TS_USER_CLK = PERIOD "USER_CLK" 10.0 ns; ## HIGH 50%;
-#NET  "USER_RST"     TIG;
 #NET  "USER_RST"         LOC="E9"    |  IOSTANDARD="LVCMOS33"  |  PULLUP;
+#NET "USER_RST" TIG;
 
 # UART
 NET  "FPGA_SERIAL_TX"   LOC="AG20"  |  IOSTANDARD="LVCMOS33";
 NET  "FPGA_SERIAL_RX"   LOC="AG15"  |  IOSTANDARD="LVCMOS33";
 #NET  "FPGA_SERIAL2_RX"  LOC="G10"   |  IOSTANDARD="LVCMOS33";
 #NET  "FPGA_SERIAL2_TX"  LOC="F10"   |  IOSTANDARD="LVCMOS33";
+NET "FPGA_SERIAL*" TIG;
+
+# LEDs "ERRORS"
+#NET  "BUS_ERROR_1"     SLEW=SLOW | DRIVE=2 | LOC="F6";
+#NET  "BUS_ERROR_2"      LOC="T10"   | SLEW=SLOW | DRIVE=2;
 
 # LEDs "BOTTOM ROW"
-NET  "GPIO_LED[*]"      SLEW=SLOW | DRIVE=2;
+NET  "GPIO_LED[*]"      SLEW="SLOW" | DRIVE=2 | PULLDOWN;
 NET  "GPIO_LED[0]"      LOC="H18"   |  IOSTANDARD="LVCMOS25";
 NET  "GPIO_LED[1]"      LOC="L18"   |  IOSTANDARD="LVCMOS25";
 NET  "GPIO_LED[2]"      LOC="G15"   |  IOSTANDARD="LVCMOS25";
@@ -26,22 +37,25 @@ NET  "GPIO_LED[4]"      LOC="G16"   |  IOSTANDARD="LVCMOS25";
 NET  "GPIO_LED[5]"      LOC="AD25"  |  IOSTANDARD="LVCMOS18";
 NET  "GPIO_LED[6]"      LOC="AD24"  |  IOSTANDARD="LVCMOS18";
 NET  "GPIO_LED[7]"      LOC="AE24"  |  IOSTANDARD="LVCMOS18";
+NET "GPIO_LED[*]" TIG;
 
-# LEDs "COMPASS" ([2] is "GPIO_COMPLED_S")
+# LEDs "COMPASS" ([0:4] is "GPIO_COMPLED_[CENSW]")
 NET  "GPIO_COMPLED[*]"  SLEW=SLOW | DRIVE=2;
 NET  "GPIO_COMPLED[0]"  LOC="E8"    |  IOSTANDARD="LVCMOS33";
-NET  "GPIO_COMPLED[1]"  LOC="AF23"  |  IOSTANDARD="LVCMOS33";
-NET  "GPIO_COMPLED[2]"  LOC="AG12"  |  IOSTANDARD="LVCMOS33";
-NET  "GPIO_COMPLED[3]"  LOC="AG23"  |  IOSTANDARD="LVCMOS33";
-NET  "GPIO_COMPLED[4]"  LOC="AF13"  |  IOSTANDARD="LVCMOS33";
+NET  "GPIO_COMPLED[1]"  LOC="AG23"  |  IOSTANDARD="LVCMOS33";
+NET  "GPIO_COMPLED[2]"  LOC="AF13"  |  IOSTANDARD="LVCMOS33";
+NET  "GPIO_COMPLED[3]"  LOC="AG12"  |  IOSTANDARD="LVCMOS33";
+NET  "GPIO_COMPLED[4]"  LOC="AF23"  |  IOSTANDARD="LVCMOS33";
+NET "GPIO_COMPLED[*]" TIG;
 
-# PUSH-BUTTONS "COMPASS" ([0] is "GPIO_SW_C")
+# PUSH-BUTTONS "COMPASS" ([0:4] is "GPIO_SW_[CENSW]")
 NET  "GPIO_COMPPB[*]"   SLEW=SLOW | DRIVE=2 | PULLDOWN;
 NET  "GPIO_COMPPB[0]"   LOC="AJ6"   |  IOSTANDARD="LVCMOS33";
-NET  "GPIO_COMPPB[1]"   LOC="AJ7"   |  IOSTANDARD="LVCMOS33";
-NET  "GPIO_COMPPB[2]"   LOC="V8"    |  IOSTANDARD="LVCMOS33";
-NET  "GPIO_COMPPB[3]"   LOC="AK7"   |  IOSTANDARD="LVCMOS33";
-NET  "GPIO_COMPPB[4]"   LOC="U8"    |  IOSTANDARD="LVCMOS33";
+NET  "GPIO_COMPPB[1]"   LOC="AK7"   |  IOSTANDARD="LVCMOS33";
+NET  "GPIO_COMPPB[2]"   LOC="U8"    |  IOSTANDARD="LVCMOS33";
+NET  "GPIO_COMPPB[3]"   LOC="V8"    |  IOSTANDARD="LVCMOS33";
+NET  "GPIO_COMPPB[4]"   LOC="AJ7"   |  IOSTANDARD="LVCMOS33";
+NET "GPIO_COMPPB[*]" TIG;
 
 # DIP SWITCHES "BOTTOM RIGHT"
 NET  "GPIO_DIP[*]"      SLEW=SLOW | DRIVE=2 | PULLDOWN;
@@ -53,6 +67,13 @@ NET  "GPIO_DIP[4]"      LOC="AE27"  |  IOSTANDARD="LVCMOS18";
 NET  "GPIO_DIP[5]"      LOC="AE26"  |  IOSTANDARD="LVCMOS18";
 NET  "GPIO_DIP[6]"      LOC="AC25"  |  IOSTANDARD="LVCMOS18";
 NET  "GPIO_DIP[7]"      LOC="AC24"  |  IOSTANDARD="LVCMOS18";
+NET "GPIO_DIP[*]" TIG;
+
+# ROTARY
+#NET  FPGA_ROTARY_INCA     LOC="AH30";  # Bank 17, Vcco=1.8V, DCI using 49.9 ohm resistors
+#NET  FPGA_ROTARY_INCB     LOC="AG30";  # Bank 17, Vcco=1.8V, DCI using 49.9 ohm resistors
+#NET  FPGA_ROTARY_PUSH     LOC="AH29";  # Bank 17, Vcco=1.8V, DCI using 49.9 ohm resistors
+NET "FPGA_ROTARY_*" TIG;
 
 
 # Avoid false path on cross-clock synchronizers & reset
@@ -94,7 +115,6 @@ NET  "DVI_XCLK_N"             IOSTANDARD="LVCMOS33";
 NET  "DVI_XCLK_P"             LOC="AL11";
 NET  "DVI_XCLK_P"             IOSTANDARD="LVCMOS33";
 
-
 ################################################################################
 # Video I2C Bus
 ################################################################################
@@ -102,7 +122,7 @@ NET "IIC_SCL_VIDEO"           LOC="U27";
 NET "IIC_SCL_VIDEO"           IOSTANDARD="LVCMOS18";
 NET "IIC_SDA_VIDEO"           LOC="T29";
 NET "IIC_SDA_VIDEO"           IOSTANDARD="LVCMOS18";
-
+NET "IIC_S*_VIDEO" TIG;
 
 ################################################################################
 # VGA
@@ -110,6 +130,7 @@ NET "IIC_SDA_VIDEO"           IOSTANDARD="LVCMOS18";
 NET "VGA_DATA_CLK"  LOC="AH18"  | IOSTANDARD="LVCMOS33";
 NET "VGA_HSOUT"     LOC="AE7"   | IOSTANDARD="LVCMOS33";
 NET "VGA_VSOUT"     LOC="Y6"    | IOSTANDARD="LVCMOS33";
+#NET  VGA_IN_CLAMP         LOC="AH7";   # Bank 18, Vcco=3.3V, No DCI
 
 NET "VGA_RED[*]" IOSTANDARD="LVCMOS33";
 NET "VGA_RED[7]"   LOC="W11";
@@ -149,16 +170,16 @@ NET  "SRAM_CLK"             SLEW="FAST" | DRIVE="12" | IOSTANDARD="LVCMOS33";
 NET  "SRAM_CLK"             LOC="G8";    # Bank 20, Vcco=3.3V,  DCI 49.9ohm
 
 NET  "SRAM_CLK_FB"          IOSTANDARD="LVCMOS33";
-NET  "SRAM_CLK_FB"          LOC="AG21";  # Bank 4, Vcco=3.3V, No DCI      
+NET  "SRAM_CLK_FB"          LOC="AG21";  # Bank 4, Vcco=3.3V, No DCI
 
 NET  "SRAM_CS_B"            IOSTANDARD="LVDCI_33";
-NET  "SRAM_CS_B"            LOC="J10";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm      
+NET  "SRAM_CS_B"            LOC="J10";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
 
 NET  "SRAM_WE_B"            SLEW="FAST" | DRIVE="12" | IOSTANDARD="LVCMOS33";
 NET  "SRAM_WE_B"            LOC="AF20";  # Bank 2, Vcco=3.3V
 
 NET  "SRAM_ADV_LD_B"        IOSTANDARD="LVDCI_33";
-NET  "SRAM_ADV_LD_B"        LOC="H8";    # Bank 20, Vcco=3.3V,  DCI 49.9ohm      
+NET  "SRAM_ADV_LD_B"        LOC="H8";    # Bank 20, Vcco=3.3V,  DCI 49.9ohm
 
 NET  "SRAM_MODE"            IOSTANDARD="LVDCI_33";
 NET  "SRAM_MODE"            LOC="A13";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
@@ -167,10 +188,10 @@ NET  "SRAM_OE_B"            IOSTANDARD="LVDCI_33";
 NET  "SRAM_OE_B"            LOC="B12";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
 
 NET  "SRAM_BW[*]"           IOSTANDARD="LVDCI_33";
-NET  "SRAM_BW[0]"           LOC="D10";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm      
-NET  "SRAM_BW[1]"           LOC="D11";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm      
-NET  "SRAM_BW[2]"           LOC="J11";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm      
-NET  "SRAM_BW[3]"           LOC="K11";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm      
+NET  "SRAM_BW[0]"           LOC="D10";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
+NET  "SRAM_BW[1]"           LOC="D11";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
+NET  "SRAM_BW[2]"           LOC="J11";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
+NET  "SRAM_BW[3]"           LOC="K11";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
 
 NET  "SRAM_A[*]"           SLEW="FAST" | DRIVE="8" | IOSTANDARD="LVCMOS33";
 NET  "SRAM_A[0]"           LOC="K13";   # Bank 1, Vcco=3.3V
@@ -230,11 +251,12 @@ NET  "SRAM_D[29]"  PULLDOWN | IOSTANDARD="LVDCI_33" | LOC="K9";
 NET  "SRAM_D[30]"  PULLDOWN | IOSTANDARD="LVDCI_33" | LOC="K8";
 NET  "SRAM_D[31]"  PULLDOWN | IOSTANDARD="LVDCI_33" | LOC="J9";
 
-# Data parity bits are unused
-#NET  "SRAM_DQP[0]"           LOC="D12";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
-#NET  "SRAM_DQP[1]"           LOC="C12";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
-#NET  "SRAM_DQP[2]"           LOC="H10";   # Bank 20, Vcco=3.3V,  DCI 49.9ohm
-#NET  "SRAM_DQP[3]"           LOC="H9";    # Bank 20, Vcco=3.3V,  DCI 49.9ohm
+# Bank 20, Vcco=3.3V,  DCI 49.9ohm  (Parity as EXTRA 4-bits of data)
+NET  "SRAM_D[32]"  PULLDOWN | IOSTANDARD="LVDCI_33" | LOC="D12";
+NET  "SRAM_D[33]"  PULLDOWN | IOSTANDARD="LVDCI_33" | LOC="C12";
+NET  "SRAM_D[34]"  PULLDOWN | IOSTANDARD="LVDCI_33" | LOC="H10";
+NET  "SRAM_D[35]"  PULLDOWN | IOSTANDARD="LVDCI_33" | LOC="H9";
+
 
 
 ############################################################################
