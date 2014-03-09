@@ -1,19 +1,21 @@
 module ml505top #(
     parameter CPU_FREQ = 50_000_000
 )(
-    // Reference Clock (100MHz) & board reset (elimated)
+    // Reference Clock (100MHz) & board reset
     input         USER_CLK,
-//  input         USER_RST,
+    input         USER_RST_N,
 
-    // UART (serial)
-    input         FPGA_SERIAL_RX,
-    output        FPGA_SERIAL_TX,
+    // SERIAL (UART)
+    input         FPGA_SERIAL1_RX,
+    output        FPGA_SERIAL1_TX,
 
-    // GPIO (Switches & LEDs)
+    // GPIO (SWitches & LEDs)
     input   [7:0] GPIO_DIP,
-    input   [4:0] GPIO_COMPPB,  // [0:4] is [CENSW]
-    output  [4:0] GPIO_COMPLED, // [0:4] is [CENSW]
     output  [7:0] GPIO_LED,
+    input   [4:0] GPIO_COMPPB,  // [4:0] is [CWESN]
+    output  [4:0] GPIO_COMPLED, // [4:0] is [CWESN]
+    input         FPGA_ROTARY_INCA, FPGA_ROTARY_INCB, FPGA_ROTARY_PUSH,
+    output        BUS_ERROR_1, BUS_ERROR_2,  //RED
 
     // DDR via MIG
     output [12:0] DDR2_A,
@@ -52,7 +54,7 @@ module ml505top #(
     output        SRAM_OE_B,
     output  [3:0] SRAM_BW,
     output [17:0] SRAM_A,
-    inout  [35:0] SRAM_D,
+    inout  [35:0] SRAM_D, //4-bits of parity tacked on
 
     // VGA Capture
     input   [7:0] VGA_RED, VGA_GREEN, VGA_BLUE,
@@ -64,7 +66,8 @@ module ml505top #(
 //Declare a couple custom signals & rename GPIO
 wire any_stall, GPIO_SW_C;
 assign GPIO_COMPLED = GPIO_COMPPB; //Compass LED lights mimic pushbuttons
-assign GPIO_SW_C = GPIO_COMPPB[0];
+assign GPIO_SW_C = GPIO_COMPPB[4];
+assign BUS_ERROR_1 = USER_RST_N, BUS_ERROR_2 = !USER_RST_N;
 wire [31:0] DBG_MEM150;
 
     // PLL wires
@@ -185,17 +188,17 @@ wire [31:0] DBG_MEM150;
         .icache_dout(icache_dout),
         .stall      (stall      ),
     // DVI driver:
-        .video          (video          ),
         .video_ready    (video_ready    ),
         .video_valid    (video_valid    ),
+        .video          (video          ),
     // Graphics <=> CPU interface:
         .graphics_status(graphics_status),
-        .cpu_pf_frame   (pf_frame       ),
         .cpu_pf_valid   (pf_valid       ),
+        .cpu_pf_frame   (pf_frame       ),
         .frame_interrupt(frame_interrupt),
-        .cpu_gp_code    (gp_code        ),
-        .cpu_gp_frame   (gp_frame       ),
         .cpu_gp_valid   (gp_valid       ),
+        .cpu_gp_frame   (gp_frame       ),
+        .cpu_gp_code    (gp_code        ),
         .gp_interrupt   (gp_interrupt   ),
 // Chipscope cross-module tap
 .DBG_MEM150(DBG_MEM150)
@@ -208,8 +211,8 @@ wire [31:0] DBG_MEM150;
         .clk(cpu_clk_g),
         .rst(rst_cpu_cpu),
     // Serial (UART):
-        .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-        .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .FPGA_SERIAL_RX(FPGA_SERIAL1_RX),
+        .FPGA_SERIAL_TX(FPGA_SERIAL1_TX),
     // Memory Caches:
         .dcache_addr (dcache_addr),
         .icache_addr (icache_addr),
@@ -224,12 +227,12 @@ wire [31:0] DBG_MEM150;
         .stall       (any_stall  ),
     // Graphics:
         .graphics_status(graphics_status),
-        .pf_frame       (pf_frame),
         .pf_valid       (pf_valid),
+        .pf_frame       (pf_frame),
         .frame_interrupt(frame_interrupt),
-        .gp_code        (gp_code),
-        .gp_frame       (gp_frame),
         .gp_valid       (gp_valid),
+        .gp_frame       (gp_frame),
+        .gp_code        (gp_code),
         .gp_interrupt   (gp_interrupt),
 // Chipscope cross-module tap:
 .DBG_MEM150(DBG_MEM150)
@@ -248,11 +251,11 @@ wire [31:0] DBG_MEM150;
 //      .Height( 806), .FrontV(  3), .PulseV(  6), .BackV( 29), .ClockFreq(75_000_000)
     ) dvi (
         .Clock(dvi_clk_g), .Reset(rst_dvi_bus), .DVI_RESET_B(DVI_RESET_B),
-        .DVI_D(DVI_D), .DVI_DE(DVI_DE), .DVI_H(DVI_H), .DVI_V(DVI_V),
-        .DVI_XCLK_N(DVI_XCLK_N), .DVI_XCLK_P(DVI_XCLK_P),
+        .DVI_D(DVI_D), .DVI_DE(DVI_DE), .DVI_H(DVI_H), .DVI_V(DVI_V), //Data,Ena,Hor,Ver
+        .DVI_XCLK_N(DVI_XCLK_N), .DVI_XCLK_P(DVI_XCLK_P),         //Differential clock
         .I2C_SCL_DVI(IIC_SCL_VIDEO), .I2C_SDA_DVI(IIC_SDA_VIDEO), //Configuration IIC
-        .Video(     video      ), //Ready/Valid interface for 24-bit pixel values
-        .VideoReady(video_ready), .VideoValid(video_valid)
+        .VideoReady(video_ready), //Ready/Valid interface for 24-bit pixel RGB feed
+        .VideoValid(video_valid), .Video(video)
     );
 
     wire cpu_clk, dvi_clk, clk200, clk0, clk90, clkdiv0, pll_fb;

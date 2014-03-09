@@ -41,7 +41,6 @@ module GraphicsProcessorTestbench();
     wire        LE_trigger;
     wire [31:0] LE_frame;
 
-
     GraphicsProcessor DUT(
         .clk(Clock),
         .rst(rst),
@@ -78,18 +77,24 @@ module GraphicsProcessorTestbench();
         .LE_frame(LE_frame)
     );
 
+
+    wire ENGINES_ready;
+
     initial begin
         #(Cycle);
         @(posedge Clock);
         {GP_valid, GP_code, GP_frame} = 0;
-        {FF_ready, LE_ready} = 0;
         rst = 1'b1;
         #(10*Cycle);
-        {FF_ready, LE_ready} = {2{1'b1}};
         rst = 1'b0;
         #(Cycle);
-$monitor("gp-TB: procframe==%0h  interrupt==%b", GP_procframe, GP_interrupt);
-        execGP( .codebase(32'h0000_4000), .framebase(1) );
+
+$display("GraphicsProcessor: Fake memory & engines...");
+        execGP( 32'h0000_4000, 1 );
+
+        @(posedge Clock);
+        while (!ENGINES_ready) #(Cycle); // GP should have waited already
+$display("GraphicsProcessor: Done.");
         $finish();
     end
 
@@ -97,25 +102,27 @@ $monitor("gp-TB: procframe==%0h  interrupt==%b", GP_procframe, GP_interrupt);
         input [31:0] codebase;
         input [31:0] framebase;
     begin
-        wait (posedge Clock);
-        $display("gp-TB: Wait...");
+        @(posedge Clock);
+$display("gp-TB: Wait...");
         while (!GP_ready) #(Cycle); // wait for GP_ready
         GP_code = codebase;
         GP_frame = framebase;
         GP_valid = 1'b1;
-        $strobe("gp-TB: code=%0h  frame=%0h", GP_code, GP_frame);
+$strobe("gp-TB: code=%h  frame=%h", GP_code, GP_frame);
         #(Cycle);
         GP_valid = 1'b0;
         GP_code = 32'bz;
         GP_frame = 32'bz;
+$display("gp-TB: procframe==%h  interrupt==%b", GP_procframe, GP_interrupt);
         while (!GP_ready) begin
 //            if (wdf_wr_en && wdf_mask_din != 16'hFFFF) begin
 //                $display("gp-TB: ...", x, y);
 //            end
             #(Cycle);
         end
-        $display("gp-TB: Done.");
-    end
+$display("gp-TB: Done.");
+    end endtask
+
 
 /*
 *** SAMPLE-1 GPCODE block from checkpoint 4 ***
@@ -128,6 +135,7 @@ $monitor("gp-TB: procframe==%0h  interrupt==%b", GP_procframe, GP_interrupt);
     0x4018:   0x00AA_00BB   #   second-endpoint (0xAA, 0xBB)
     0x401C:   0x0000_0000   # STOP.
 */
+
 
 // Fake memory fetch/response, always fetches 2-parts of SAMPLE-1 ignoring address!
     localparam MS_DEAD=0, MS_IDLE=1, MS_OFFER1=2, MS_OFFER2=3;
@@ -159,8 +167,91 @@ $monitor("gp-TB: procframe==%0h  interrupt==%b", GP_procframe, GP_interrupt);
         if (rst) mem_cs <= MS_IDLE;
         else mem_cs <= mem_ns;
 
-        if (!af_full && af_wr_en) $display("gp-MEM: addr=%0h", af_addr_din);
-        if (rdf_valid && rdf_rd_en) $display("gp-MEM: data=%0h", rdf_dout);
+        if (!af_full && af_wr_en) begin
+            $display("gp-MEM: addr=%h", af_addr_din);
+        end
+        if (rdf_valid && rdf_rd_en) begin
+            $display("gp-MEM: data=%h %h %h %h", rdf_dout[127:96],
+                rdf_dout[95:64], rdf_dout[63:32], rdf_dout[31:0]);
+        end
+    end
+
+
+//Fake ENGINEs to listen to GP actions
+    integer FF__countdown, LE__countdown;
+    integer LE__frame, LE__color, LE__x0, LE__y0, LE__x1, LE__y1;
+    assign ENGINES_ready = (FF_ready && LE_ready);
+    always @(posedge Clock) begin
+        if (rst) begin
+            {FF_ready, FF__countdown} <= 0;
+            {LE_ready, LE__countdown} <= 0;
+        end else begin
+            if (FF__countdown == 0) begin
+                FF_ready <= 1'b1;
+                if (!FF_ready) $display("[+FILL+] Ready!");
+            end else FF__countdown <= (FF__countdown-1);
+            if (LE__countdown == 0) begin
+                LE_ready <= 1'b1;
+                if (!LE_ready) $display("[+LINE+] Ready!");
+            end else LE__countdown <= (LE__countdown-1);
+        end
+
+        if (FF_ready) begin
+            if (FF_valid) begin
+                if (!ENGINES_ready) $display("*OVERLAP* FILL");
+                $display("[=FILL=] frame=%h", FF_frame);
+                $display("[-FILL-] color=%h (%0d,%0d,%0d)", FF_color,
+                         FF_color[23:16], FF_color[15:8], FF_color[7:0]);
+                FF_ready <= 0;
+                FF__countdown <= 9;
+            end
+        end else begin
+            if (FF_valid) begin
+                $display("*PREMATURE* FILL");
+            end
+        end
+
+        if (LE_ready) begin
+            if (LE_color_valid) begin
+                $display(" LINE: color=%h (%0d,%0d,%0d)", LE_color,
+                         LE_color[23:16], LE_color[15:8], LE_color[7:0]);
+                LE__color <= LE_color;
+            end
+            if (LE_x0_valid) begin
+                $display(" LINE: x0=%h (%0d)", LE_point, LE_point);
+                LE__x0 <= LE_point;
+            end
+            if (LE_y0_valid) begin
+                $display(" LINE: y0=%h (%0d)", LE_point, LE_point);
+                LE__y0 <= LE_point;
+            end
+            if (LE_x1_valid) begin
+                $display(" LINE: x1=%h (%0d)", LE_point, LE_point);
+                LE__x1 <= LE_point;
+            end
+            if (LE_y1_valid) begin
+                $display(" LINE: y1=%h (%0d)", LE_point, LE_point);
+                LE__y1 <= LE_point;
+            end
+            if (LE_trigger) begin
+                LE__frame <= LE_frame;
+                if (!ENGINES_ready) $display("*OVERLAP* LINE");
+                #1; //Might have simultaneously assigned other values above!
+                $display("[=LINE=] frame=%h", LE__frame);
+                $display("[-LINE-] color=%h (%0d,%0d,%0d)", LE__color,
+                         LE__color[23:16], LE__color[15:8], LE__color[7:0]);
+                $display("[-LINE-] P0=%h,%h (%0d,%0d)",
+                         LE__x0, LE__y0, LE__x0, LE__y0);
+                $display("[-LINE-] P1=%h,%h (%0d,%0d)",
+                         LE__x1, LE__y1, LE__x1, LE__y1);
+                LE_ready <= 0;
+                LE__countdown <= 3;
+            end
+        end else begin
+            if (LE_color_valid || LE_x0_valid || LE_y0_valid
+                    || LE_x1_valid || LE_y1_valid || LE_trigger)
+                $display("*PREMATURE* LINE");
+        end
     end
 
 endmodule

@@ -54,17 +54,17 @@ module Memory150 #(
     output  [31:0]  icache_dout,
     output          stall,
 // DVI Interface:
-    output  [23:0]  video,
-    output          video_valid,
     input           video_ready,
+    output          video_valid,
+    output  [23:0]  video,
 // Graphics <=> CPU Interface:
     output  [31:0]  graphics_status,
-    input   [31:0]  cpu_pf_frame,
     input           cpu_pf_valid,
+    input   [31:0]  cpu_pf_frame,
     output          frame_interrupt,
-    input   [31:0]  cpu_gp_code,
-    input   [31:0]  cpu_gp_frame,
     input           cpu_gp_valid,
+    input   [31:0]  cpu_gp_frame,
+    input   [31:0]  cpu_gp_code,
     output          gp_interrupt,
 // Chipscope cross-module tap:
 output [31:0] DBG_MEM150
@@ -179,10 +179,9 @@ assign DBG_MEM150 = {
         1'b0, i_wdf_wr_en, i_af_wr_en, i_rdf_rd_en,
     stall, wdf_full, af_full, rdf_dout_valid,
         1'b0, wdf_wr_en, af_wr_en, rdf_rd_en,
-8'd0 /*pixel_af_full, pixel_rdf_valid, pixel_af_wr_en, pixel_rdf_rd_en,
-        filler_af_full, filler_wdf_full, filler_af_wr_en, filler_wdf_wr_en*/
+    filler_valid, (filler_af_full || filler_wdf_full), filler_af_wr_en, filler_wdf_wr_en,
+4'd0 /*        line_trigger, (line_af_full || line_wdf_full), line_af_wr_en, line_wdf_wr_en*/
 };
-
 
    // DDR2 module:
     mig_v3_61 #(
@@ -462,13 +461,13 @@ assign DBG_MEM150 = {
         .wdf_wr_en(line_wdf_wr_en),
     //Line control <=> CPU:
         .LE_ready(line_ready),
-        .LE_color(line_color),
-        .LE_point(line_point),
         .LE_color_valid(line_color_valid),
+        .LE_color(line_color),
         .LE_x0_valid(line_x0_valid),
         .LE_y0_valid(line_y0_valid),
         .LE_x1_valid(line_x1_valid),
         .LE_y1_valid(line_y1_valid),
+        .LE_point(line_point),
         .LE_trigger(line_trigger),
         .LE_frame(line_frame)
     );
@@ -486,13 +485,13 @@ assign DBG_MEM150 = {
         .af_addr_din(cmd_addr_din),
     //LineEngine interface:
         .LE_ready(line_ready),
-        .LE_color(line_color),
-        .LE_point(line_point),
         .LE_color_valid(line_color_valid),
+        .LE_color(line_color),
         .LE_x0_valid(line_x0_valid),
         .LE_y0_valid(line_y0_valid),
         .LE_x1_valid(line_x1_valid),
         .LE_y1_valid(line_y1_valid),
+        .LE_point(line_point),
         .LE_trigger(line_trigger),
         .LE_frame(line_frame),
     //FrameFiller interface:

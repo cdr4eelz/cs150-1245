@@ -25,12 +25,12 @@ module MIPS150 #(
     input           stall,
 // Graphics:
     input  [ 31:0]  graphics_status,
-    output [ 31:0]  pf_frame,
     output          pf_valid,
+    output [ 31:0]  pf_frame,
     input           frame_interrupt,
-    output [ 31:0]  gp_code,
-    output [ 31:0]  gp_frame,
     output          gp_valid,
+    output [ 31:0]  gp_frame,
+    output [ 31:0]  gp_code,
     input           gp_interrupt,
 // Chipscope cross-module tap:
 input [31:0] DBG_MEM150
@@ -446,7 +446,7 @@ assign trace = {
 
     PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[63:0],
     DBG_MEM150[31:0],   CNT_BRANCH[31:0],   CNT_ISR[31:0],
-    {   8'd0, 8'd0, 8'd0, 8'd0 }
+    graphics_status
 };
 
 

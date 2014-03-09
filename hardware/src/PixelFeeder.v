@@ -21,13 +21,13 @@ module PixelFeeder #(
     output          af_wr_en,
     output [ 30:0]  af_addr_din,
 // DVI driver @dvi_clk_g:
-    output [ 23:0]  video,
-    output          video_valid,
     input           video_ready,
+    output          video_valid,
+    output [ 23:0]  video,
 // FRAME control <=> CPU @cpu_clk_g:
-    input  [ 31:0]  PF_frame, //Address or Frame# for base of NEXT frame once this one is done
-    input           PF_valid, //Signal new PF_frame is to be captured this clock cycle
     output [  5:0]  PF_feedframe, //Frame being actively used for the feed
+    input           PF_valid, //Signal new PF_frame is to be captured this clock cycle
+    input  [ 31:0]  PF_frame, //Address or Frame# for base of NEXT frame once this one is done
     output          PF_interrupt //1-cycle pulse after frame transition (except startup frame)
 );
 
@@ -112,7 +112,7 @@ module PixelFeeder #(
         .full(feeder_full),
         .rd_clk(dvi_clk_g),
         .rd_en(video_ready && isRunning),
-        .dout(feeder_raw), //NOTE: First-word-fallthrough an no "valid" signal avail!
+        .dout(feeder_raw), //NOTE: First-word-fallthrough but no "valid" signal avail!
         .empty(feeder_empty));
 
     assign feeder_dout = (isRunning) ? feeder_raw : ignore_pixel;

@@ -1,6 +1,7 @@
 `include "cpuglobal.vh"
 
 //TODO: Check for multiple reads/writes during stall???
+//TODO: Translate address matches on "addra" into "one-hot" lines (maybe hierarchical)
 //TODO-XTRA: Config address via registers/lines (simple, dedicated comparators)
 
 /*                          Table 2: I/O Memory Map
@@ -13,11 +14,10 @@ h004    32’h80000010    Cycle count     Read    Total number of cycles
 h005    32’h80000014    Instr count     Read    Number of instructions executed
 h006    32’h80000018    Reset counts    Write   N/A (any byte will trigger)
 h014    32’h80000050    PF_FRAME        Write   PixelFeeder frame# (ADDR is frame# * 0x0040_0000)
-h015    32’h80000058    GP_FRAME        Write   Stored, then "captured" along with GP_CODE on launch
-h016    32’h80000054    GP_CODE         Write   Write also launches GraphicsProcessor
-h017    32’h8000005C    Graphics cntl   Read    See PIX-bits below
+h015    32’h80000054    GP_FRAME        Write   Stored, then "captured" along with GP_CODE on launch
+h016    32’h80000058    GP_CODE         Write   Write also launches GraphicsProcessor
+h017    32’h8000005C    Graphics cntl   Read    See Memory150 for concatenated signals
 */
-//TODO: Translate address matches on "addra" into "one-hot" lines (maybe hierarchical)
 
 module MemMapIO #(
     parameter BADNESS=1, BAD_WORD=32'hFED1C007, BAD_BYTE=8'h11,
