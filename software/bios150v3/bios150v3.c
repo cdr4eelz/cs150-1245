@@ -2,76 +2,11 @@
 #include "uart.h"
 #include "string.h"
 #include "memory.h"
+#include "parse.h"
 #include "graphics.h"
 
-int8_t* read_n(int8_t*b, uint32_t n) 
-{
-    for (uint32_t i = 0; i < n;  i++) {
-        b[i] =  uread_int8();
-    }
-    b[n] = '\0';
-    return b;
-}
-
-int8_t* read_token(int8_t* b, uint32_t n, int8_t* ds)
-{
-    for (uint32_t i = 0; i < n; i++) {
-        int8_t ch = uread_int8();
-        for (uint32_t j = 0; ds[j] != '\0'; j++) {
-            if (ch == ds[j]) {
-                b[i] = '\0';
-                return b;
-            }
-        }
-        b[i] = ch;
-    }
-    b[n - 1] = '\0';
-    return b;
-}
-
-void store(uint32_t address, uint32_t length)
-{
-    for (uint32_t i = 0; i*4 < length; i++) {
-        int8_t buffer[9];
-        int8_t* ascii_instruction = read_n(buffer,8);
-        volatile uint32_t* p = (volatile uint32_t*)(address+i*4);
-        *p = ascii_hex_to_uint32(ascii_instruction);
-    }
-}
-
-void show_block(uint32_t address, uint8_t numWords, int8_t* bufMEM, uint32_t bufLEN)
-{
-    volatile uint32_t* p = (volatile uint32_t*)(address);
-    for (uint32_t i = 0; i < numWords; i++) {
-        if ((i%4)==0) {
-            uwrite_int8s("\r\n");
-            uwrite_int8s(uint32_to_ascii_hex((uint32_t) p, bufMEM, bufLEN));
-            uwrite_int8(':');
-        } else {
-            uwrite_int8(' ');
-        }
-        uwrite_int8s(uint32_to_ascii_hex(*p++, bufMEM, bufLEN));
-    }
-}
-
-uint32_t copy_xor(uint32_t pSRC, uint32_t pDST, uint32_t length)
-{
-    volatile uint32_t* s = (volatile uint32_t*)(pSRC);
-    volatile uint32_t* d = (volatile uint32_t*)(pDST);
-    uint32_t result = 0;
-    for (uint32_t i = 0; i*4 < length; i++) {
-        uint32_t val = *s++;
-        result ^= val;
-        if (pDST) {
-            *d++ = val;
-        }
-    }
-    return result;
-}
-
-
 #define BUFFER_LEN 128
-#define VERSION_CHAR '3'
+#define VERSION_CHAR '4'
 
 typedef void (*entry_t)(void);
 
@@ -145,6 +80,37 @@ int main(void)
             *p = byte;
 
 //Graphics commands:
+        } else if (strcmp150(input, "gs") == 0) {
+            uint32_t status = GP_CONTROL;
+
+            uwrite_int8s(uint32_to_ascii_hex(status, buffer, BUFFER_LEN));
+            uwrite_int8s("\r\n");
+        } else if (strcmp150(input, "pf") == 0) {
+            uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+
+            PF_FRAME = frame;
+        } else if (strcmp150(input, "gf") == 0) {
+            uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+
+            GP_FRAME = frame;
+        } else if (strcmp150(input, "gc") == 0) {
+            uint32_t code = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+
+            GP_CODE = code;
+        } else if (strcmp150(input, "hwfill") == 0) {
+            uint32_t color = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+
+            hwfill(color, frame);
+        } else if (strcmp150(input, "hwline") == 0) {
+            uint32_t color = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t x0 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t y0 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t x1 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint16_t y1 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
+            uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
+
+            hwline(color, x0, y0, x1, y1, frame);
         } else if (strcmp150(input, "swfill") == 0) {
             uint32_t color = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
             uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
@@ -159,7 +125,6 @@ int main(void)
             uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
 
             swline(color, x0, y0, x1, y1, frame);
-
         } else if (strcmp150(input, "swpixel") == 0) {
             uint32_t color = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
             uint16_t x = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));

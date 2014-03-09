@@ -3,19 +3,21 @@
 
 #include "types.h"
 
+//NOTE:Using #define since INLINE functions not making it through CLANG/LLVM -> GAS process
 
 //MEMORY MAPPED CONTROLS
-#define PF_FRAME    (*((volatile uint32_t*) 0x80000050))
-#define GP_FRAME    (*((volatile uint32_t*) 0x80000054))
-#define GP_CODE     (*((volatile uint32_t*) 0x80000058))
-//#define GP_CONTROL  (*((volatile uint32_t*) 0x8000005C)) //Status of GP & friends
+#define PF_FRAME    (*((volatile uint32_t*) 0x80000050)) //WRITE:PixelFeeder source frame addr/num
+#define GP_FRAME    (*((volatile uint32_t*) 0x80000054)) //WRITE:GraphicsProcessor frame addr/num
+#define GP_CODE     (*((volatile uint32_t*) 0x80000058)) //WRITE:Set code addr & trigger GP now!
+#define GP_CONTROL  (*((volatile uint32_t*) 0x8000005C)) //READ:Status bits/values of PIX,GP,etc.
 
 
-//Rebased so FRAME0 would be 0x10000000...but skip that one!
+//Renumbered so FRAME0 is 0x10000000...but usually skip that one!
+#define STD_FRAME0X ((uint32_t*) 0x10000000)
 #define STD_FRAME1  ((uint32_t*) 0x10400000)
 #define STD_FRAME2  ((uint32_t*) 0x10800000)
 #define STD_FRAME3  ((uint32_t*) 0x10C00000) //...advance 0x0040_0000 each
-//...NOTE:Frame# (1,2,3,etc.) can be used instead in PF_FRAME & GP_FRAME
+//...NOTE:Frame# (1,2,3,...) can also be used for PF_FRAME & GP_FRAME
 
 
 // DVI Mode: VESA 800x600 pixels @72Hz
@@ -45,22 +47,21 @@
     ((F) & FPMASK) ? ((F) & FPMASK)                     \
         : (0x10000000 | (((F) & FNMASK)<<FSHIFT))     ) )
 
-#define FRAME_NUM(F)    ( (uint32_t)                    \
-    ((F) & FPMASK) ? (((F)>>FSHIFT) & FPMASK) : F       )
-
-#define PIX_PTR(FP,Y,X) ( (uint32_t*) (                 \
+#define PIX_PTR(X,Y,FP) ( (uint32_t*) (                 \
     ((uint32_t)(FP)) | ((Y)<<YSHIFT) | ((X)<<XSHIFT)  ) )
 
-#define PIX_PTC(F,Y,X) ( (uint32_t*) (                  \
-    (FRAME_NUM(F)<<FSHIFT) | (((Y) & PMASK)<<YSHIFT)    \
-    | (((X) & PMASK)<<XSHIFT)                         ) )
+//#define FRAME_NUM(F)    ( (uint32_t)                    \
+//    ((F) & FPMASK) ? (((F)>>FSHIFT) & FPMASK) : F       )
+//#define PIX_PTC(X,Y,F) ( (uint32_t*) (                  \
+//    (FRAME_NUM(F)<<FSHIFT) | (((Y) & PMASK)<<YSHIFT)    \
+//    | (((X) & PMASK)<<XSHIFT)                         ) )
+//#define SWPIXEL(C,X,Y,F) \
+//    { *PIX_PTC((uint16_t)(X),(uint16_t)(Y),(uint32_t)(F)) = (uint32_t)(C); }
 
 
 void swfill(uint32_t color, uint32_t frame);
 void swline(uint32_t color, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint32_t frame);
 void swpixel(uint32_t color, uint16_t x, uint16_t y, uint32_t frame);
-#define SWPIXEL(C,X,Y,F) \
-    { *PIX_PTC((uint32_t)(F),(uint16_t)(Y), (uint16_t)(X)) = (uint32_t)(C); }
 
 void hwfill(uint32_t color, uint32_t frame);
 void hwline(uint32_t color, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint32_t frame);

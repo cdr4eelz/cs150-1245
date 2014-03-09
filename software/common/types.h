@@ -29,4 +29,7 @@ typedef int   int32_t;
 #define HI4(x) ((x >> 4) & 0xF)
 #define LO4(x) (x & 0xF)
 
+#define SWAP(A,B,T) {T=A;A=B;B=T;}
+#define ABSDIF(A,B) (((A) < (B)) ? ((B)-(A)) : ((A)-(B)))
+
 #endif

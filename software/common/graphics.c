@@ -32,51 +32,47 @@ void swpixel(uint32_t color, const uint16_t x, const uint16_t y,
              const uint32_t frame)
 {
     const uint32_t *fp = FRAME_PTR(frame);
-    *PIX_PTR(fp, y, x) = color;
+    *PIX_PTR(x, y, fp) = color;
 }
 
-//utility methods
-void swap(uint16_t* a, uint16_t* b)
-{
-  uint16_t tmp = *a;
-  *a = *b;
-  *b = tmp;
-}
-
-uint16_t abs(int a) 
-{
-   if (a < 0) return -a;
-   return a;
-}
 
 // Based on wikipedia implementation
-void swline(const uint32_t color, uint16_t x0, uint16_t y0,
-            uint16_t x1, uint16_t y1, const uint32_t frame)
+void swline(const uint32_t color, const uint16_t x0, const uint16_t y0,
+            const uint16_t x1, const uint16_t y1, const uint32_t frame)
 {
+    uint16_t a0, a1, b0, b1, tmp;
     const uint32_t *fp = FRAME_PTR(frame);
-    char steep = (abs(y1-y0) > abs(x1-x0)) ? 1 : 0;
+    char steep = (ABSDIF(y1,y0) > ABSDIF(x1,x0)) ? 1 : 0;
     if (steep) {
-        swap(&x0, &y0);
-        swap(&x1, &y1);
+        a0 = y0; a1 = y1; //swap_u16(&x0, &y0);
+        b0 = x0; b1 = x1; //swap_u16(&x1, &y1);
+    } else {
+        a0 = x0; a1 = x1;
+        b0 = y0; b1 = y1;
     }
-    if (x0 > x1) {
-        swap(&x0, &x1);
-        swap(&y0, &y1);
+    if (a0 > a1) {
+        SWAP(a0,a1,tmp); //swap_u16(&a0, &a1);
+        SWAP(b0,b1,tmp); //swap_u16(&b0, &b1);
     }
-    int deltax = x1-x0;
-    int deltay = abs(y1-y0);
-    int error = deltax / 2;
-    int ystep = (y0 < y1) ? 1 : -1;
-    int y = y0;
-    for (int x = x0; x <= x1; x++) {
+    char yinc = (b0 < b1) ? 1 : -1;
+    int32_t deltax = (a1 - a0); //Guaranteed >= 0
+    int32_t deltay = ABSDIF(b1,b0);
+    int32_t error = (int)deltax / 2;
+    uint16_t y = b0;
+    for (uint16_t x = a0; x <= a1; x++) {
         if (steep) {
-            SWPIXEL(color, y, x, fp); //One macro style and one...
+            *PIX_PTR(y, x, fp) = color; //swpixel(color, y, x, fp);
         } else {
-            swpixel(color, x, y, frame); //...function call for testing variety!
+            swpixel(color, x, y, frame);
+//          *PIX_PTR(x, y, fp) = color;
         }
         error = error - deltay;
         if (error < 0) {
-            y += ystep;
+            if (yinc) {
+                y += 1;
+            } else {
+                y -= 1;
+            }
             error += deltax;
         }
     }
