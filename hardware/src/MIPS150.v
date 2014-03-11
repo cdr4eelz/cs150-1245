@@ -3,7 +3,7 @@
 module MIPS150 #(
     parameter CPU_FREQ = 50_000_000,
     parameter DD=`COLT45_DD,
-    parameter COLT45_BRK=0, COLT45_SCOPE=0, COLT45_SCRATCH=0, COLT45_PC=0,
+    parameter COLT45_SCOPE=1, COLT45_BRK=0, COLT45_SCRATCH=0, COLT45_PC=0,
                 COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
     input   clk,

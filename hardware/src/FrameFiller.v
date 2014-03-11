@@ -24,10 +24,11 @@ module FrameFiller #(
 //      Also, 4x64=256-bits accessed per request, so ideal is 32-byte align (lo 5-bits zero).
 //      Chosen approach simply imposes 32-byte alignment by clipping the frame base address.
 
-    localparam S_DEAD   = 2'b00;
-    localparam S_RESET  = 2'b01;
-    localparam S_IDLE   = 2'b10;
-    localparam S_RUN    = 2'b11;
+    localparam [1:0]
+        S_DEAD   = 2'd0,
+        S_RESET  = 2'd1,
+        S_IDLE   = 2'd2,
+        S_RUN    = 2'd3;
 
     reg  [31:0] color;
     reg  [ 5:0] framebits;
@@ -48,7 +49,7 @@ module FrameFiller #(
     assign af_wr_en  = ((cs == S_RUN) && !x[2]); //Skip address on odds's
     assign af_addr_din = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign wdf_wr_en = (cs == S_RUN); //Data & mask on odd & even
-    assign wdf_din = {4{color}}; //Replicate same color on each write
+    assign wdf_din = {4{color}}; //Replicate same color on all 4 pixels of both writes
     assign wdf_mask_din = {4{4'b0000}}; //Write all bytes on every write
 
     assign FF_ready  = (cs == S_IDLE);
@@ -57,9 +58,9 @@ module FrameFiller #(
     always @(*) begin
         ns = cs; //Default for unassigned
         case (cs)
-            S_RESET: ns = S_IDLE;
-            S_IDLE: if (FF_start) ns = S_RUN;
-            S_RUN: if (mem_advance && lastX && lastY) ns = S_RESET;
+            S_RESET: ns = S_IDLE; //Gives 1-cycle in S_RESET after !rst
+            S_IDLE:  if (FF_start) ns = S_RUN;
+            S_RUN:   if (mem_advance && lastX && lastY) ns = S_RESET;
             default: ns = S_DEAD; //Default for untrapped
         endcase
     end
@@ -76,7 +77,9 @@ module FrameFiller #(
         end else if (mem_advance && lastX) begin
             y <= (y + 1);
             x <= {rL[9:3],3'b00};
-        end else if (mem_advance) x <= (x + 4);
+        end else if (mem_advance) begin
+            x <= (x + 4);
+        end
     end
 
 
