@@ -4,7 +4,7 @@ if [[ "$1"=="" ]]; then
   make clean
 fi
 
-make $1 2>&1 | tee qb.log | grep -f sparse.grep
+make $1 2>&1 | tee qb.log | grep -f cfg/sparse.grep
 
 #clear
 reset

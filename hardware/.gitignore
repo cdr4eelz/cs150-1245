@@ -4,6 +4,16 @@
 /build/
 /*_bld/
 
+/m
+/n
+/p
+/q
+/cfg
+/m_cfg
+/n_cfg
+/p_cfg
+/q_cfg
+
 coregen.*
 *.dump
 *.list
