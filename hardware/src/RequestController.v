@@ -243,18 +243,18 @@ module RequestController(
     always @(posedge clk) begin
         if(rst)
             line_reserved <= 1'b0;
-        else if (fifo_access == LINE_ACCESS && !wdf_full && !af_full)
-            line_reserved <= line_reserved + 1'b1;
+        else if(fifo_access == LINE_ACCESS && !wdf_full && !af_full)
+            line_reserved <= ~line_reserved; //line_reserved + 1'b1;
 
         if(rst)
             bypass_reserved <= 1'b0;
         else if(fifo_access == BYPASS_ACCESS && !wdf_full && !af_full)
-          bypass_reserved <= 1'b0;
+            bypass_reserved <= ~bypass_reserved; //1'b0;
 
         if(rst)
             filler_reserved <= 1'b0;
         else if(fifo_access == FILLER_ACCESS && !wdf_full && !af_full)
-            filler_reserved <= filler_reserved + 1'b1;
+            filler_reserved <= ~filler_reserved; //filler_reserved + 1'b1;
     end
 
     always @(*) begin
@@ -321,7 +321,7 @@ module RequestController(
             wdf_mask_din = line_wdf_mask_din;
             wdf_wr_en    = line_wdf_wr_en && !wdf_full && !af_full;
         end
-        /*
+
         else if((bypass_af_wr_en || bypass_wdf_wr_en) && !filler_reserved && !line_reserved) begin
             fifo_access  = BYPASS_ACCESS;
             // write-only path for cache-bypass:
@@ -332,7 +332,7 @@ module RequestController(
             wdf_mask_din = bypass_wdf_mask_din;
             wdf_wr_en    = bypass_wdf_wr_en && !wdf_full && !af_full;
         end
-        */
+
         else begin
             fifo_access  = NO_ACCESS;
             // in the default case, both need to see the actual fifo full 
