@@ -1,0 +1,111 @@
+#!/usr/bin/python
+
+import sys
+
+def rtype(line):
+	return '$' + str(int(str(line[16:21]), 2)) +	' $' + str(int(str(line[6:11]), 2)) +	' $' + str(int(str(line[11:16]), 2))
+def shift(line):
+	return '$' + str(int(str(line[16:21]), 2)) +	' $' + str(int(str(line[6:11]), 2)) +	' $' + str(int(str(line[21:26]), 2))
+def mem(line):
+	return '$' + str(int(str(line[11:16]), 2)) + ' ' + sext(line[16:32]) + '($' + str(int(str(line[6:11]), 2)) + ')'
+def sext(imm):
+	x = int(imm, 2)
+	if x > 0x7FFF:
+		x = x - 0x10000
+	return str(x)
+def itype(line):
+	return '$' + str(int(str(line[11:16]), 2)) +	' $' + str(int(str(line[6:11]), 2)) + ' ' + sext(line[16:32])
+def itypeu(line):
+	return '$' + str(int(str(line[11:16]), 2)) +	' $' + str(int(str(line[6:11]), 2)) + ' ' + str(int(line[16:32], 2))
+def jtype(line):
+	return str(int(str(line[6:32]), 2))
+i = 0
+f = open(sys.argv[1], 'r')
+for line in f:
+	i = i + 1
+	if len(line) != 33:
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  line[0:len(line)-1]
+	elif line[0:6] == '000000':
+		if line[26:32] == '000000': # sll
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'sll ' + shift(line)
+		elif line[26:32] == '000010': # srl
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'srl ' + shift(line)
+		elif line[26:32] == '000011': # sra
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'sra ' + shift(line)
+		elif line[26:32] == '000100': # sllv
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'sllv ' + rtype(line)
+		elif line[26:32] == '000110': # srlv
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'srlv ' + rtype(line)
+		elif line[26:32] == '000111': # srav
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'srav ' + rtype(line)
+		elif line[26:32] == '100001': # addu
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'addu ' + rtype(line)
+		elif line[26:32] == '100011': # subu
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'subu ' + rtype(line)
+		elif line[26:32] == '100100': # and
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'and ' + rtype(line)
+		elif line[26:32] == '100101': # or
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'or ' + rtype(line)
+		elif line[26:32] == '100110': # xor
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'xor ' + rtype(line)
+		elif line[26:32] == '100111': # nor
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'nor ' + rtype(line)
+		elif line[26:32] == '101010': # slt
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'slt ' + rtype(line)
+		elif line[26:32] == '101011': # sltu
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'sltu ' + rtype(line)
+		elif line[26:32] == '001000': # jr
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'jr $' + str(int(str(line[6:11]), 2))
+		elif line[26:32] == '001001': # jalr
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'jalr $' + str(int(str(line[16:21]), 2)) + ' $' + str(int(str(line[6:11]), 2))
+ 	 	else:
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'Unrecognized instruction: ' + line[0:32]
+	elif line[0:6] == '100000': # lb
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'lb ' + mem(line)
+	elif line[0:6] == '100001': # lh
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'lh ' + mem(line)
+	elif line[0:6] == '100011': # lw
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'lw ' + mem(line)
+	elif line[0:6] == '100100': # lbu
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'lbu ' + mem(line)
+	elif line[0:6] == '100101': # lhu
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'lhu ' + mem(line)
+	elif line[0:6] == '101000': # sb
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'sb ' + mem(line)
+	elif line[0:6] == '101001': # sh
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'sb ' + mem(line)
+	elif line[0:6] == '101011': # sw
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'sb ' + mem(line)
+	elif line[0:6] == '001001': # addiu
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'addiu ' + itype(line)
+	elif line[0:6] == '001010': # slti
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'slti ' + itype(line)
+	elif line[0:6] == '001011': # sltiu
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'sltiu ' + itype(line)
+	elif line[0:6] == '001100': # andi
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'andi ' + itypeu(line)
+	elif line[0:6] == '001101': # ori
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'ori ' + itypeu(line)
+	elif line[0:6] == '001110': # xori
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'xori ' + itypeu(line)
+	elif line[0:6] == '001111': # lui
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'lui ' + itypeu(line)
+	elif line[0:6] == '000010': # j
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'j ' + jtype(line)
+	elif line[0:6] == '000011': # jal
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'jal ' + jtype(line)
+	elif line[0:6] == '000100': # beq
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'beq ' + itype(line)
+	elif line[0:6] == '000101': # bne
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'bne ' + itype(line)
+	elif line[0:6] == '000110': # blez
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'blez ' + itype(line)
+	elif line[0:6] == '000111': # bgtz
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'bgtz ' + itype(line)
+	elif line[0:6] == '000001': # bltz or bgez
+		if line[15]=='1':
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'bgez '  + itype(line)
+		else:
+			print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'bltz ' + itype(line)
+	else:
+		print str(i) + ' ' + hex((i*4)-4)  + ': ' +  'Unrecognized instruction: ' + line[0:32]

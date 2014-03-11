@@ -1,0 +1,24 @@
+#!/usr/bin/python2
+
+import sys
+
+nameOut = sys.argv[1].rstrip('.mif')+'_rom.mif'
+fin = open(sys.argv[1])
+fout = open(nameOut, 'w')
+
+# Setup the base address in $t0:
+fout.write("00111100000010000011000000000000\n")
+
+# for each line, lui, ori, sw, addi t0 4
+try:
+    for line in fin:
+        fout.write("0011110000001001"+line[0:16]+"\n")
+        fout.write("0011010100101001"+line[16:32]+"\n")
+        fout.write("10101101000010010000000000000000\n")
+        fout.write("00100101000010000000000000000100\n")
+    # then jalr to 0x10000000
+    fout.write("00111100000010010001000000000000\n")
+    fout.write("00000001001000001111100000001001\n")
+finally:
+    fin.close()
+    fout.close()

@@ -4,9 +4,6 @@
 /build/
 /*_bld/
 
-/sim/results/
-/sim/modelsim_libs/
-
 coregen.*
 *.dump
 *.list

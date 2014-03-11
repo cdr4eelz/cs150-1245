@@ -4,7 +4,4 @@
 *.bak
 *.xxx
 *.log
-mem_bd.bmm
 _*
-/docs
-/docs/

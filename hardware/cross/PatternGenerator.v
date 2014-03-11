@@ -21,15 +21,15 @@ reg         curSCENE, nextSCENE;
 reg  [23:0] curRGB, nextRGB;
 reg         validRGB;
 
-assign video       = curRGB;
-assign video_valid = validRGB;
-assign advanceRVA  = video_valid && video_ready; //reset will trump this
-
 //Could use fast-counter/pixelrange util instead of our own
-wire        rollCOL = (curCOL >= SCREEN_WIDTH-1);
-wire        rollROW = (curROW >= SCREEN_HEIGHT-1);
+wire rollCOL = (curCOL >= SCREEN_WIDTH-1);
+wire rollROW = (curROW >= SCREEN_HEIGHT-1);
 wire [ 2:0] scale = curFRAME[6:4];
 wire [ 2:0] idx   = {curSCENE, curROW[scale], curCOL[scale+1]}; //Scene in MSB
+wire advanceRVA  = video_valid && video_ready; //reset will trump this
+
+assign video       = curRGB;
+assign video_valid = validRGB;
 
 always @(posedge clock) begin
   if (reset) begin
