@@ -75,6 +75,7 @@ output [31:0] DBG_MEM150
 
     wire         af_afull;
     wire         af_full;
+    wire         af_empty;
     wire         af_valid;
     wire [ 33:0] af_dout;
     wire         wdf_valid;

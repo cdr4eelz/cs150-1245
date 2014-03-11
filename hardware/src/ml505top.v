@@ -330,7 +330,10 @@ end endgenerate
   // -- |SRAM Controller| ------------------------------------------------------
   `define SRAM_ENABLE
 
-  wire sram_clock, sram_locks;
+  wire sram_clock, sram_locked, sram_ready, sram_addr_valid, sram_data_out_valid;
+  wire [17:0] sram_addr;
+  wire [ 3:0] sram_write_mask;
+  wire [35:0] sram_data_in,sram_data_out;
 
   `ifdef SRAM_ENABLE
     SRAM sram (

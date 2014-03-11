@@ -6,7 +6,7 @@
 `define MODELSIM 1
 `timescale 1ns / 1ps
 
-module FrameFillerTestbench();
+module FrameFillerTestbench;
 
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;

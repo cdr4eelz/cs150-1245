@@ -45,15 +45,15 @@ module FrameFiller #(
 
     wire mem_ready = (!af_full && !wdf_full);
     wire mem_advance = (mem_ready && wdf_wr_en);
+    wire FF_start  = (FF_ready && FF_valid);
+
+    assign FF_ready  = (cs == S_IDLE);
 
     assign af_wr_en  = ((cs == S_RUN) && !x[2]); //Skip address on odds's
     assign af_addr_din = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign wdf_wr_en = (cs == S_RUN); //Data & mask on odd & even
     assign wdf_din = {4{color}}; //Replicate same color on all 4 pixels of both writes
     assign wdf_mask_din = {4{4'b0000}}; //Write all bytes on every write
-
-    assign FF_ready  = (cs == S_IDLE);
-    assign FF_start  = (FF_ready && FF_valid);
 
     always @(*) begin
         ns = cs; //Default for unassigned
@@ -91,7 +91,6 @@ module FrameFiller #(
                      color, color[23:16], color[15:8], color[7:0]);
         end
     end
-
 //synthesis translate_on
 
 endmodule

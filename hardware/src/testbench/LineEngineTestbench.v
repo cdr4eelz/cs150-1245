@@ -7,7 +7,7 @@
 `define MODELSIM 1
 `timescale 1ns / 1ps
 
-module LineEngineTestbench();
+module LineEngineTestbench;
 
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;

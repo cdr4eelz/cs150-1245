@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module GraphicsProcessorTestbench();
+module GraphicsProcessorTestbench;
 
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;
@@ -78,6 +78,24 @@ module GraphicsProcessorTestbench();
     );
 
 
+// Little convenience tasks for error tracking
+
+reg ELOG_errors = 0;
+
+    task ELOG_ERROR;
+        input [100*8:1] unit_name;
+        input [256*8:1] message;
+    begin
+        $display("ERROR: (%s) %s", unit_name, message);
+        ELOG_errors = ELOG_errors + 1;
+    end endtask
+
+    task ELOG_TALLY;
+    begin
+        $display("\nERRORS: %0d\n", ELOG_errors);
+    end endtask
+
+
     wire ENGINES_ready;
 
     initial begin
@@ -95,6 +113,7 @@ $display("GraphicsProcessor: Fake memory & engines...");
         @(posedge Clock);
         while (!ENGINES_ready) #(Cycle); // GP should have waited already
 $display("GraphicsProcessor: Done.");
+        ELOG_TALLY;
         $finish();
     end
 
@@ -135,9 +154,17 @@ $display("gp-TB: Done.");
     0x4018:   0x00AA_00BB   #   second-endpoint (0xAA, 0xBB)
     0x401C:   0x0000_0000   # STOP.
 */
+reg  [0:512] GPCODE_SAMPLE1 = { //Ascending bit order
+    32'h0100_0000, 32'h0200_00FF, 32'h0010_0020, 32'h001A_002B,
+    32'h02FF_0000, 32'h0123_0124, 32'h00AA_00BB, 32'h0000_0000,
+    256'b0
+};
 
 
 // Fake memory fetch/response, always fetches 2-parts of SAMPLE-1 ignoring address!
+    wire [0:1024] GPCODE;
+    assign GPCODE = GPCODE_SAMPLE1;
+
     localparam MS_DEAD=0, MS_IDLE=1, MS_OFFER1=2, MS_OFFER2=3;
     reg [1:0] mem_ns, mem_cs = MS_DEAD;
     always @(*) begin
@@ -152,12 +179,12 @@ $display("gp-TB: Done.");
             end
             MS_OFFER1: begin
                 rdf_valid = 1'b1; //First 128-bits from SAMPLE below
-                rdf_dout = {32'h0100_0000,32'h0200_00FF,32'h0010_0020,32'h001A_002B};
+                rdf_dout = GPCODE[0:127];
                 if (rdf_rd_en) mem_ns = MS_OFFER2;
             end
             MS_OFFER2: begin
                 rdf_valid = 1'b1; //Second 128-bits from SAMPLE below
-                rdf_dout = {32'h02FF_0000,32'h0123_0124,32'h00AA_00BB,32'h0000_0000};
+                rdf_dout = GPCODE[128:255];
                 if (rdf_rd_en) mem_ns = MS_IDLE;
             end
             default: mem_ns = MS_DEAD;
@@ -198,7 +225,7 @@ $display("gp-TB: Done.");
 
         if (FF_ready) begin
             if (FF_valid) begin
-                if (!ENGINES_ready) $display("*OVERLAP* FILL");
+                if (!ENGINES_ready) ELOG_ERROR("FILL", "Overlap");
                 $display("[=FILL=] frame=%h", FF_frame);
                 $display("[-FILL-] color=%h (%0d,%0d,%0d)", FF_color,
                          FF_color[23:16], FF_color[15:8], FF_color[7:0]);
@@ -206,9 +233,7 @@ $display("gp-TB: Done.");
                 FF__countdown <= 9;
             end
         end else begin
-            if (FF_valid) begin
-                $display("*PREMATURE* FILL");
-            end
+            if (FF_valid) ELOG_ERROR("FILL", "Premature");
         end
 
         if (LE_ready) begin
@@ -235,7 +260,7 @@ $display("gp-TB: Done.");
             end
             if (LE_trigger) begin
                 LE__frame <= LE_frame;
-                if (!ENGINES_ready) $display("*OVERLAP* LINE");
+                if (!ENGINES_ready) ELOG_ERROR("LINE", "Overlap");
                 #1; //Might have simultaneously assigned other values above!
                 $display("[=LINE=] frame=%h", LE__frame);
                 $display("[-LINE-] color=%h (%0d,%0d,%0d)", LE__color,
@@ -250,7 +275,7 @@ $display("gp-TB: Done.");
         end else begin
             if (LE_color_valid || LE_x0_valid || LE_y0_valid
                     || LE_x1_valid || LE_y1_valid || LE_trigger)
-                $display("*PREMATURE* LINE");
+                ELOG_ERROR("LINE", "Premature");
         end
     end
 
