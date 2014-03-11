@@ -3,7 +3,7 @@
 module MIPS150 #(
     parameter CPU_FREQ = 50_000_000,
     parameter DD=`COLT45_DD,
-    parameter COLT45_BRK=0, COLT45_SCOPE=1, COLT45_SCRATCH=0, COLT45_PC=0,
+    parameter COLT45_BRK=0, COLT45_SCOPE=0, COLT45_SCRATCH=0, COLT45_PC=0,
                 COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
     input   clk,
@@ -455,18 +455,18 @@ generate if (COLT45_BRK) begin:_BRK_
 end endgenerate //COLT45_BRK
 
 
-generate if (COLT45_SCOPE) begin:_SCOPE_
+generate if (COLT45_SCOPE) begin:_SCOPE_MIPSY_
     wire [31:0] CS_TRIG0 = keywatch[31:0];
     wire [31:0] CS_TRIG1 = PC_DX[31:0];
     wire [31:0] CS_TRIG2 = INST_DX[31:0];
     wire [31:0] CS_TRIG3 = CNT_Inst[31:0];
 
-    wire [35: 0] cs_icon_scope;
-    cs_icon_1 CS_ICON (
+    wire [35:0] cs_icon_scope;
+    cs_icon_1 CS_ICON_MIPSY (
         .CONTROL0(cs_icon_scope) // INOUT BUS [35:0]
     ) /* synthesis syn_noprune=1 */;
 
-    cs_ila_1024 CS_ILA ( .CONTROL(cs_icon_scope),
+    cs_ila_1024 CS_ILA_MIPSY ( .CONTROL(cs_icon_scope),
         .CLK(clk),
         .DATA( trace ), // IN BUS [1023:0]
         .TRIG0( CS_TRIG0 ), // IN BUS [31:0]

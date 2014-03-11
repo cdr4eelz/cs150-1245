@@ -9,6 +9,7 @@
 `define GOP_LINE    8'h02   //w/color; followed by 2 x POINT (2nd point auto-triggers line)
 //`define GOP_LINE    8'h02   //w/color; followed by 2 x POINT (each point has TRIGGER bit)
 //`define GOP_STAMP   8'h03   //w/color; followed by n x POINT (See "MORE" bit below)
+`define GOP__LAST   2
 
 //INSTruction-initiation (opcode & packed fields)
 `define IX_INST_GOP    31:24 //Graphics-OpCode

@@ -1,14 +1,16 @@
 /* This module keeps a FIFO filled that then outputs to the DVI module. */
 
+`include "gpcommands.vh"
+
 module PixelFeeder #(
-//    parameter CLOCK_HZ = 50_000_000,
+    parameter CLOCK_HZ = 50_000_000,
     parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600,
-//    parameter SCREEN_WIDTH = 640, SCREEN_HEIGHT = 480,
-    parameter PIXFO_CAPACITY = (2048/2), //pixel_fifo max capacity (adjusted for 256-bit units)
-    parameter PIXFO_STARTUP = PIXFO_CAPACITY - 100, //fill to this point before running from FIFO
-    parameter PIXFO_TARGET = PIXFO_CAPACITY - 5, //1 af req => 2 x 128-bit rdf => 8 x 32-bit pixfo rd
-    parameter COLT45_NOFRAMES=0, COLT45_TESTPAT=0
-)(  //System:
+    parameter PIXFO_CAPACITY = (2048/2), //max pixel_fifo "chunk" capacity (adjust to 256-bit units)
+    parameter PIXFO_STARTUP = PIXFO_CAPACITY - 100, //fake source until pixel_fifo is this full
+    parameter PIXFO_TARGET = PIXFO_CAPACITY - 5, //1 "af" req => 2 "rdf" 128b resp => 8 pixfo 32b "rd"
+    parameter COLT45_TESTPAT=0 // 1..3 are non-DDR test feeds of various sorts
+)(
+//System:
     input           cpu_clk_g,
     input           cpu_rst_g,
     input           dvi_clk_g,
@@ -41,7 +43,7 @@ module PixelFeeder #(
     // pixel_fifo is 128-bit write (2K depth) and 32-bit read (8K depth).
     //    Forced to grab rdf output or lose it, no back-pressure opportunity there.
     // pixel_fifo available space tracked on CPU-clocked side in large chunks.  The chunks
-    //    serve to reduce inter-clock signal rate, keep counters small (but separate),
+    //    serve to reduce inter-clock signal rate, framebitskeep counters small (but separate),
     //    and create a hysteresis.  Synchronizing with 4-cycle signal/acknowledge loop.
     //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE and/or TIG
 
@@ -132,7 +134,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     reg [12:0] pend, pend_next; //pending mig_af requests (represent 256-bits each)
     reg [ 9:0] head_y, head_x;
     reg fr, fr_r; // Flag for frame transition
-    reg [ 5:0] framebits, frame_next; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
+    reg [ 5:0] framebits, frame_next=0; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
     reg state;
 
     wire [31:0] head_addr = {4'h1, framebits, head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
@@ -143,7 +145,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     wire af_advance = af_wr_en && !af_full; //NOTE: Always af_full until we assert af_wr_en first!
 
     assign af_addr_din = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
-    assign af_wr_en = (state == FETCH); //Declare that we want to write an address (but might not happen)
+    assign af_wr_en = (state == FETCH); //Declare when FETCH addr ready (but might not happen)
     assign PF_feedframe = framebits;
     assign PF_interrupt = (fr != fr_r); //Fires right after request gets queued (not resp or pix)
 
@@ -156,14 +158,22 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
         endcase
     end
 
-    //Currently, this ensures an IDLE or more between FETCHs:
-    wire next_state = ((state == IDLE) && (pend < PIXFO_TARGET)) ? FETCH : IDLE;
+    //Ensures 1+ IDLEs between FETCHs; also note (state==IDLE) ensures !af_advance
+    wire next_state = ((pend < PIXFO_TARGET) && !af_advance) ? FETCH : IDLE;
+//  wire next_state = ((pend < PIXFO_TARGET) && (state == IDLE)) ? FETCH : IDLE;
 
     always @(posedge cpu_clk_g) begin
-        if (cpu_rst_g) begin
+        //NOTE:Allow PF_frame "set" during "reset" to allow user init
+        if (PF_valid) frame_next <= `FRAME_BITS(PF_frame); //Either addr style
+        else if (cpu_rst_g) frame_next <= 0;
+    end
+
+    always @(posedge cpu_clk_g) begin
+        if (cpu_rst_g) begin //Standard reset for other stuff
             {chunk_ack, pend, fifo_start} <= 0;
             state <= IDLE;
-            {frame_next, framebits, fr, fr_r, head_y, head_x, pixel_count} <= 0;
+            {fr, fr_r, head_y, head_x, pixel_count} <= 0;
+            framebits <= frame_next;
         end else begin
             pend <= pend_next;
             state <= next_state;
@@ -172,10 +182,6 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 
             if (pend_next > PIXFO_STARTUP) begin
                 fifo_start <= 1'b1;
-            end
-
-            if (PF_valid) begin
-                frame_next <= (|PF_frame[31:28]) ? PF_frame[27:22] : PF_frame[5:0]; //Either addr style
             end
 
             if (af_advance) begin //Advance x/y/frame (right AFTER end of this cycle)
@@ -246,7 +252,7 @@ end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
 end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
 // *** DIRECTLY inject simple pattern gen from FALL-2013-CP1 ***
     PatternGenerator #(
-        .CLOCK_HZ(50_000_000), //DVI Clock
+        .CLOCK_HZ(CLOCK_HZ), //DVI Clock
         .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600),
         .SCENES_PER_SEC(1)
     ) patgen (

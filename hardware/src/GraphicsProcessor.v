@@ -18,12 +18,13 @@
 `include "gpcommands.vh"
 
 //TODO:Eliminate FIFO for less latency?
-//TODO:Preview code chunks for C_STOP (not just zero data), and stop fetching ASAP
+//TODO:Preview code chunks for CC_STOP (not just zero data), and stop fetching ASAP
 //TODO:Fault response?
 
 module GraphicsProcessor #(
-    parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter LITTLEWORDIAN=0, //Order of 32-bit words in each 256-bit DDR block (not byte order)
 //TODO: Implement LITTLEWORDIAN
+    parameter COLT45_SCOPE=0
 )(
     input clk,
     input rst,
@@ -68,155 +69,157 @@ module GraphicsProcessor #(
 //    FIFO: Fetch 256-bit chunks from memory & present 32-bit INST stream.
 //Chose for GP, FF, LE, etc. to EACH capture own copy of frame upon trigger.
 
-//Master States:
-    localparam S_DEAD       = 0;
-    localparam S_RESET      = 1;
-    localparam S_IDLE       = 2;
-//  localparam S_INIT       = 3;
-    localparam S_PROCESS    = 4; //"RUNNING"
-//  localparam S_KILL       = 5;
-    localparam S__LAST      = 4;
+//Master-States:
+    localparam MS_DEAD    = 0, //Initial or fault (requires explicit reset)
+               MS_RSET    = 1, //Performing or coming out of reset
+               MS_IDLE    = 2, //Ready for GPCode initiation
+               MS_PROC    = 3; //Processing GPCode block (to MS_RSET when done)
+    localparam MS__LAST   = 3;
 
 //Sub-States:
-    localparam SS_TOP   = 0;
-    localparam SS_X0    = 1;
-    localparam SS_Y0    = 2;
-    localparam SS_XX    = 3;
-    localparam SS_YY    = 4;
-    localparam SS__LAST = 4;
+    localparam SS_TOP     = 0, //First or only INSTruction part
+               SS_X0      = 1, //Sub-CMDs from separate
+               SS_Y0      = 2, //  INSTs and/or within
+               SS_XX      = 3, //  INSTs trailing initial
+               SS_YY      = 4; //  INST at SS_TOP
+    localparam SS__LAST   = 4;
 
-//Engine CMD codes (computed/composite state):
-    localparam C_WAIT       = 0; //FIFO dry, Engine-Wait, etc. but not FOUL
-    localparam C_STOP       = 1;
-    localparam C_FF_RGB     = 2;
-    localparam C_LE_RGB     = 3;  //css==0
-    localparam C_LE_X0      = 4;  //css==1
-    localparam C_LE_Y0      = 5;  //css==2
-    localparam C_LE_XX      = 6;  //css==3
-    localparam C_LE_YY      = 7;  //css==4
-//  localparam C_ST_WAIT    = 8;
-//  localparam C_ST_X0      = 9;
-//  localparam C_ST_Y0      =10;
-    localparam C__LAST      = 7;
+//FIFO-States:
+    localparam FS_READY   = 0, //Can fetch if other conditions right
+               FS_READ1   = 1, //Pending data (awaiting first 128-bits)
+               FS_READ2   = 2; //Pending data (awaiting second 128-bits)
+    localparam FS__LAST   = 2;
 
-    reg  [C__LAST:0] hot_cmd;
+//Engine-Command composite state output:
+    localparam CC_WAIT    = 0, //cs_S==<any> (FIFO-dry, Engine-busy, idle, ...)
+               CC_STOP    = 1, //cs_S==SS_TOP
+               CC_FF_RGB  = 2, //cs_S==SS_TOP
+               CC_LE_RGB  = 3, //cs_S==SS_TOP
+               CC_LE_X0   = 4, //cs_S==SS_X0
+               CC_LE_Y0   = 5, //cs_S==SS_Y0
+               CC_LE_XX   = 6, //cs_S==SS_X1
+               CC_LE_YY   = 7; //cs_S==SS_Y1
+    localparam CC__LAST   = 7;
+
+    reg  [ 1:0] ns_M, cs_M = MS_DEAD; //Master-State
+    reg  [ 2:0] ns_S, cs_S = SS_TOP;  //Sub-State
+    //TODO:One/Zero-hot MS_ & SS_ also
+    reg  [FS__LAST:0] ns_F, cs_F = (1<<FS_READY); //FIFO-State
+    reg  [CC__LAST:0] CMD;  //CMD-Composite state output
+
+    reg  INST_advance, rst_r;
     reg  [ 5:0] framebits;  //Insist on aligning with multiples of 0x0040_0000
     reg  [22:0] code_chunk; //256-bit chunk # within 256MB range of DDR (8 x 32-bit words each)
     reg  [ 2:0] code_skips; //Offset of first 32-bit CODE within 256-bit chunk (skip on fifo read)
-    reg  [ 3:0] ns, cs = S_DEAD;
-    reg  [ 2:0] nss, css = 0; //SubState
-    reg  INST_advance;
-//FIFO Pending Count, Need Count
 
-//TODO:Let pending read responses clear upon reset
+
+//Triggers for state transitions & Mealy outputs (usually 1-cycle duration)
+    //   T_DEAD   = INITIAL upon FPGA config
+    wire T_RESET  = (rst); //TODO:OR with T_STOPS to piggyback on sync-reset???
+wire fifo_empty; //TODO:FIFO-State embed all fifo info
+    wire T_READY  = (!rst_r && fifo_empty);
+    wire T_START  = (GP_ready && GP_valid);
+    wire T_STOPS  = (CMD[CC_STOP]);
     wire ENGINES_ready = (FF_ready && LE_ready);
-    assign GP_ready = (cs == S_IDLE); // && ENGINES_ready);
-    assign GP_procframe = framebits;
 
-    wire fifo_low, fifo_full, fifo_empty;
-
-//Trigger values shared between state transitions & outputs (often 1-cycle duration)
-    //T_DEAD = INITIAL upon FPGA config
-    wire T_RSET   = (rst); //Might OR with T_DONE???
-    wire T_IDLE   = (!rst && fifo_empty); //TODO:Use reset_delay FF or CNT
-    wire T_INIT   = (GP_ready && GP_valid);
-    wire T_DONE   = (hot_cmd[C_STOP]);
-
-    assign GP_interrupt = T_DONE; //TODO:Replace with reg asserted cleanly for 1-cycle
+    assign GP_ready = (cs_M==MS_IDLE);
+    assign GP_procframe = `FRAME_BITS(GP_frame); //Pass NEXT value through! (was framebits)
+    assign GP_interrupt = T_STOPS; //TODO:Ensure clean for most of 1-cycle
 
 //INSTruction RAW decode (includes invalid/inactive signals)
     wire INST_valid;
     wire [31:0] INST;
-    wire [ 7:0] inst_gop    = INST[`IX_INST_GOP];
-    wire [31:0] inst_color  = {8'd0, INST[`IX_INST_COLOR]};
-    wire [ 9:0] inst_pointX = INST[`IX_POINT_X];
-    wire [ 9:0] inst_pointY = INST[`IX_POINT_Y];
-//  wire        inst_trigger = INST[`IX_POINT_TRIG]);
+    wire [ 7:0] INST_gop    = INST[`IX_INST_GOP];
+    wire [31:0] INST_color  = {8'd0, INST[`IX_INST_COLOR]};
+    wire [ 9:0] INST_pointX = INST[`IX_POINT_X];
+    wire [ 9:0] INST_pointY = INST[`IX_POINT_Y];
+//  wire        INST_trigger = INST[`IX_POINT_TRIG]);
 
-//ENGINE & state-based RAW feeds (includes invalid/inactive signals):
-    wire engine_x = (hot_cmd[C_LE_X0] || hot_cmd[C_LE_XX]);
-    wire [ 9:0] engine_point = (engine_x) ? inst_pointX : inst_pointY;
-    wire [31:0] engine_color = inst_color;
-    wire [31:0] engine_frame = {4'h1,framebits,22'd0};
 
-//MAP specific ENGINEs as appropriate (or continuous when no harm):
-    assign FF_valid   = (hot_cmd[C_FF_RGB]);
-    assign FF_color   = engine_color,
-            FF_frame  = engine_frame;
-    assign LE_color_valid = (hot_cmd[C_LE_RGB]),
-            LE_x0_valid   = (hot_cmd[C_LE_X0]),
-            LE_y0_valid   = (hot_cmd[C_LE_Y0]),
-            LE_x1_valid   = (hot_cmd[C_LE_XX]),
-            LE_y1_valid   = (hot_cmd[C_LE_YY]),
-            LE_trigger    = LE_y1_valid; //inst_trigger;
-    assign LE_color   = engine_color,
-            LE_point  = engine_point,
-            LE_frame  = engine_frame;
-
-//SUB State-Machine (outputs: hot_cmd & INST_advance)
+//FIFO State-Machine
     always @(*) begin
-        nss = css; //Hold sub-state if unassigned
-        hot_cmd = 0;
+        ns_F = cs_F; //Default: Hold prior state if UNASSIGNED
+        case (cs_F)
+            FS_READY: if (!af_full && af_wr_en) ns_F = (1<<FS_READ1);
+            FS_READ1: if (rdf_valid) ns_F = (1<<FS_READ2);
+            FS_READ2: if (rdf_valid) ns_F = (1<<FS_READY);
+        endcase
+    end
+    always @(posedge clk) begin
+        if (T_START) cs_F <= (1<<FS_READY); else cs_F <= ns_F;
+//$display("FIFO-STATE: %b  af_full:%b af_wr_en:%b rdf_valid:%b af_addr_din:%h",
+//         cs_F, af_full, af_wr_en, rdf_valid, af_addr_din);
+    end
+
+
+//SUB State-Machine (Mealy outputs: CMD & INST_advance)
+    always @(*) begin
+        ns_S = cs_S; //Hold sub-state if unassigned
+        CMD = 0; //TODO:Separate process for CMD compute
         INST_advance = 1'b0;
-        if ((cs == S_PROCESS) && (INST_valid)) begin
-            case (css)
+        if ((cs_M==MS_PROC) && (INST_valid)) begin
+            case (cs_S)
                 SS_TOP: if (ENGINES_ready) begin //All TOP INST (even STOP) wait on ALL
-                    //TODO:Make exception for C_STOP (wait during S_RESET instead)
+                    //TODO:Make exception for CC_STOP (wait during MS_RSET instead)
                     INST_advance = 1'b1;
-                    hot_cmd[C_STOP]   = (inst_gop == `GOP_STOP);
-                    hot_cmd[C_FF_RGB] = (inst_gop == `GOP_FILL);
-                    hot_cmd[C_LE_RGB] = (inst_gop == `GOP_LINE);
-                    nss = (inst_gop == `GOP_LINE) ? SS_X0 : SS_TOP;
+                    CMD[CC_STOP]   = (INST_gop==`GOP_STOP);
+                    CMD[CC_FF_RGB] = (INST_gop==`GOP_FILL);
+                    CMD[CC_LE_RGB] = (INST_gop==`GOP_LINE);
+                    ns_S = (INST_gop==`GOP_LINE) ? SS_X0 : SS_TOP;
                     //TODO:Capture GOP so Sub-states can overlay other engines
                 end
                 SS_X0: begin
-                    hot_cmd[C_LE_X0] = 1'b1;
-                    nss = SS_Y0;
+                    CMD[CC_LE_X0] = 1'b1;
+                    ns_S = SS_Y0;
                 end
                 SS_Y0: begin
                     INST_advance = 1'b1;
-                    hot_cmd[C_LE_Y0] = 1'b1;
-                    nss = SS_XX;
+                    CMD[CC_LE_Y0] = 1'b1;
+                    ns_S = SS_XX;
                 end
                 SS_XX: begin
-                    hot_cmd[C_LE_XX] = 1'b1;
-                    nss = SS_YY;
+                    CMD[CC_LE_XX] = 1'b1;
+                    ns_S = SS_YY;
                 end
                 SS_YY: begin
                     INST_advance = 1'b1;
-                    hot_cmd[C_LE_YY] = 1'b1;
-                    nss = SS_TOP;
+                    CMD[CC_LE_YY] = 1'b1;
+                    ns_S = SS_TOP;
                 end
-                default: nss = SS_TOP;
+                default: begin
+                    ns_S = SS_TOP;
+                end
             endcase
         end
     end
     always @(posedge clk) begin
-        if (T_RSET) css <= SS_TOP; else css <= nss;
+        rst_r <= rst;
+        if (T_RESET) cs_S <= SS_TOP; else cs_S <= ns_S;
     end
+
 
 //MASTER State-Machine (
     always @(*) begin
-        ns = cs; //Default: Hold prior state if UNASSIGNED
-        case (cs)
-            S_DEAD:   if (T_RSET) ns = S_RESET; //Redundant with machine reset
-            S_RESET:  if (T_IDLE) ns = S_IDLE;
-            S_IDLE:   if (T_INIT) ns = S_PROCESS;
-            S_PROCESS:if (T_DONE) ns = S_RESET;
-            default:  ns = S_DEAD; //Default for UNTRAPPED
+        ns_M = cs_M; //Default: Hold prior state if UNASSIGNED
+        case (cs_M)
+            MS_DEAD: if (T_RESET) ns_M = MS_RSET; //Redundant with machine reset
+            MS_RSET: if (T_READY) ns_M = MS_IDLE;
+            MS_IDLE: if (T_START) ns_M = MS_PROC;
+            MS_PROC: if (T_STOPS) ns_M = MS_RSET;
         endcase
     end
     always @(posedge clk) begin
-        if (T_RSET) cs <= S_RESET; else cs <= ns;
-
-        if (T_INIT) begin //No harm to ignore T_RSET
+        if (T_RESET) cs_M <= MS_RSET; else cs_M <= ns_M;
+    end
+    always @(posedge clk) begin
+        if (T_START) begin //Capture incoming values
             //            GP-code[31:28] -- Ignore hi-nibble which likely specified D-Cache from CPU's POV
             code_chunk <= GP_code[27:5]; //Take enough to address a 256-bit-chunk in DDR
             code_skips <= GP_code[ 4:2]; //Take 3-bits for 32-bit word offset within chunk
             //            GP_code[ 1:0] -- Ignore lo 2-bits (would specify byte within a word)
             framebits <= `FRAME_BITS(GP_frame); //Either addr style
         end else begin
-            if (!af_full && af_wr_en) begin
+            if (!af_full && af_wr_en) begin //Advance for next chunk
                 code_chunk <= (code_chunk + 1); //1 x "chunk" af-request -=> 2 x 128-bit rdf-response
             end
             //TODO:ADJUST "pending" by simultaneous INC x2 vs. DEC x1 on fifo_write
@@ -224,15 +227,38 @@ module GraphicsProcessor #(
     end
 
 
-//FIFO fetching GPCode chunks & presenting as 32-bit INSTruction stream
-    wire fifo_reset = (cs == S_RESET);
-    wire fifo_write = (cs == S_PROCESS) && (rdf_valid && rdf_rd_en);
-    wire [ 4:0] wr_count;
+//MAP ENGINEs as appropriate (or continuous/junk when no harm):
+    wire engine_x = (CMD[CC_LE_X0] || CMD[CC_LE_XX]);
+    wire [ 9:0] engine_point = (engine_x) ? INST_pointX : INST_pointY;
+    wire [31:0] engine_color = INST_color;
+    wire [31:0] engine_frame = {4'h1,framebits,22'd0};
 
-    assign fifo_low = !(|wr_count[4:2] || fifo_full); //(wr_count < 4);
-    assign af_wr_en = (cs == S_PROCESS) && !af_full && fifo_low;
-    assign af_addr_din = {6'd0, code_chunk, 2'b00}; //Chunk DDR address (64-bit "resolution")
-    assign rdf_rd_en = 1'b1; //Never argue with RequestController about our slot(s)!
+    assign FF_valid   = (CMD[CC_FF_RGB]);
+    assign FF_color   = engine_color,
+            FF_frame  = engine_frame;
+    assign LE_color_valid = (CMD[CC_LE_RGB]),
+            LE_x0_valid   = (CMD[CC_LE_X0]),
+            LE_y0_valid   = (CMD[CC_LE_Y0]),
+            LE_x1_valid   = (CMD[CC_LE_XX]),
+            LE_y1_valid   = (CMD[CC_LE_YY]),
+            LE_trigger    = LE_y1_valid; //INST_trigger;
+    assign LE_color   = engine_color,
+            LE_point  = engine_point,
+            LE_frame  = engine_frame;
+
+
+//FIFO fetching GPCode chunks & presenting as 32-bit INSTruction stream
+//TODO:Early first fetch address mux on T_START
+    wire fifo_full;
+    wire [ 4:0] wr_count;
+    wire fifo_low   = !(|wr_count[4:2] || fifo_full); //(wr_count < 4);
+    wire fifo_reset = (cs_M==MS_RSET);
+    wire fifo_write = (cs_M==MS_PROC) && (rdf_valid && rdf_rd_en);
+
+    //NOTE:Don't base af_wr_en on af_full when using RequestController!!!
+    assign af_wr_en     = (cs_M==MS_PROC) && cs_F[FS_READY] && fifo_low;
+    assign af_addr_din  = {6'd0, code_chunk, 2'b00}; //Chunk addr (64-bit "resolution")
+    assign rdf_rd_en    = (cs_F[FS_READ1] || cs_F[FS_READ2]);
 
     gpcode_fifo GPCODE_FIFO (
         .wr_clk(clk),         // input wr_clk
@@ -259,8 +285,57 @@ module GraphicsProcessor #(
                      rdf_dout[31:0], fifo_full, wr_count);
         if (INST_valid || INST_advance)
             $display("fifo-R: %h gop=%h  valid=%b advance=%b (rst=%b empty=%b)",
-                     INST, inst_gop, INST_valid, INST_advance, fifo_reset, fifo_empty);
+                     INST, INST_gop, INST_valid, INST_advance, fifo_reset, fifo_empty);
     end
 //synthesis translate_on
+
+generate if (COLT45_SCOPE) begin:_SCOPE_GP_
+//  localparam MS_INIT    = 3;
+
+    wire [511:0] CS_DATA512 = { //512-bits: 4 x 4 x 32-bits
+        GP_ready, GP_valid, GP_procframe[5:0],
+/*
+        GP_code[31:0],
+        GP_frame[31:0],
+
+        code_chunk, code_skips,
+        fifo_reset, INST_advance, INST_valid,
+        INST[31:0],
+
+        wr_count[4:0], fifo_full, fifo_write, fifo_empty,
+        T_RESET, T_READY, T_START, T_STOPS, cs_M, ns_M, cs_S, ns_S, CMD[7:0],
+
+        engine_frame[31:0], engine_color[31:0], engine_point[9:0],
+        FF_valid, LE_trigger,
+        LE_color_valid, LE_x0_valid, LE_y0_valid, LE_x1_valid, LE_y1_valid,
+
+        af_full,
+        af_wr_en,
+        1'b1, af_addr_din[30:0],
+        rdf_valid,
+        rdf_rd_en,
+
+        rdf_dout[127:0]
+*/ 32'hFFFF_FFFF
+    };
+
+    wire [7:0] CS_TRIG8 = {
+        4'b0000 /*T_START, T_STOPS, fifo_low, af_wr_en,*/
+        //INST_advance, INST_valid, FF_valid, LE_trigger
+    };
+
+    wire [35:0] cs_icon_scope;
+    cs_icon_1 CS_ICON_GP (
+        .CONTROL0(cs_icon_scope) // INOUT BUS [35:0]
+    ) /* synthesis syn_noprune=1 */;
+
+    cs_ila_simple CS_ILA_GP (
+        .CONTROL(cs_icon_scope),
+        .CLK(clk),
+        .DATA(CS_DATA512), // IN BUS [511:0]
+        .TRIG0(CS_TRIG8) // IN BUS [7:0]
+    ) /* synthesis syn_noprune=1 */;
+
+end endgenerate
 
 endmodule

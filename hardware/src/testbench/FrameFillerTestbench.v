@@ -70,14 +70,21 @@ module FrameFillerTestbench();
     initial begin
         #(Cycle);
         @(posedge Clock);
-        {af_full, wdf_full} = {2{1'b1}};
-        {FF_valid, FF_color, FF_frame} = 0;
+        af_full = 1'b1;
+        wdf_full = 1'b1;
+        FF_valid = 1'b0;
         rst = 1'b1;
         #(10*Cycle);
         rst = 1'b0;
-        {af_full, wdf_full} = {2{1'b0}};
-        #(Cycle);
-        fillFrame( 32'h00_7F_22_11, 32'h1040_0000 );
+        af_full = 1'b0;
+        wdf_full = 1'b0;
+
+$display("FrameFiller: Fake memory...");
+        fillFrame( 32'h00_7F2211, 32'h1040_0000 );
+
+        #(10*Cycle);
+$display("FrameFiller: Done.");
+        $finish();
     end
 
     task fillFrame;
@@ -90,11 +97,12 @@ $display("fill-TB: Wait...");
         FF_color = color;
         FF_frame = framebase;
         FF_valid = 1'b1;
-$strobe("fill-TB: color=%0h  frame=%0h", FF_color, FF_frame);
-        #(Cycle);
+$display("fill-TB: color=%h  frame=%h", FF_color, FF_frame);
+        @(posedge Clock);
         FF_valid = 1'b0;
         FF_color = 32'bz;
         FF_frame = 32'bz;
+        #(Cycle);
         while (!FF_ready) begin
             if (wdf_wr_en && wdf_mask_din != 16'hFFFF) begin
 $display("fill-TB: %4d %4d", x, y);
