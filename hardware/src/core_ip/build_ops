@@ -1,0 +1,46 @@
+#!/bin/bash
+
+D="$PWD"
+L="$D/_build_ops.log"
+
+echo "BASE DIR: $D"
+echo "LOG FILE: $L"
+
+date > "$L"
+
+cd "$D/div_s"
+echo "Building DIV-Signed"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/div_u"
+echo "Building DIV-Unsigned"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/mul_s"
+echo "Building MUL-Signed"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/mul_u"
+echo "Building MUL-Unsigned"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/crc_32"
+echo "Building CRC-32"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/reg_32"
+echo "Building REG-32"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/sqt_t"
+echo "Building SQT-Truncate"
+ezcore 2>&1 | tee -a "$L"
+
+
+cd $D
+echo "  "
+echo "  "
+echo "build_scope is done! Please check logfile for warnings and/or errors."
+echo "LOG FILE: $L"
+date >> "$L"
+

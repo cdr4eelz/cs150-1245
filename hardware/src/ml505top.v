@@ -330,28 +330,33 @@ end endgenerate
   // -- |SRAM Controller| ------------------------------------------------------
   `define SRAM_ENABLE
 
+  wire sram_clock, sram_locks;
+
   `ifdef SRAM_ENABLE
     SRAM sram (
-      .clock(cpu_clk_g),
-      .reset(rst_cpu_mem),
-      .addr_valid(sram_addr_valid),
+      .clock_base(cpu_clk_g),
+      .reset(!pll_lock),
+      .logic_clk_g(sram_clock),
+      .locked(sram_locked),
+
       .ready(sram_ready),
+      .addr_valid(sram_addr_valid),
       .addr(sram_addr),
       .data_in(sram_data_in),
       .write_mask(sram_write_mask),
-      .data_out(sram_data_out),
       .data_out_valid(sram_data_out_valid),
+      .data_out(sram_data_out),
 
-      .sram_clk_fb(SRAM_CLK_FB),
-      .sram_clk(SRAM_CLK),
-      .sram_cs_l(SRAM_CS_B),
-      .sram_we_l(SRAM_WE_B),
-      .sram_mode(SRAM_MODE),
-      .sram_adv_ld_l(SRAM_ADV_LD_B),
-      .sram_oe_l(SRAM_OE_B),
-      .sram_data(SRAM_D),
-      .sram_addr(SRAM_A),
-      .sram_bw_l(SRAM_BW));
+      .SRAM_CLK_FB  (SRAM_CLK_FB),
+      .SRAM_CLK     (SRAM_CLK),
+      .SRAM_CS_L    (SRAM_CS_B),
+      .SRAM_WE_L    (SRAM_WE_B),
+      .SRAM_MODE    (SRAM_MODE),
+      .SRAM_ADV_LD_L(SRAM_ADV_LD_B),
+      .SRAM_OE_L    (SRAM_OE_B),
+      .SRAM_DATA    (SRAM_D),
+      .SRAM_ADDR    (SRAM_A),
+      .SRAM_BW_L    (SRAM_BW));
   `else
     assign SRAM_CLK=0;
     assign SRAM_CS_B=1;

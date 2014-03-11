@@ -1,0 +1,6 @@
+#!/bin/bash -euv
+
+pwd
+make clean
+reset
+make | tee _qm.log

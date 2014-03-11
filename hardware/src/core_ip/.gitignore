@@ -1,0 +1,5 @@
+tmp/
+/*/
+!*.xco
+!xco.template
+!stash_*

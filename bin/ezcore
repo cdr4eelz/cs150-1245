@@ -18,8 +18,9 @@ if [ "$?" -ne 0 ]; then
 fi
 
 echo "Removing extras, owner-only permissions, dos2unix (if Cygwin)..."
-rm -rf coregen.* *.txt *.pdf tmp/ xlnx_auto_0_xdb/ _xmsgs/
-rm -rf *.gise *.xise *.tcl *.asy *.veo *.mif summary.log
+rm -rf *.txt *.pdf tmp/ xlnx_auto_0_xdb/ _xmsgs/
+rm -rf *.gise *.xise *.tcl *.asy *.log
+#rm -rf coregen.* *.mif *.veo
 chmod -R u=rw,go= ./*/*
 chmod u=rw,go= ./*
 chmod -R u=rwX ./*

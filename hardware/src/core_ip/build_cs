@@ -1,0 +1,54 @@
+#!/bin/bash
+
+D="$PWD"
+L="$D/_build_cs.log"
+
+echo "BASE DIR: $D"
+echo "LOG FILE: $L"
+
+date > "$L"
+
+cd "$D/cs_icon_1"
+echo "Building ICON_1"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/cs_icon_2"
+echo "Building ICON_2"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/cs_icon_3"
+echo "Building ICON_3"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/cs_icon_4"
+echo "Building ICON_4"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/cs_vio_brk"
+echo "Building VIO_BRK"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/cs_vio_256"
+echo "Building VIO_256"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/cs_vio_512"
+echo "Building VIO_512"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/cs_ila_1024"
+echo "Building ILA_1024"
+ezcore 2>&1 | tee -a "$L"
+
+cd "$D/cs_ila_simple"
+echo "Building ILA_SIMPLE"
+ezcore 2>&1 | tee -a "$L"
+
+
+cd $D
+echo "  "
+echo "  "
+echo "build_scope is done! Please check logfile for warnings and/or errors."
+echo "LOG FILE: $L"
+date >> "$L"
+

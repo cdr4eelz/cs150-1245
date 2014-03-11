@@ -1,0 +1,28 @@
+// File: /home/cc/cs199/fa12/class/cs199-fu/team45/tool/plop/plat/implementation/plop505top_stub.bmm
+
+ADDRESS_MAP microblaze_0 MICROBLAZE 100
+	ADDRESS_SPACE lmb_bram_combined COMBINED [0x00000000:0x00003fff]
+		ADDRESS_RANGE RAMB32
+		BUS_BLOCK
+			plop505top_i/lmb_bram/lmb_bram/ramb36_0 [31:24] INPUT = lmb_bram_combined_0.mem ;
+			plop505top_i/lmb_bram/lmb_bram/ramb36_1 [23:16] INPUT = lmb_bram_combined_1.mem ;
+			plop505top_i/lmb_bram/lmb_bram/ramb36_2 [15:8] INPUT = lmb_bram_combined_2.mem ;
+			plop505top_i/lmb_bram/lmb_bram/ramb36_3 [7:0] INPUT = lmb_bram_combined_3.mem ;
+		END_BUS_BLOCK;
+		END_ADDRESS_RANGE;
+	END_ADDRESS_SPACE;
+	ADDRESS_SPACE brk_bram_combined COMBINED [0x70000000:0x70007fff]
+		ADDRESS_RANGE RAMB32
+		BUS_BLOCK
+			plop505top_i/brk_bram/brk_bram/ramb36_0 [31:28] INPUT = brk_bram_combined_0.mem ;
+			plop505top_i/brk_bram/brk_bram/ramb36_1 [27:24] INPUT = brk_bram_combined_1.mem ;
+			plop505top_i/brk_bram/brk_bram/ramb36_2 [23:20] INPUT = brk_bram_combined_2.mem ;
+			plop505top_i/brk_bram/brk_bram/ramb36_3 [19:16] INPUT = brk_bram_combined_3.mem ;
+			plop505top_i/brk_bram/brk_bram/ramb36_4 [15:12] INPUT = brk_bram_combined_4.mem ;
+			plop505top_i/brk_bram/brk_bram/ramb36_5 [11:8] INPUT = brk_bram_combined_5.mem ;
+			plop505top_i/brk_bram/brk_bram/ramb36_6 [7:4] INPUT = brk_bram_combined_6.mem ;
+			plop505top_i/brk_bram/brk_bram/ramb36_7 [3:0] INPUT = brk_bram_combined_7.mem ;
+		END_BUS_BLOCK;
+		END_ADDRESS_RANGE;
+	END_ADDRESS_SPACE;
+END_ADDRESS_MAP;

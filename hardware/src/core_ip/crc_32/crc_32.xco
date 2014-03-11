@@ -1,0 +1,55 @@
+##############################################################
+#
+# Xilinx Core Generator version 14.6
+# Date: Thu Jan 16 02:21:27 2014
+#
+##############################################################
+#
+#  This file contains the customisation parameters for a
+#  Xilinx CORE Generator IP GUI. It is strongly recommended
+#  that you do not manually alter this file as it may cause
+#  unexpected and unsupported behavior.
+#
+##############################################################
+#
+#  Generated from component: xilinx.com:ip:crc_wizard:1.3
+#
+##############################################################
+#
+# BEGIN Project Options
+SET addpads = false
+SET asysymbol = true
+SET busformat = BusFormatSquareBracketNotRipped
+SET createndf = false
+SET designentry = Verilog
+SET device = xc5vlx110t
+SET devicefamily = virtex5
+SET flowvendor = Other
+SET formalverification = false
+SET foundationsym = false
+SET implementationfiletype = Ngc
+SET package = ff1136
+SET removerpms = false
+SET simulationfiles = Behavioral
+SET speedgrade = -1
+SET verilogsim = true
+SET vhdlsim = false
+# END Project Options
+# BEGIN Select
+SELECT CRC_Wizard family Xilinx,_Inc. 1.3
+# END Select
+# BEGIN Parameters
+CSET c_compcrc=false
+CSET c_compdata=false
+CSET c_crc_init=FFFFFFFF
+CSET c_data_width=32
+CSET c_trancrc=false
+CSET c_trandata=false
+CSET component_name=crc_32
+CSET silicon_version=PRODUCTION
+# END Parameters
+# BEGIN Extra information
+MISC pkg_timestamp=2013-06-08T23:00:50Z
+# END Extra information
+GENERATE
+# CRC: 17143be6
