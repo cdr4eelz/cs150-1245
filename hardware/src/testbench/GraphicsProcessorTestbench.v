@@ -154,7 +154,7 @@ $display("gp-TB: Done.");
     0x4018:   0x00AA_00BB   #   second-endpoint (0xAA, 0xBB)
     0x401C:   0x0000_0000   # STOP.
 */
-reg  [0:512] GPCODE_SAMPLE1 = { //Ascending bit order
+reg  [0:511] GPCODE_SAMPLE1 = { //Ascending bit order
     32'h0100_0000, 32'h0200_00FF, 32'h0010_0020, 32'h001A_002B,
     32'h02FF_0000, 32'h0123_0124, 32'h00AA_00BB, 32'h0000_0000,
     256'b0
@@ -162,8 +162,8 @@ reg  [0:512] GPCODE_SAMPLE1 = { //Ascending bit order
 
 
 // Fake memory fetch/response, always fetches 2-parts of SAMPLE-1 ignoring address!
-    wire [0:1024] GPCODE;
-    assign GPCODE = GPCODE_SAMPLE1;
+    wire [0:1023] GPCODE;
+    assign GPCODE[0:1023] = {2{GPCODE_SAMPLE1[0:511]}};
 
     localparam MS_DEAD=0, MS_IDLE=1, MS_OFFER1=2, MS_OFFER2=3;
     reg [1:0] mem_ns, mem_cs = MS_DEAD;
@@ -179,12 +179,12 @@ reg  [0:512] GPCODE_SAMPLE1 = { //Ascending bit order
             end
             MS_OFFER1: begin
                 rdf_valid = 1'b1; //First 128-bits from SAMPLE below
-                rdf_dout = GPCODE[0:127];
+                rdf_dout[127:0] = GPCODE[0:127];
                 if (rdf_rd_en) mem_ns = MS_OFFER2;
             end
             MS_OFFER2: begin
                 rdf_valid = 1'b1; //Second 128-bits from SAMPLE below
-                rdf_dout = GPCODE[128:255];
+                rdf_dout[127:0] = GPCODE[128:255];
                 if (rdf_rd_en) mem_ns = MS_IDLE;
             end
             default: mem_ns = MS_DEAD;

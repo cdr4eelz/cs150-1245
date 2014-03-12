@@ -143,7 +143,7 @@ module GraphicsProcessor #(
 //Triggers for state transitions & Mealy outputs (usually 1-cycle duration)
     //   T_DEAD   = INITIAL upon FPGA config
     wire T_RESET  = (rst); //TODO:OR with T_STOPS to piggyback on sync-reset???
-wire fifo_empty; //TODO:FIFO-State embed all fifo info
+wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
     wire T_READY  = (!rst_r && fifo_empty); //FIFO-State influences T_READY
     wire T_START  = (GP_ready && GP_valid); //MASTER-State alone for ready/valid enable
     wire T_STOPS  = (hot_GOP_val && hot_GOP[`GOP_STOP]); //Sub-State triggers T_STOPS
@@ -260,17 +260,18 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info
     gpcode_fifo GPCODE_FIFO (
         .wr_clk(clk),         // input wr_clk
         .wr_rst(fifo_reset),  // input wr_rst
-        .full   (fifo_full),    // output full
-        .wr_en  (fifo_write),   // input wr_en
-        .din    (rdf_dout),     // input [127 : 0] din
+        .full   (fifo_full),      // output full
+        .wr_en  (fifo_write),     // input wr_en
+        .din    (rdf_dout),       // input [127 : 0] din
         .wr_data_count(wr_count), // output [4 : 0] wr_data_count
 
         .rd_clk(clk),         // input rd_clk
         .rd_rst(fifo_reset),  // input rd_rst
-        .empty  (fifo_empty),   // output empty
-        .valid  (fifo_valid),   // output valid
-        .dout   (INST),         // output [31 : 0] dout
-        .rd_en  (INST_advance)  // input rd_en
+        .empty  (fifo_empty),     // output empty
+        .prog_empty(prog_empty),  // output prog_empty
+        .valid  (fifo_valid),     // output valid
+        .dout   (INST),           // output [31 : 0] dout
+        .rd_en  (INST_advance)    // input rd_en
     );
 
 

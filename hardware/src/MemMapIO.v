@@ -85,7 +85,7 @@ module MemMapIO #(
     assign PF_VALID = (isWrite && (addra==12'h014));
     assign PF_FRAME = (BADNESS && !PF_VALID) ? BAD_WORD : dina;
     assign GP_VALID = (isWrite && (addra==12'h016));
-    assign GP_FRAME = (BADNESS && !GP_VALID) ? BAD_WORD : reg_gpframe;
+    assign GP_FRAME = reg_gpframe; //(BADNESS && !GP_VALID) ? BAD_WORD : reg_gpframe;
     assign GP_CODE  = (BADNESS && !GP_VALID) ? BAD_WORD : dina;
 
 
