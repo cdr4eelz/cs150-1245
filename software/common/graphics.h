@@ -16,7 +16,8 @@
 #define STD_FRAME0X ((uint32_t*) 0x10000000)
 #define STD_FRAME1  ((uint32_t*) 0x10400000)
 #define STD_FRAME2  ((uint32_t*) 0x10800000)
-#define STD_FRAME3  ((uint32_t*) 0x10C00000) //...advance 0x0040_0000 each
+#define STD_FRAME3  ((uint32_t*) 0x10C00000)
+#define STD_FRAME4  ((uint32_t*) 0x11000000) //...advance 0x0040_0000 each
 //...NOTE:Frame# (1,2,3,...) can also be used for PF_FRAME & GP_FRAME
 
 
@@ -47,40 +48,66 @@
     ((F) & FPMASK) ? ((F) & FPMASK)                     \
         : (0x10000000 | (((F) & FNMASK)<<FSHIFT))     ) )
 
-#define PIX_PTR(X,Y,FP) ( (uint32_t*) (                 \
+#define PIX_PTR(FP,X,Y) ( (uint32_t*) (                 \
     ((uint32_t)(FP)) | ((Y)<<YSHIFT) | ((X)<<XSHIFT)  ) )
 
-//#define FRAME_NUM(F)    ( (uint32_t)                    \
-//    ((F) & FPMASK) ? (((F)>>FSHIFT) & FPMASK) : F       )
-//#define PIX_PTC(X,Y,F) ( (uint32_t*) (                  \
-//    (FRAME_NUM(F)<<FSHIFT) | (((Y) & PMASK)<<YSHIFT)    \
-//    | (((X) & PMASK)<<XSHIFT)                         ) )
-//#define SWPIXEL(C,X,Y,F) \
-//    { *PIX_PTC((uint16_t)(X),(uint16_t)(Y),(uint32_t)(F)) = (uint32_t)(C); }
+
+void swfill  (uint32_t frame, uint32_t color);
+void swline  (uint32_t frame, uint32_t color,
+                uint16_t x0, uint16_t y0,
+                uint16_t x1, uint16_t y1);
+void swpixel (uint32_t frame, uint32_t color,
+                uint16_t x,  uint16_t y);
+void swcircle(uint32_t frame, uint32_t color,
+                uint16_t xc, uint16_t yc,
+                uint16_t r);
+void swelipse(uint32_t frame, uint32_t color,
+                uint16_t xc, uint16_t yc,
+                uint16_t rx, uint16_t ry);
+
+void hwfill  (uint32_t color);
+void hwline  (uint32_t color,
+                uint16_t x0, uint16_t y0,
+                uint16_t x1, uint16_t y1);
+void hwpixel (uint32_t color,
+                uint16_t x,  uint16_t y);
+//void hwcircle(uint32_t color,
+//                uint16_t xc, uint16_t yc,
+//                uint16_t r);
+void hwelipse(uint32_t color,
+                uint16_t xc, uint16_t yc,
+                uint16_t rx, uint16_t ry);
+
+void swcircle_old(uint32_t frame, uint32_t color,
+                    uint16_t xc, uint16_t yc,
+                    uint16_t r);
+void swpixel_4way(uint32_t *fp, uint32_t color,
+                    uint16_t xc, uint16_t yc,
+                    int16_t ox, int16_t oy);
+void swpixel_8way(uint32_t *fp, uint32_t color,
+                    uint16_t xc, uint16_t yc,
+                    int16_t ox, int16_t oy);
 
 
-void swfill(uint32_t color, uint32_t frame);
-void swline(uint32_t color, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint32_t frame);
-void swpixel(uint32_t color, uint16_t x, uint16_t y, uint32_t frame);
+// *** GP_CODE COMMANDs: INST Fields, OpCodes, etc. ***
 
-void hwfill(uint32_t color, uint32_t frame);
-void hwline(uint32_t color, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint32_t frame);
-void hwpixel(uint32_t color, uint16_t x, uint16_t y, uint32_t frame);
+#define GOP_STOP    ((uint8_t) 0x00)
+#define GOP_FILL    ((uint8_t) 0x01)
+#define GOP_LINE    ((uint8_t) 0x02)
+#define GOP_PIXEL   ((uint8_t) 0x03)
+#define GOP_ELIPSE  ((uint8_t) 0x04)
 
+#define CMD_STOP(C)     CMD_rgb(GOP_STOP,   0) //No trailing words
+#define CMD_FILL(C)     CMD_rgb(GOP_FILL,   C) //No trailing words
+#define CMD_LINE(C)     CMD_rgb(GOP_LINE,   C) //Then 2 x CMD_point
+#define CMD_PIXEL(C)    CMD_rgb(GOP_PIXEL,  C) //Then 1 x CMD_point
+#define CMD_ELIPSE(C)   CMD_rgb(GOP_ELIPSE, C) //Then 2 x CMD_point
+#define CMD_rgb(OP,C)   ((uint32_t) ( (((OP)&0x0FF )<<24 ) | ((C)&0x0FFFFFF) ))
+#define CMD_point(X,Y)  ((uint32_t) ( (((X)&(PMASK))<<16 ) | ((Y)&(PMASK))   ))
+//efine CMD_point(X,Y)  ((uint32_t) ( (((X)&(PMASK))<<16 ) | ((Y)&(PMASK)) | (T<<31) ))
 
-//GP COMMANDS
-#define OP_STOP     ((uint8_t) 0x00)
-#define OP_FILL     ((uint8_t) 0x01)
-#define OP_LINE     ((uint8_t) 0x02)
-#define OP_PIXEL    ((uint8_t) 0x03)
-#define OMASK       (0xFF)
-#define CMASK       (0x00FFFFFF)
-
-#define cmd_COLOR(OP,C)     ((uint32_t) ( (((OP) & OMASK)<<24) | ((C) & CMASK) ))
-#define cmd_POINT(X,Y,T)    ((uint32_t) ( (((X) & PMASK)<<16) | ((Y) & PMASK) | (T<<31) ))
-#define CMD_STOP(C)         ((uint32_t) 0)          //No trailing words
-#define CMD_FILL(C)         cmd_COLOR(OP_FILL, C)   //No trailing words
-#define CMD_LINE(C)         cmd_COLOR(OP_LINE, C)   //Then 2 x cmd_POINT
-#define CMD_PIXEL(C)        cmd_COLOR(OP_PIXEL, C)  //Then 1 x cmd_POINT
+#define GPTEMP_PTR ((uint32_t*)0x10003000) //FIXED location "global"
+#define GPTEMP_SZW (0x00000020) //32-words is...
+#define GPTEMP_SZB (GPTEMP_SZW*4) // (128-bytes)
 
 #endif

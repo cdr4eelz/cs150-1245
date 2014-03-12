@@ -67,3 +67,36 @@ uint32_t copy_xor(uint32_t pSRC, uint32_t pDST, uint32_t length)
     }
     return result;
 }
+
+
+int8_t*  tok_word  ( void ) {
+    return read_token(BUFFER_FIX, BUFFER_LEN, " \x0d");
+}
+uint32_t tok_hex32u( void ) {
+    return ascii_hex_to_uint32(read_token(BUFFER_FIX, BUFFER_LEN, " \x0d"));
+}
+uint16_t tok_hex16u( void ) {
+    return ascii_hex_to_uint16(read_token(BUFFER_FIX, BUFFER_LEN, " \x0d"));
+}
+uint8_t  tok_hex8u ( void ) {
+    return ascii_hex_to_uint8 (read_token(BUFFER_FIX, BUFFER_LEN, " \x0d"));
+}
+uint32_t tok_dec32u( void ) {
+    return ascii_dec_to_uint32(read_token(BUFFER_FIX, BUFFER_LEN, " \x0d"));
+}
+uint16_t tok_dec16u( void ) {
+    return ascii_dec_to_uint16(read_token(BUFFER_FIX, BUFFER_LEN, " \x0d"));
+}
+uint8_t  tok_dec8u ( void ) {
+    return ascii_dec_to_uint8 (read_token(BUFFER_FIX, BUFFER_LEN, " \x0d"));
+}
+
+void bufw_hex32u(uint32_t u32) {
+    uwrite_int8s(uint32_to_ascii_hex(u32, BUFFER_FIX, BUFFER_LEN));
+}
+void bufw_hex16u(uint16_t u16) {
+    uwrite_int8s(uint16_to_ascii_hex(u16, BUFFER_FIX, BUFFER_LEN));
+}
+void bufw_hex8u ( uint8_t u8 ) {
+    uwrite_int8s( uint8_to_ascii_hex(u8,  BUFFER_FIX, BUFFER_LEN));
+}

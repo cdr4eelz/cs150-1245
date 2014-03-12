@@ -4,25 +4,46 @@
 typedef void (*entry_t)(void);
 
 int main(int argc, char**argv) {
+    uint32_t sw_frame;
+
     PF_FRAME = 3;
-    swfill(0x00808080, 3);
-    swline(0x000000FF, 100,100, 200,100, 3);
-    swline(0x00FF0000, 100,100, 100,200, 3);
 
-//    PF_FRAME = 0;
-    swfill(0x00002233, 1);
-    swline(0xFFFFFFFF, 10,10, 700,300, 1);
-    swline(0xFFFFFFFF, 10,10, 500,400, 1);
-    swpixel(0xFFFFFFFF, 20,50, 1);
+    GP_FRAME = 1;
+    sw_frame = 2;
+    hwfill  (           0x00002233);
+    swfill  (sw_frame,  0x00002233);
+    hwline  (           0xFFFFFFFF,  10, 10,  700,300);
+    swline  (sw_frame,  0xFFFFFFFF,  10, 10,  700,300);
+    hwline  (           0xFFFFFFFF,  10, 10,  500,400);
+    swline  (sw_frame,  0xFFFFFFFF,  10, 10,  500,400);
+    hwpixel (           0xFFFFFFFF,  20, 50);
+    swpixel (sw_frame,  0xFFFFFFFF,  20, 50);
+    swelipse(sw_frame,  0x00FF0000, 300,300,   50, 50);
+    PF_FRAME = 1;
+    swcircle_old(sw_frame, 0x00000000, 650,200,   50);
+    swcircle_old(sw_frame, 0x00222222, 650,200,   40);
+    swcircle_old(sw_frame, 0x00444444, 650,200,   30);
+    swcircle_old(sw_frame, 0x00666666, 650,200,   20);
+    swcircle_old(sw_frame, 0x00888888, 650,200,   10);
 
-//    PF_FRAME = 1;
-    swfill(0x00FF2222, 2);
-    swline(0x0000FF00, 10,10, 700,300, 2);
-    swline(0x000000FF, 10,10, 500,400, 2);
-    swline(0x00000000, 10,10, 400,500, 2);
-    swpixel(0x00006666, 21,51, 2);
+    GP_FRAME = 3;
+    sw_frame = 4;
+    hwfill  (           0x00FF2222);
+    swfill  (sw_frame,  0x00FF2222);
+    hwline  (           0x0000FF00,  10, 10,  700,300);
+    swline  (sw_frame,  0x0000FF00,  10, 10,  700,300);
+    hwline  (           0x000000FF, 500,400,   10, 10);
+    swline  (sw_frame,  0x000000FF, 500,400,   10, 10);
+    hwline  (           0x00000000,  10, 10,  400,500);
+    swline  (sw_frame,  0x00000000,  10, 10,  400,500);
+    hwelipse(           0x22222222, 650,200,   50, 50);
+    swcircle(sw_frame,  0x22222222, 650,200,   50);
+    hwelipse(           0x00008844, 250,120,  100, 25);
+    swelipse(sw_frame,  0x00008844, 250,120,  100, 25);
+    hwpixel (           0x00023666,  21, 51);
+    swpixel (sw_frame,  0x00023666,  21, 51);
 
-    PF_FRAME = 2;
+    PF_FRAME = 4;
 //    uint32_t bios = ascii_hex_to_uint32("40000000");
 //    entry_t start = (entry_t) (bios);
 //    start();

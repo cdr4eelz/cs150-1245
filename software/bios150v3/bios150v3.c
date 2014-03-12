@@ -5,7 +5,7 @@
 #include "parse.h"
 #include "graphics.h"
 
-#define BUFFER_LEN 128
+//#define BUFFER_LEN 128
 #define VERSION_CHAR '4'
 
 typedef void (*entry_t)(void);
@@ -101,7 +101,7 @@ int main(void)
             uint32_t color = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
             uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
 
-            hwfill(color, frame);
+            hwfill(color);
         } else if (strcmp150(input, "hwline") == 0) {
             uint32_t color = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
             uint16_t x0 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
@@ -110,7 +110,7 @@ int main(void)
             uint16_t y1 = ascii_dec_to_uint16(read_token(buffer, BUFFER_LEN, " \x0d"));
             uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
 
-            hwline(color, x0, y0, x1, y1, frame);
+            hwline(color, x0, y0, x1, y1);
         } else if (strcmp150(input, "swfill") == 0) {
             uint32_t color = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));
             uint32_t frame = ascii_hex_to_uint32(read_token(buffer, BUFFER_LEN, " \x0d"));

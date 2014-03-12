@@ -31,7 +31,9 @@ bins: $(SECS:%=$(TARGET).%.bin)
 
 $(TARGET).elf: $(OBJS)
 	mips-gcc -static $(LIBOPTS) -T $(LDSRC) $^ -o $@ -G 0 -mno-gpopt
+	mips-size $@
 #	mips-strip -R .pdr -R .comment -R .reginfo $@
+#	mips-size $@
 	chmod -x $@
 
 %.data.bin: %.elf
@@ -72,7 +74,7 @@ $(TARGET).elf: $(OBJS)
 	mips-as $< -o $<.o
 
 clean:
-	rm -f *.o *.llvm *.elf *.bin *.mif *.coe *.mem *.v *.dump *.llvm.s
+	rm -f *.o *.llvm *.elf *.bin *.mif *.coe *.mem *.v *.dump *.llvm.s *.log
 
 .PHONY: clean
 

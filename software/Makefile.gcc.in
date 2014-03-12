@@ -42,6 +42,6 @@ $(TARGET).elf: $(CSRCS) $(SSRCS)
 	bin2rom $% 0 < $< > $@
 
 clean:
-	rm -f *.o *.c.s *.elf *.bin *.mif *.coe *.v *.dump
+	rm -f *.o *.c.s *.elf *.bin *.mif *.coe *.v *.dump *.log
 
 .phony: $(TARGET) clean

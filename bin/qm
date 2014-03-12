@@ -3,4 +3,4 @@
 pwd
 make clean
 reset
-make "$@" | tee "_qm.log"
+make "$@" 2>&1 |tee "_qm.log" |colorit

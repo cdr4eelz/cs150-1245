@@ -78,7 +78,7 @@ $(TARGET).elf: $(OBJS)
 	mips-as $< -o $<.o
 
 clean:
-	rm -f $(POBJS) $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).*.bin $(TARGET).*.mif $(TARGET).*.coe $(TARGET).*.mem $(TARGET).*.v $(TARGET).dump $(TARGET).*.dump *.o *.llvm.s
+	rm -f $(POBJS) $(COBJS) $(SOBJS) $(TARGET).elf $(TARGET).*.bin $(TARGET).*.mif $(TARGET).*.coe $(TARGET).*.mem $(TARGET).*.v $(TARGET).dump $(TARGET).*.dump *.o *.llvm.s *.log
 
 .PHONY: clean
 
