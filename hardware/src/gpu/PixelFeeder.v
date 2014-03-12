@@ -106,16 +106,19 @@ module PixelFeeder #(
     wire         feeder_den, feeder_full, feeder_empty;
     wire [ 31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
-    pixel_fifo feeder_fifo(
-        .rst(cpu_rst_g), //Internal syncronization across clock domains
+    pixel_fifo feeder_fifo (
+        //.rst(cpu_rst_g), //Internal syncronization across clock domains
         .wr_clk(cpu_clk_g),
+        .wr_rst(cpu_rst_g),
         .wr_en(feeder_den), //rdf_valid
         .din(feeder_din), //rdf_dout
         .full(feeder_full),
         .rd_clk(dvi_clk_g),
+        .rd_rst(dvi_rst_g),
         .rd_en(video_ready && isRunning),
         .dout(feeder_raw), //NOTE: First-word-fallthrough but no "valid" signal avail!
-        .empty(feeder_empty));
+        .empty(feeder_empty)
+    );
 
     assign feeder_dout = (isRunning) ? feeder_raw : ignore_pixel;
     assign rdf_rd_en = 1'b1; //Really a "ready" signal, not standard FIFO "enable"

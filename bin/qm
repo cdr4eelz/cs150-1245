@@ -3,4 +3,4 @@
 pwd
 make clean
 reset
-make | tee _qm.log
+make "$@" | tee "_qm.log"
