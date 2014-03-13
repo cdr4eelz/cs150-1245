@@ -6,22 +6,26 @@
 */
 module PipelineRegister #(
     parameter DD=`COLT45_DD,
-    parameter Width=0,
+    parameter Width=0, //Instantiated module had best override this! :)
     ResetValue={Width{1'b0}}
 )(
     input clk, rst, stall,
     input  [Width-1:0] In,
-    output reg [Width-1:0] Out
+    output [Width-1:0] Out
 );
 
-    // Basic register with sync-reset & sync-enable (enable = !stall).
+    reg [Width-1:0] pipereg = ResetValue;
+
+    // Basic register with sync-reset & Clock-Enable (CE = !stall).
     //  Only admit new value if !stall.
     always @(posedge clk) begin
         if (rst) begin
-            Out <= ResetValue;
+            pipereg <= ResetValue;
         end else if (!stall) begin
-            Out <= In;
+            pipereg <= In;
         end //else hold value
     end
+
+    assign Out = pipereg;
 
 endmodule

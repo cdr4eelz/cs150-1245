@@ -3,13 +3,13 @@
 
 typedef void (*entry_t)(void);
 
-int main(int argc, char**argv) {
-    uint32_t sw_frame;
+int main(int argc, char** argv) {
+    gframe_p sw_frame;
 
-    PF_FRAME = 3;
+    PF_FRAME = STD_FRAME3;
 
-    GP_FRAME = 1;
-    sw_frame = 2;
+    GP_FRAME = STD_FRAME1;
+    sw_frame = STD_FRAME2;
     hwfill  (           0x00002233);
     swfill  (sw_frame,  0x00002233);
     hwline  (           0xFFFFFFFF,  10, 10,  700,300);
@@ -19,15 +19,15 @@ int main(int argc, char**argv) {
     hwpixel (           0xFFFFFFFF,  20, 50);
     swpixel (sw_frame,  0xFFFFFFFF,  20, 50);
     swelipse(sw_frame,  0x00FF0000, 300,300,   50, 50);
-    PF_FRAME = 1;
+    PF_FRAME = STD_FRAME1;
     swcircle_old(sw_frame, 0x00000000, 650,200,   50);
     swcircle_old(sw_frame, 0x00222222, 650,200,   40);
     swcircle_old(sw_frame, 0x00444444, 650,200,   30);
     swcircle_old(sw_frame, 0x00666666, 650,200,   20);
     swcircle_old(sw_frame, 0x00888888, 650,200,   10);
 
-    GP_FRAME = 3;
-    sw_frame = 4;
+    GP_FRAME = STD_FRAME3;
+    sw_frame = STD_FRAME4;
     hwfill  (           0x00FF2222);
     swfill  (sw_frame,  0x00FF2222);
     hwline  (           0x0000FF00,  10, 10,  700,300);
@@ -43,7 +43,7 @@ int main(int argc, char**argv) {
     hwpixel (           0x00023666,  21, 51);
     swpixel (sw_frame,  0x00023666,  21, 51);
 
-    PF_FRAME = 4;
+    PF_FRAME = STD_FRAME4;
 //    uint32_t bios = ascii_hex_to_uint32("40000000");
 //    entry_t start = (entry_t) (bios);
 //    start();

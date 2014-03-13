@@ -4,22 +4,24 @@
 module InstructionControl #(
     parameter DD=`COLT45_DD
 )(
-    // Input instruction to decode (PC pinds down branch/jump target later)
-    input [31:0 ] _inst,
+    // Input instruction to decode (PC-relative branch/jump finalized elsewhere)
+    input [31:0] _inst,
+    // Signals used for instruction "Preview" during fetch stage
+    output Deviant,
     // Global or post-DX control signals
-    output [ 1:0 ] MemShift,
-    output [ 4:0 ] DestReg,
-    output         MemSigned, MemToReg, MemWrite,
-    // Values consumed mostly by DX stage
-    output [ 3:0 ] ALUOp,
-    output [ 2:0 ] CmpOp,
-    output         ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, Branch,
-    output [15:0 ] IMMED,
-    output [27:0 ] NEARADDR,
-    output [ 4:0 ] SRC1, SRC2, SHAMT,
+    output MemSigned, MemToReg, MemWrite,
+    output [ 1:0] MemShift,
+    output [ 4:0] DestReg,
+    // Signals consumed mostly by DX stage
+    output ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, Branch,
+    output [ 3:0] ALUOp,
+    output [ 2:0] CmpOp,
+    output [15:0] IMMED,
+    output [27:0] NEARADDR,
+    output [ 4:0] SRC1, SRC2, SHAMT,
     // COP0 additions
-    output [ 4:0 ] COPADDR,
-    output COPREAD, COPWRITE
+    output COPREAD, COPWRITE,
+    output [ 4:0] COPADDR
 );
 
     // OPCODE and major categories
@@ -74,34 +76,36 @@ module InstructionControl #(
     assign isRJump     = (isRType  && (_funct_[5:1] == 5'b00100_));
     assign isJump      = (isIJump || isRJump);
     assign isJLink     = (isIJump && _opcode_[0]) || (isRJump && _funct_[0]); //JAL/JALR lo-bit==1
-    wire #DD isBSimple, isBranchZo, isBranchZr, isBranchX, isBranch, isBranch0, isBLink;
+    wire #DD isBSimple, isBranchX, isBranchZo, isBranchZr, isBranch, isBranch0, isBLink;
     assign isBSimple   = (_opcode_[5:2] == 4'b0001__);
-    assign isBranchZo  = (_opcode_[5:1] == 5'b00011_);
-    assign isBranchZr  = (_opcode_      == 6'b000001);
-    assign isBranchX   = (_opcode_[5:1] == 5'b00010_);
+    assign isBranchX   = (_opcode_[5:1] == 5'b00010_); //Subset of BSimple
+    assign isBranchZo  = (_opcode_[5:1] == 5'b00011_); //Subset of BSimple
+    assign isBranchZr  = (_opcode_      == 6'b000001); //Only non-BSimple branch right now
     assign isBranch    = (isBranchZr || isBSimple);
     assign isBranch0   = (isBranchZr || isBranchZo);
     assign isBLink     = (isBranchZr && _rt_[4]); //BGEZAL/BLTZAL (branch-and-link ops)
-    wire isLink;
+    wire isDeviant, isLink; //Consolidate both Jump & Branch info
+    assign isDeviant   = (isJump || isBranch); //Anything that can change PC
     assign isLink      = (isJLink || isBLink); //JALs & BALs
 
+    // Outbound results (mostly for DX stage)
     assign IMMED    = _immediate_;
     assign SHAMT    = (isRShiftI) ? _shamt_ : 5'd0;
     assign SRC1     = (!isJType && !isRShiftI) ? _rs_ : 5'd0;
     assign SRC2     = (isBranch0) ? 5'd0 :
                        (isROther || isBranchX || isRShift || isMStore || isCopWrite)
                            ? _rt_ : 5'd0;
-
-    assign COPADDR  = (isCopRead || isCopWrite) ? _rd_ : 5'd0;
-    assign COPREAD  = isCopRead;
-    assign COPWRITE = isCopWrite;
-
-    // Embed existing ALUDecoder from lab
-    ALUdec ALUDecoder(
+    ALUdec ALUDecoder( // Embed existing ALUDecoder from lab
         .opcode(_opcode_), .funct(_funct_),
         .ALUop(ALUOp)
     );
 
+    // Outbound results (COP0 related)
+    assign COPADDR  = (isCopRead || isCopWrite) ? _rd_ : 5'd0;
+    assign COPREAD  = isCopRead;
+    assign COPWRITE = isCopWrite;
+
+    // Outbound results (mostly for DX stage)
     assign MemSigned = isMSigned, MemToReg = isMLoad, MemWrite = isMStore;
     assign MemShift = `UNKWIFN(
                         (~_opcode_[1:0])
@@ -124,5 +128,8 @@ module InstructionControl #(
                             ? (_opcode_[2:0] << _rt_[0]) //TODO: Simplify this! :(
                             : ((isJump) ? 3'b011 : 3'b000) //TODO: Use constant names!
                         );
+
+    // Outbound results (Instruction-Preview specific)
+    assign Deviant  = isDeviant;
 
 endmodule

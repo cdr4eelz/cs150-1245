@@ -1,6 +1,0 @@
-#!/bin/bash -euv
-
-pwd
-make clean
-reset
-make "$@" 2>&1 |tee "_qm.log" |colorit

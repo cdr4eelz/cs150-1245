@@ -62,34 +62,24 @@ module LineEngine(
 endmodule
 
 /*
-#define SWAP(x, y) (x ^= y ^= x ^= y)
-#define ABS(x) (((x)<0) ? -(x) : (x))
+#define ABSDIF(A,B) (((A) < (B)) ? ((B)-(A)) : ((A)-(B)))
 
-void line(int x0, int y0, int x1, int y1) {
-    char steep = (ABS(y1 - y0) > ABS(x1 - x0)) ? 1 : 0;
-    if (steep) {
-        SWAP(x0, y0);
-        SWAP(x1, y1);
-    }
-    if (x0 > x1) {
-        SWAP(x0, x1);
-        SWAP(y0, y1);
-    }
-    int deltax = x1 - x0;
-    int deltay = ABS(y1 - y0);
-    int error = deltax / 2;
-    int ystep;
-    int y = y0
-    int x;
-    ystep = (y0 < y1) ? 1 : -1;
-    for (x = x0; x <= x1; x++) {
-        if (steep)
-            plot(y,x);
-        else
-            plot(x,y);
-        error = error - deltay;
+void swline(gframe_p const frame, color_t const color,
+            uint16_t const x0, uint16_t const y0,
+            uint16_t const x1, uint16_t const y1)
+{
+    uint16_t a0, a1, b0, b1, tmp;
+    uint32_t const yinc = (b0 < b1) ? 1 : -1;
+    uint32_t const deltax = (a1 - a0); //Guaranteed >= 0
+    uint32_t const deltay = ABSDIF(b1,b0); //Always subtracted from error
+
+    int32_t error = (int32_t)(deltax >> 1);
+    uint16_t y = b0;
+    for (uint16_t x = a0; x <= a1; x++) {
+        swpixel(frame,color, x,y);
+        error -= deltay;
         if (error < 0) {
-            y += ystep;
+            y += yinc;
             error += deltax;
         }
     }

@@ -3,7 +3,7 @@
 #include "ascii.h"
 #include "uart.h"
 
-int8_t* read_n(int8_t*b, uint32_t n)
+int8_t* read_n(int8_t* b, uint32_t n)
 {
     for (uint32_t i = 0; i < n;  i++) {
         b[i] =  uread_int8();
@@ -38,25 +38,25 @@ void store(uint32_t address, uint32_t length)
     }
 }
 
-void show_block(uint32_t address, uint8_t numWords, int8_t* bufMEM, uint32_t bufLEN)
+void show_block(uint32_t* const address, uint8_t numWords)
 {
-    volatile uint32_t* p = (volatile uint32_t*)(address);
+    uint32_t* p = address;
     for (uint32_t i = 0; i < numWords; i++) {
         if ((i%4)==0) {
-            uwrite_int8s("\r\n");
-            uwrite_int8s(uint32_to_ascii_hex((uint32_t) p, bufMEM, bufLEN));
+            bufw_newline();
+            bufw_hex32u((uint32_t) p);
             uwrite_int8(':');
         } else {
             uwrite_int8(' ');
         }
-        uwrite_int8s(uint32_to_ascii_hex(*p++, bufMEM, bufLEN));
+        bufw_hex32u(*p++);
     }
 }
 
-uint32_t copy_xor(uint32_t pSRC, uint32_t pDST, uint32_t length)
+uint32_t copy_xor(uint32_t* const pSRC, uint32_t* const pDST, uint32_t length)
 {
-    volatile uint32_t* s = (volatile uint32_t*)(pSRC);
-    volatile uint32_t* d = (volatile uint32_t*)(pDST);
+    uint32_t* s = pSRC;
+    uint32_t* d = pDST;
     uint32_t result = 0;
     for (uint32_t i = 0; i*4 < length; i++) {
         uint32_t val = *s++;
@@ -91,6 +91,10 @@ uint8_t  tok_dec8u ( void ) {
     return ascii_dec_to_uint8 (read_token(BUFFER_FIX, BUFFER_LEN, " \x0d"));
 }
 
+void bufw_newline( void ) {
+    uwrite_int8('\r');
+    uwrite_int8('\n');
+}
 void bufw_hex32u(uint32_t u32) {
     uwrite_int8s(uint32_to_ascii_hex(u32, BUFFER_FIX, BUFFER_LEN));
 }

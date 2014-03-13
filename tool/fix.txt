@@ -1,14 +1,17 @@
+FILTER: Xst:2211
 
 
 KEYtag: BUG!/? STEP OPTImize TOOL CLeanUP ANALyze COOLcrossuse WANTtolearn
 
-BUG-    Reset is double applied with 2-cycle gap (init_done lag)
+BUG     ISR lockup
 
 CLUP    Revert ml505top as much as possible, move fanciness to sub/wrapper
 CLUP    Re-group/balance modules
 CLUP    Data vs control segregation
 
-STEP    PixelFeeder from DDR (or SRAM if arbiter works)
+STEP    LineEngine!!!!
+STEP    Fancy shape, overlay, composite, etc.
+STEP    Visually appealing demo (game, etc.)
 
 TOOL    Use speedy distmem and custom instructions for special internal debug data/triggers
 TOOL    Helper functions in scratch IMEM (link with smaller user code)
@@ -40,7 +43,9 @@ WANT    Try simple dual-processing arrangement
     PLOP for serial forwarding & other tricks
     BRKTAP for debug stepping & monitoring
     Research timing constraints, MIG details, uBlaze, etc.
+      Techniques such as minimizing reset tree, TIG & DATAPATHONLY constraints, etc.
     Rebuilt custom GCC tools (without clang)
+    Fancy multi-reset scheme including clock-domain syncronization
 
 ::TROUBLESHOOT STEPS (when sim/synth discrep)::
     * Reverted to sparse CP2 top & framework *
@@ -55,7 +60,7 @@ WANT    Try simple dual-processing arrangement
     Questionable tricks (short-term not worth long-term)
     Control/Datapath useful (though difficult for big pipeline CPU)
 
-    
+
 Press on to visual aspects:
     Will dumping DDR buffer make all code malfunction until bug fixed???
     Can Arbie be completed quickly & SDRAM swapped in (or augmented)???

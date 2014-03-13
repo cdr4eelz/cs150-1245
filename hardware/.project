@@ -17,7 +17,7 @@
 	</natures>
 	<filteredResources>
 		<filter>
-			<id>1394572649535</id>
+			<id>1394689786341</id>
 			<name></name>
 			<type>10</type>
 			<matcher>
@@ -26,7 +26,7 @@
 			</matcher>
 		</filter>
 		<filter>
-			<id>1394572649540</id>
+			<id>1394689786346</id>
 			<name></name>
 			<type>10</type>
 			<matcher>
@@ -35,7 +35,7 @@
 			</matcher>
 		</filter>
 		<filter>
-			<id>1394572649545</id>
+			<id>1394689786351</id>
 			<name></name>
 			<type>22</type>
 			<matcher>
@@ -44,12 +44,66 @@
 			</matcher>
 		</filter>
 		<filter>
-			<id>1394572649550</id>
+			<id>1394689786357</id>
 			<name></name>
 			<type>6</type>
 			<matcher>
 				<id>org.eclipse.ui.ide.multiFilter</id>
 				<arguments>1.0-isSymLink-equals-false-false-true</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1394689786363</id>
+			<name></name>
+			<type>26</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-tmp</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1394689786369</id>
+			<name></name>
+			<type>26</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-xlnx_*</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1394689786374</id>
+			<name></name>
+			<type>30</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-_*</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1394692637414</id>
+			<name>src/core_ip</name>
+			<type>26</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-true-(doc|example_design|implement|simulation)</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1394692637418</id>
+			<name>src/core_ip</name>
+			<type>22</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-true-.*\.(asy|gise|tcl|txt|veo|xdc|xise)</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1394692637423</id>
+			<name>src/core_ip</name>
+			<type>22</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-*.cgc</arguments>
 			</matcher>
 		</filter>
 	</filteredResources>

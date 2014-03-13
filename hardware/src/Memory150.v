@@ -187,11 +187,11 @@ assign DBG_MEM150 = {
    // DDR2 module:
     mig_v3_61 #(
         .SIM_ONLY(SIM_ONLY),
-        .CAS_LAT(3), //Seen 3 or 4...seems like 3 is ok
+        .CAS_LAT(3), //CAS 3 matches 200MHz (like -53E), CAS 4 matches 266MHz (like -667)
         .BURST_LEN(4), //TODO: Try 8
         .APPDATA_WIDTH(128),
-        .CLK_PERIOD(5000), //200MHz=5000 (DDR400)
-        .RST_ACT_LOW(1) //Maybe flip this to avoid inversion
+        .CLK_PERIOD(5000), //5000ns==200MHz (3750ns==266MHz, challenging for SpeedGrade-1)
+        .RST_ACT_LOW(1) //Maybe flip this to avoid double inversion
     ) ddr2(
         .clk200(clk200_g),
         .clk0(clk0_g),

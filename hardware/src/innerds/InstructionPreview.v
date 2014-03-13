@@ -1,7 +1,8 @@
 `include "cpuglobal.vh"
 
 module InstructionPreview #(
-    parameter DD=`COLT45_DD
+    parameter DD=`COLT45_DD,
+    parameter USE_DECODER=1
 )(
     // Inputs to decode (PC to pin down branch/jump)
     input [31:0 ] _inst,
@@ -9,9 +10,24 @@ module InstructionPreview #(
     output couldBranch
 );
 
-//Could just use InstructionControl and let synthesis prune out unused junk!
-//Could use a pretty simple casex too.
-
+//TODO:Consider a pretty simple casex for this
+generate if (USE_DECODER) begin:_DECODER_
+    InstructionControl decodeControl(
+        ._inst(_inst),
+        // Global control signals
+        .MemShift(), .MemSigned(),
+        .MemToReg(), .MemWrite(),
+        // Standard control signals only used locally
+        .ALUOp(), .ALUSrcA(), .ALUSrcB(), .DestReg(),
+        .ISigned(), .CmpOp(), .Jump(), .JR(), .Link(), .Branch(),
+        // Locally used special values
+        .IMMED(), .NEARADDR(),
+        .SRC1(), .SRC2(), .COPWRITE(), .COPADDR(),
+        .SHAMT(), .COPREAD(),
+        // Specific to Instruction-Preview
+        .Deviant(couldBranch)
+    );
+end else begin:_COMPUTE_
     wire [5:0] _opcode_ = _inst[31:26];
     wire [5:0] _funct_  = _inst[5:0];
 
@@ -23,5 +39,6 @@ module InstructionPreview #(
     wire isRJump    = (isRType && (_funct_[5:1] == 5'b00100_));
 
     assign couldBranch  = (isBSimple || isBGELTZ || isJType || isRJump);
+end endgenerate
 
 endmodule

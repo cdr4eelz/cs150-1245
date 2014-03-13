@@ -1,0 +1,20 @@
+#!/bin/bash -euv
+
+LOG="._mq.log"
+LOGP="${LOG}.p1"
+COLORIT=`which "colorit" 2>/dev/null || echo "cat"`
+RM=`which /bin/rm 2>/dev/null || which rm 2>/dev/null || echo "rm"`
+MV=`which /bin/mv 2>/dev/null || which mv 2>/dev/null || echo "mv"`
+
+echo "LOG:${LOG}  COLORIT:${COLORIT}"
+pwd
+make clean
+
+${RM} -rf "${LOGP}"
+[ -e "${LOGP}" ] && ${MV} "${LOG}" "${LOGP}"
+${RM} -rf "${LOG}"
+
+reset
+echo "LOG:${LOG}  COLORIT:${COLORIT}"
+
+make "$@" 2>&1 |tee "${LOG}" |${COLORIT}

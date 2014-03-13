@@ -28,7 +28,7 @@ module StageDX(
     output         DOBranch_
 );
 
-//TODO: Avoid extra adders by passing pre-added PC value and/or sharing ALU
+//TODO: Use prior stage to more pre-computation like using pre-added PC value
 
     // Decoded signals used locally in DX
     wire [15: 0] IMMED;
@@ -55,7 +55,9 @@ module StageDX(
         // Locally used special values
         .IMMED(IMMED), .NEARADDR(NEARADDR),
         .SRC1(SRC1), .SRC2(SRC2), .COPWRITE(CopInHot), .COPADDR(CopAddr),
-        .SHAMT(SHAMT), .COPREAD(COPREAD)
+        .SHAMT(SHAMT), .COPREAD(COPREAD),
+        // Specific to Instruction-Preview
+        .Deviant()
     );
 
     // Some simple functions (not too powerful, just for experience)

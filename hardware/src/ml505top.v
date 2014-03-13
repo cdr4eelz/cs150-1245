@@ -3,7 +3,7 @@ module ml505top #(
 )(
     // Reference Clock (100MHz) & board reset
     input         USER_CLK,
-    input         USER_RST_N,
+    input         FPGA_CPU_RESET_B,
 
     // SERIAL (UART)
     input         FPGA_SERIAL1_RX,
@@ -21,15 +21,15 @@ module ml505top #(
     output [12:0] DDR2_A,
     output  [1:0] DDR2_BA,
     output        DDR2_CAS_B,
-    output        DDR2_CKE,
+    output        DDR2_CKE0,
     output  [1:0] DDR2_CLK_N,
     output  [1:0] DDR2_CLK_P,
-    output        DDR2_CS_B,
+    output        DDR2_CS0_B,
     inout  [63:0] DDR2_D,
     output  [7:0] DDR2_DM,
     inout   [7:0] DDR2_DQS_N,
     inout   [7:0] DDR2_DQS_P,
-    output        DDR2_ODT,
+    output        DDR2_ODT0,
     output        DDR2_RAS_B,
     output        DDR2_WE_B,
 
@@ -64,16 +64,32 @@ module ml505top #(
 );
 
 //Declare a couple custom signals & rename GPIO
-wire any_stall, GPIO_SW_C;
+wire any_stall /* synthesis syn_maxfan = 10 */;
+// synthesis attribute max_fanout of any_stall is 10
+
+//IO hookups
+wire GPIO_SW_C;
 assign GPIO_COMPLED = GPIO_COMPPB; //Compass LED lights mimic pushbuttons
 assign GPIO_SW_C = GPIO_COMPPB[4];
-assign BUS_ERROR_1 = USER_RST_N, BUS_ERROR_2 = !USER_RST_N;
+assign BUS_ERROR_1 = FPGA_CPU_RESET_B;
+assign BUS_ERROR_2 = !FPGA_CPU_RESET_B;
 wire [31:0] DBG_MEM150;
 
-    // PLL wires
+    // Clocking (PLL/DCM/DLL) wires
     wire user_clk_g, pll_lock, init_done;
     wire cpu_clk_g, dvi_clk_g, clk200_g, clk0_g, clk90_g, clkdiv0_g;
-    reg  rst_pll, rst_cpu_mem, rst_cpu_bus, rst_dvi_bus, rst_cpu_cpu;
+    // Resets named rst_{CLK-DOMAIN}_{RST-STAGE}
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE" *)
+    reg  rst_user_pll /* synthesis syn_maxfan = 10 */;
+// synthesis attribute max_fanout of rst_user_pll is 10
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE" *)
+    reg  rst_cpu_mem, rst_cpu_bus, rst_cpu_cpu /* synthesis syn_maxfan = 10 */;
+// synthesis attribute max_fanout of rst_cpu_mem is 10
+// synthesis attribute max_fanout of rst_cpu_bus is 10
+// synthesis attribute max_fanout of rst_cpu_cpu is 10
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE" *)
+    reg  rst_dvi_bus /* synthesis syn_maxfan = 10 */;
+// synthesis attribute max_fanout of rst_dvi_bus is 10
 
     // Memory150
     wire [31:0] dcache_addr,    icache_addr;
@@ -133,8 +149,8 @@ wire [31:0] DBG_MEM150;
         end
     end
 
-//TODO:Make a mini reset "tree" for distribution
-    always @(*) rst_pll = reset_lines[0] || (&reset_r); //USER-clock (already)
+//TODO:Make a mini reset "tree" for distribution (within each domain)
+    always @(*) rst_user_pll = reset_lines[0] || (&reset_r); //USER-clock (already)
     always @(posedge cpu_clk_g) begin //CPU-clock
         rst_cpu_mem <= reset_lines[1];
         rst_cpu_bus <= reset_lines[2];
@@ -164,15 +180,15 @@ wire [31:0] DBG_MEM150;
         .DDR2_A     (DDR2_A),
         .DDR2_BA    (DDR2_BA),
         .DDR2_CAS_B (DDR2_CAS_B),
-        .DDR2_CKE   (DDR2_CKE),
+        .DDR2_CKE   (DDR2_CKE0),
         .DDR2_CLK_N (DDR2_CLK_N),
         .DDR2_CLK_P (DDR2_CLK_P),
-        .DDR2_CS_B  (DDR2_CS_B),
+        .DDR2_CS_B  (DDR2_CS0_B),
         .DDR2_D     (DDR2_D),
         .DDR2_DM    (DDR2_DM),
         .DDR2_DQS_N (DDR2_DQS_N),
         .DDR2_DQS_P (DDR2_DQS_P),
-        .DDR2_ODT   (DDR2_ODT),
+        .DDR2_ODT   (DDR2_ODT0),
         .DDR2_RAS_B (DDR2_RAS_B),
         .DDR2_WE_B  (DDR2_WE_B),
     // Cache <=> CPU interface:
@@ -272,7 +288,7 @@ wire [31:0] DBG_MEM150;
         .CLKOUT5_DIVIDE( 6),    .CLKOUT5_PHASE(  0.0),  .CLKOUT5_DUTY_CYCLE(0.5),
         .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
     ) user_clk_pll (
-        .CLKIN(user_clk_g), .RST(rst_pll), .LOCKED(pll_lock),
+        .CLKIN(user_clk_g), .RST(rst_user_pll), .LOCKED(pll_lock),
         .CLKOUT0(cpu_clk),
         .CLKOUT1(dvi_clk),
         .CLKOUT2(clk200),
@@ -328,7 +344,7 @@ end endgenerate
 
 //CROSS: SRAM driver from FALL13
   // -- |SRAM Controller| ------------------------------------------------------
-  `define SRAM_ENABLE
+//`define SRAM_ENABLE
 
   wire sram_clock, sram_locked, sram_ready, sram_addr_valid, sram_data_out_valid;
   wire [17:0] sram_addr;
@@ -367,9 +383,9 @@ end endgenerate
     assign SRAM_MODE=0;
     assign SRAM_ADV_LD_B=1;
     assign SRAM_OE_B=1;
-    assign SRAM_D=32'dz;
+    assign SRAM_D={36{1'bz}};
     assign SRAM_A=0;
-    assign SRAM_BW=4'hF;
+    assign SRAM_BW=4'b1111;
   `endif // SRAM_ENABLE
 
 `else

@@ -3,7 +3,7 @@
 module MIPS150 #(
     parameter CPU_FREQ = 50_000_000,
     parameter DD=`COLT45_DD,
-    parameter COLT45_SCOPE=1, COLT45_BRK=0, COLT45_SCRATCH=0, COLT45_PC=0,
+    parameter COLT45_SCOPE=0, COLT45_BRK=0, COLT45_SCRATCH=0, COLT45_PC=0,
                 COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
     input   clk,
@@ -113,7 +113,8 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     InstructionPreview previewFetch(
         ._inst(INST_F_), .couldBranch(INST_CouldBranch_F_)
     );
-    assign DO_ISR = {BRA_IRQPending_DX2F_,stall,INST_CouldBranch_F_,WAS_Branch,WAS_ISR} == 5'b10000;
+//  assign DO_ISR = {BRA_IRQPending_DX2F_,stall,INST_CouldBranch_F_,WAS_Branch,WAS_ISR} == 5'b10000;
+    assign DO_ISR = BRA_IRQPending_DX2F_ && ~|{stall,INST_CouldBranch_F_,WAS_Branch,WAS_ISR};
 
 
 //=============--- "PIPELINE"-PEEK: F/DX ---=============

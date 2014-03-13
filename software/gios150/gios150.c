@@ -7,22 +7,22 @@
 
 //BUFFER_LEN moved to parse.h and new BUFFER_FIX for fixed buffer pointer
 
-#define VERSION_CHAR '5'
+#define VERSION_I (1)
+#define VERSION_C '1'
+#define VERSION_S "1"
 
 typedef void (*entry_t)(void);
 
 int main(void)
 {
-    uwrite_int8s("\r\n\r\n[COLT45.");
-    uwrite_int8(VERSION_CHAR);
-    uwrite_int8s("]\r\n\r\n");
+    uwrite_int8s("\r\n\r\n[Golt45." VERSION_S "]\r\n\r\n");
 
     int8_t buffer[BUFFER_LEN];
-    uint32_t stash_addr1 = 0x10000000;
-    uint32_t sw_frame = 0x00000001;
+    uint32_t* stash_addr1 = (uint32_t*)0x10000000;
+    gframe_p sw_frame = (gframe_p)0x00000001;
 
     for ( ; ; ) {
-        uwrite_int8(VERSION_CHAR);
+        uwrite_int8(VERSION_C);
         uwrite_int8('>');
         uwrite_int8(' ');
 
@@ -46,7 +46,7 @@ int main(void)
             bufw_hex32u(address);
             uwrite_int8s(":");
             bufw_hex32u(*p);
-            uwrite_int8s("\r\n");
+            bufw_newline();
         } else if (strcmp150(input, "lhu") == 0) {
             uint32_t address      = tok_hex32u();
 
@@ -55,7 +55,7 @@ int main(void)
             bufw_hex32u(address);
             uwrite_int8s(":");
             bufw_hex16u(*p);
-            uwrite_int8s("\r\n");
+            bufw_newline();
         } else if (strcmp150(input, "lbu") == 0) {
             uint32_t address      = tok_hex32u();
 
@@ -64,7 +64,7 @@ int main(void)
             bufw_hex32u(address);
             uwrite_int8s(":");
             bufw_hex8u(*p);
-            uwrite_int8s("\r\n");
+            bufw_newline();
         } else if (strcmp150(input, "sw") == 0) {
             uint32_t word         = tok_hex32u();
             uint32_t address      = tok_hex32u();
@@ -86,99 +86,107 @@ int main(void)
 
 //Graphics commands:
         } else if (strcmp150(input, "gs") == 0) {
-            uint32_t status = GP_CONTROL;
+            gstate_t state = GP_STATE;
+            bufw_hex32u( state.u32 );
+            bufw_newline();
 
-            bufw_hex32u(status);
-            uwrite_int8s("\r\n");
         } else if (strcmp150(input, "pf") == 0) {
-            uint32_t frame        = tok_hex32u();
-
+            gframe_p frame = (gframe_p)tok_hex32u();
             PF_FRAME = frame;
-        } else if (strcmp150(input, "sf") == 0) {
-            uint32_t frame        = tok_hex32u();
 
+        } else if (strcmp150(input, "sf") == 0) {
+            gframe_p frame = (gframe_p)tok_hex32u();
             sw_frame = frame;
             GP_FRAME = frame;
+
         } else if (strcmp150(input, "gf") == 0) {
-            uint32_t frame        = tok_hex32u();
-
+            gframe_p frame = (gframe_p)tok_hex32u();
             GP_FRAME = frame;
+
         } else if (strcmp150(input, "gc") == 0) {
-            uint32_t code         = tok_hex32u();
+            gpcode_p code = (gpcode_p)tok_hex32u();
+            GP_GCODE = code;
 
-            GP_CODE = code;
         } else if (strcmp150(input, "hwfill") == 0) {
-            uint32_t color        = tok_hex32u();
-
+            color_t color = (color_t)tok_hex32u();
             hwfill(color);
+
         } else if (strcmp150(input, "hwline") == 0) {
-            uint32_t color        = tok_hex32u();
+            uint32_t color = (color_t)tok_hex32u();
             uint16_t x0           = tok_dec16u();
             uint16_t y0           = tok_dec16u();
             uint16_t x1           = tok_dec16u();
             uint16_t y1           = tok_dec16u();
-
             hwline(color, x0, y0, x1, y1);
+
         } else if (strcmp150(input, "hwpixel") == 0) {
-            uint32_t color        = tok_hex32u();
+            uint32_t color = (color_t)tok_hex32u();
             uint16_t x            = tok_dec16u();
             uint16_t y            = tok_dec16u();
-
             hwpixel(color, x, y);
-        } else if (strcmp150(input, "hwcircle") == 0) {
-            uint32_t color        = tok_hex32u();
-            uint16_t x            = tok_dec16u();
-            uint16_t y            = tok_dec16u();
-            uint16_t r            = tok_dec16u();
 
-            hwcircle(color, x, y, r);
+        } else if (strcmp150(input, "hwelipse") == 0) {
+            uint32_t color = (color_t)tok_hex32u();
+            uint16_t xc           = tok_dec16u();
+            uint16_t yc           = tok_dec16u();
+            uint16_t ox           = tok_dec16u();
+            uint16_t oy           = tok_dec16u();
+            hwelipse(color, xc, yc, ox, oy);
+
         } else if (strcmp150(input, "swfill") == 0) {
             uint32_t color        = tok_hex32u();
+            swfill(sw_frame, color);
 
-            swfill(color, sw_frame);
         } else if (strcmp150(input, "swline") == 0) {
-            uint32_t color        = tok_hex32u();
+            uint32_t color = (color_t)tok_hex32u();
             uint16_t x0           = tok_dec16u();
             uint16_t y0           = tok_dec16u();
             uint16_t x1           = tok_dec16u();
             uint16_t y1           = tok_dec16u();
+            swline(sw_frame, color, x0, y0, x1, y1);
 
-            swline(color, x0, y0, x1, y1, sw_frame);
         } else if (strcmp150(input, "swpixel") == 0) {
-            uint32_t color        = tok_hex32u();
+            uint32_t color = (color_t)tok_hex32u();
             uint16_t x            = tok_dec16u();
             uint16_t y            = tok_dec16u();
+            swpixel(sw_frame, color, x, y);
 
-            swpixel(color, x, y, sw_frame);
+        } else if (strcmp150(input, "swelipse") == 0) {
+            uint32_t color = (color_t)tok_hex32u();
+            uint16_t xc           = tok_dec16u();
+            uint16_t yc           = tok_dec16u();
+            uint16_t ox           = tok_dec16u();
+            uint16_t oy           = tok_dec16u();
+            swelipse(sw_frame, color, xc, yc, ox, oy);
+
         } else if (strcmp150(input, "swcircle") == 0) {
-            uint32_t color        = tok_hex32u();
+            uint32_t color = (color_t)tok_hex32u();
             uint16_t x            = tok_dec16u();
             uint16_t y            = tok_dec16u();
             uint16_t r            = tok_dec16u();
-
-            swcircle(color, x, y, r, sw_frame);
+            swcircle(sw_frame, color, x, y, r);
 
 //COLT45 "custom" extensions:
         } else if (strcmp150(input, "dump") == 0) {
-            uint32_t address      = tok_hex32u();
-            if (address == 0) {
+            uint32_t* address = (uint32_t*)tok_hex32u();
+            if (!address) {
                 address = stash_addr1;
-                stash_addr1 += (16 * 4);
+                stash_addr1 += 16;
             } else {
                 stash_addr1 = address;
             }
 
-            show_block(address, 16, buffer, BUFFER_LEN);
-            uwrite_int8s("\r\n");
+            show_block(address, 16);
+            bufw_newline();
         } else if (strcmp150(input, "cp") == 0) {
-            uint32_t a_src        = tok_hex32u();
-            uint32_t a_dst        = tok_hex32u();
-            uint32_t l_cpy        = tok_hex32u();
+            uint32_t* a_src = (uint32_t*)tok_hex32u();
+            uint32_t* a_dst = (uint32_t*)tok_hex32u();
+            uint32_t l_cpy  = tok_hex32u();
 
             uint32_t xor = copy_xor(a_src, a_dst, l_cpy);
 
             bufw_hex32u(xor);
-            uwrite_int8s("\r\n");
+            bufw_newline();
         }
     }
 

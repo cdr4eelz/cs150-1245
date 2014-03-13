@@ -2,14 +2,14 @@
 
 // *** HARDWARE IMPLEMENTATION (Just single GPCODE commands in GPTEMP_PTR) ***
 
-uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
+uint32_t* hw_OpRGB_PP_S(uint8_t const op, color_t const color,
                         uint32_t const p0, uint32_t const p1);
 
-void hwfill(uint32_t const color)
+void hwfill(color_t const color)
 {
     hw_OpRGB_PP_S(GOP_FILL, color, 0xFFFFFFFF, 0xFFFFFFFF);
 }
-void hwline(uint32_t const color,
+void hwline(color_t const color,
             uint16_t const x0, uint16_t const y0,
             uint16_t const x1, uint16_t const y1)
 {
@@ -17,13 +17,13 @@ void hwline(uint32_t const color,
                   CMD_point(x0,y0),
                   CMD_point(x1,y1));
 }
-void hwpixel(uint32_t const color,
+void hwpixel(color_t const color,
              uint16_t const x, uint16_t const y)
 {
     hw_OpRGB_PP_S(GOP_PIXEL, color,
                   CMD_point(x,y), 0xFFFFFFFF);
 }
-void hwelipse(uint32_t const color,
+void hwelipse(color_t const color,
               uint16_t const xc, uint16_t const yc,
               uint16_t const rx, uint16_t const ry)
 {
@@ -32,7 +32,7 @@ void hwelipse(uint32_t const color,
                   CMD_point(rx,ry));
 }
 
-uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
+uint32_t* hw_OpRGB_PP_S(uint8_t const op, color_t const color,
                         uint32_t const p0, uint32_t const p1)
 {
     uint32_t* pINST = GPTEMP_PTR;
@@ -40,7 +40,7 @@ uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
     if (p0 != 0xFFFFFFFF) *pINST++ = p0;
     if (p1 != 0xFFFFFFFF) *pINST++ = p1;
     *pINST++ = CMD_STOP();
-    GP_CODE = *GPTEMP_PTR;
+    GP_GCODE = GPTEMP_PTR;
     return pINST;
 }
 
@@ -48,9 +48,9 @@ uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
 
 // *** SOFTWARE IMPLEMENTATIONS ***
 
-void swfill(uint32_t const frame, uint32_t const color)
+void swfill(gframe_p const frame, color_t const color)
 {
-    uint32_t *pPIX = FRAME_PTR(frame); //Start at pointer to frame base address
+    uint32_t *pPIX = (uint32_t*)FRAME_PTR(frame); //Start at pointer to frame base address
     for (int nROW = 0; nROW < ROW_SIZEP; nROW++) {
         for (int nCOL = 0; nCOL < COL_SIZEP; nCOL++) {
             *pPIX++ = color; //Advance 1-word (4-bytes) each time
@@ -60,11 +60,11 @@ void swfill(uint32_t const frame, uint32_t const color)
 }
 
 // Based on wikipedia implementation
-void swline(uint32_t const frame, uint32_t const color,
+void swline(gframe_p const frame, color_t const color,
             uint16_t const x0, uint16_t const y0,
             uint16_t const x1, uint16_t const y1)
 {
-    uint32_t* const fp = FRAME_PTR(frame);
+    gframe_p const fp = FRAME_PTR(frame);
     char const steep = (ABSDIF(y1,y0) > ABSDIF(x1,x0)) ? 1 : 0;
     uint16_t a0, a1, b0, b1, tmp;
     if (steep) {
@@ -78,11 +78,11 @@ void swline(uint32_t const frame, uint32_t const color,
         SWAP(a0,a1,tmp); //swap_u16(&a0, &a1);
         SWAP(b0,b1,tmp); //swap_u16(&b0, &b1);
     }
-    char const yinc = (b0 < b1) ? 1 : -1;
-    int32_t const deltax = (a1 - a0); //Guaranteed >= 0
-    int32_t const deltay = ABSDIF(b1,b0);
+    uint32_t const yinc = (b0 < b1) ? 1 : -1;
+    uint32_t const deltax = (a1 - a0); //Guaranteed >= 0
+    uint32_t const deltay = ABSDIF(b1,b0); //Always subtracted from error
 
-    int32_t error = (int32_t)(deltax / 2);
+    int32_t error = (int32_t)(deltax >> 1); //(deltax>>1)==(deltax/2)
     uint16_t y = b0;
     for (uint16_t x = a0; x <= a1; x++) {
         if (steep) {
@@ -92,30 +92,26 @@ void swline(uint32_t const frame, uint32_t const color,
 //          swpixel(frame,color, x,y);
             *PIX_PTR(fp, x,y) = color;
         }
-        error = error - deltay;
+        error -= deltay;
         if (error < 0) {
-            if (yinc) {
-                y += 1;
-            } else {
-                y -= 1;
-            }
+            y += yinc;
             error += deltax;
         }
     }
 }
 
-void swpixel(uint32_t const frame, uint32_t const color,
+void swpixel(gframe_p const frame, color_t const color,
              uint16_t const x, uint16_t const y)
 {
-    uint32_t* const fp = FRAME_PTR(frame);
+    gframe_p const fp = FRAME_PTR(frame);
     *PIX_PTR(fp, x, y) = color;
 }
 
-void swcircle_old(uint32_t const frame, uint32_t const color,
+void swcircle_old(gframe_p const frame, color_t const color,
                   uint16_t const xc, uint16_t const yc,
                   uint16_t const r)
 {
-    uint32_t* const fp = FRAME_PTR(frame);
+    gframe_p const fp = FRAME_PTR(frame);
     int32_t x, y, d;
     x = 0;
     y = r;
@@ -134,11 +130,11 @@ void swcircle_old(uint32_t const frame, uint32_t const color,
     }
 }
 
-void swcircle(uint32_t const frame, uint32_t const color,
+void swcircle(gframe_p const frame, color_t const color,
               uint16_t const xc, uint16_t const yc,
               uint16_t const r)
 {
-    uint32_t* const fp = FRAME_PTR(frame);
+    gframe_p const fp = FRAME_PTR(frame);
     int32_t x, y, d, dE, dSE;
     x = 0;
     y = r;
@@ -163,11 +159,11 @@ void swcircle(uint32_t const frame, uint32_t const color,
     }
 }
 
-void swelipse(uint32_t const frame, uint32_t const color,
+void swelipse(gframe_p const frame, color_t const color,
               uint16_t const xc, uint16_t const yc,
               uint16_t const rx, uint16_t const ry)
 {
-    uint32_t* const fp = FRAME_PTR(frame);
+    gframe_p const fp = FRAME_PTR(frame);
     int32_t const a2p = (rx^2);
     int32_t const b2p = (ry^2);
     int32_t x, y, d1, d2;
@@ -203,7 +199,7 @@ void swelipse(uint32_t const frame, uint32_t const color,
 }
 
 
-void swpixel_4way(uint32_t* const fp, uint32_t const color,
+void swpixel_4way(gframe_p const fp, color_t const color,
                   uint16_t const xc, uint16_t const yc,
                   int16_t const ox,  int16_t const oy)
 {
@@ -213,7 +209,7 @@ void swpixel_4way(uint32_t* const fp, uint32_t const color,
     *PIX_PTR(fp, xc + ox, yc + oy) = color;
 }
 
-void swpixel_8way(uint32_t* const fp, uint32_t const color,
+void swpixel_8way(gframe_p const fp, color_t const color,
                   uint16_t const xc, uint16_t const yc,
                   int16_t const ox,  int16_t const oy)
 {

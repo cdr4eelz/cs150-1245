@@ -1,3 +1,26 @@
+Interesting options to aid pre-bugging:
+
+vlog:
++define+one=r1+two=r2+three=r3
+
+vcom:
+-coverreportcancelled +acc
+-quiet -rangecheck -source -check_synthesis
+-nocoverexcludedefault -constimmedassert
+-fsmverbose -fsmsingle -fsmresettrans
+-f <file> -outf <out>
+
+vcover report --Coverage report
+verror --Error Details
+
+Settings into Sigasi (vcom & vlog):
+
+-64 +define+GLBL=1 -source -vlog01compat -pedanticerrors -lint -rangecheck -check_synthesis +cover -coverreportcancelled -nocoverexcludedefault -constimmedassert -fsmverbose -fsmsingle -fsmresettrans  +incdir+/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src+/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src/alt+/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src/base_io+/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src/base_mem+/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src/base_util+/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src/base_vid+/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src/gpu+/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src/innerds+/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src/testbench
+
+-64 +define+GLBL=1 -source -vlog01compat -pedanticerrors -lint -rangecheck -check_synthesis +cover -coverreportcancelled -nocoverexcludedefault -constimmedassert -fsmverbose -fsmsingle -fsmresettrans
+
+
+
 From http://www.csee.umbc.edu/portal/help/VHDL/verilog/system.html
 
 $display("<format>", exp1, exp2, ...);  // formatted write to display
@@ -11,7 +34,7 @@ $display("<format>", exp1, exp2, ...);  // formatted write to display
                     %l %L library binding information
                     %m %M hierarchical name, no expression
                     %o %O octal
-                    %s %S string, 8 bits per character, 2´h00 does not print
+                    %s %S string, 8 bits per character, 2ï¿½h00 does not print
                     %t %T simulation time, expression is  $time
                     %u %U unformatted two value data  0 and 1 
                     %v %V net signal strength

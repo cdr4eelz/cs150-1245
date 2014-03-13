@@ -1,1 +1,13 @@
-../../sigasi/sigasi
+#!/bin/bash -euv
+
+SIGASI_SRC="${HOME}/local/sigasi"
+SIGASI_LOC="/scratch/sigasi"
+
+LOG="${SIGASI_LOC}/sigasi.log"
+RM=`which /bin/rm 2>/dev/null || which rm 2>/dev/null || echo "rm"`
+
+rsync -ELAtg --verbose --recursive "${SIGASI_SRC}/" "${SIGASI_LOC}"
+
+echo "Can terminate this log view without closing sigasi." >"${LOG}"
+
+$SIGASI_LOC/sigasi "$@" 1>>"${LOG}" 2>&1 &

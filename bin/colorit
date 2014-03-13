@@ -1,8 +1,10 @@
 #!/bin/bash
 
-while read x ; do echo $x ; done \
+#while read x ; do echo $x ; done \
+cat \
   | sed -e "s/.*error:.*/\x1b[1;30m&\x1b[0m/i" \
         -e "s/.*warning:.*/\x1b[1;30m&\x1b[0m/i" \
+        -e "s/.*info:.*/\x1b[1;30m&\x1b[0m/i" \
         -e "s/^start .*/\x1b[1;5;7m&\x1b[0m/i" \
         -e "s/^run .*/\x1b[41m&\x1b[0m/i" \
         -e "s/^\(.*\)\(required from\)/\x1b[1;30m\1\x1b[0mnote: \2/" \
@@ -10,4 +12,5 @@ while read x ; do echo $x ; done \
         -e "s/^\(.*\)\(In member\)/\x1b[1;30m\1\x1b[0mnote: \2/" \
   | sed -e "s/error:/\x1b[1;31m&\x1b[1;30m/i" \
         -e "s/warning:/\x1b[1;35m&\x1b[1;30m/i" \
-        -e "s/note:/\x1b[1;34m&\x1b[0m/i"
+        -e "s/note:/\x1b[1;34m&\x1b[0m/i" \
+        -e "s/info:/\x1b[1;34m&\x1b[0m/i"
