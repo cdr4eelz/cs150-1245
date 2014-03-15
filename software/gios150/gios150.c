@@ -7,22 +7,27 @@
 
 //BUFFER_LEN moved to parse.h and new BUFFER_FIX for fixed buffer pointer
 
-#define VERSION_I (1)
-#define VERSION_C '1'
-#define VERSION_S "1"
+#define VERSION_I (2)
+#define VERSION_C ('0' + VERSION_I)
 
 typedef void (*entry_t)(void);
 
+//TODO:Stash color rather than always as parameter
+//TODO:Command-Table with token match-strings => ENUM, then case
+//TODO:Arg-List in Command-Table
+//TODO:GS nice output
+
 int main(void)
 {
-    uwrite_int8s("\r\n\r\n[Golt45." VERSION_S "]\r\n\r\n");
+    uwrite_int8s("\r\n\r\n[Golt45.");
+    uwrite_int8(VERSION_C);
+    uwrite_int8s("]\r\n\r\n");
 
     int8_t buffer[BUFFER_LEN];
-    uint32_t* stash_addr1 = (uint32_t*)0x10000000;
-    gframe_p sw_frame = (gframe_p)0x00000001;
+    gframe_p sw_frame = STD_FRAME1;
+    GP_FRAME = sw_frame;
 
     for ( ; ; ) {
-        uwrite_int8(VERSION_C);
         uwrite_int8('>');
         uwrite_int8(' ');
 
@@ -34,54 +39,46 @@ int main(void)
 
             store(address, file_length);
         } else if (strcmp150(input, "jal") == 0) {
-            uint32_t address      = tok_hex32u();
+            entry_t start = (entry_t)tok_addr();
 
-            entry_t start = (entry_t)(address);
+            bufw_hex32u((uint32_t)start);
+            bufw_newline();
             start();
         } else if (strcmp150(input, "lw") == 0) {
-            uint32_t address      = tok_hex32u();
+            volatile uint32_t* p  = (volatile uint32_t*)tok_addr();
 
-            volatile uint32_t* p  = (volatile uint32_t*)(address);
-
-            bufw_hex32u(address);
+            bufw_hex32u((uint32_t)p);
             uwrite_int8s(":");
             bufw_hex32u(*p);
             bufw_newline();
         } else if (strcmp150(input, "lhu") == 0) {
-            uint32_t address      = tok_hex32u();
+            volatile uint16_t* p  = (volatile uint16_t*)tok_addr();
 
-            volatile uint16_t* p  = (volatile uint16_t*)(address);
-
-            bufw_hex32u(address);
+            bufw_hex32u((uint32_t)p);
             uwrite_int8s(":");
             bufw_hex16u(*p);
             bufw_newline();
         } else if (strcmp150(input, "lbu") == 0) {
-            uint32_t address      = tok_hex32u();
+            volatile uint8_t* p = (volatile uint8_t*)tok_addr();
 
-            volatile uint8_t* p = (volatile uint8_t*)(address);
-
-            bufw_hex32u(address);
+            bufw_hex32u((uint32_t)p);
             uwrite_int8s(":");
             bufw_hex8u(*p);
             bufw_newline();
         } else if (strcmp150(input, "sw") == 0) {
             uint32_t word         = tok_hex32u();
-            uint32_t address      = tok_hex32u();
+            volatile uint32_t* p = (volatile uint32_t*)tok_addr();
 
-            volatile uint32_t* p = (volatile uint32_t*)(address);
             *p = word;
         } else if (strcmp150(input, "sh") == 0) {
             uint16_t half         = tok_hex16u();
-            uint32_t address      = tok_hex32u();
+            volatile uint16_t* p = (volatile uint16_t*)tok_addr();
 
-            volatile uint16_t* p = (volatile uint16_t*)(address);
             *p = half;
         } else if (strcmp150(input, "sb") == 0) {
             uint8_t byte          = tok_hex8u ();
-            uint32_t address      = tok_hex32u();
+            volatile uint8_t* p = (volatile uint8_t*)tok_addr();
 
-            volatile uint8_t* p = (volatile uint8_t*)(address);
             *p = byte;
 
 //Graphics commands:
@@ -91,28 +88,22 @@ int main(void)
             bufw_newline();
 
         } else if (strcmp150(input, "pf") == 0) {
-            gframe_p frame = (gframe_p)tok_hex32u();
-            PF_FRAME = frame;
-
+            PF_FRAME = (gframe_p)tok_hex32u();
         } else if (strcmp150(input, "sf") == 0) {
-            gframe_p frame = (gframe_p)tok_hex32u();
-            sw_frame = frame;
-            GP_FRAME = frame;
-
+            sw_frame = (gframe_p)tok_hex32u();
+            GP_FRAME = sw_frame;
         } else if (strcmp150(input, "gf") == 0) {
-            gframe_p frame = (gframe_p)tok_hex32u();
-            GP_FRAME = frame;
+            GP_FRAME = (gframe_p)tok_hex32u();
 
         } else if (strcmp150(input, "gc") == 0) {
-            gpcode_p code = (gpcode_p)tok_hex32u();
-            GP_GCODE = code;
+            GP_GCODE = (gpcode_p)tok_addr();
 
         } else if (strcmp150(input, "hwfill") == 0) {
             color_t color = (color_t)tok_hex32u();
             hwfill(color);
 
         } else if (strcmp150(input, "hwline") == 0) {
-            uint32_t color = (color_t)tok_hex32u();
+            color_t color = (color_t)tok_hex32u();
             uint16_t x0           = tok_dec16u();
             uint16_t y0           = tok_dec16u();
             uint16_t x1           = tok_dec16u();
@@ -120,13 +111,13 @@ int main(void)
             hwline(color, x0, y0, x1, y1);
 
         } else if (strcmp150(input, "hwpixel") == 0) {
-            uint32_t color = (color_t)tok_hex32u();
+            color_t color = (color_t)tok_hex32u();
             uint16_t x            = tok_dec16u();
             uint16_t y            = tok_dec16u();
             hwpixel(color, x, y);
 
         } else if (strcmp150(input, "hwelipse") == 0) {
-            uint32_t color = (color_t)tok_hex32u();
+            color_t color = (color_t)tok_hex32u();
             uint16_t xc           = tok_dec16u();
             uint16_t yc           = tok_dec16u();
             uint16_t ox           = tok_dec16u();
@@ -134,11 +125,11 @@ int main(void)
             hwelipse(color, xc, yc, ox, oy);
 
         } else if (strcmp150(input, "swfill") == 0) {
-            uint32_t color        = tok_hex32u();
+            color_t color = (color_t)tok_hex32u();
             swfill(sw_frame, color);
 
         } else if (strcmp150(input, "swline") == 0) {
-            uint32_t color = (color_t)tok_hex32u();
+            color_t color = (color_t)tok_hex32u();
             uint16_t x0           = tok_dec16u();
             uint16_t y0           = tok_dec16u();
             uint16_t x1           = tok_dec16u();
@@ -146,13 +137,13 @@ int main(void)
             swline(sw_frame, color, x0, y0, x1, y1);
 
         } else if (strcmp150(input, "swpixel") == 0) {
-            uint32_t color = (color_t)tok_hex32u();
+            color_t color = (color_t)tok_hex32u();
             uint16_t x            = tok_dec16u();
             uint16_t y            = tok_dec16u();
             swpixel(sw_frame, color, x, y);
 
         } else if (strcmp150(input, "swelipse") == 0) {
-            uint32_t color = (color_t)tok_hex32u();
+            color_t color = (color_t)tok_hex32u();
             uint16_t xc           = tok_dec16u();
             uint16_t yc           = tok_dec16u();
             uint16_t ox           = tok_dec16u();
@@ -160,7 +151,7 @@ int main(void)
             swelipse(sw_frame, color, xc, yc, ox, oy);
 
         } else if (strcmp150(input, "swcircle") == 0) {
-            uint32_t color = (color_t)tok_hex32u();
+            color_t color = (color_t)tok_hex32u();
             uint16_t x            = tok_dec16u();
             uint16_t y            = tok_dec16u();
             uint16_t r            = tok_dec16u();
@@ -168,16 +159,10 @@ int main(void)
 
 //COLT45 "custom" extensions:
         } else if (strcmp150(input, "dump") == 0) {
-            uint32_t* address = (uint32_t*)tok_hex32u();
-            if (!address) {
-                address = stash_addr1;
-                stash_addr1 += 16;
-            } else {
-                stash_addr1 = address;
-            }
+            uint32_t* address = (uint32_t*)tok_addr();
 
             show_block(address, 16);
-            bufw_newline();
+            *STASH_ADDR = (address + 16);
         } else if (strcmp150(input, "cp") == 0) {
             uint32_t* a_src = (uint32_t*)tok_hex32u();
             uint32_t* a_dst = (uint32_t*)tok_hex32u();

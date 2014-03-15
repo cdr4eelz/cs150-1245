@@ -1,3 +1,6 @@
+*.ll
+*.ll.s
+*.ll.s.o
 *.llvm
 *.llvm.s
 *.llvm.s.o

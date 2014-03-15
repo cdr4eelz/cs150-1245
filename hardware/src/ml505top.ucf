@@ -1,9 +1,17 @@
 #NOTE: RE-MERGED with XUP5.ucf and MIG from partgen output known to be clean/running.
 #NOTE: Layout style and extra goodies like DRIVE, SLEW, PULLDOWN brought in from other examples.
-#NOTE: DDR2 run at speed like -53E but rated -667 (for example CAS=3 for slower rate vs. 4)
+#NOTE: DDR2 run speed set like -53E but rated -667 (for example CAS=3 for slower rate vs. 4).
+#NOTE: Dilligently pulled Bank/Vcco/DCI info from XUPv5 master UCF w/consistent format.
+#NOTE: TIGs added on appropriate lines like GPIO or other known ASYNC inputs.
 
 
-#TODO: Use super consistent naming to mark cross-clock NET/INST (ensure "direction" correct)
+################################################################################
+# PROJECT SPECIFIC SPECIAL DATAPATHs/TIGs
+################################################################################
+
+#TODO: Ensure "direction" correct on these paths
+#TODO: Apply ultra-consistent naming on cross-clock NET/INST & use wildcards (cautiously)
+
 # Avoid false path on cross-clock synchronizers & reset
 INST "*/pixelfeed/*_clkDVI" TNM = "TN_SYNC_TO_DVI";
 #NET "/rst_dvi_*" TNM = "TN_SYNC_TO_DVI";
@@ -11,6 +19,9 @@ TIMESPEC "TS_CPU_SYNC_DVI" = FROM "cpu_clk" TO "TN_SYNC_TO_DVI" 4 ns DATAPATHONL
 INST "*/pixelfeed/*_clkCPU" TNM = "TN_SYNC_TO_CPU";
 #NET "/rst_cpu_*" TNM = "TN_SYNC_TO_CPU";
 TIMESPEC "TS_DVI_SYNC_CPU" = FROM "dvi_clk" TO "TN_SYNC_TO_CPU" 4 ns DATAPATHONLY; #TIG
+
+
+#TODO: Consider unifying UCF vs. synth-attribute vs. PCF constraint settings
 
 
 ################################################################################
@@ -117,7 +128,7 @@ NET "FPGA_ROTARY_*" TIG;
 
 # LEDs "GPIO" green (BOTTOM-CENTER w/GAP)
 #    (Bus/Rename of GPIO_LED_0, GPIO_LED_1, ...GPIO_LED_7)
-NET "GPIO_LED[*]"       SLEW="SLOW" | DRIVE="2";
+NET "GPIO_LED[*]"       SLEW="SLOW" | DRIVE="2"; # | PULLDOWN;
 NET  "GPIO_LED[0]"        LOC="H18"   |  IOSTANDARD="LVCMOS25"; # Bank  3, Vcco=2.5V, No DCI
 NET  "GPIO_LED[1]"        LOC="L18"   |  IOSTANDARD="LVCMOS25"; # Bank  3, Vcco=2.5V, No DCI
 NET  "GPIO_LED[2]"        LOC="G15"   |  IOSTANDARD="LVCMOS25"; # Bank  3, Vcco=2.5V, No DCI
@@ -130,7 +141,7 @@ NET "GPIO_LED[*]" TIG;
 
 # LEDs "COMPASS" green (BOTTOM-RIGHT) (DS{24/3/1/2/0}==GPIO_LED_{CWESN}==GPIO_COMPLED_[4:0], respectively)
 #    (Bus/Rename of GPIO_LED_C, GPIO_LED_W, GPIO_LED_E, GPIO_LED_S, GPIO_LED_N)
-NET "GPIO_COMPLED[*]"   SLEW="SLOW" | DRIVE="2" | PULLDOWN;
+NET "GPIO_COMPLED[*]"   SLEW="SLOW" | DRIVE="2"; # | PULLDOWN;
 NET  "GPIO_COMPLED[4]"    LOC="E8"    |  IOSTANDARD="LVCMOS33"; # Bank 20, Vcco=3.3V, DCI 49.9ohm
 NET  "GPIO_COMPLED[3]"    LOC="AF23"  |  IOSTANDARD="LVCMOS33"; # Bank  2, Vcco=3.3V
 NET  "GPIO_COMPLED[2]"    LOC="AG23"  |  IOSTANDARD="LVCMOS33"; # Bank  2, Vcco=3.3V
@@ -140,7 +151,7 @@ NET "GPIO_COMPLED[*]" TIG;
 
 # LEDs "ERRORS" red (BOTTOM-CENTER left of GPIO-LEDs) (ERR{2|1}==BUS_ERROR_{2|1}, respectively)
 # Bank 12, Vcco=3.3V,  DCI 49.9ohm  #NOTE: WHY 1.8V, not that LEDs care???
-NET "BUS_ERROR_*"       IOSTANDARD="LVCMOS18" | SLEW="SLOW" | DRIVE="2";# | PULLDOWN;
+NET "BUS_ERROR_*"       IOSTANDARD="LVCMOS18" | SLEW="SLOW" | DRIVE="2"; # | PULLDOWN;
 NET  "BUS_ERROR_1"        LOC="F6";
 NET  "BUS_ERROR_2"        LOC="T10";
 NET "BUS_ERROR_*" TIG;

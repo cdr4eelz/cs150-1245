@@ -9,10 +9,10 @@ typedef char  int8_t;
 typedef short int16_t;
 typedef int   int32_t;
 
-#define NULL 0
+#define NULL ((void*)0)
 
-#define TRUE  1
-#define FALSE 0
+#define TRUE  (1)
+#define FALSE (0)
 
 #define HILO16(x, y) (((x & 0xFFFF) << 16) | (y & 0xFFFF))
 

@@ -3,26 +3,32 @@
 
 #include "types.h"
 
-//NOTE:Using #define since INLINE functions not making it through CLANG/LLVM -> GAS process
-
-typedef uint32_t color_t;
-typedef uint32_t* gframe_p;
-typedef uint32_t* gpcode_p;
-typedef struct gstate_s {
-  uint32_t u32;
-} gstate_t;
-
-//MEMORY MAPPED CONTROLS
-#define PF_FRAME  (*((volatile gframe_p*) 0x80000050)) //WRITE:PixelFeeder source frame addr/num
-#define GP_FRAME  (*((volatile gframe_p*) 0x80000054)) //WRITE:GraphicsProcessor frame addr/num
-#define GP_GCODE  (*((volatile gpcode_p*) 0x80000058)) //WRITE:Set code addr & trigger GP now!
-#define GP_STATE  (*((volatile gstate_t*) 0x8000005C)) //READ:Status bits/values of PIX,GP,etc.
-
-//MEMORY FIXED GLOBAL TEMPORARIES
-#define GPTEMP_PTR ((gpcode_p)0x10003000) //FIXED location "global"
-#define GPTEMP_SZW (0x00000020) //32-words is...
-#define GPTEMP_SZB (GPTEMP_SZW*4) // (128-bytes)
-
+// DVI Mode: VESA 800x600 pixels @72Hz
+#define PIX_SIZEB     (4)
+#define COL_SIZEP     (0x0320)      //800P
+#define COL_SIZEB     (4*COL_SIZEP)             //3200B (0x0C80)
+#define COL_OFFSETP   (0x0001)      //1P
+#define COL_OFFSETB   (4*COL_OFFSETP)           //4B
+#define COL_LASTP     (COL_SIZEP-1)       //800P-1P=799P
+#define COL_LASTB     (4*COL_LASTP)   //3196B (0x0C7C)
+#define ROW_SIZEP     (0x0258)      //600P
+#define ROW_SIZEB     (4*ROW_SIZEP)             //2400KB (0x00258000) ???
+#define ROW_LASTP     (ROW_SIZEP-1)       //600P-1P=599P
+#define ROW_LASTB     (0x00257000)    //2396KB (0x00257000)
+#define ROW_OFFSETC   (0x0400)      //1KC
+#define ROW_OFFSETP   (ROW_OFFSETC*COL_OFFSETP)               //1KP   (0x0400)
+#define ROW_OFFSETB   (4*ROW_OFFSETP) //4KB   (0x1000)
+#define ROW_EXTRAC    (ROW_OFFSETP-COL_SIZEP)       //1KC-800C= 224C  (0xE0)
+#define ROW_EXTRAP    (ROW_OFFSETP-COL_SIZEP)       //1KP-800P= 224P  (0xE0)
+#define FRAME_SIZEP   (COL_SIZEP*ROW_SIZEP)                   //480KP (0x00075300)
+#define FRAME_SIZEB   (4*ROW_SIZEP) //2400KB (0x00258000) ???
+#define FRAME_OFFSETR (0x0400)      //1KR
+#define FRAME_OFFSETP (FRAME_OFFSETR*ROW_OFFSETC*COL_OFFSETP) //1MP   (0x00100000)
+#define FRAME_OFFSETB (0x00400000)    //4MB (0x00400000)
+#define FRAME_EXTRAR  (FRAME_OFFSETR-ROW_SIZEP)     //1KR-600P= 424P  (0x1A8)
+#define FRAME_EXTRAP  (FRAME_OFFSETP-ROW_SIZEP)     //1MP-600P= 424P  (0x...)
+#define PIX_SIZEF   (xxx) //2400KB (0x00258000)
+#define PIX_LASTB     (0x00257C7C)    //2396KB+3196B (0x00257C7C)
 
 //Renumbered so FRAME0 is 0x10000000...but usually skip that one!
 #define STD_FRAME0X ((gframe_p) 0x10000000)
@@ -33,20 +39,56 @@ typedef struct gstate_s {
 //...NOTE:Frame# (1,2,3,...) can also be used for PF_FRAME & GP_FRAME
 
 
-// DVI Mode: VESA 800x600 pixels @72Hz
-#define COL_SIZEP       (0x0320)        //800
-#define ROW_SIZEP       (0x0258)        //600
-#define COL_OFFSETP     (0x00000001)    //1
-#define ROW_OFFSETP     (0x00000400)    //1 K
-#define FRAME_OFFSETP   (0x00100000)    //1 M
-#define COL_OFFSETB     (0x00000004)    //4
-#define COL_LASTB       (0x00000C7C)    //3196
-#define COL_SIZEB       (0x00000C80)    //3200
-#define ROW_OFFSETB     (0x00001000)    //4 K
-#define ROW_LASTB       (0x00257000)    //2396 K
-#define ROW_SIZEB       (0x00258000)    //2400 K
-#define PIX_LASTB       (0x00257C7C)    //2396 K + 3196
-#define FRAME_OFFSETB   (0x00400000)    //4 M
+typedef union gstate_u // __attribute__ ((__transparent_union__)) CLANG wants it after union
+    {
+        uint32_t u32;
+        struct __attribute__ ((aligned (4))) __attribute__ ((packed)) {
+          /* assign graphics_status = {
+              2'b00, pf_feedframe[5:0],
+              6'b0000_00, video_ready, video_valid,
+              2'b00, gp_procframe[5:0],
+              5'b0000_0, line_ready, filler_ready, gp_ready
+          }; */
+          unsigned int unused_1:2;
+          unsigned int pf_feedframe:6;
+          unsigned int unused_2:6;
+          unsigned int video_ready:1;
+          unsigned int video_valid:1;
+          unsigned int unused_3:2;
+          unsigned int gp_procframe:6;
+          unsigned int unused_4:5;
+          unsigned int line_ready:1;
+          unsigned int filler_ready:1;
+          unsigned int gp_ready:1;
+        } S;
+    } __attribute__ ((__transparent_union__))
+    gstate_t, *gstate_p;
+typedef gstate_t volatile gstate_tv;
+typedef gstate_tv *gstate_pv;
+
+typedef union color_u // __attribute__ ((__transparent_union__)) CLANG wants it after union
+    {
+        uint32_t u32;
+        struct __attribute__ ((aligned (4))) __attribute__ ((packed)) {
+            unsigned int a:8;
+            unsigned int r:8;
+            unsigned int g:8;
+            unsigned int b:8;
+        } argb;
+    } __attribute__ ((__transparent_union__))
+    color_t, *color_p, pixel_t, *pixel_p;
+typedef pixel_t volatile pixel_tv;
+typedef pixel_tv *pixel_pv;
+
+typedef struct row_s
+    {
+        pixel_tv used[800];
+        uint32_t extra[1024-800];
+    }
+    volatile row_vt;
+typedef row_vt gframe_t, *gframe_p;
+
+typedef uint32_t* gpcode_p;
 #define XSHIFT  (2)
 #define YSHIFT  (12)
 #define FSHIFT  (22)
@@ -56,11 +98,24 @@ typedef struct gstate_s {
 #define FPMASK  (0xFFC00000)    //Upper nibble plus 6-bits for frame#
 #define FNMASK  (0x0000003F)    //Just the 6-bits for frame# (before shifting)
 
+
+//MEMORY MAPPED CONTROLS
+#define PF_FRAME  (*((volatile gframe_p*)0x80000050)) //WRITE:PixelFeeder source frame addr/num
+#define GP_FRAME  (*((volatile gframe_p*)0x80000054)) //WRITE:GraphicsProcessor frame addr/num
+#define GP_GCODE  (*((volatile gpcode_p*)0x80000058)) //WRITE:Set code addr & trigger GP now!
+#define GP_STATE  (*((gstate_pv)0x8000005C)) //READ:Status bits/values of PIX,GP,etc.
+
+//MEMORY FIXED GLOBAL TEMPORARIES
+#define GPTEMP_PTR ((gpcode_p)0x10003000) //FIXED location "global"
+#define GPTEMP_SZW (0x00000020) //32-words is...
+#define GPTEMP_SZB (GPTEMP_SZW*4) // (128-bytes)
+
+
 #define FRAME_PTR(F)    ( (gframe_p) (                      \
     ((uint32_t)(F) & FPMASK) ? ((uint32_t)(F) & FPMASK)      \
         : (0x10000000 | (((uint32_t)(F) & FNMASK)<<FSHIFT)) ) )
 
-#define PIX_PTR(FP,X,Y) ( (uint32_t*) (                 \
+#define PIX_PTR(FP,X,Y) ( (pixel_p) (                 \
     ((uint32_t)(FP)) | ((Y)<<YSHIFT) | ((X)<<XSHIFT)  ) )
 
 
@@ -94,10 +149,10 @@ void swelipse(gframe_p frame, color_t color,
 void swcircle_old(gframe_p frame, color_t color,
                     uint16_t xc, uint16_t yc,
                     uint16_t r);
-void swpixel_4way(uint32_t *fp, color_t color,
+void swpixel_4way(gframe_p fp, color_t color,
                     uint16_t xc, uint16_t yc,
                     int16_t ox, int16_t oy);
-void swpixel_8way(uint32_t *fp, color_t color,
+void swpixel_8way(gframe_p fp, color_t color,
                     uint16_t xc, uint16_t yc,
                     int16_t ox, int16_t oy);
 
@@ -110,12 +165,12 @@ void swpixel_8way(uint32_t *fp, color_t color,
 #define GOP_PIXEL   ((uint8_t) 0x03)
 #define GOP_ELIPSE  ((uint8_t) 0x04)
 
-#define CMD_STOP(C)     CMD_rgb(GOP_STOP,   0) //No trailing words
-#define CMD_FILL(C)     CMD_rgb(GOP_FILL,   C) //No trailing words
-#define CMD_LINE(C)     CMD_rgb(GOP_LINE,   C) //Then 2 x CMD_point
-#define CMD_PIXEL(C)    CMD_rgb(GOP_PIXEL,  C) //Then 1 x CMD_point
-#define CMD_ELIPSE(C)   CMD_rgb(GOP_ELIPSE, C) //Then 2 x CMD_point
-#define CMD_rgb(OP,C)   ((uint32_t) ( (((OP)&0x0FF )<<24 ) | ((C)&0x0FFFFFF) ))
+#define CMD_STOP()      CMD_rgb(GOP_STOP,   0    ) //No trailing words
+#define CMD_FILL(C)     CMD_rgb(GOP_FILL,   C.u32) //No trailing words
+#define CMD_LINE(C)     CMD_rgb(GOP_LINE,   C.u32) //Then 2 x CMD_point
+#define CMD_PIXEL(C)    CMD_rgb(GOP_PIXEL,  C.u32) //Then 1 x CMD_point
+#define CMD_ELIPSE(C)   CMD_rgb(GOP_ELIPSE, C.u32) //Then 2 x CMD_point
+#define CMD_rgb(OP,U24) ((uint32_t) ( (((OP)&0x0FF )<<24 ) | ((U24)&0x0FFFFFF) ))
 #define CMD_point(X,Y)  ((uint32_t) ( (((X)&(PMASK))<<16 ) | ((Y)&(PMASK))   ))
 //efine CMD_point(X,Y)  ((uint32_t) ( (((X)&(PMASK))<<16 ) | ((Y)&(PMASK)) | (T<<31) ))
 

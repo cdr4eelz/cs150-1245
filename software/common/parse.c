@@ -51,6 +51,7 @@ void show_block(uint32_t* const address, uint8_t numWords)
         }
         bufw_hex32u(*p++);
     }
+    bufw_newline();
 }
 
 uint32_t copy_xor(uint32_t* const pSRC, uint32_t* const pDST, uint32_t length)
@@ -71,6 +72,15 @@ uint32_t copy_xor(uint32_t* const pSRC, uint32_t* const pDST, uint32_t length)
 
 int8_t*  tok_word  ( void ) {
     return read_token(BUFFER_FIX, BUFFER_LEN, " \x0d");
+}
+void* tok_addr( void ) {
+    void *addr = (void*)tok_hex32u();
+    if (!addr) {
+        addr = *STASH_ADDR;
+    } else {
+        *STASH_ADDR = addr;
+    }
+    return addr;
 }
 uint32_t tok_hex32u( void ) {
     return ascii_hex_to_uint32(read_token(BUFFER_FIX, BUFFER_LEN, " \x0d"));

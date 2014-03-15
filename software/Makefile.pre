@@ -1,0 +1,111 @@
+LDSTYLE ?= inject_basic
+LDSRC ?= ../link/$(LDSTYLE).ld
+START ?= ../link/$(LDSTYLE).s
+
+CSRCS ?= $(wildcard *.c)
+SSRCS ?= $(wildcard *.s) $(START)
+
+OUTS ?= mif coe mem # "dump v"
+SECS ?= data inst
+
+OBJS = $(SOBJS) $(COBJS)
+SOBJS = $(SSRCS:%.s=%.s.o)
+COBJS = $(CSRCS:%.c=%.c.ll.s.o)
+#COBJS = $(CSRCS:%.c=%.c.ll.o)
+#COBJS = $(CSRCS:%.c=%.c.o)
+
+default: all
+elf: $(TARGET).elf
+dump: $(TARGET).dump
+data: $(OUTS:%=$(TARGET).data.%)
+inst: $(OUTS:%=$(TARGET).inst.%)
+#both: $(OUTS:%=$(TARGET).both.%)
+#both: $(TARGET).both.mem
+bins: $(SECS:%=$(TARGET).%.bin)
+
+
+RM ?= `which "/bin/rm" 2>/dev/null || which "rm" 2>/dev/null || echo "rm"`
+CLANG  ?= clang
+LLC    ?= llc
+
+M_ARCH ?= mips
+M_TRI  ?= $(M_ARCH)-unknown-elf
+M_DIR  ?=
+M_PRE  ?= $(M_DIR)$(M_ARCH)-
+
+PGCC   ?= $(M_PRE)gcc
+PGAS   ?= $(M_PRE)as
+PSTRIP ?= $(M_PRE)strip
+PSIZE  ?= $(M_PRE)size
+PDUMP  ?= $(M_PRE)objdump
+PCOPY  ?= $(M_PRE)objcopy
+
+CCOPTS ?= -std=gnu99 -Os
+# -pedantic
+PCLANG ?= $(CLANG) -cc1 -triple=$(M_TRI) -target-cpu mips1 -target-abi o32 -mrelocation-model static
+LIBOPTS ?= -nostartfiles -nostdlib -nodefaultlibs -static
+PLLC   ?= $(LLC) -march=$(M_ARCH) -relocation-model=static
+
+$(TARGET).elf: $(ELF_INPUT)
+	$(PGCC) $(ELF_CCOPT) $^ $(LIBOPTS) -T $(LDSRC) -o $@ -G 0 -mno-gpopt
+	$(PSIZE) $@
+#	$(PSTRIP) -R .pdr -R .comment -R .reginfo $@
+#	$(PSIZE) $@
+	chmod -x $@
+
+%.c.o: %.c
+	$(PGCC) $(CCOPTS) -o $@ -c $<
+%.c.ll: %.c
+	$(PCLANG) $(CCOPTS) -emit-llvm -o $@ -x c $<
+%.c.ll.o: %.c.ll
+	$(PLLC) -o $@ $<
+%.c.ll.s: %.c
+	$(PCLANG) $(CCOPTS) -S -o $@ -x c $<
+%.s.o: %.s
+	$(PGAS) -o $@ $<
+
+
+%.bin: %.elf
+	$(PCOPY) -j .text -p -O binary $< $@
+	chmod -x $@
+%.inst.bin: %.elf
+	$(PCOPY) -j .text -p -O binary $^ $@
+	chmod -x $@
+%.data.bin: %.elf
+	$(PCOPY) -j .data -p -O binary $^ $@
+	chmod -x $@
+#%.both.bin: %.elf
+#	$(PCOPY) -j .both -p -O binary $^ $@
+#	chmod -x $@
+#%.both.bin: %.data.bin %.inst.bin
+#	truncate -s 16K $@
+#	cat $^ > $@
+#%.both.mem: %.data.bin %.inst.bin
+#	bin2mem     0 < $*.data.bin > $@
+#	bin2mem 16384 < $*.inst.bin | sed s/^@00000000/@00004000/ >> $@
+
+
+%.dump: %.elf
+	$(PDUMP) $^ -xsD >$@
+%.inst.dump: %.elf
+	$(PDUMP) -j .text $^ -xsD >$@
+%.data.dump: %.elf
+	$(PDUMP) -j .data $^ -xS >$@
+
+
+%.mif: %.bin
+	bin2mif < $^ > $@
+%.coe: %.bin
+	bin2coe < $^ > $@
+%.mem: %.bin
+	bin2mem 0 < $^ > $@
+%.v: %.bin
+	bin2rom < $^ > $@
+
+
+clean:
+	$(RM) -f *.o *.ll *.ll.s *.c.s *.elf *.bin *.mif *.coe *.mem *.v *.dump *.log $(OBJS)
+
+.PHONY: clean $(TARGET) elf dump data inst both bins
+.PRECIOUS: %.s %.c.ll %.c.ll.s
+.SECONDARY:

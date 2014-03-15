@@ -11,10 +11,13 @@ void show_block(uint32_t* address, uint8_t numWords);
 uint32_t copy_xor(uint32_t *pSRC, uint32_t *pDST, uint32_t length);
 
 
-#define BUFFER_FIX ((int8_t*)0x10000100) //FIXED location "global"
+//FIXED location "globals"!  Watchout :)
+#define BUFFER_FIX ((int8_t*)0x10000100)
 #define BUFFER_LEN (0x00000080) //128-bytes
+#define STASH_ADDR ((void**)0x10000200)
 
- int8_t* tok_word  ( void );
+int8_t*  tok_word  ( void );
+void*    tok_addr  ( void );
 uint32_t tok_hex32u( void );
 uint16_t tok_hex16u( void );
 uint8_t  tok_hex8u ( void );

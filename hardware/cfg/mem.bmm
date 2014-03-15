@@ -10,6 +10,16 @@
 
 ADDRESS_MAP MIPSY PPC405 0
 
+// BIOS ROM:
+    ADDRESS_SPACE BROM_BIOS RAMB36 WORD_ADDRESSING [0x40000000:0x40003FFF]
+        BUS_BLOCK
+            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [35:27] OUTPUT = BMEM3.mem ;
+            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [26:18] OUTPUT = BMEM2.mem ;
+            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = BMEM1.mem ;
+            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = BMEM0.mem ;
+        END_BUS_BLOCK;
+    END_ADDRESS_SPACE;
+
 //OPTIONAL FAKE CONSOLIDATED MEMORY SPAN makes it easier to use the tools to punch it:
 //  ADDRESS_SPACE BRAM_BOTH COMBINED WORD_ADDRESSING [0x00000000:0x00007FFF]
 //  ADDRESS_RANGE RAMB36
@@ -34,16 +44,6 @@ ADDRESS_MAP MIPSY PPC405 0
     END_ADDRESS_SPACE;
 //  END_ADDRESS_RANGE;
 //  END_ADDRESS_SPACE;
-
-// BIOS ROM:
-    ADDRESS_SPACE BROM_BIOS RAMB36 WORD_ADDRESSING [0x40000000:0x40003FFF]
-        BUS_BLOCK
-            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [35:27] OUTPUT = BMEM3.mem ;
-            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [26:18] OUTPUT = BMEM2.mem ;
-            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = BMEM1.mem ;
-            CPU/brom_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = BMEM0.mem ;
-        END_BUS_BLOCK;
-    END_ADDRESS_SPACE;
 
 // ISR RAM:
     ADDRESS_SPACE BRAM_ISR RAMB36 WORD_ADDRESSING [0xC0000000:0xC0003FFF]

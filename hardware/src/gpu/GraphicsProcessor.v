@@ -70,27 +70,29 @@ module GraphicsProcessor #(
 //Chose for GP, FF, LE, etc. to EACH capture own copy of frame upon trigger.
 
 //Master-States:
-    localparam MS_DEAD    = 0, //Initial or fault (requires explicit reset)
-               MS_RSET    = 1, //Performing or coming out of reset
-               MS_IDLE    = 2, //Ready for GPCode initiation
-               MS_PROC    = 3; //Processing GPCode block (to MS_RSET when done)
-    localparam MS__LAST   = 3;
+    localparam [1:0]
+        MS_DEAD     = 0, //Initial or fault (requires explicit reset)
+        MS_RSET     = 1, //Performing or coming out of reset
+        MS_IDLE     = 2, //Ready for GPCode initiation
+        MS_PROC     = 3; //Processing GPCode block (to MS_RSET when done)
+    localparam MS__LAST = 3;
 
 //Sub-States:
     localparam [2:0]
-        SS_TOP     = 0, //First or only INSTruction part
-        SS_X0      = 1, //Sub-CMDs from separate
-        SS_Y0      = 2, //  INSTs and/or within
-        SS_XX      = 3, //  INSTs trailing initial
-        SS_YY      = 4; //  INST at SS_TOP
-    localparam SS__LAST   = 4;
+        SS_TOP      = 0, //First or only INSTruction part
+        SS_X0       = 1, //Sub-CMDs from separate
+        SS_Y0       = 2, //  INSTs and/or within
+        SS_XX       = 3, //  INSTs trailing initial
+        SS_YY       = 4; //  INST at SS_TOP
+    localparam SS__LAST = 4;
 
 //FIFO-States:
-    localparam FS_READY   = 0, //Can fetch if other conditions right
+    localparam
+        FS_READY    = 0, //Can fetch if other conditions right
     //TODO:Add FS_FETCH  (& FS_START???)
-               FS_READ1   = 1, //Awaiting 1st read 128-bits
-               FS_READ2   = 2; //Awaiting 2nd read 128-bits
-    localparam FS__LAST   = 2;
+        FS_READ1    = 1, //Awaiting 1st read 128-bits
+        FS_READ2    = 2; //Awaiting 2nd read 128-bits
+    localparam FS__LAST = 2;
 
 //Key State Registers
     reg  [ 1:0] ns_M, cs_M = MS_DEAD; //Master-State

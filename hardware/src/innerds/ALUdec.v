@@ -43,7 +43,11 @@ always @(*) begin
                     `OF_MFHI, `OF_MTHI, `OF_MFLO, `OF_MTLO,
                     `OF_MULT, `OF_MULTU, `OF_DIV, `OF_DIVU:
                         ALUop = `ALU_XXX;
-                default: $display("Untrapped ALU op: funct=%h  @%t", funct, $time);
+
+//synthesis translate_off
+                default:
+                    $display("Untrapped ALU op: funct=%h  @%t", funct, $time);
+//synthesis translate_on
             endcase end
 
         // Load/store
@@ -65,8 +69,10 @@ always @(*) begin
         `OP_J, `OP_JAL, `OP_BEQ, `OP_BNE, `OP_BLEZ, `OP_BGTZ, `OP_REGIMM:
             ALUop = `ALU_XXX;   //These use a comparator rather than sharing ALU
 
+//synthesis translate_off
         default:
             $display("Untrapped ALU op: opcode=%h  @%t", opcode, $time);
+//synthesis translate_on
     endcase
 end
 

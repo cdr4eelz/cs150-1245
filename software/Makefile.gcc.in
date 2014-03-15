@@ -1,47 +1,6 @@
-LDSTYLE ?= inject_basic
-LDSRC ?= ../link/$(LDSTYLE).ld
-START ?= ../link/$(LDSTYLE).s
-LIBOPTS ?= -nostartfiles -nostdlib -nodefaultlibs
+ELF_INPUT = $(CSRCS) $(SSRCS)
+ELF_CCOPT = $(CCOPTS)
 
-CSRCS ?= $(wildcard *.c)
-SSRCS ?= $(wildcard *.s) $(START)
+include ../Makefile.pre
 
-OBJS = $(COBJS) $(SOBJS)
-COBJS = $(CSRCS:%.c=%.c.o)
-SOBJS = $(SSRCS:%.s=%.s.o)
-
-M_PRE ?= mips-
-
-default: $(TARGET).coe $(TARGET).mif $(TARGET).dump
-.SECONDARY:
-
-$(TARGET).elf: $(CSRCS) $(SSRCS)
-	$(M_PRE)gcc -std=gnu99 $(LIBOPTS) $^ -T $(LDSRC) -o $@
-#	$(M_PRE)strip -R .reginfo -R .comment -R .pdr $@
-
-#$(TARGET).elf: $(OBJS)
-#	$(M_PRE)gcc $(LIBOPTS) $^ -T $(LDSRC) -o $@
-#	$(M_PRE)strip -R .reginfo -R .comment -R .pdr $@
-
-%.c.o: %.c
-	$(M_PRE)gcc -std=gnu99 -c $< -o $@
-
-%.s.o: %.s
-	$(M_PRE)as $< -o $@
-
-%.dump: %.elf
-	$(M_PRE)objdump $^ -xsD >$@
-%.bin: %.elf
-	$(M_PRE)objcopy -j .text -p -O binary $< $@
-	chmod -x $@
-%.mif: %.bin
-	bin2mif < $< > $@
-%.coe: %.bin
-	bin2coe < $< > $@
-%.v: %.bin
-	bin2rom $% 0 < $< > $@
-
-clean:
-	rm -f *.o *.c.s *.elf *.bin *.mif *.coe *.v *.dump *.log
-
-.phony: $(TARGET) clean
+all: elf dump $(TARGET).coe $(TARGET).mif

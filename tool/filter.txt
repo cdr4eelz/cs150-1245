@@ -1,0 +1,90 @@
+** FILTERS **
+
+--CONSIDER--
+
+--BY-MODULE--
+MIG, DVI, et. al.
+
+WARNING:NgdBuild:486
+  (INIT_FILE no allowed) -- U_ILA
+WARNING:NgdBuild:443
+  (unconnected output pin) -- u_ddr2_top_0
+WARNING:HDLCompilers:38
+  (macro redefined) -- MACROSAFE
+
+--UNKNOWN--
+WARNING:Pack:2874
+  (Trimming timing constraints)
+WARNING:NgdBuild:452
+  logical net 'N1677' has no driver
+WARNING:Xst:1305
+  (output never assigned)
+WARNING:Xst:524
+  (all outputs unconnected)
+
+--KEEP (except filtered by module)--
+WARNING:NgdBuild:470
+  (bidirect pad has no legal driver)
+WARNING:Pack:2573
+  (implemented suboptimally)
+WARNING:Xst:1290
+  (block unconnected)
+WARNING:Xst:1710
+  (FF/Latch trimmed)
+WARNING:Xst:1895
+  (FF/Latch trimmed due to others)
+WARNING:Xst:38
+  (property doesn't apply)
+WARNING:Xst:2677
+  (sequential node unconnected)
+WARNING:Xst:616
+  (invalid property)
+WARNING:Xst:852
+  (unconnected input port tied to GND)
+WARNING:Xst:905
+  (missing in sensitivity list)
+
+--IGNORE--
+WARNING:Xst:2211
+  (black-box)
+WARNING:PhysDesignRules:372
+  (gated clock...for chipscope)
+WARNING:Xst:916
+  (delay ignored)
+WARNING:Par:288
+  (no load)
+WARNING:Par:283
+  (loadless signals summary)
+WARNING:Place:838
+  (bus IO standards)
+
+--DEMOTE--
+WARNING:Xst:647
+  (never used) --posible exception is "rst", "clk", etc.
+WARNING:Xst:646
+  (assigned but never used)
+WARNING:Xst:1780
+  (never used or assigned)
+WARNING:PhysDesignRules:367
+  (signal doesn't drive)
+
+--PROMOTE--
+WARNING:Xst:863
+  (name conflict)
+WARNING:Xst:2404
+  (FFs/Latches constant value)
+WARNING:Xst:2319
+  (partially initialized)
+WARNING:Xst:653
+  (used but never assigned)
+INFO:Xst:1799
+  (FSM state never reached)
+WARNING:Pack:2574
+  (mux non-optimal)
+WARNING:Pack:2143
+  (failed to merge)
+WARNING:Xst:1872
+  (Variable used but never assigned)
+WARNING:Xst:2565
+  (inout never assigned)
+
