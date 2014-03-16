@@ -29,8 +29,8 @@ void line_UI32(
     const char incY = (y1 > y0);
     const uint32_t errX = (x1 - x0); //Error addend; (assumed >= 0)
     const uint32_t errY = (incY) ? (y1 - y0) : (y0 - y1); //Error subtracted portion (arrange >= 0)
-    const uint32_t offY = (incY) ? 1 : 0x80000000; //Y addend fake-signed (pos/"neg" one)
-    const uint32_t negY = (0x80000000 | errY); //Error addend fake-signed (arrange "<=" 0)
+    const uint32_t offY = (incY) ? 1 : 0xFFFFFFFF; //Y addend fake-signed (pos/"neg" one)
+    const uint32_t negY = (~errY + 1); //Error addend fake-signed (arrange "<=" 0)
     const uint32_t posX = (errX + negY); //Error addend signed, net after errX/2 (guaranteed >= 0)
 
     uint32_t error = (errX >> 1); //error is s30.1 fixed-point signed (guaranteed >= 0)
@@ -133,7 +133,7 @@ void swap_u16(uint16_t* a, uint16_t* b) {
 
 // Code from Wikipedia
 void line_ORIG(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
-    char steep = (abs(y1-y0) > abs(x1-x0)) ? 1 : 0; 
+    char steep = (abs(y1-y0) > abs(x1-x0)) ? 1 : 0;
     if (steep) {
         swap_u16(&x0, &y0);
         swap_u16(&x1, &y1);

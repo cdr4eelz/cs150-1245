@@ -85,10 +85,10 @@ module LineEngine #(
         case (cs_M)
             MS_DEAD: if (T_RESET) ns_M = MS_RSET; //Redundant with machine reset
             MS_RSET: if (T_READY) ns_M = MS_IDLE;
-            MS_IDLE: if (T_START) ns_M = MS_PREP;
-            MS_PREP: if (T_NORML) ns_M = MS_PWR1; //TODO:Check non-draw
-            MS_PWR1: if (T_WRIT1) ns_M = MS_PWR2;
-            MS_PWR2: if (T_WRIT2) ns_M = (pastA) ? MS_RSET : MS_PWR1;
+            MS_IDLE: if (LE_trigger) ns_M = MS_PREP;
+            MS_PREP: ns_M = MS_PWR1; //TODO:Check non-draw
+            MS_PWR1: if (!wdf_full && !af_full) ns_M = MS_PWR2;
+            MS_PWR2: if (!wdf_full) ns_M = (pastA) ? MS_RSET : MS_PWR1;
             default: ns_M = MS_DEAD;
         endcase
     end
@@ -102,19 +102,19 @@ module LineEngine #(
         end
 
 //TODO:These become "nextXYZ" signals instead (with don't cares)!
-        if (T_NORML) begin
+        if ((LE_ready && LE_trigger) || (cs_M==MS_PREP)) begin
             {a,aLast} <= {x0,x1};
             {b,bLast} <= {y0,y1};
 //$strobe("L:PREP (%0d,%0d) (%0d,%0d)", a,b, aLast,bLast);
         end else if (T_WRIT1) begin
-            a <= (T_NORML) ? x0 : (a + 1);
+            a <= (cs_M==MS_PREP) ? x0 : (a + 1);
 //$strobe("L:INC (a=%0d)", a);
         end
 
-        if (ns_M==MS_RSET) begin
+        if (cs_M==MS_RSET) begin
             {x,y} <= 0;
-        end else if (T_NORML || T_WRIT2) begin
-            {x,y} <= (T_NORML) ? {x0,y0} : {a,b};
+        end else if ((cs_M==MS_PREP) || T_WRIT2) begin
+            {x,y} <= (cs_M==MS_PREP) ? {x0,y0} : {a,b};
 //$strobe("L:ADV (x=%0d)", x);
         end
     end
@@ -146,9 +146,10 @@ module LineEngine #(
 
 
 //synthesis translate_off
-    initial $monitor("RT:%b/%b CN:%0d/%0d (%0d,%0d)/(%0d,%0d) %h/%b (%h)",
+    initial $monitor("RT:%b/%b CN:%0d/%0d (%0d,%0d)/(%0d,%0d) %h/%b (%h) W%b/%b",
                      T_RESET,LE_trigger, cs_M,ns_M, a,b, x,y,
-                     af_addr_din, maskW, wdf_mask_din);
+                     af_addr_din, maskW, wdf_mask_din,
+                     af_wr_en, wdf_wr_en);
     always @(posedge clk) begin
         if (T_START) begin
             #1;
@@ -163,14 +164,31 @@ module LineEngine #(
 endmodule
 
 /** ALORGITHM CORE (STEEP & SWAP REMOVED) **
-void line_FLAT(
+void line_UI32(
     const uint16_t x0, const uint16_t y0,
     const uint16_t x1, const uint16_t y1)
 {
+    const char incY = (y1 > y0);
+    const uint32_t errX = (x1 - x0); //Error addend; (assumed >= 0)
+    const uint32_t errY = (incY) ? (y1 - y0) : (y0 - y1); //Error subtracted portion (arrange >= 0)
+    const uint32_t offY = (incY) ? 1 : 0xFFFFFFFF; //Y addend fake-signed (pos/"neg" one)
+    const uint32_t negY = (~errY + 1); //Error addend fake-signed (arrange "<=" 0)
+    const uint32_t posX = (errX + negY); //Error addend signed, net after errX/2 (guaranteed >= 0)
+
+    uint32_t error = (errX >> 1); //error is s30.1 fixed-point signed (guaranteed >= 0)
     uint16_t x = x0, y = y0;
     while (x <= x1) {
+        //FORK (parallel)
+        const uint32_t errorA = error + negY;
+        const uint32_t errorB = error + posX;
+        const uint32_t nextX = x + 1;
         printf("%4d %4d\n", x, y);
-        x++;
+        //JOIN
+        //FORK (parallel)
+        error = (errorA & 0x80000000) ? errorB : errorA;
+        if (errorA & 0x80000000) y += offY;
+        x = nextX;
+        //JOIN
     }
 }
 */
