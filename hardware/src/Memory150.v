@@ -1,14 +1,14 @@
 //----------------------------------------------------------------------
 // Module: Memory.v
 // Authors: James Parker, Daiwei Li
-// This module contains the instantiaton of the Xilinx DDR2 module, the 
+// This module contains the instantiaton of the Xilinx DDR2 module, the
 // clock-crossing FIFOs for communication with the DDR2 controller, and
 // the caches.
 //
 // *** NOTE ***
 // You should not need to change the contents of this file. You will,
 // however, need to have a general understanding of the FIFO <=> cache
-// interface implemented in this module to design the FSM in your cache. 
+// interface implemented in this module to design the FSM in your cache.
 //----------------------------------------------------------------------
 
 module Memory150 #(
@@ -173,7 +173,8 @@ output [31:0] DBG_MEM150
         5'b0000_0, line_ready, filler_ready, gp_ready
     };
 
-assign DBG_MEM150 = {
+assign DBG_MEM150 = 0;
+/*{
     d_stall, d_wdf_full, d_af_full, d_rdf_valid,
         1'b0, d_wdf_wr_en, d_af_wr_en, d_rdf_rd_en,
     i_stall, i_wdf_full, i_af_full, i_rdf_valid,
@@ -181,8 +182,9 @@ assign DBG_MEM150 = {
     stall, wdf_full, af_full, rdf_dout_valid,
         1'b0, wdf_wr_en, af_wr_en, rdf_rd_en,
     filler_valid, (filler_af_full || filler_wdf_full), filler_af_wr_en, filler_wdf_wr_en,
-4'd0 /*        line_trigger, (line_af_full || line_wdf_full), line_af_wr_en, line_wdf_wr_en*/
+        line_trigger, (line_af_full || line_wdf_full), line_af_wr_en, line_wdf_wr_en
 };
+*/
 
    // DDR2 module:
     mig_v3_61 #(

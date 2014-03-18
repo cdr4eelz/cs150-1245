@@ -63,10 +63,10 @@ module LineEngine #(
 
 //Key State Registers
     reg  [ 2:0] ns_M, cs_M = MS_DEAD;
-    reg  [ 9:0] y,x, b,a, bLast,aLast;
+    reg  [ 9:0] y,x, b0,a0, b1,a1;
     reg  rst_r;
 
-    wire pastA = (a > aLast);
+    wire pastA = (a0 > a1);
     //TODO:Watchout for locking up when no pixels to draw!
 
 //Triggers for state transitions & Mealy outputs (usually 1-cycle duration)
@@ -80,6 +80,7 @@ module LineEngine #(
 
     assign LE_ready = (cs_M==MS_IDLE);
 
+
     always @(*) begin
         ns_M = cs_M; //Default: Hold prior state if UNASSIGNED
         case (cs_M)
@@ -92,6 +93,15 @@ module LineEngine #(
             default: ns_M = MS_DEAD;
         endcase
     end
+
+reg  MODE_incY;
+/*
+    wire [15:0] errX = (x1 - x0); //Error addend; (assumed >= 0)
+    wire [15:0] errY = (incY) ? (y1 - y0) : (y0 - y1); //Error subtracted portion (arrange >= 0)
+    wire [15:0] offY = (incY) ? 1 : 0xFFFFFFFF; //Y addend fake-signed (pos/"neg" one)
+    wire [15:0] negY = (~errY + 1); //Error addend fake-signed (arrange "<=" 0)
+    wire [15:0] posX = (errX + negY); //Error addend signed, net after errX/2 (guaranteed >= 0)
+*/
     always @(posedge clk) begin
         rst_r <= rst;
 
@@ -102,28 +112,39 @@ module LineEngine #(
         end
 
 //TODO:These become "nextXYZ" signals instead (with don't cares)!
-        if ((LE_ready && LE_trigger) || (cs_M==MS_PREP)) begin
-            {a,aLast} <= {x0,x1};
-            {b,bLast} <= {y0,y1};
-//$strobe("L:PREP (%0d,%0d) (%0d,%0d)", a,b, aLast,bLast);
+        if (LE_ready && LE_trigger) begin //Grab-ahead if simultaneous set & trigger
+            a0 <= (LE_x0_valid) ? LE_point : x0;
+            a1 <= (LE_x1_valid) ? LE_point : x1;
+            b0 <= (LE_y0_valid) ? LE_point : y0;
+            b1 <= (LE_y1_valid) ? LE_point : y1;
+//$strobe("L:TRIG (%0d,%0d) (%0d,%0d)", a0,b0, a1,b1);
+//TODO:Make new PREP stage for "steep" pre-calcs
+        end else if (cs_M==MS_PREP) begin
+            //TODO:Normalize to increasing a0 (swap a0/b0 & a1/b1)
+            //TODO:Apply steep (swap x & y) simultaneous with steep (4 possibilities)
+            {a0,a1} <= {a0,a1};
+            {b0,b1} <= {b0,b1};
+            MODE_incY <= (b1 > b0) ? 1'b1 : 1'b0;
+//$strobe("L:PREP (%0d,%0d) (%0d,%0d)", a0,b0, a1,b1);
         end else if (T_WRIT1) begin
-            a <= (cs_M==MS_PREP) ? x0 : (a + 1);
-//$strobe("L:INC (a=%0d)", a);
+            a0 <= (a0+1);
+            b0 <= (MODE_incY) ? (b0+1) : (b0-1);
+//$strobe("L:INC (a0=%0d)", a0);
         end
 
         if (cs_M==MS_RSET) begin
             {x,y} <= 0;
         end else if ((cs_M==MS_PREP) || T_WRIT2) begin
-            {x,y} <= (cs_M==MS_PREP) ? {x0,y0} : {a,b};
+            {x,y} <= {a0,b0};
 //$strobe("L:ADV (x=%0d)", x);
         end
     end
 
 
-//Drive DDR lines to write 1 pixel at a time
-//TODO:Write a "run" of pixels instead
+//Drive DDR lines to write 1 pixel at-a-time
+//TODO:Write "run" of pixels instead
     reg [3:0] maskW;
-    wire [31:0] head_addr = {4'h1, framebits[5:0], y[9:0], x[9:0], 2'b00}; //"Byte" address
+    wire [31:0] head_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //"Byte" address
     assign af_addr_din = {6'b000000, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign af_wr_en  = (cs_M == MS_PWR1);
     assign wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} };
@@ -146,8 +167,8 @@ module LineEngine #(
 
 
 //synthesis translate_off
-    initial $monitor("RT:%b/%b CN:%0d/%0d (%0d,%0d)/(%0d,%0d) %h/%b (%h) W%b/%b",
-                     T_RESET,LE_trigger, cs_M,ns_M, a,b, x,y,
+    initial $monitor("RT:%b/%b CN:%0d/%0d (%0d,%0d)->(%0d,%0d)/(%0d,%0d) %h/%b (%h) W%b/%b",
+                     T_RESET,LE_trigger, cs_M,ns_M, a0,b0, a1,b1, x,y,
                      af_addr_din, maskW, wdf_mask_din,
                      af_wr_en, wdf_wr_en);
     always @(posedge clk) begin
@@ -162,12 +183,8 @@ module LineEngine #(
 //synthesis translate_on
 
 endmodule
-
 /** ALORGITHM CORE (STEEP & SWAP REMOVED) **
-void line_UI32(
-    const uint16_t x0, const uint16_t y0,
-    const uint16_t x1, const uint16_t y1)
-{
+void line_UI32( const uint16_t x0, const uint16_t y0, const uint16_t x1, const uint16_t y1) {
     const char incY = (y1 > y0);
     const uint32_t errX = (x1 - x0); //Error addend; (assumed >= 0)
     const uint32_t errY = (incY) ? (y1 - y0) : (y0 - y1); //Error subtracted portion (arrange >= 0)
@@ -190,5 +207,4 @@ void line_UI32(
         x = nextX;
         //JOIN
     }
-}
-*/
+} */

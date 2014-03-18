@@ -1,7 +1,7 @@
 #!/bin/bash -euv
 
-LOG="._mq.log"
-LOGP="${LOG}.p1"
+LOG="._mq0.log"
+LOGP="._mq1.log"
 COLORIT=`which "colorit" 2>/dev/null || echo "cat"`
 RM=`which /bin/rm 2>/dev/null || which rm 2>/dev/null || echo "rm"`
 MV=`which /bin/mv 2>/dev/null || which mv 2>/dev/null || echo "mv"`
@@ -11,7 +11,7 @@ pwd
 make clean
 
 ${RM} -rf "${LOGP}"
-[ -e "${LOGP}" ] && ${MV} "${LOG}" "${LOGP}"
+[ -e "${LOG}" ] && ${MV} "${LOG}" "${LOGP}"
 ${RM} -rf "${LOG}"
 
 reset

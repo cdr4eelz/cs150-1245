@@ -6,17 +6,17 @@
 
 /*                          Table 2: I/O Memory Map
 ADDR-12 ADDRESS-32      FUNCTION        ACCESS  DATA-ENCODING/DESC
-h000    32’h80000000    UART xmit cntl  Read    {31’b0, DataInReady}
-h001    32’h80000004    UART recv cntl  Read    {31’b0, DataOutValid}
-h002    32’h80000008    UART xmit data  Write   {24’b0, DataIn}
-h003    32’h8000000c    UART recv data  Read    {24’b0, DataOut}
-h004    32’h80000010    Cycle count     Read    Total number of cycles
-h005    32’h80000014    Instr count     Read    Number of instructions executed
-h006    32’h80000018    Reset counts    Write   N/A (any byte will trigger)
-h014    32’h80000050    PF_FRAME        Write   PixelFeeder frame# (ADDR is frame# * 0x0040_0000)
-h015    32’h80000054    GP_FRAME        Write   Stored, then "captured" along with GP_CODE on launch
-h016    32’h80000058    GP_CODE         Write   Write also launches GraphicsProcessor
-h017    32’h8000005C    Graphics cntl   Read    See Memory150 for concatenated signals
+h000    32'h80000000    UART xmit cntl  Read    {31'b0, DataInReady}
+h001    32'h80000004    UART recv cntl  Read    {31'b0, DataOutValid}
+h002    32'h80000008    UART xmit data  Write   {24'b0, DataIn}
+h003    32'h8000000c    UART recv data  Read    {24'b0, DataOut}
+h004    32'h80000010    Cycle count     Read    Total number of cycles
+h005    32'h80000014    Instr count     Read    Number of instructions executed
+h006    32'h80000018    Reset counts    Write   N/A (any byte will trigger)
+h014    32'h80000050    PF_FRAME        Write   PixelFeeder frame# (ADDR is frame# * 0x0040_0000)
+h015    32'h80000054    GP_FRAME        Write   Stored, then "captured" along with GP_CODE on launch
+h016    32'h80000058    GP_CODE         Write   Write also launches GraphicsProcessor
+h017    32'h8000005C    Graphics cntl   Read    See Memory150 for concatenated signals
 */
 
 module MemMapIO #(
@@ -77,7 +77,7 @@ module MemMapIO #(
 
 
 // PixelFeeder & GraphicsController
-    reg  [31: 0] reg_gpframe; //Stash this internally, others just "pass through"
+    reg  [31: 0] reg_gpframe = 0; //Stash this internally, others just "pass through"
     always @(posedge clk) begin:_REG_GPFRAME_
         //NOTE:Avoid unnecessary resets --if (rst) reg_gpframe <= 0; else
         if (isWrite && (addra==12'h015)) reg_gpframe <= dina;

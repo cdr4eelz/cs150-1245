@@ -6,7 +6,7 @@ CSRCS ?= $(wildcard *.c)
 SSRCS ?= $(wildcard *.s) $(START)
 
 OUTS ?= mif coe mem # "dump v"
-SECS ?= data inst
+SECS ?= inst data
 
 OBJS = $(SOBJS) $(COBJS)
 SOBJS = $(SSRCS:%.s=%.s.o)
@@ -16,7 +16,7 @@ COBJS = $(CSRCS:%.c=%.c.ll.s.o)
 
 default: all
 elf: $(TARGET).elf
-dump: $(TARGET).dump
+dump: $(TARGET).dump $(TARGET).inst.dump $(TARGET).data.dump
 data: $(OUTS:%=$(TARGET).data.%)
 inst: $(OUTS:%=$(TARGET).inst.%)
 #both: $(OUTS:%=$(TARGET).both.%)
@@ -40,14 +40,21 @@ PSIZE  ?= $(M_PRE)size
 PDUMP  ?= $(M_PRE)objdump
 PCOPY  ?= $(M_PRE)objcopy
 
-CCOPTS ?= -std=gnu99 -Os
+ASOPTS ?= -mno-pdr -xgot -non_shared -mno-shared -O0
+CCOPTS ?= -pipe -fasm -std=gnu99 -pedantic -ffreestanding -Os -fomit-frame-pointer -freorder-blocks-and-partition -foptimize-register-move -frename-registers -funit-at-a-time -g
+#-O0
+CCMIPS ?= -mips1 -mabi=32 -mno-abicalls -msoft-float -mno-dsp -mno-mips3d -mlong32 -mno-branch-likely -mno-flush-func -fno-PIE -fno-PIC -fno-pie -fno-pic -fno-exceptions -Wa,-mno-pdr,-xgot,-non_shared,-mno-shared,-O
+# -G0
+# -Wl,--strip-debug
+
+
 # -pedantic
 PCLANG ?= $(CLANG) -cc1 -triple=$(M_TRI) -target-cpu mips1 -target-abi o32 -mrelocation-model static
 LIBOPTS ?= -nostartfiles -nostdlib -nodefaultlibs -static
 PLLC   ?= $(LLC) -march=$(M_ARCH) -relocation-model=static
 
 $(TARGET).elf: $(ELF_INPUT)
-	$(PGCC) $(ELF_CCOPT) $^ $(LIBOPTS) -T $(LDSRC) -o $@ -G 0 -mno-gpopt
+	$(PGCC) $(ELF_CCOPT) $^ $(LIBOPTS) -T $(LDSRC) -o $@
 	$(PSIZE) $@
 #	$(PSTRIP) -R .pdr -R .comment -R .reginfo $@
 #	$(PSIZE) $@
@@ -62,21 +69,21 @@ $(TARGET).elf: $(ELF_INPUT)
 %.c.ll.s: %.c
 	$(PCLANG) $(CCOPTS) -S -o $@ -x c $<
 %.s.o: %.s
-	$(PGAS) -o $@ $<
+	$(PGAS) $(ASOPTS) -o $@ $<
 
 
 %.bin: %.elf
-	$(PCOPY) -j .text -p -O binary $< $@
-	chmod -x $@
+	-$(PCOPY) -j .text -p -O binary $< $@
+	-chmod -x $@
 %.inst.bin: %.elf
-	$(PCOPY) -j .text -p -O binary $^ $@
-	chmod -x $@
+	-$(PCOPY) -j .text -p -O binary $^ $@
+	-chmod -x $@
 %.data.bin: %.elf
-	$(PCOPY) -j .data -p -O binary $^ $@
-	chmod -x $@
+	-$(PCOPY) -j .data -p -O binary $^ $@
+	-chmod -x $@
 #%.both.bin: %.elf
-#	$(PCOPY) -j .both -p -O binary $^ $@
-#	chmod -x $@
+#	-$(PCOPY) -j .both -p -O binary $^ $@
+#	-chmod -x $@
 #%.both.bin: %.data.bin %.inst.bin
 #	truncate -s 16K $@
 #	cat $^ > $@
@@ -86,11 +93,11 @@ $(TARGET).elf: $(ELF_INPUT)
 
 
 %.dump: %.elf
-	$(PDUMP) $^ -xsD >$@
+	-$(PDUMP) $^ -xsD >$@
 %.inst.dump: %.elf
-	$(PDUMP) -j .text $^ -xsD >$@
+	-$(PDUMP) -j .text $^ -xsDSl >$@
 %.data.dump: %.elf
-	$(PDUMP) -j .data $^ -xS >$@
+	-$(PDUMP) -j .data $^ -xS >$@
 
 
 %.mif: %.bin

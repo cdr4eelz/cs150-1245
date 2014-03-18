@@ -18,9 +18,9 @@ _start:
     lui     $s7, 0
     lui     $k0, 0
     lui     $k1, 0
-    lui     $gp, 0x1000 # Fun: pull from LD (not used anyway)
+    lui     $gp, _gp    # NOTE: Pulled from LD
     lui     $fp, 0x1001 # Fun: passing xtra args above here
-    lui     $sp, 0x1001 # 0000 Fun: pull from LD not hardcode
+    lui     $sp, 0x1001 # 0000 TODO: pull from LD not hardcode
     lui     $ra, 0x4000 # 0000 In case of unexpected return
     j       main
 # nop by assembler

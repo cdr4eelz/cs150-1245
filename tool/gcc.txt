@@ -1,0 +1,44 @@
+export BLDINS=/scratch/local
+export BLDDEP=/scratch/build-mips-lin64/dep
+export CROSS6=/scratch/cross-compiler-i686
+export CONFIG_SHELL=/bin/ksh
+export LD_LIBRARY_PATH=${BLDDEP}/lib:${BLDINS}/lib:/usr/lib64:/usr/lib32:/lib64:/lib32
+export LD_RUN_PATH=${LD_LIBRARY_PATH}
+export PATH=${BLDDEP}/bin:${BLDINS}/bin:/usr/local/bin:/usr/bin:/bin
+export PATH=${CROSS6}/bin:$PATH
+export PKG_CONFIG_PATH=${BLDDEP}/lib/pkgconfig
+
+--target=i686
+  ARCH=i386 CROSS_COMPILE=i686-
+
+???/usr/local/texlive/2013/bin/x86_64-linux
+
+( ( These match BUILD platform, used during binutils make:
+[ncurses...dir]
+CPPFLAGS="-I/usr/lib/gcc/x86_64-redhat-linux/4.4.7/include" LDFLAGS="-L/usr/lib/gcc/x86_64-redhat-linux/4.4.7" ./configure --prefix="${BLDDEP}" --without-debug --without-shared --without-manpages --enable-symlinks --with-develop --without-ada --without-cxx-binding --with-termlib --with-pkg-config="${PKG_CONFIG_PATH}" --enable-pc-files
+[ make depend ... make ... make install ]
+
+[CPPFLAGS & LDFLAGS for ncurses: pkg-config --static --cflags --libs "zlib"]
+CPPFLAGS=`pkg-config --static --cflags "zlib"` LDFLAGS=`pkg-config --static --libs "zlib"` ../texinfo-5.2/configure --prefix="${BLDDEP}" --disable-nls --disable-rpath --disable-dependency-tracking --with-gnu-ld
+[ make ... make install ]
+)
+
+[zlib dir]
+CC='i686-gcc' CCFLAGS='-m32' ./configure --prefix="${BLDDEP}" --static
+[ make disclean ... configure ... make ... make install ]
+
+  PATCH: binutils (if before 2.23) for cygnus "@@" type-o.
+  COPY:  gmp,mpc,mpfr into binutils directory.
+../binutils-2.24/configure --prefix="${BLDINS}" --with-pkgversion='cs150' --disable-dependency-tracking --disable-shared --disable-threads --disable-multilib --disable-nls --target=mips-unknown-linux --program-prefix=mips- --with-arch=mips1 --with-abi=32 --disable-initfini-array --disable-libquadmath --without-pic --disable-pic  --enable-install-libiberty --disable-libstdcxx --with-newlib --disable-libssp --disable-libada --with-included-gettext --with-gnu-ld --with-gnu-as --with-gmp --with-mpc --with-mpfr --enable-plugins  --enable-64-bit-bfd --enable-install-libbfd --with-mmap
+  --enable-serial-target-configure --disable-rpath --with-zlib="${BLDDEP}" --enable-gold --enable-ld
+  ((--disable-werror))  --host=i686
+[ make configure-host ... make ... make check ... make install ]
+)
+
+(
+[openssl] ./config --prefix="${BLDDEP}" no-shared
+[make depend ... make ... make tests ... make install ]
+
+../coreutils-8.22/configure --prefix="${BLDINS}" --with-gnu-ld --disable-nls --disable-dependency-tracking --disable-rpath  --with-openssl
+)
+

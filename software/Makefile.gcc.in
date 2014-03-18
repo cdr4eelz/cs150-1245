@@ -1,6 +1,8 @@
 ELF_INPUT = $(CSRCS) $(SSRCS)
-ELF_CCOPT = $(CCOPTS)
+ELF_CCOPT = $(CCMIPS) $(CCOPTS)
 
-include ../Makefile.pre
+include ../makefile.pre
 
-all: elf dump $(TARGET).coe $(TARGET).mif
+all: elf dump $(SECS)
+
+#all: $(TARGET).coe $(TARGET).mif

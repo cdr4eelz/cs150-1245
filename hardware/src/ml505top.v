@@ -1,5 +1,6 @@
 module ml505top #(
-    parameter CPU_FREQ = 50_000_000
+    parameter CPU_FREQ = 50_000_000,
+    parameter COLT45_STALLDIP=1
 )(
     // Reference Clock (100MHz) & board reset
     input         USER_CLK,
@@ -310,7 +311,7 @@ wire [31:0] DBG_MEM150;
 
 //Minor mods for debug (like old dip stall toggle from prior checkpoint)
 
-generate if (1) begin:_STALL_DIP_
+generate if (COLT45_STALLDIP) begin:_STALL_DIP_
     wire stall_toggle;
     Debouncer #(
         .Width(16) // 2^16 / 50MHz => apprx 1.3 ms?
@@ -344,7 +345,7 @@ end endgenerate
 
 //CROSS: SRAM driver from FALL13
   // -- |SRAM Controller| ------------------------------------------------------
-//`define SRAM_ENABLE
+  `define SRAM_ENABLE
 
   wire sram_clock, sram_locked, sram_ready, sram_addr_valid, sram_data_out_valid;
   wire [17:0] sram_addr;

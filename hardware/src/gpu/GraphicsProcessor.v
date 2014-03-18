@@ -22,9 +22,8 @@
 //TODO:Fault response?
 
 module GraphicsProcessor #(
-    parameter LITTLEWORDIAN=0, //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 //TODO: Implement LITTLEWORDIAN
-    parameter COLT45_SCOPE=0
 )(
     input clk,
     input rst,
@@ -288,54 +287,5 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
                      INST, INST_gop, fifo_valid, INST_advance, fifo_reset, fifo_empty);
     end
 //synthesis translate_on
-
-generate if (COLT45_SCOPE) begin:_SCOPE_GP_
-//  localparam MS_INIT    = 3;
-
-    wire [511:0] CS_DATA512 = { //512-bits: 4 x 4 x 32-bits
-        GP_ready, GP_valid, GP_procframe[5:0],
-/*
-        GP_code[31:0],
-        GP_frame[31:0],
-
-        code_chunk, code_skips,
-        fifo_reset, INST_advance, INST_valid,
-        INST[31:0],
-
-        wr_count[4:0], fifo_full, fifo_write, fifo_empty,
-        T_RESET, T_READY, T_START, T_STOPS, cs_M, ns_M, cs_S, ns_S, CMD[7:0],
-
-        engine_frame[31:0], engine_color[31:0], engine_point[9:0],
-        FF_valid, LE_trigger,
-        LE_color_valid, LE_x0_valid, LE_y0_valid, LE_x1_valid, LE_y1_valid,
-
-        af_full,
-        af_wr_en,
-        1'b1, af_addr_din[30:0],
-        rdf_valid,
-        rdf_rd_en,
-
-        rdf_dout[127:0]
-*/ 32'hFFFF_FFFF
-    };
-
-    wire [7:0] CS_TRIG8 = {
-        4'b0000 /*T_START, T_STOPS, fifo_low, af_wr_en,*/
-        //INST_advance, INST_valid, FF_valid, LE_trigger
-    };
-
-    wire [35:0] cs_icon_scope;
-    cs_icon_1 CS_ICON_GP (
-        .CONTROL0(cs_icon_scope) // INOUT BUS [35:0]
-    ) /* synthesis syn_noprune=1 */;
-
-    cs_ila_simple CS_ILA_GP (
-        .CONTROL(cs_icon_scope),
-        .CLK(clk),
-        .DATA(CS_DATA512), // IN BUS [511:0]
-        .TRIG0(CS_TRIG8) // IN BUS [7:0]
-    ) /* synthesis syn_noprune=1 */;
-
-end endgenerate
 
 endmodule

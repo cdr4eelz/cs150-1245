@@ -18,77 +18,58 @@
 #define ROW_OFFSETC   (0x0400)      //1KC
 #define ROW_OFFSETP   (ROW_OFFSETC*COL_OFFSETP)               //1KP   (0x0400)
 #define ROW_OFFSETB   (4*ROW_OFFSETP) //4KB   (0x1000)
-#define ROW_EXTRAC    (ROW_OFFSETP-COL_SIZEP)       //1KC-800C= 224C  (0xE0)
-#define ROW_EXTRAP    (ROW_OFFSETP-COL_SIZEP)       //1KP-800P= 224P  (0xE0)
+#define ROW_XTRAP     (ROW_OFFSETP-COL_SIZEP)       //1KP-800P= 224P  (0xE0)
 #define FRAME_SIZEP   (COL_SIZEP*ROW_SIZEP)                   //480KP (0x00075300)
 #define FRAME_SIZEB   (4*ROW_SIZEP) //2400KB (0x00258000) ???
 #define FRAME_OFFSETR (0x0400)      //1KR
 #define FRAME_OFFSETP (FRAME_OFFSETR*ROW_OFFSETC*COL_OFFSETP) //1MP   (0x00100000)
 #define FRAME_OFFSETB (0x00400000)    //4MB (0x00400000)
-#define FRAME_EXTRAR  (FRAME_OFFSETR-ROW_SIZEP)     //1KR-600P= 424P  (0x1A8)
-#define FRAME_EXTRAP  (FRAME_OFFSETP-ROW_SIZEP)     //1MP-600P= 424P  (0x...)
-#define PIX_SIZEF   (xxx) //2400KB (0x00258000)
+#define FRAME_XTRAR  (FRAME_OFFSETR-ROW_SIZEP)     //1KR-600P= 424P  (0x1A8)
+#define FRAME_XTRAP  (FRAME_OFFSETP-x)     //1MP-600P= 424P  (0x...)
+#define PIX_SIZEF   (4*FRAME_SIZEP) //2400KB (0x00258000)
 #define PIX_LASTB     (0x00257C7C)    //2396KB+3196B (0x00257C7C)
+#define PIX_XTRAP  (Ay+Bx-AB)     //1MP-600P= 424P  (0x...)
 
-//Renumbered so FRAME0 is 0x10000000...but usually skip that one!
-#define STD_FRAME0X ((gframe_p) 0x10000000)
-#define STD_FRAME1  ((gframe_p) 0x10400000)
-#define STD_FRAME2  ((gframe_p) 0x10800000)
-#define STD_FRAME3  ((gframe_p) 0x10C00000)
-#define STD_FRAME4  ((gframe_p) 0x11000000) //...advance 0x0040_0000 each
-//...NOTE:Frame# (1,2,3,...) can also be used for PF_FRAME & GP_FRAME
+struct __attribute__ ((aligned (4))) __attribute__ ((packed)) gstate_s {
+  /* assign graphics_status = {
+      2'b00, pf_feedframe[5:0],
+      6'b0000_00, video_ready, video_valid,
+      2'b00, gp_procframe[5:0],
+      5'b0000_0, line_ready, filler_ready, gp_ready
+  }; */
+  unsigned int unused_1:2;
+  unsigned int pf_feedframe:6;
+  unsigned int unused_2:6;
+  unsigned int video_ready:1;
+  unsigned int video_valid:1;
+  unsigned int unused_3:2;
+  unsigned int gp_procframe:6;
+  unsigned int unused_4:5;
+  unsigned int line_ready:1;
+  unsigned int filler_ready:1;
+  unsigned int gp_ready:1;
+};
+typedef union gstate_u {
+    uint32_t u32;
+    struct gstate_s f;
+} gstate_tp, *gstate_pp;
+typedef gstate_tp volatile gstate_tv, *gstate_pv;
 
+typedef uint32_t color_t, *color_p;
+typedef uint32_t pixel_tp, *pixel_pp;
+typedef pixel_tp volatile pixel_tv, *pixel_pv;
+typedef struct grow_s {
+    pixel_tp used[COL_SIZEP];
+    pixel_tp xtra[ROW_XTRAP];
+} grow_tp, *grow_pp;
+typedef volatile grow_tp grow_tv, *grow_pv;
+typedef struct gframe_sx {
+    grow_tp used[ROW_SIZEP];
+    grow_tp xtra[FRAME_XTRAR];
+} gframe_tp, *gframe_pp;
+typedef volatile gframe_tp gframe_tv, *gframe_pv;
 
-typedef union gstate_u // __attribute__ ((__transparent_union__)) CLANG wants it after union
-    {
-        uint32_t u32;
-        struct __attribute__ ((aligned (4))) __attribute__ ((packed)) {
-          /* assign graphics_status = {
-              2'b00, pf_feedframe[5:0],
-              6'b0000_00, video_ready, video_valid,
-              2'b00, gp_procframe[5:0],
-              5'b0000_0, line_ready, filler_ready, gp_ready
-          }; */
-          unsigned int unused_1:2;
-          unsigned int pf_feedframe:6;
-          unsigned int unused_2:6;
-          unsigned int video_ready:1;
-          unsigned int video_valid:1;
-          unsigned int unused_3:2;
-          unsigned int gp_procframe:6;
-          unsigned int unused_4:5;
-          unsigned int line_ready:1;
-          unsigned int filler_ready:1;
-          unsigned int gp_ready:1;
-        } S;
-    } __attribute__ ((__transparent_union__))
-    gstate_t, *gstate_p;
-typedef gstate_t volatile gstate_tv;
-typedef gstate_tv *gstate_pv;
-
-typedef union color_u // __attribute__ ((__transparent_union__)) CLANG wants it after union
-    {
-        uint32_t u32;
-        struct __attribute__ ((aligned (4))) __attribute__ ((packed)) {
-            unsigned int a:8;
-            unsigned int r:8;
-            unsigned int g:8;
-            unsigned int b:8;
-        } argb;
-    } __attribute__ ((__transparent_union__))
-    color_t, *color_p, pixel_t, *pixel_p;
-typedef pixel_t volatile pixel_tv;
-typedef pixel_tv *pixel_pv;
-
-typedef struct row_s
-    {
-        pixel_tv used[800];
-        uint32_t extra[1024-800];
-    }
-    volatile row_vt;
-typedef row_vt gframe_t, *gframe_p;
-
-typedef uint32_t* gpcode_p;
+typedef uint32_t* gpcode_pp;
 #define XSHIFT  (2)
 #define YSHIFT  (12)
 #define FSHIFT  (22)
@@ -97,25 +78,34 @@ typedef uint32_t* gpcode_p;
 #define YMASK   (0x003FF000)    //10-bits shifted into "y" coordinate
 #define FPMASK  (0xFFC00000)    //Upper nibble plus 6-bits for frame#
 #define FNMASK  (0x0000003F)    //Just the 6-bits for frame# (before shifting)
+typedef volatile gpcode_pp gpcode_pv;
 
+
+//Renumbered so FRAME0 is 0x10000000...but usually skip that one!
+#define STD_FRAME0X ((gframe_pv) 0x10000000)
+#define STD_FRAME1  ((gframe_pv) 0x10400000)
+#define STD_FRAME2  ((gframe_pv) 0x10800000)
+#define STD_FRAME3  ((gframe_pv) 0x10C00000)
+#define STD_FRAME4  ((gframe_pv) 0x11000000) //...advance 0x0040_0000 each
+//...NOTE:Frame# (1,2,3,...) can also be used for PF_FRAME & GP_FRAME
 
 //MEMORY MAPPED CONTROLS
-#define PF_FRAME  (*((volatile gframe_p*)0x80000050)) //WRITE:PixelFeeder source frame addr/num
-#define GP_FRAME  (*((volatile gframe_p*)0x80000054)) //WRITE:GraphicsProcessor frame addr/num
-#define GP_GCODE  (*((volatile gpcode_p*)0x80000058)) //WRITE:Set code addr & trigger GP now!
-#define GP_STATE  (*((gstate_pv)0x8000005C)) //READ:Status bits/values of PIX,GP,etc.
+#define PF_FRAME  (*((gframe_pv volatile *)0x80000050)) //WRITE:PixelFeeder source frame addr/num
+#define GP_FRAME  (*((gframe_pv volatile *)0x80000054)) //WRITE:GraphicsProcessor frame addr/num
+#define GP_GCODE  (*((gpcode_pv volatile *)0x80000058)) //WRITE:Set code-addr, trigger GP now!
+#define GP_STATE  (*((gstate_pv)0x8000005C)) //READ:Status of PIX,GP,etc.
 
 //MEMORY FIXED GLOBAL TEMPORARIES
-#define GPTEMP_PTR ((gpcode_p)0x10003000) //FIXED location "global"
-#define GPTEMP_SZW (0x00000020) //32-words is...
-#define GPTEMP_SZB (GPTEMP_SZW*4) // (128-bytes)
+#define GPTEMP_PTR ((gpcode_pv)0x10003000) //FIXED location "global"
+#define GPTEMP_SZW (0x00000020)           //  32-words is...
+#define GPTEMP_SZB (GPTEMP_SZW*4)        //  128-bytes
 
 
-#define FRAME_PTR(F)    ( (gframe_p) (                      \
+#define FRAME_PTR(F)    ( (gframe_pv) (                      \
     ((uint32_t)(F) & FPMASK) ? ((uint32_t)(F) & FPMASK)      \
         : (0x10000000 | (((uint32_t)(F) & FNMASK)<<FSHIFT)) ) )
 
-#define PIX_PTR(FP,X,Y) ( (pixel_p) (                 \
+#define PIX_PTR(FP,X,Y) ( (pixel_pv) (                 \
     ((uint32_t)(FP)) | ((Y)<<YSHIFT) | ((X)<<XSHIFT)  ) )
 
 
@@ -133,26 +123,26 @@ void hwelipse(color_t color,
                 uint16_t rx, uint16_t ry);
 
 
-void swfill  (gframe_p frame, color_t color);
-void swline  (gframe_p frame, color_t color,
+void swfill  (gframe_pv frame, color_t color);
+void swline  (gframe_pv frame, color_t color,
                 uint16_t x0, uint16_t y0,
                 uint16_t x1, uint16_t y1);
-void swpixel (gframe_p frame, color_t color,
+void swpixel (gframe_pv frame, color_t color,
                 uint16_t x,  uint16_t y);
-void swcircle(gframe_p frame, color_t color,
+void swcircle(gframe_pv frame, color_t color,
                 uint16_t xc, uint16_t yc,
                 uint16_t r);
-void swelipse(gframe_p frame, color_t color,
+void swelipse(gframe_pv frame, color_t color,
                 uint16_t xc, uint16_t yc,
                 uint16_t rx, uint16_t ry);
 
-void swcircle_old(gframe_p frame, color_t color,
+void swcircle_old(gframe_pv frame, color_t color,
                     uint16_t xc, uint16_t yc,
                     uint16_t r);
-void swpixel_4way(gframe_p fp, color_t color,
+void swpixel_4way(gframe_pv fp, color_t color,
                     uint16_t xc, uint16_t yc,
                     int16_t ox, int16_t oy);
-void swpixel_8way(gframe_p fp, color_t color,
+void swpixel_8way(gframe_pv fp, color_t color,
                     uint16_t xc, uint16_t yc,
                     int16_t ox, int16_t oy);
 

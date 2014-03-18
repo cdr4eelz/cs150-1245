@@ -167,8 +167,8 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 
     always @(posedge cpu_clk_g) begin
         //NOTE:Allow PF_frame "set" during "reset" to allow user init
-        if (PF_valid) frame_next <= `FRAME_BITS(PF_frame); //Either addr style
-        else if (cpu_rst_g) frame_next <= 0;
+        if (cpu_rst_g && !PF_valid) frame_next <= 0;
+        else if (PF_valid) frame_next <= `FRAME_BITS(PF_frame); //Either addr style
     end
 
     always @(posedge cpu_clk_g) begin

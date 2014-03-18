@@ -1,10 +1,10 @@
 #include "types.h"
 #include "graphics.h"
 
-typedef void (*entry_t)(void);
+//typedef void (*entry_t)(void);
 
 int main(int argc, char** argv) {
-    gframe_p sw_frame;
+    gframe_pv sw_frame;
 
     PF_FRAME = STD_FRAME3;
 
@@ -12,13 +12,13 @@ int main(int argc, char** argv) {
     sw_frame = STD_FRAME2;
     hwfill  (           0x00002233);
     swfill  (sw_frame,  0x00002233);
-//    hwline  (           0xFFFFFFFF,  10, 10,  700,300);
+    hwline  (           0xFFFFFFFF,  10, 10,  700,300);
     swline  (sw_frame,  0xFFFFFFFF,  10, 10,  700,300);
-//    hwline  (           0xFFFFFFFF,  10, 10,  500,400);
+    hwline  (           0xFFFFFFFF,  10, 10,  500,400);
     swline  (sw_frame,  0xFFFFFFFF,  10, 10,  500,400);
-//    hwpixel (           0xFFFFFFFF,  20, 50);
+    hwpixel (           0xFFFFFFFF,  20, 50);
     swpixel (sw_frame,  0xFFFFFFFF,  20, 50);
-//    swelipse(sw_frame,  0x00FF0000, 300,300,   50, 50);
+    swelipse(sw_frame,  0x00FF0000, 300,300,   50, 50);
     PF_FRAME = STD_FRAME1;
     swcircle_old(sw_frame, 0x00000000, 650,200,   50);
     swcircle_old(sw_frame, 0x00222222, 650,200,   40);
@@ -30,17 +30,17 @@ int main(int argc, char** argv) {
     sw_frame = STD_FRAME4;
     hwfill  (           0x00FF2222);
     swfill  (sw_frame,  0x00FF2222);
-//    hwline  (           0x0000FF00,  10, 10,  700,300);
+    hwline  (           0x0000FF00,  10, 10,  700,300);
     swline  (sw_frame,  0x0000FF00,  10, 10,  700,300);
-//    hwline  (           0x000000FF, 500,400,   10, 10);
+    hwline  (           0x000000FF, 500,400,   10, 10);
     swline  (sw_frame,  0x000000FF, 500,400,   10, 10);
-//    hwline  (           0x00000000,  10, 10,  400,500);
+    hwline  (           0x00000000,  10, 10,  400,500);
     swline  (sw_frame,  0x00000000,  10, 10,  400,500);
-//    hwelipse(           0x22222222, 650,200,   50, 50);
+    hwelipse(           0x22222222, 650,200,   50, 50);
     swcircle(sw_frame,  0x22222222, 650,200,   50);
-//    hwelipse(           0x00008844, 250,120,  100, 25);
-//    swelipse(sw_frame,  0x00008844, 250,120,  100, 25);
-//    hwpixel (           0x00023666,  21, 51);
+    hwelipse(           0x00008844, 250,120,  100, 25);
+    swelipse(sw_frame,  0x00008844, 250,120,  100, 25);
+    hwpixel (           0x00023666,  21, 51);
     swpixel (sw_frame,  0x00023666,  21, 51);
 
     PF_FRAME = STD_FRAME4;

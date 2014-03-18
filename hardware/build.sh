@@ -18,7 +18,7 @@ echo "  ${D_BLD}"
 # exit 0
 
 if [ -e "${F_PID}" ]; then
-  echo "ALREADY RUNNING:"
+  echo "ALREADY RUNNING (Delete ${F_PID} if not true):"
   cat ${F_PID}
   exit 1
 fi
@@ -30,6 +30,11 @@ touch ${F_PID} #Temporary (don't know pid yet)
 echo -e "MAKE '$0': $*" |tee ${F_OUT} ${F_ERR}
 date |tee -a ${F_OUT} ${F_ERR}
 echo -e "\n\n" |tee -a ${F_OUT} ${F_ERR}
+
+
+export XIL_XST_HIDEMESSAGES="hdl_level" #or hdl_and_low_levels
+export XIL_MAXLINEWIDTH=5000
+
 
 #Run the make itself (as sub-process)
 export D_CFG

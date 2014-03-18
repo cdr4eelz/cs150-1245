@@ -1,6 +1,1 @@
-ELF_INPUT = $(OBJS)
-ELF_CCOPT =
-
-include ../Makefile.pre
-
-all: elf dump $(SECS)
+Makefile.gcc.in

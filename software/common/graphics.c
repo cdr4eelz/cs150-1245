@@ -2,14 +2,14 @@
 
 // *** HARDWARE IMPLEMENTATION (Just single GPCODE commands in GPTEMP_PTR) ***
 
-uint32_t* hw_OpRGB_PP_S(const uint8_t op, const color_t color,
+uint32_t* hw_OpRGB_PP_S(const uint8_t op, const uint32_t color,
                         const uint32_t p0, const uint32_t p1);
 
-void hwfill(const color_t color)
+void hwfill(const uint32_t color)
 {
     hw_OpRGB_PP_S(GOP_FILL, color, 0xFFFFFFFF, 0xFFFFFFFF);
 }
-void hwline(const color_t color,
+void hwline(const uint32_t color,
             const uint16_t x0, const uint16_t y0,
             const uint16_t x1, const uint16_t y1)
 {
@@ -17,13 +17,13 @@ void hwline(const color_t color,
                   CMD_point(x0,y0),
                   CMD_point(x1,y1));
 }
-void hwpixel(const color_t color,
+void hwpixel(const uint32_t color,
              const uint16_t x, const uint16_t y)
 {
     hw_OpRGB_PP_S(GOP_PIXEL, color,
                   CMD_point(x,y), 0xFFFFFFFF);
 }
-void hwelipse(const color_t color,
+void hwelipse(const uint32_t color,
               const uint16_t xc, const uint16_t yc,
               const uint16_t rx, const uint16_t ry)
 {
@@ -32,11 +32,11 @@ void hwelipse(const color_t color,
                   CMD_point(rx,ry));
 }
 
-uint32_t* hw_OpRGB_PP_S(const uint8_t op, const color_t color,
+uint32_t* hw_OpRGB_PP_S(const uint8_t op, const uint32_t color,
                         const uint32_t p0, const uint32_t p1)
 {
     uint32_t* pINST = GPTEMP_PTR;
-    *pINST++ = CMD_rgb(op, color.u32);
+    *pINST++ = CMD_rgb(op, color);
     if (p0 != 0xFFFFFFFF) *pINST++ = p0;
     if (p1 != 0xFFFFFFFF) *pINST++ = p1;
     *pINST++ = CMD_STOP();
@@ -48,9 +48,9 @@ uint32_t* hw_OpRGB_PP_S(const uint8_t op, const color_t color,
 
 // *** SOFTWARE IMPLEMENTATIONS ***
 
-void swfill(const gframe_p frame, const color_t color)
+void swfill(const gframe_pv fp, const uint32_t color)
 {
-    pixel_p pPIX = (pixel_p)FRAME_PTR(frame); //Start at pointer to frame base address
+    pixel_pv pPIX = (pixel_pv)fp; //Start at pointer to frame base address
     for (int nROW = 0; nROW < ROW_SIZEP; nROW++) {
         for (int nCOL = 0; nCOL < COL_SIZEP; nCOL+=8) {
             *pPIX++ = color; //Advance 1-word (4-bytes) each time
@@ -68,11 +68,10 @@ void swfill(const gframe_p frame, const color_t color)
 }
 
 // Based on wikipedia implementation
-void swline(const gframe_p frame, const color_t color,
+void swline(const gframe_pv fp, const uint32_t color,
             const uint16_t x0, const uint16_t y0,
             const uint16_t x1, const uint16_t y1)
 {
-    const gframe_p fp = FRAME_PTR(frame);
     const char steep = (ABSDIF(y1,y0) > ABSDIF(x1,x0)) ? 1 : 0;
     uint16_t a0, a1, b0, b1, tmp;
     if (steep) {
@@ -94,10 +93,10 @@ void swline(const gframe_p frame, const color_t color,
     uint16_t x = a0, y = b0;
     while (x <= a1) {
         if (steep) {
-            swpixel(frame,color, y,x);
+            swpixel(fp,color, y,x);
 //          *PIX_PTR(fp, y,x) = color;
         } else {
-//          swpixel(frame,color, x,y);
+//          swpixel(fp,color, x,y);
             *PIX_PTR(fp, x,y) = color;
         }
         error -= deltay;
@@ -109,18 +108,16 @@ void swline(const gframe_p frame, const color_t color,
     }
 }
 
-void swpixel(const gframe_p frame, const color_t color,
+void swpixel(const gframe_pv fp, const uint32_t color,
              const uint16_t x, const uint16_t y)
 {
-    const gframe_p fp = FRAME_PTR(frame);
     *PIX_PTR(fp, x, y) = color;
 }
 
-void swcircle(const gframe_p frame, const color_t color,
+void swcircle(const gframe_pv fp, const uint32_t color,
               const uint16_t xc, const uint16_t yc,
               const uint16_t r)
 {
-    const gframe_p fp = FRAME_PTR(frame);
     int32_t x, y, d, dE, dSE;
     x = 0; //theta=0; fake "origin" (translate pixels later)
     y = r; //theta=0
@@ -145,11 +142,10 @@ void swcircle(const gframe_p frame, const color_t color,
     }
 }
 
-void swelipse(const gframe_p frame, const color_t color,
+void swelipse(const gframe_pv fp, const uint32_t color,
               const uint16_t xc, const uint16_t yc,
               const uint16_t rx, const uint16_t ry)
 {
-    const gframe_p fp = FRAME_PTR(frame);
 //TODO:Optimize SQUARE(uint16_t):uint32_t
     uint16_t x = 0, y = ry; //theta=0; fake "origin" (translate pixels later)
     const uint32_t a2p = (rx^2)<<1; //scale2x: rx^2
@@ -191,11 +187,10 @@ void swelipse(const gframe_p frame, const color_t color,
     }
 }
 
-void swcircle_old(const gframe_p frame, const color_t color,
+void swcircle_old(const gframe_pv fp, const uint32_t color,
                   const uint16_t xc, const uint16_t yc,
                   const uint16_t r)
 {
-    const gframe_p fp = FRAME_PTR(frame);
     int32_t x, y, d;
     x = 0;
     y = r;
@@ -215,7 +210,7 @@ void swcircle_old(const gframe_p frame, const color_t color,
 }
 
 
-void swpixel_4way(const gframe_p fp, const color_t color,
+void swpixel_4way(const gframe_pv fp, const uint32_t color,
                   const uint16_t xc, const uint16_t yc,
                   const int16_t ox,  const int16_t oy)
 {
@@ -226,7 +221,7 @@ void swpixel_4way(const gframe_p fp, const color_t color,
     *PIX_PTR(fp, xc + ox, yc + oy) = color;
 }
 
-void swpixel_8way(const gframe_p fp, const color_t color,
+void swpixel_8way(const gframe_pv fp, const uint32_t color,
                   const uint16_t xc, const uint16_t yc,
                   const int16_t ox,  const int16_t oy)
 {

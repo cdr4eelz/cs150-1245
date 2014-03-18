@@ -2,15 +2,15 @@
 // Module: RequestControler.v
 // Author: James Parker
 //
-// This module is designed to give the caches the illusion of having exclusive 
-//   access to the DDR2 FIFOs. Additionally, it interleaves requests when both 
-//   caches attempt to access DDR2 simultaneously. The instruction cache is 
+// This module is designed to give the caches the illusion of having exclusive
+//   access to the DDR2 FIFOs. Additionally, it interleaves requests when both
+//   caches attempt to access DDR2 simultaneously. The instruction cache is
 //   given priority (i.e. it's requests are serviced first).
 //
-// When there are access collisions, this module tells the data cache that the 
+// When there are access collisions, this module tells the data cache that the
 //   FIFOs are full, essentially stalling the cache until the icache finishes.
 //
-// There are some optimizations this module does not attempt that you may 
+// There are some optimizations this module does not attempt that you may
 //   experiment with for the performance contest:
 //      - Recognizing duplicate read requests and performing only one DDR2 access
 //      - Giving reads priority (because we don't block on completing writes)
@@ -62,7 +62,7 @@ module RequestController(
     input           d_wdf_wr_en,
     input           d_stall,
     // inputs from the line drawing engine:
-    //   Note: the line drawing engine only needs to write, 
+    //   Note: the line drawing engine only needs to write,
     //         thus, it accesses on a subset of the fifo signals
     input [ 30:0]   line_addr_din,
     input           line_af_wr_en,
@@ -88,8 +88,8 @@ module RequestController(
     input           cmd_rdf_rd_en,
     input           cmd_af_wr_en,
     input [ 30:0]   cmd_addr_din,
-    // inputs from the module responsibile for keeping the 
-    //   pixel fifo full, designated with 'pixel'. This only allows 
+    // inputs from the module responsibile for keeping the
+    //   pixel fifo full, designated with 'pixel'. This only allows
     //   read access.
     input           pixel_rdf_rd_en,
     input           pixel_af_wr_en,
@@ -130,9 +130,9 @@ module RequestController(
     localparam BYPASS_ACCESS    = 3'b110;
     localparam CMD_ACCESS       = 3'b111;
 
-    // New approach: icache and dcache don't stream reads. Keep 
-    //   a count of each read and then remember the number for 
-    //   the caches. Should be okay if they wrap around; 11 bits 
+    // New approach: icache and dcache don't stream reads. Keep
+    //   a count of each read and then remember the number for
+    //   the caches. Should be okay if they wrap around; 11 bits
     //   so that they are larger than max fifo size.
 
     reg  [ 2:0] fifo_access;
@@ -226,12 +226,12 @@ module RequestController(
 
 
     //**************************************************************************
-    // This section is for determining the signals to the DDR2 fifos and the 
+    // This section is for determining the signals to the DDR2 fifos and the
     // full signals to send to the various access paths.
     //************************************************************************
 
-    // The "reserved" signals are used to prevent the higher-priority paths 
-    // from interrupting the filler or line engine (which run async) during 
+    // The "reserved" signals are used to prevent the higher-priority paths
+    // from interrupting the filler or line engine (which run async) during
     // writes.
 
     reg line_reserved;
@@ -335,8 +335,8 @@ module RequestController(
 
         else begin
             fifo_access  = NO_ACCESS;
-            // in the default case, both need to see the actual fifo full 
-            //   signals, otherwise the cache will never attempt to write. for 
+            // in the default case, both need to see the actual fifo full
+            //   signals, otherwise the cache will never attempt to write. for
             //   the other signals, we don't care, so just choose icache.
             af_cmd_din   = i_af_cmd_din;
             addr_din     = i_addr_din;
@@ -348,7 +348,7 @@ module RequestController(
     end
 
 
-    // To facilitate the switch to asserting wr_en's even when fifos are full, 
+    // To facilitate the switch to asserting wr_en's even when fifos are full,
     // we have to and the full signals so data and cmds are written together.
 
     // finally, based on the cache accessing, the fifo signals need to be set:
