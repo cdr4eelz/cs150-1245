@@ -96,12 +96,12 @@ module LineEngineTestbench;
         #(10*Cycle);
         rst = 1'b0;
         #(Cycle);
-//$monitor("R:%b T:%b (%0d,%0d) W:%b.%b", LE_ready, LE_trigger, x,y, af_wr_en,wdf_wr_en);
-        drawLine(10'd2, 10'd4, 10'd10, 10'd6, 32'h00_7F_00_00);
-        // drawLine(10'd0, 10'd0, 10'd1023, 10'd767, 32'h00_7F_00_00);
-        // drawLine(10'd1000, 10'd700, 10'd0, 10'd0, 32'h00_7F_00_00);
-        // drawLine(10'd500, 10'd700, 10'd0, 10'd0, 32'h00_7F_00_00);
-        // drawLine(10'd0, 10'd0, 10'd400, 10'd652, 32'h00_7F_00_00);
+//      $monitor("R:%b T:%b (%0d,%0d) W:%b.%b", LE_ready, LE_trigger, x,y, af_wr_en,wdf_wr_en);
+        drawLine(10'd2, 10'd4, 10'd10, 10'd6, 32'h11_7F_00_00);
+        drawLine(10'd0, 10'd0, 10'd1023, 10'd767, 32'h22_7F_00_00);
+        drawLine(10'd1000, 10'd700, 10'd0, 10'd0, 32'h33_7F_00_00);
+        drawLine(10'd500, 10'd700, 10'd0, 10'd0, 32'h44_7F_00_00);
+        drawLine(10'd0, 10'd0, 10'd400, 10'd652, 32'h55_7F_00_00);
     end
 
     task drawLine;
@@ -111,6 +111,7 @@ module LineEngineTestbench;
         input [9:0] y1;
         input [31:0] color;
     begin
+        $display("le-TB: Wait...");
         @(negedge Clock);
         while (!LE_ready) #(Cycle); // wait for LE_ready
         LE_color = color;
@@ -134,6 +135,8 @@ module LineEngineTestbench;
         LE_point = y1;
         LE_frame = 32'h1040_0000;
         LE_trigger  = 1'b1;
+        $strobe("le-TB: TRIG (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h frame=%h",
+        x0,y0, x1,y1, x0,y0, x1,y1, color, LE_frame);
         #(Cycle);
         LE_point = 32'bz;
         LE_frame = 32'bz;
@@ -146,6 +149,8 @@ module LineEngineTestbench;
             end
             #(Cycle);
         end
+        $display("le-TB: Done. (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h frame=%h",
+                x0,y0, x1,y1, x0,y0, x1,y1, color, LE_frame);
     end endtask
 
 endmodule

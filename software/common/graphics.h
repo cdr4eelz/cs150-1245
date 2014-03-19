@@ -31,23 +31,18 @@
 #define PIX_XTRAP  (Ay+Bx-AB)     //1MP-600P= 424P  (0x...)
 
 struct __attribute__ ((aligned (4))) __attribute__ ((packed)) gstate_s {
-  /* assign graphics_status = {
-      2'b00, pf_feedframe[5:0],
-      6'b0000_00, video_ready, video_valid,
-      2'b00, gp_procframe[5:0],
-      5'b0000_0, line_ready, filler_ready, gp_ready
-  }; */
-  unsigned int unused_1:2;
-  unsigned int pf_feedframe:6;
-  unsigned int unused_2:6;
-  unsigned int video_ready:1;
-  unsigned int video_valid:1;
-  unsigned int unused_3:2;
-  unsigned int gp_procframe:6;
-  unsigned int unused_4:5;
-  unsigned int line_ready:1;
-  unsigned int filler_ready:1;
-  unsigned int gp_ready:1;
+/* assign graphics_status = {
+        2'b00, pf_feedframe[5:0],
+        8'b0000_0000, //Maybe for overlay stuff later
+        2'b00, gp_procframe[5:0], //TODO:Count video_xyz activity, not snapshot
+        video_ready, video_valid, 3'b00_0, line_ready, filler_ready, gp_ready
+}; */
+    int unused_1:2; unsigned int pf_feedframe:6;
+    int unused_2:8;
+    int unused_3:2; unsigned int gp_procframe:6;
+    BOOL video_ready:1; BOOL video_valid:1;
+        int unused_4:3;
+            BOOL line_ready:1; BOOL filler_ready:1; BOOL gp_ready:1;
 };
 typedef union gstate_u {
     uint32_t u32;

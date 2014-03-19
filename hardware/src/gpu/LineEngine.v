@@ -1,9 +1,10 @@
 
 module LineEngine #(
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
     parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
     input           clk,
-    input           rst,
+    input           rst, //Synchronized internally
 //DDR FIFOs (write-only):
     input           af_full,
     input           wdf_full,
@@ -27,19 +28,35 @@ module LineEngine #(
 
     // Implement Bresenham's line drawing algorithm here!
 
-// Manage line values (each is a register with RVA style "set")
-    reg  [31:0] color;
-    reg  [ 9:0] x0,y0, x1,y1;
-    reg  [ 5:0] framebits;
-
+    reg  rst_r; //Detect & apply & release synchronously to our clock
     always @(posedge clk) begin
-        if (LE_ready) begin //Capture active inputs if not running
-            if (LE_color_valid) color <= LE_color;
-            if (LE_x0_valid) x0 <= LE_point;
-            if (LE_y0_valid) y0 <= LE_point;
-            if (LE_x1_valid) x1 <= LE_point;
-            if (LE_y1_valid) y1 <= LE_point;
-            if (LE_trigger) framebits <= LE_frame[27:22];
+        rst_r <= rst; //Internal reset, rst_r, unless really must sync-up release!
+    end
+
+// Manage line values (each is a register with RVA style "set")
+                //Grabbed @clk & trigger  //MUXed to expose value @trigger
+    reg  [ 5:0] framebits_r,              framebits;
+    reg  [31:0] color_r,                  color;
+    reg  [ 9:0] x0_r,y0_r, x1_r,y1_r,     x0,y0, x1,y1;
+    always @(posedge clk) begin
+        if (rst_r) begin //Internal reset (don't bog global rst unless needed)
+            {framebits_r, color_r  } <= 0;
+            {x0_r,y0_r,   x1_r,y1_r} <= 0;
+        end else if (LE_ready) begin //Convenient "enable" line (redundant)
+            {framebits_r, color_r  } <= {framebits, color}; //Feedback muxed vals
+            {x0_r,y0_r,   x1_r,y1_r} <= {x0,y0,     x1,y1}; // since available.
+        end
+    end
+    always @(*) begin //NOTE:Seems OK to lump into one always@* block!
+        {framebits, color} = {framebits_r, color_r  };
+        {x0,y0,     x1,y1} = {x0_r,y0_r,   x1_r,y1_r};
+        if (LE_ready) begin //Preview/capture active inputs up until trigger
+            if (LE_trigger)     framebits = LE_frame[27:22];
+            if (LE_color_valid) color     = LE_color;
+            if (LE_x0_valid)    x0        = LE_point;
+            if (LE_y0_valid)    y0        = LE_point;
+            if (LE_x1_valid)    x1        = LE_point;
+            if (LE_y1_valid)    y1        = LE_point;
         end
     end
 
@@ -55,97 +72,112 @@ module LineEngine #(
     localparam
         MH_RSET     = 0, //Performing or coming out of reset
         MH_IDLE     = 1, //Ready for initiation
-        MH_PRE3     = 2, //Prep/Normalize (examine raw x/y traits)
-        MH_PRE2     = 3, //Prep/Normalize (translate/normalize x/y)
-        MH_PRE1     = 4, //Prep/Normalize (finalize iteration params)
-        MH_RUN1     = 5, //1st-half DDR-write; next-iteration work-ahead
-        MH_RUN2     = 6; //2nd-half DDR-write; iteration finalize/advance
-    localparam MH__LAST = 6;
+        MH_PRE4     = 2, //Prep/Normalize (examine raw x/y traits)
+        MH_PRE3     = 3, //Prep/Normalize (examine raw x/y traits)
+        MH_PRE2     = 4, //Prep/Normalize (translate/normalize x/y)
+        MH_PRE1     = 5, //Prep/Normalize (finalize iteration params)
+        MH_RUN1     = 6, //1st-half DDR-write; next-iteration work-ahead
+        MH_RUN2     = 7; //2nd-half DDR-write; iteration finalize/advance
+    localparam MH__LAST = MH_RUN2;
     localparam [MH__LAST:0] MS__DEAD = 0, //Initial or fault (requires reset)
         MS_RSET = (1<<MH_RSET), MS_IDLE = (1<<MH_IDLE),
-        MS_PRE3 = (1<<MH_PRE3), MS_PRE2 = (1<<MH_PRE2), MS_PRE1 = (1<<MH_PRE1),
+        MS_PRE4 = (1<<MH_PRE4), MS_PRE3 = (1<<MH_PRE3),
+        MS_PRE2 = (1<<MH_PRE2), MS_PRE1 = (1<<MH_PRE1),
         MS_RUN1 = (1<<MH_RUN1), MS_RUN2 = (1<<MH_RUN2);
 
 //Key State Registers
     reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
-    reg  rst_r;
-    reg  [ 9:0] y,x, b0,a0, b1,a1;
+    reg  [ 9:0] a0,b0, a1,b1, a,b; //(a0,b0) & (a,b) redundant; kept for debug
 
 //Key Live-Wires & Assigns
-    wire pastA = (a0 > a1);
-    assign LE_ready = (cs_M[MH_IDLE]);
+reg  MODE_incB, MODE_tran, MODE_flip, decrX, decrY;
+reg  [15:0] error, tempA,tempB, ADJ_negB,ADJ_posA;
+wire [15:0] difXu = ((decrX) ? x0 : x1) - ((decrX) ? x1 : x0); //Arrange >= 0 *in advance*
+wire [15:0] difYu = ((decrY) ? y0 : y1) - ((decrX) ? y1 : y0); //Arrange >= 0 *in advance*
+wire longerY = (difYu > difXu); //TODO:Consider algebraic re-grouping???
+wire passingA = (a >= a1);
+wire [ 9:0] x,y;
+assign {x,y} = (MODE_tran) ? {b,a} : {a,b};
+assign LE_ready = (cs_M[MH_IDLE]);
+//TODO:Segregate combinational (compare/adder/etc.) vs. sequential ("enables")
+
 
 //Master-State machine Next-States
     always @(*) begin
         ns_M = cs_M; //Default: Hold prior state if UNASSIGNED
         case (cs_M) //TODO:Create MM_xyz "masks" & use Parallel-Case approach
             MS_RSET: if (!rst_r) ns_M = MS_IDLE; //Come out with a full cycle
-            MS_IDLE: if (LE_trigger) ns_M = MS_PRE3;
+            MS_IDLE: if (LE_trigger) ns_M = MS_PRE4;
+            MS_PRE4: ns_M = MS_PRE3;
             MS_PRE3: ns_M = MS_PRE2;
             MS_PRE2: ns_M = MS_PRE1;
             MS_PRE1: ns_M = MS_RUN1; //TODO:Check non-draw
             MS_RUN1: if (!wdf_full && !af_full) ns_M = MS_RUN2;
-            MS_RUN2: if (!wdf_full) ns_M = (pastA) ? MS_RSET : MS_RUN1;
+            MS_RUN2: if (!wdf_full) ns_M = (passingA) ? MS_RSET : MS_RUN1;
             default: ns_M = MS__DEAD;
         endcase
     end
 
-reg  MODE_incY;
-/*
-    wire [15:0] errX = (x1 - x0); //Error addend; (assumed >= 0)
-    wire [15:0] errY = (incY) ? (y1 - y0) : (y0 - y1); //Error subtracted portion (arrange >= 0)
-    wire [15:0] offY = (incY) ? 1 : 0xFFFFFFFF; //Y addend fake-signed (pos/"neg" one)
-    wire [15:0] negY = (~errY + 1); //Error addend fake-signed (arrange "<=" 0)
-    wire [15:0] posX = (errX + negY); //Error addend signed, net after errX/2 (guaranteed >= 0)
-*/
-
 //Synchronous transistions & data-path
     always @(posedge clk) begin
-        rst_r <= rst;
         if (rst) cs_M <= MS_RSET; else cs_M <= ns_M;
+
+//TODO:Set registers to "don't care" when possible (allow re-use/optimizations)
+        case (cs_M)
+            MS_RSET: begin
+                {a,b} <= 0; //Not much important about reset, better to not-care!
+            end
+            MS_IDLE: if (LE_trigger) begin
+                //Modest comparator delay imposed on predecessor as "setup" time,
+                {decrX,decrY} <= {(x1 < x0),(y1 < y0)}; // the dude must abide!
+//TODO:Apply x/y CLIP or at least detect when needed & apply next
+            end
+            MS_PRE4: begin
+                {tempA,tempB} <= {difXu,difYu};
+                MODE_tran <= (longerY); //Translate axes to step along LONGER one
+                MODE_flip <= (longerY) ? decrY : decrX; //Stash for debug
+            end
+            MS_PRE3: begin
+                case ({MODE_tran, MODE_flip}) //Flat-MUXIE (x,y)'s -=> (a,b)'s
+                    2'b0_0: {a0,b0, a1,b1, MODE_incB} <= {x0,y0, x1,y1, !decrY};
+                    2'b0_1: {a0,b0, a1,b1, MODE_incB} <= {x1,y1, x0,y0,  decrY};
+                    2'b1_0: {a0,b0, a1,b1, MODE_incB} <= {y0,x0, y1,x1, !decrX};
+                    2'b1_1: {a0,b0, a1,b1, MODE_incB} <= {y1,x1, y0,x0,  decrX};
+                endcase //Case is fully covered
+            end
+            MS_PRE2: begin
+                ADJ_negB  <= (MODE_incB) ? (b0 - b1) : (b1 - b0); //Arrange <= 0
+                tempA     <= (a1 - a0); //Guaranteed >= 0
+            end
+            MS_PRE1: begin
+                ADJ_posA  <= (tempA + ADJ_negB);
+                error     <= (tempA >> 1);
+                {a,b}     <= {a0,b0};
+            end
+            MS_RUN1: if (!wdf_full && !af_full) begin
+                tempA     <= error + ADJ_posA;
+                tempB     <= error + ADJ_negB;
+            end
+            MS_RUN2: if (!wdf_full) begin
+                a         <= (a+1); //up-counter w/enable
+                b         <= (tempB[15]) ? ((MODE_incB)?(b+1):(b-1)) : b; //up/down w/enable
+                error     <= (tempB[15]) ? tempA : tempB;
+            end
+        endcase
+
     end
 
 
-    always @(posedge clk) begin
-//TODO:These become "nextXYZ" signals instead (with don't cares)!
-        if (LE_ready && LE_trigger) begin //Grab-ahead if simultaneous set & trigger
-            a0 <= (LE_x0_valid) ? LE_point : x0;
-            a1 <= (LE_x1_valid) ? LE_point : x1;
-            b0 <= (LE_y0_valid) ? LE_point : y0;
-            b1 <= (LE_y1_valid) ? LE_point : y1;
-//$strobe("L:TRIG (%0d,%0d) (%0d,%0d)", a0,b0, a1,b1);
-//TODO:Make new PREP stage for "steep" pre-calcs
-        end else if (cs_M[MH_PRE3]) begin
-            //TODO:Normalize to increasing a0 (swap a0/b0 & a1/b1)
-            //TODO:Apply steep (swap x & y) simultaneous with steep (4 possibilities)
-            {a0,a1} <= {a0,a1};
-            {b0,b1} <= {b0,b1};
-            MODE_incY <= (b1 > b0) ? 1'b1 : 1'b0;
-//$strobe("L:PREP (%0d,%0d) (%0d,%0d)", a0,b0, a1,b1);
-        end else if (cs_M[MH_RUN1] && !wdf_full && !af_full) begin
-            a0 <= (a0+1);
-            b0 <= (MODE_incY) ? (b0+1) : (b0-1);
-//$strobe("L:INC (a0=%0d)", a0);
-        end
-
-        if (cs_M[MH_RSET]) begin
-            {x,y} <= 0;
-        end else if ((cs_M[MH_PRE3]) || (cs_M[MH_RUN2] && !wdf_full)) begin
-            {x,y} <= {a0,b0};
-//$strobe("L:ADV (x=%0d)", x);
-        end
-    end
-
-
-//Drive DDR lines to write 1 pixel at-a-time
 //TODO:Write "run" of pixels instead
-    reg [3:0] maskW;
-    wire [31:0] head_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //"Byte" address
-    assign af_addr_din = {6'b000000, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
-    assign af_wr_en  = (cs_M[MH_RUN1]);
+//Drive DDR lines to write 1 pixel at-a-time
+    reg  [3:0] maskW;
+    wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
+
+    assign af_addr_din  = {6'b000000, cpu_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
+    assign af_wr_en     = (cs_M[MH_RUN1]);
     assign wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} };
-    assign wdf_din = {4{color}}; //Replicate same color on all 4 pixels of both writes
-    assign wdf_wr_en = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
+    assign wdf_din      = {4{color}}; //Replicate same color on all 4 pixels of both writes
+    assign wdf_wr_en    = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
 
     always @(*) begin
         case ({cs_M[MH_RUN1],cs_M[MH_RUN2], x[2:0]})
@@ -163,10 +195,12 @@ reg  MODE_incY;
 
 
 //synthesis translate_off
+/*
     initial $monitor("RT:%b/%b C/N:%b/%b (%0d,%0d)->(%0d,%0d)/(%0d,%0d) %h/%b (%h) W%b/%b",
                      rst,LE_trigger, cs_M,ns_M, a0,b0, a1,b1, x,y,
                      af_addr_din, maskW, wdf_mask_din,
                      af_wr_en, wdf_wr_en);
+*/
     always @(posedge clk) begin
         if (LE_ready && LE_trigger) begin
             #1;
@@ -182,32 +216,6 @@ endmodule
 
 /** ALORGITHM CORE ("c" model code) **
 
-// SIMPLIFIED: STEEP & SWAP REMOVED
-void line_UI32( const uint16_t x0, const uint16_t y0, const uint16_t x1, const uint16_t y1) {
-    const char incY = (y1 > y0);
-    const uint32_t errX = (x1 - x0); //Error addend; (assumed >= 0)
-    const uint32_t errY = (incY) ? (y1 - y0) : (y0 - y1); //Error subtracted portion (arrange >= 0)
-    const uint32_t offY = (incY) ? 1 : 0xFFFFFFFF; //Y addend fake-signed (pos/"neg" one)
-    const uint32_t negY = (~errY + 1); //Error addend fake-signed (arrange "<=" 0)
-    const uint32_t posX = (errX + negY); //Error addend signed, net after errX/2 (guaranteed >= 0)
-
-    uint32_t error = (errX >> 1); //error is s30.1 fixed-point signed (guaranteed >= 0)
-    uint16_t x = x0, y = y0;
-    while (x <= x1) {
-        //FORK (parallel)
-        const uint32_t errorA = error + negY;
-        const uint32_t errorB = error + posX;
-        const uint32_t nextX = x + 1;
-        printf("%4d %4d\n", x, y);
-        //JOIN
-        //FORK (parallel)
-        error = (errorA & 0x80000000) ? errorB : errorA;
-        if (errorA & 0x80000000) y += offY;
-        x = nextX;
-        //JOIN
-    }
-}
-
 // COMPLETE: UNSIGNED only, isolated PREP/ITER stages, identified PARALLEL blocks
 void swline(
     gframe_pv const fp, uint32_t const color,
@@ -219,10 +227,10 @@ void swline(
     BOOL const decrX = (difXs < 0), decrY = (difYs < 0);
     uint16_t const difXu = (decrX) ? -difXs : difXs;
     uint16_t const difYu = (decrY) ? -difYs : difYs;
-    BOOL const spin = (difYu > difXu) ? 1 : 0;
-    BOOL const flip = (spin) ? decrY : decrX;
+    BOOL const tran = (difYu > difXu) ? 1 : 0;
+    BOOL const flip = (tran) ? decrY : decrX;
     uint16_t a0, a1, b0, b1;
-    if (spin) {
+    if (tran) {
         if (flip) {
             a0 = y1; b0 = x1; //swap_u16(&x0, &y0) & swap_u16(&a0, &a1);
             a1 = y0; b1 = x0; //swap_u16(&x1, &y1) & swap_u16(&b0, &b1);
@@ -241,8 +249,6 @@ void swline(
     }
     BOOL const incB = (b1 > b0);
     uint32_t const offB = (incB) ? 1 : 0xFFFFFFFF; //B addend fake-signed (+/- 1)
-    //uint32_t const errB = (incB) ? (b1 - b0) : (b0 - b1); //Error subtracted portion (arrange >= 0)
-    //negB = (~errB + 1);
     uint32_t const negB = (incB) ? (b0 - b1) : (b1 - b0); //Error addend fake-signed (arrange "<=" 0)
     uint32_t const errA = (a1 - a0); //Error addend; (guaranteed >= 0)
     uint32_t const posA = (errA + negB); //Error addend signed, net after errA/2 (guaranteed >= 0)
@@ -254,8 +260,8 @@ void swline(
         uint32_t const nextB = b + offB;
         uint32_t const errorA = error + posA;
         uint32_t const errorB = error + negB;
-        uint16_t x = ((spin) ? b : a);
-        uint16_t y = ((spin) ? a : b);
+        uint16_t x = ((tran) ? b : a);
+        uint16_t y = ((tran) ? a : b);
         swpixel(fp,color, x,y);
         //JOIN:iter-1
         //FORK:iter-2

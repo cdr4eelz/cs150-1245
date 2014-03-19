@@ -1,5 +1,7 @@
 #!/bin/bash -euv
 
+ACTION="${A:-b}"
+
 LOG="._mq0.log"
 LOGP="._mq1.log"
 COLORIT=`which "colorit" 2>/dev/null || echo "cat"`
@@ -8,13 +10,16 @@ MV=`which /bin/mv 2>/dev/null || which mv 2>/dev/null || echo "mv"`
 
 echo "LOG:${LOG}  COLORIT:${COLORIT}"
 pwd
-make clean
+if [ "${ACTION}" == "v" ]; then
+  cat "${LOGP}" |${COLORIT} |less
+  exit 0
+elif [ "${ACTION}" == "b" ]; then
+  make clean
+  ${RM} -rf "${LOGP}"
+  [ -e "${LOG}" ] && ${MV} "${LOG}" "${LOGP}"
+  ${RM} -rf "${LOG}"
+  reset
+  echo "LOG:${LOG}  COLORIT:${COLORIT}"
+  make "$@" 2>&1 |tee "${LOG}" |${COLORIT}
+fi
 
-${RM} -rf "${LOGP}"
-[ -e "${LOG}" ] && ${MV} "${LOG}" "${LOGP}"
-${RM} -rf "${LOG}"
-
-reset
-echo "LOG:${LOG}  COLORIT:${COLORIT}"
-
-make "$@" 2>&1 |tee "${LOG}" |${COLORIT}

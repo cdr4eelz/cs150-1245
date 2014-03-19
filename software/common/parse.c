@@ -7,47 +7,70 @@
 #define LOCALBUF_LEN 32
 
 bcmdspec_t const bcmd_table[] = {
-    {"file",      BC_FILE,      "?",        0},
-    {"jal",       BC_JAL,       "a",        0},
-    {"lw",        BC_LW,        "a",        0},
-    {"lhu",       BC_LHU,       "a",        0},
-    {"lbu",       BC_LBU,       "a",        0},
-    {"sw",        BC_SW,        "wa",       0},
-    {"sh",        BC_SH,        "ha",       0},
-    {"sb",        BC_SB,        "ba",       0},
+    {"file",        BC_FILE,      0}, // "?"
+    {"jal",         BC_JAL,       0}, // "a"
+    {"l" "w",       BC_LW,        0}, // "a"
+    {"l" "hu",       BC_LHU,       0}, // "a"
+    {"l" "bu",       BC_LBU,       0}, // "a"
+    {"s" "w",       BC_SW,        0}, // "wa"
+    {"s" "h",        BC_SH,        0}, // "ha"
+    {"s" "b",        BC_SB,        0}, // "ba"
 
-    {"dump",      BC_DUMP,      "aw",       0},
-    {"copy",      BC_COPY,      "aaw",      0},
+    {"dump",        BC_DUMP,      0}, // "aw"
+    {"copy",        BC_COPY,      0}, // "aaw"
 
-    {"gs",        BC_GS,        "",         0},
-    {"cc",        BC_CC,        "w",        0},
-    {"sc",        BC_SC,        "w",        0},
-    {"gc",        BC_GC,        "w",        0},
+    {"gstat",       BC_GSTAT,     0}, // ""
+    {"gcode",       BC_GCODE,    0}, // "w"
+    {"fr",          BC_FRAME,     7}, // "w"
+    {"pf" "fr",       BC_FRAME,     4}, // "w"
+    {"hw" "fr",       BC_FRAME,     2}, // "w"
+    {"sw" "fr",       BC_FRAME,     1}, // "w"
 
-    {"ff",        BC_FF,        "w",        0},
-    {"pf",        BC_PF,        "w",        0},
-    {"gf",        BC_GF,        "w",        0},
-    {"sf",        BC_SF,        "w",        0},
-    {"gp",        BC_GP,        "w",        0},
+    {"color",       BC_COLOR,     3}, // "w"
+    {"hw" "color",    BC_COLOR,     2}, // "w"
+    {"sw" "color",    BC_COLOR,     1}, // "w"
+    {"fill",        BC_FILL,      0}, // ""
+    {"hw" "fill",     BC_FILL,      2}, // ""
+    {"sw" "fill",     BC_FILL,      1}, // ""
+    {"line",        BC_LINE,      0}, // "hhhh"
+    {"hw" "line",     BC_LINE,      2}, // "hhhh"
+    {"sw" "line",     BC_LINE,      1}, // "hhhh"
+    {"pixl",        BC_PIXL,      0}, // "hh"
+    {"hw" "pixl",     BC_PIXL,      2}, // "hh"
+    {"sw" "pixl",     BC_PIXL,      1}, // "hh"
+    {"elip",        BC_ELIP,      0}, // "hhhh"
+    {"hw" "elip",     BC_ELIP,      2}, // "hhhh"
+    {"sw" "elip",     BC_ELIP,      1}, // "hhhh"
+    {"circ",        BC_CIRC,      0}, // "hhh"
 
-    {"fill",      BC_FILL,      "",         0},
-    {"line",      BC_LINE,      "hhhh",     0},
-    {"pixl",      BC_PIXL,      "hh",       0},
-    {"elip",      BC_ELIP,      "hhhh",     0},
-    {"circ",      BC_CIRC,      "hhh",      0},
-
-    {"",          BC_BLANK,     "",         0},
-    {NULL,        BC_UNKNOWN,   "",         0xFFFFFFFF}
+    {"?",           BC_HELP,      0},
+    {"?",           BC_UNKNOWN,   0xFFFF},
+    {"-",           BC_BLANK,     0xFFFF}
 };
+
+const int8_t const DEF_DELIMS[] = " \x0d",
+                    *ERRS_ALIGN = "*ALIGN*";
 
 bcmdspec_t* token_cmdspec(const int8_t* const input)
 {
+    //TODO:Filter odd chars (whitespace)???
     bcmdspec_t *bcs;
-    for (bcs = bcmd_table ; (bcs->flags != 0xFFFFFFFF) ; bcs++) {
+
+    for (bcs = bcmd_table ; (bcs->flags != 0xFFFF) ; bcs++) {
         if (strcmp150(input, bcs->token) == 0) break;
     }
-    //TODO:Use ARGS-LIST in Command-Table
     return bcs;
+}
+
+void bufw_cmdspec( void )
+{
+    bcmdspec_t *bcs;
+
+    bufw_newline();
+    for (bcs = bcmd_table ; (bcs->flags != 0xFFFF) ; bcs++) {
+        uwrite_int8s(bcs->token); uwrite_int8(' ');
+    }
+    bufw_newline();
 }
 
 int8_t* read_n(int8_t* const bufptr, uint32_t const numBytesBeforeNull)

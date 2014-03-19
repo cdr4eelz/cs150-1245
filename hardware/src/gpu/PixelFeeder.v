@@ -3,11 +3,12 @@
 `include "gpcommands.vh"
 
 module PixelFeeder #(
-    parameter CLOCK_HZ = 50_000_000,
-    parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600,
-    parameter PIXFO_CAPACITY = (2048/2), //max pixel_fifo "chunk" capacity (adjust to 256-bit units)
-    parameter PIXFO_STARTUP = PIXFO_CAPACITY - 100, //fake source until pixel_fifo is this full
-    parameter PIXFO_TARGET = PIXFO_CAPACITY - 5, //1 "af" req => 2 "rdf" 128b resp => 8 pixfo 32b "rd"
+    parameter DVI_CLOCK_HZ=50_000_000,
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
+    parameter LITTLEWORDIAN=0, //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter PIXFO_CAPACITY=(2048/2), //max pixel_fifo "chunk" capacity (adjust to 256-bit units)
+    parameter PIXFO_STARTUP =PIXFO_CAPACITY - 100, //fake source until pixel_fifo is this full
+    parameter PIXFO_TARGET  =PIXFO_CAPACITY - 5, //1 "af" req => 2 "rdf" 128b resp => 8 pixfo 32b "rd"
     parameter COLT45_TESTPAT=0 // 1..3 are non-DDR test feeds of various sorts
 )(
 //System:
@@ -255,7 +256,7 @@ end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
 end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
 // *** DIRECTLY inject simple pattern gen from FALL-2013-CP1 ***
     PatternGenerator #(
-        .CLOCK_HZ(CLOCK_HZ), //DVI Clock
+        .CLOCK_HZ(DVI_CLOCK_HZ), //DVI Clock
         .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600),
         .SCENES_PER_SEC(1)
     ) patgen (

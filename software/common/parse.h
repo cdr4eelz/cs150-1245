@@ -3,29 +3,23 @@
 
 #include "types.h"
 
-#define DEF_DELIMS " \x0d"
-#define ERRS_ALIGN "*ALIGN*"
-
 typedef enum bcmd_e {
-    BC_UNKNOWN, BC_BLANK,
-    BC_FILE, BC_JAL,
+    BC_UNKNOWN, BC_BLANK, BC_HELP,
+    BC_FILE, BC_JAL, BC_DUMP, BC_COPY,
     BC_LW, BC_LHU, BC_LBU,
-    BC_SW, BC_SH, BC_SB,
-    BC_DUMP, BC_COPY,
-    BC_GS, BC_SC, BC_GC, BC_CC,
-    BC_FF, BC_PF, BC_GF, BC_SF, BC_GP,
-    BC_ARGB, BC_FILL, BC_LINE, BC_PIXL, BC_ELIP,
-    BC_CIRC
+    BC_SW, BC_SH,  BC_SB,
+    BC_GSTAT, BC_GCODE, BC_FRAME, BC_COLOR,
+    BC_FILL, BC_LINE, BC_PIXL, BC_ELIP, BC_CIRC
 } bcmd_t;
 
 typedef struct bcmdspec_s {
     const int8_t *token;
-    bcmd_t cmd;
-    const int8_t *argt;
-    uint32_t flags;
+    bcmd_t        cmd;
+    uint16_t      flags;
 } const bcmdspec_t;
 
 extern bcmdspec_t const cmd_table[];
+extern const int8_t const DEF_DELIMS[], *ERRS_ALIGN;
 
 typedef enum radixize_e {
     RZ_HEX32, RZ_HEX16, RZ_HEX8,
@@ -36,6 +30,7 @@ int8_t* read_n(int8_t* bufptr, uint32_t numBytesBeforeNull);
 int8_t* read_token(int8_t* bufptr, uint32_t buflen,
                    const int8_t* delimstr); //NULL to use DEF_DELIMS
 bcmdspec_t* token_cmdspec(const int8_t* bufptr);
+void bufw_cmdspec( void );
 
 void store(uint32_t *pDST, uint32_t numBytes);
 const uint32_t* dump_block(const uint32_t* pSRC, uint8_t numWords);

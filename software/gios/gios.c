@@ -7,11 +7,11 @@
 
 #define BUFFER_LEN (0x00000080) //128-bytes
 
-#define VERSION_I (6)
-#define VERSION_C ('0' + VERSION_I)
-#define VERSION_S STIFIE(VERSION_I)
+#define VERSION_I 9
+#define VERSION_C ('0' + VERSION_I) //Turn into '<version>' char
+#define VERSION_S STIFIE(VERSION_I) //Turn into "<version>" const string
 #define STIFIE(Z) STIFIY(Z) //Stringify expanded macro value of Z
-#define STIFIY(Z) #Z //Stringify argument Z
+#define STIFIY(z) #z        //Stringify argument z
 
 #define KILLR 0xFFFFFFFF
 
@@ -26,8 +26,8 @@ int main(void)
     void* stash_address = (void*)0x10000000;
     bcmdspec_t* priorbcs = NULL;
 
-    color_t sw_argb = (color_t)0x4044FFAA;
-    color_t gp_argb = (color_t)0xC044AAFF;
+    color_t sw_color = (color_t)0x4044FFAA;
+    color_t hw_color = (color_t)0xC044AAFF;
     gframe_pv sw_frame = STD_FRAME1;
     GP_FRAME = STD_FRAME1;
 
@@ -36,13 +36,19 @@ int main(void)
         int8_t* input = read_token(buffer, BUFFER_LEN, NULL);
         bcmdspec_t* bcs = token_cmdspec(input);
         bcmd_t cmd = bcs->cmd;
+        uint16_t flags = bcs->flags;
+        uint16_t gflag = flags;
+        if (!gflag) {
+            if (hw_color!=KILLR) gflag |= 2;
+            if (sw_color!=KILLR) gflag |= 1;
+        }
 
         if ((cmd==BC_BLANK) && (priorbcs) && (priorbcs->cmd==BC_DUMP)) {
             stash_address = (void*)dump_block(stash_address, 16);
             break;
         }
 
-        switch (cmd) { //Apply -fjump-tables if you don't have a GOT!!!
+        switch (cmd) { //Use -fno-jump-tables or ensure GOT&GP in LD-script!!!
             case BC_FILE: {
                 store(tok_addr(&stash_address), tok_dec32u());
             } break;
@@ -110,84 +116,75 @@ int main(void)
             } break;
 
         //Graphics commands:
-            case BC_GS: {
-                const gstate_tp state = GP_STATE;
+            case BC_GSTAT: {
+                const gstate_tp stat = GP_STATE;
 
-                bufw_hex32u( state.u32 );
-                uwrite_int8s(" pf#"); bufw_hex8u( state.f.pf_feedframe );
-                uwrite_int8( (state.f.video_ready)  ? 'R' : 'r');
-                uwrite_int8( (state.f.video_valid)  ? 'V' : 'v');
-                uwrite_int8s(" gf#"); bufw_hex8u( state.f.gp_procframe );
-                uwrite_int8( (state.f.line_ready)   ? 'L' : 'l');
-                uwrite_int8( (state.f.filler_ready) ? 'F' : 'f');
-                uwrite_int8( (state.f.gp_ready)     ? 'G' : 'g');
-                uwrite_int8s(" sf:"); bufw_hex32u( (uint32_t)sw_frame );
+                bufw_hex32u( stat.u32 );
+                uwrite_int8s(" PF#"); bufw_hex8u( stat.f.pf_feedframe );
+                uwrite_int8( (stat.f.video_ready)  ? 'R' : 'r');
+                uwrite_int8( (stat.f.video_valid)  ? 'V' : 'v');
+                uwrite_int8s(" HW#"); bufw_hex8u( stat.f.gp_procframe );
+                uwrite_int8( (stat.f.line_ready)   ? 'L' : 'l');
+                uwrite_int8( (stat.f.filler_ready) ? 'F' : 'f');
+                uwrite_int8( (stat.f.gp_ready)     ? 'G' : 'g');
+                uwrite_int8s(" SW:"); bufw_hex32u( (uint32_t)sw_frame );
                 bufw_newline();
-                uwrite_int8s(" gc:"); bufw_hex32u( (uint32_t)gp_argb );
-                uwrite_int8s(" sc:"); bufw_hex32u( (uint32_t)sw_argb );
+                uwrite_int8s(" hw:"); bufw_hex32u( (uint32_t)hw_color );
+                uwrite_int8s(" sw:"); bufw_hex32u( (uint32_t)sw_color );
                 bufw_newline();
             } break;
-            case BC_CC: case BC_SC: case BC_GC: {
-                color_t color = (color_t)tok_hex32u();
-                if (cmd != BC_GC) sw_argb = color;
-                if (cmd != BC_SC) gp_argb = color;
-            } break;
-
-            case BC_FF: {
-                gframe_pv frame = FRAME_PTR(tok_hex32u());
-                PF_FRAME = frame;
-                GP_FRAME = frame;
-                sw_frame = frame;
-            } break;
-            case BC_PF: {
-                //PF_FRAME = FRAME_PTR(tok_hex32u());
-                PF_FRAME = (gframe_pv)tok_hex32u(); //Test hw frame# conversion
-            } break;
-            case BC_GF: {
-                //GP_FRAME = FRAME_PTR(tok_hex32u());
-                GP_FRAME = (gframe_pv)tok_hex32u(); //Test hw frame# conversion
-            } break;
-            case BC_SF: {
-                sw_frame = FRAME_PTR(tok_hex32u());
-            } break;
-            case BC_GP: {
+            case BC_GCODE: {
                 GP_GCODE = tok_addr(&stash_address);
             } break;
+            case BC_FRAME: {
+                gframe_pv frame = tok_addr(&stash_address);
+                if (flags & 0x04) PF_FRAME = frame;         //Test hw frame# conversion
+                frame = FRAME_PTR(frame); //Software converted frame#
+                if (flags & 0x02) GP_FRAME = frame;
+                if (flags & 0x01) sw_frame = frame;
+            } break;
 
+            case BC_COLOR: {
+                color_t color = (color_t)tok_hex32u();
+                if (flags & 0x02) hw_color = color;
+                if (flags & 0x01) sw_color = color;
+            } break;
             case BC_FILL: {
-                if (gp_argb!=KILLR) hwfill(gp_argb);
-                if (sw_argb!=KILLR) swfill(sw_frame, sw_argb);
+                if (gflag & 0x02) hwfill(hw_color);
+                if (gflag & 0x01) swfill(sw_frame, sw_color);
             } break;
             case BC_LINE: {
                 uint16_t x0           = tok_dec16u();
                 uint16_t y0           = tok_dec16u();
                 uint16_t x1           = tok_dec16u();
                 uint16_t y1           = tok_dec16u();
-                if (gp_argb!=KILLR) hwline(gp_argb, x0, y0, x1, y1);
-                if (sw_argb!=KILLR) swline(sw_frame, sw_argb, x0, y0, x1, y1);
+                if (gflag & 0x02) hwline(hw_color, x0,y0, x1,y1);
+                if (gflag & 0x01) swline(sw_frame, sw_color, x0,y0, x1,y1);
             } break;
             case BC_PIXL: {
                 uint16_t x            = tok_dec16u();
                 uint16_t y            = tok_dec16u();
-                if (gp_argb!=KILLR) hwpixel(gp_argb, x, y);
-                if (sw_argb!=KILLR) swpixel(sw_frame, sw_argb, x, y);
+                if (gflag & 0x02) hwpixel(hw_color, x,y);
+                if (gflag & 0x01) swpixel(sw_frame, sw_color, x,y);
             } break;
             case BC_ELIP: {
                 uint16_t xc           = tok_dec16u();
                 uint16_t yc           = tok_dec16u();
                 uint16_t ox           = tok_dec16u();
                 uint16_t oy           = tok_dec16u();
-                if (gp_argb!=KILLR) hwelipse(gp_argb, xc, yc, ox, oy);
-                if (sw_argb!=KILLR) swelipse(sw_frame, sw_argb, xc, yc, ox, oy);
+                if (gflag & 0x02) hwelipse(hw_color, xc,yc, ox,oy);
+                if (gflag & 0x01) swelipse(sw_frame, sw_color, xc,yc, ox,oy);
             } break;
             case BC_CIRC: {
-                uint16_t x            = tok_dec16u();
-                uint16_t y            = tok_dec16u();
-                uint16_t r            = tok_dec16u();
-                if (sw_argb!=KILLR) swcircle(sw_frame, sw_argb, x, y, r);
+                uint16_t xc           = tok_dec16u();
+                uint16_t yc           = tok_dec16u();
+                uint16_t rr           = tok_dec16u();
+                if (gflag & 0x02) hwelipse(hw_color, xc,yc, rr,rr);
+                if (gflag & 0x01) swcircle(sw_frame, sw_color, xc,yc, rr);
             } break;
 
-            BC_BLANK: {
+            BC_HELP: {
+                bufw_cmdspec();
             } break;
             BC_UNKNOWN: {
                 uwrite_int8('?');
@@ -195,6 +192,8 @@ int main(void)
             default: { //UNKNOWN: "??" UNIMPLEMENTED/bad-case: "?"
                 uwrite_int8('?');
                 uwrite_int8s(input);
+            } //FALLTHROUGH
+            BC_BLANK: {
                 bufw_newline();
             } break;
         }

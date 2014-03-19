@@ -168,9 +168,9 @@ output [31:0] DBG_MEM150
 
     assign graphics_status = {
         2'b00, pf_feedframe[5:0],
-        6'b0000_00, video_ready, video_valid, //TODO:Sample/count recent activity instead
-        2'b00, gp_procframe[5:0],
-        5'b0000_0, line_ready, filler_ready, gp_ready
+        8'b0000_0000, //Maybe for overlay stuff later
+        2'b00, gp_procframe[5:0], //TODO:Count video_xyz activity, not snapshot
+        video_ready, video_valid, 3'b00_0, line_ready, filler_ready, gp_ready
     };
 
 assign DBG_MEM150 = 0;

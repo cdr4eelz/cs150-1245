@@ -107,12 +107,12 @@ reg ELOG_errors = 0;
         rst = 1'b0;
         #(Cycle);
 
-$display("GraphicsProcessor: Fake memory & engines...");
+        $display("GraphicsProcessor: Fake memory & engines...");
         execGP( 32'h0000_4000, 1 );
 
         @(posedge Clock);
         while (!ENGINES_ready) #(Cycle); // GP should have waited already
-$display("GraphicsProcessor: Done.");
+        $display("GraphicsProcessor: Done.");
         ELOG_TALLY;
         $finish();
     end
@@ -121,25 +121,25 @@ $display("GraphicsProcessor: Done.");
         input [31:0] codebase;
         input [31:0] framebase;
     begin
-        @(posedge Clock);
-$display("gp-TB: Wait...");
+        @(negedge Clock);
+        $display("gp-TB: Wait...");
         while (!GP_ready) #(Cycle); // wait for GP_ready
         GP_code = codebase;
         GP_frame = framebase;
         GP_valid = 1'b1;
-$strobe("gp-TB: code=%h  frame=%h", GP_code, GP_frame);
+        $strobe("gp-TB: code=%h  frame=%h", GP_code, GP_frame);
         #(Cycle);
         GP_valid = 1'b0;
         GP_code = 32'bz;
         GP_frame = 32'bz;
-$display("gp-TB: procframe==%h  interrupt==%b", GP_procframe, GP_interrupt);
+        $display("gp-TB: procframe==%h  interrupt==%b", GP_procframe, GP_interrupt);
         while (!GP_ready) begin
 //            if (wdf_wr_en && wdf_mask_din != 16'hFFFF) begin
 //                $display("gp-TB: ...", x, y);
 //            end
             #(Cycle);
         end
-$display("gp-TB: Done.");
+        $display("gp-TB: Done.");
     end endtask
 
 
