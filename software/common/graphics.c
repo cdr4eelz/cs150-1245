@@ -1,39 +1,49 @@
 #include "graphics.h"
 
-// *** HARDWARE IMPLEMENTATION (Just single GPCODE commands in GPTEMP_PTR) ***
+// *** UTILITY ROUTINES ***
 
-uint32_t* hw_OpRGB_PP_S(const uint8_t op, const uint32_t color,
-                        const uint32_t p0, const uint32_t p1);
+gframe_pv std_frame(uint32_t const fn_or_fp) {
+    uint32_t fp = (fn_or_fp & (FPMASK));
+    if (!fp) fp = (0x10000000 | ((fn_or_fp & (FNMASK)) << (FSHIFT)));
+    return (gframe_pv)fp;
+}
 
-void hwfill(const uint32_t color)
+
+
+// *** HARDWARE IMPLEMENTATION (Just single GPCODE command in GPTEMP_PTR) ***
+
+uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
+                        uint32_t const p0, uint32_t const p1);
+
+void hwfill(uint32_t const color)
 {
     hw_OpRGB_PP_S(GOP_FILL, color, 0xFFFFFFFF, 0xFFFFFFFF);
 }
-void hwline(const uint32_t color,
-            const uint16_t x0, const uint16_t y0,
-            const uint16_t x1, const uint16_t y1)
+void hwline(uint32_t const color,
+            uint16_t const x0, uint16_t const y0,
+            uint16_t const x1, uint16_t const y1)
 {
     hw_OpRGB_PP_S(GOP_LINE, color,
                   CMD_point(x0,y0),
                   CMD_point(x1,y1));
 }
-void hwpixel(const uint32_t color,
-             const uint16_t x, const uint16_t y)
+void hwpixel(uint32_t const color,
+             uint16_t const x, uint16_t const y)
 {
     hw_OpRGB_PP_S(GOP_PIXEL, color,
                   CMD_point(x,y), 0xFFFFFFFF);
 }
-void hwelipse(const uint32_t color,
-              const uint16_t xc, const uint16_t yc,
-              const uint16_t rx, const uint16_t ry)
+void hwelipse(uint32_t const color,
+              uint16_t const xc, uint16_t const yc,
+              uint16_t const rx, uint16_t const ry)
 {
     hw_OpRGB_PP_S(GOP_ELIPSE, color,
                   CMD_point(xc,yc),
                   CMD_point(rx,ry));
 }
 
-uint32_t* hw_OpRGB_PP_S(const uint8_t op, const uint32_t color,
-                        const uint32_t p0, const uint32_t p1)
+uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
+                        uint32_t const p0, uint32_t const p1)
 {
     uint32_t* pINST = GPTEMP_PTR;
     *pINST++ = CMD_rgb(op, color);
@@ -48,7 +58,7 @@ uint32_t* hw_OpRGB_PP_S(const uint8_t op, const uint32_t color,
 
 // *** SOFTWARE IMPLEMENTATIONS ***
 
-void swfill(const gframe_pv fp, const uint32_t color)
+void swfill(gframe_pv const fp, uint32_t const color)
 {
     pixel_pv pPIX = (pixel_pv)fp; //Start at pointer to frame base address
     for (int nROW = 0; nROW < ROW_SIZEP; nROW++) {
@@ -67,56 +77,74 @@ void swfill(const gframe_pv fp, const uint32_t color)
     }
 }
 
-// Based on wikipedia implementation
-void swline(const gframe_pv fp, const uint32_t color,
-            const uint16_t x0, const uint16_t y0,
-            const uint16_t x1, const uint16_t y1)
+// UNSIGNED only, isolated PREP/ITER stages, identified PARALLEL blocks
+void swline(
+    gframe_pv const fp, uint32_t const color,
+    uint16_t const x0, uint16_t const y0,
+    uint16_t const x1, uint16_t const y1)
 {
-    const char steep = (ABSDIF(y1,y0) > ABSDIF(x1,x0)) ? 1 : 0;
-    uint16_t a0, a1, b0, b1, tmp;
-    if (steep) {
-        a0 = y0; b0 = x0; //swap_u16(&x0, &y0);
-        a1 = y1; b1 = x1; //swap_u16(&x1, &y1);
-    } else {
-        a0 = x0; b0 = y0;
-        a1 = x1; b1 = y1;
-    }
-    if (a0 > a1) {
-        SWAP(a0,a1,tmp); //swap_u16(&a0, &a1);
-        SWAP(b0,b1,tmp); //swap_u16(&b0, &b1);
-    }
-    const uint32_t yOff = (b0 < b1) ? 1 : -1;
-    const uint32_t deltay = ABSDIF(b1,b0); //Always subtracted from error
-    const uint32_t deltax = (a1 - a0); //Guaranteed >= 0
-
-    int32_t error = (int32_t)(deltax >> 1); //(deltax>>1)==(deltax/2)
-    uint16_t x = a0, y = b0;
-    while (x <= a1) {
-        if (steep) {
-            swpixel(fp,color, y,x);
-//          *PIX_PTR(fp, y,x) = color;
+    int16_t const difXs = (x1 - x0);
+    int16_t const difYs = (y1 - y0);
+    BOOL const decrX = (difXs < 0), decrY = (difYs < 0);
+    uint16_t const difXu = (decrX) ? -difXs : difXs;
+    uint16_t const difYu = (decrY) ? -difYs : difYs;
+    BOOL const spin = (difYu > difXu) ? 1 : 0;
+    BOOL const flip = (spin) ? decrY : decrX;
+    uint16_t a0, a1, b0, b1;
+    if (spin) {
+        if (flip) {
+            a0 = y1; b0 = x1; //swap_u16(&x0, &y0) & swap_u16(&a0, &a1);
+            a1 = y0; b1 = x0; //swap_u16(&x1, &y1) & swap_u16(&b0, &b1);
         } else {
-//          swpixel(fp,color, x,y);
-            *PIX_PTR(fp, x,y) = color;
+            a0 = y0; b0 = x0; //swap_u16(&x0, &y0);
+            a1 = y1; b1 = x1; //swap_u16(&x1, &y1);
         }
-        error -= deltay;
-        if (error < 0) {
-            y += yOff;
-            error += deltax;
+    } else {
+        if (flip) {
+            a0 = x1; b0 = y1; //swap_u16(&a0, &a1);
+            a1 = x0; b1 = y0; //swap_u16(&b0, &b1);
+        } else {
+            a0 = x0; b0 = y0;
+            a1 = x1; b1 = y1;
         }
-        x++;
+    }
+    BOOL const incB = (b1 > b0);
+    uint32_t const offB = (incB) ? 1 : 0xFFFFFFFF; //B addend fake-signed (+/- 1)
+    //uint32_t const errB = (incB) ? (b1 - b0) : (b0 - b1); //Error subtracted portion (arrange >= 0)
+    //negB = (~errB + 1);
+    uint32_t const negB = (incB) ? (b0 - b1) : (b1 - b0); //Error addend fake-signed (arrange "<=" 0)
+    uint32_t const errA = (a1 - a0); //Error addend; (guaranteed >= 0)
+    uint32_t const posA = (errA + negB); //Error addend signed, net after errA/2 (guaranteed >= 0)
+    uint32_t error = (errA >> 1); //error is s30.1 fixed-point signed (guaranteed >= 0)
+    uint16_t a = a0, b = b0;
+    while (a <= a1) {
+        //FORK:iter-1
+        uint32_t const nextA = a + 1;
+        uint32_t const nextB = b + offB;
+        uint32_t const errorA = error + posA;
+        uint32_t const errorB = error + negB;
+        uint16_t x = ((spin) ? b : a);
+        uint16_t y = ((spin) ? a : b);
+        swpixel(fp,color, x,y);
+        //JOIN:iter-1
+        //FORK:iter-2
+        a     = nextA;
+        b     = (errorB & 0x80000000) ? nextB  : b;
+        error = (errorB & 0x80000000) ? errorA : errorB;
+        //JOIN:iter-2
     }
 }
 
-void swpixel(const gframe_pv fp, const uint32_t color,
-             const uint16_t x, const uint16_t y)
+void swpixel(gframe_pv const fp, uint32_t const color,
+             uint16_t const x, uint16_t const y)
 {
     *PIX_PTR(fp, x, y) = color;
+//  printf("%4d %4d\n", x,y);
 }
 
-void swcircle(const gframe_pv fp, const uint32_t color,
-              const uint16_t xc, const uint16_t yc,
-              const uint16_t r)
+void swcircle(gframe_pv const fp, uint32_t const color,
+              uint16_t const xc, uint16_t const yc,
+              uint16_t const r)
 {
     int32_t x, y, d, dE, dSE;
     x = 0; //theta=0; fake "origin" (translate pixels later)
@@ -142,14 +170,14 @@ void swcircle(const gframe_pv fp, const uint32_t color,
     }
 }
 
-void swelipse(const gframe_pv fp, const uint32_t color,
-              const uint16_t xc, const uint16_t yc,
-              const uint16_t rx, const uint16_t ry)
+void swelipse(gframe_pv const fp, uint32_t const color,
+              uint16_t const xc, uint16_t const yc,
+              uint16_t const rx, uint16_t const ry)
 {
 //TODO:Optimize SQUARE(uint16_t):uint32_t
     uint16_t x = 0, y = ry; //theta=0; fake "origin" (translate pixels later)
-    const uint32_t a2p = (rx^2)<<1; //scale2x: rx^2
-    const uint32_t b2p = (ry^2)<<1; //scale2x: ry^2
+    uint32_t const a2p = (rx^2)<<1; //scale2x: rx^2
+    uint32_t const b2p = (ry^2)<<1; //scale2x: ry^2
     int32_t dd; //dd
 
 //TODO:Pre-compute dd increments
@@ -187,9 +215,9 @@ void swelipse(const gframe_pv fp, const uint32_t color,
     }
 }
 
-void swcircle_old(const gframe_pv fp, const uint32_t color,
-                  const uint16_t xc, const uint16_t yc,
-                  const uint16_t r)
+void swcircle_old(gframe_pv const fp, uint32_t const color,
+                  uint16_t const xc, uint16_t const yc,
+                  uint16_t const r)
 {
     int32_t x, y, d;
     x = 0;
@@ -210,9 +238,9 @@ void swcircle_old(const gframe_pv fp, const uint32_t color,
 }
 
 
-void swpixel_4way(const gframe_pv fp, const uint32_t color,
-                  const uint16_t xc, const uint16_t yc,
-                  const int16_t ox,  const int16_t oy)
+void swpixel_4way(gframe_pv const fp, uint32_t const color,
+                  uint16_t const xc, uint16_t const yc,
+                  int16_t const ox,  int16_t const oy)
 {
 //TODO:Avoid recompute of pixel address
     *PIX_PTR(fp, xc - ox, yc - oy) = color;
@@ -221,9 +249,9 @@ void swpixel_4way(const gframe_pv fp, const uint32_t color,
     *PIX_PTR(fp, xc + ox, yc + oy) = color;
 }
 
-void swpixel_8way(const gframe_pv fp, const uint32_t color,
-                  const uint16_t xc, const uint16_t yc,
-                  const int16_t ox,  const int16_t oy)
+void swpixel_8way(gframe_pv const fp, uint32_t const color,
+                  uint16_t const xc, uint16_t const yc,
+                  int16_t const ox,  int16_t const oy)
 {
 //TODO:Avoid recompute of pixel address
 //    uint16_t o2x = (ox << 1);

@@ -1,21 +1,25 @@
 #include "string.h"
 
-int32_t strcmp150(const int8_t* s0, const int8_t* s1)
+#define RUNAWAYSTRING 1024
+
+int32_t strcmp150(const int8_t* const s0, const int8_t* const s1)
 {
-    for (uint32_t i = 0; ; i++) {
-        if (s0[i] != s1[i]) {
-            return 1;
-        }
-        if (s0[i] == '\0') {
-            break;
-        }
-    }
-    return 0;
+    register const uint8_t *p0 = (const uint8_t*)s0, *p1 = (const uint8_t*)s1;
+    uint32_t remains = RUNAWAYSTRING;
+    uint8_t c0, c1;
+
+    do {
+        c0 = *p0++;
+        c1 = *p1++;
+        if (c0 == '\0') break;
+    } while ((c0 == c1) && (--remains));
+    return (c0 - c1);
 }
 
-int32_t strlen150(int8_t const * s)
+int32_t strlen150(const int8_t* const s)
 {
+    const int8_t *p = s;
     uint32_t i = 0;
-    for ( ; s[i] != '\0'; i++) ;
+    while (*p++) i++;
     return i;
 }

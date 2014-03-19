@@ -19,8 +19,6 @@ elf: $(TARGET).elf
 dump: $(TARGET).dump $(TARGET).inst.dump $(TARGET).data.dump
 data: $(OUTS:%=$(TARGET).data.%)
 inst: $(OUTS:%=$(TARGET).inst.%)
-#both: $(OUTS:%=$(TARGET).both.%)
-#both: $(TARGET).both.mem
 bins: $(SECS:%=$(TARGET).%.bin)
 
 
@@ -40,10 +38,11 @@ PSIZE  ?= $(M_PRE)size
 PDUMP  ?= $(M_PRE)objdump
 PCOPY  ?= $(M_PRE)objcopy
 
-ASOPTS ?= -mno-pdr -xgot -non_shared -mno-shared -O0
+ASOPTS ?= -mips1 -march=mips1 -mabi=32 --no-break --no-trap  -mno-pdr -xgot -non_shared -mno-shared -R -g2
+# -O0
 CCOPTS ?= -pipe -fasm -std=gnu99 -pedantic -ffreestanding -Os -fomit-frame-pointer -freorder-blocks-and-partition -foptimize-register-move -frename-registers -funit-at-a-time -g
-#-O0
-CCMIPS ?= -mips1 -mabi=32 -mno-abicalls -msoft-float -mno-dsp -mno-mips3d -mlong32 -mno-branch-likely -mno-flush-func -fno-PIE -fno-PIC -fno-pie -fno-pic -fno-exceptions -Wa,-mno-pdr,-xgot,-non_shared,-mno-shared,-O
+# -O0
+CCMIPS ?= -mips1 -march=mips1 -mabi=32 -mno-abicalls -msoft-float -mno-dsp -mno-mips3d -mlong32 -mno-branch-likely -mno-flush-func -fno-PIE -fno-PIC -fno-pie -fno-pic -fno-exceptions -Wa,-mno-pdr,-xgot,-non_shared,-mno-shared,-O,-R
 # -G0
 # -Wl,--strip-debug
 
@@ -95,7 +94,7 @@ $(TARGET).elf: $(ELF_INPUT)
 %.dump: %.elf
 	-$(PDUMP) $^ -xsD >$@
 %.inst.dump: %.elf
-	-$(PDUMP) -j .text $^ -xsDSl >$@
+	-$(PDUMP) -j .text $^ -xsSDl >$@
 %.data.dump: %.elf
 	-$(PDUMP) -j .data $^ -xS >$@
 

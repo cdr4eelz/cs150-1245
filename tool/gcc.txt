@@ -1,15 +1,13 @@
-export BLDINS=/scratch/local
-export BLDDEP=/scratch/build-mips-lin64/dep
-export CROSS6=/scratch/cross-compiler-i686
+export BLDINS=/scratch/local/
+export BLDINS=/scratch/local/mini-native-mips/usr
+export BLDDEP=/scratch/cross/build-mips-lin64/dep
 export CONFIG_SHELL=/bin/ksh
-export LD_LIBRARY_PATH=${BLDDEP}/lib:${BLDINS}/lib:/usr/lib64:/usr/lib32:/lib64:/lib32
+export LD_LIBRARY_PATH=${BLDDEP}/lib:/usr/lib64:/usr/lib32:/lib64:/lib32
 export LD_RUN_PATH=${LD_LIBRARY_PATH}
-export PATH=${BLDDEP}/bin:${BLDINS}/bin:/usr/local/bin:/usr/bin:/bin
-export PATH=${CROSS6}/bin:$PATH
+export PATH=${BLDDEP}/bin:/usr/local/bin:/usr/bin:/bin
 export PKG_CONFIG_PATH=${BLDDEP}/lib/pkgconfig
-
---target=i686
-  ARCH=i386 CROSS_COMPILE=i686-
+#export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${BLDINS}/lib
+#export PATH=${PATH}:${BLDINS}/bin
 
 ???/usr/local/texlive/2013/bin/x86_64-linux
 
@@ -24,14 +22,14 @@ CPPFLAGS=`pkg-config --static --cflags "zlib"` LDFLAGS=`pkg-config --static --li
 )
 
 [zlib dir]
-CC='i686-gcc' CCFLAGS='-m32' ./configure --prefix="${BLDDEP}" --static
+ABI='32' CCFLAGS='-m32' ./configure --prefix="${BLDDEP}" --static
 [ make disclean ... configure ... make ... make install ]
 
   PATCH: binutils (if before 2.23) for cygnus "@@" type-o.
-  COPY:  gmp,mpc,mpfr into binutils directory.
-../binutils-2.24/configure --prefix="${BLDINS}" --with-pkgversion='cs150' --disable-dependency-tracking --disable-shared --disable-threads --disable-multilib --disable-nls --target=mips-unknown-linux --program-prefix=mips- --with-arch=mips1 --with-abi=32 --disable-initfini-array --disable-libquadmath --without-pic --disable-pic  --enable-install-libiberty --disable-libstdcxx --with-newlib --disable-libssp --disable-libada --with-included-gettext --with-gnu-ld --with-gnu-as --with-gmp --with-mpc --with-mpfr --enable-plugins  --enable-64-bit-bfd --enable-install-libbfd --with-mmap
-  --enable-serial-target-configure --disable-rpath --with-zlib="${BLDDEP}" --enable-gold --enable-ld
-  ((--disable-werror))  --host=i686
+ABI="32" CPPFLAGS="-32" build_configargs="" target_configargs="--disable-pic --without-pic" ../binutils-2.24/configure --prefix="${BLDINS}" --with-pkgversion='cs150' --disable-dependency-tracking --disable-shared --enable-multilib --disable-nls --target=mips-unknown-linux --program-prefix=mips- --with-arch=mips1 --with-abi=32 --disable-initfini-array --disable-libquadmath --enable-install-libiberty --disable-libstdcxx --with-newlib --disable-libssp --disable-libada --with-included-gettext --with-gnu-ld --with-gnu-as --enable-plugins  --enable-64-bit-bfd --enable-install-libbfd --with-mmap --with-zlib="${BLDDEP}" --enable-gold --enable-ld --with-cross-host=i686-unknown-linux --enable-got=target
+--disable-rpath 
+  --enable-serial-target-configure 
+  ((--disable-werror))
 [ make configure-host ... make ... make check ... make install ]
 )
 
@@ -42,3 +40,4 @@ CC='i686-gcc' CCFLAGS='-m32' ./configure --prefix="${BLDDEP}" --static
 ../coreutils-8.22/configure --prefix="${BLDINS}" --with-gnu-ld --disable-nls --disable-dependency-tracking --disable-rpath  --with-openssl
 )
 
+COPY:  gmp,mpc,mpfr into gcc directory.

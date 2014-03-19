@@ -1,7 +1,7 @@
 #include "ascii.h"
 
 #define DEFINE_FROM_ASCII_DEC(type) \
-type##_t ascii_dec_to_##type(const char* s) \
+type##_t ascii_dec_to_##type(const char* const s) \
 { \
     type##_t t = 0; \
     for (uint32_t i = 0; i < (((sizeof(type##_t)/sizeof(uint8_t))<<1)+1) && s[i] != '\0'; i++) { \
@@ -17,7 +17,7 @@ DEFINE_FROM_ASCII_DEC(uint16)
 DEFINE_FROM_ASCII_DEC(uint32)
 
 #define DEFINE_FROM_ASCII_HEX(type) \
-type##_t ascii_hex_to_##type(const char* s) \
+type##_t ascii_hex_to_##type(const char* const s) \
 { \
     type##_t t = 0, i = 0; \
     for ( ; i < ((sizeof(type##_t)/sizeof(uint8_t))<<1) && s[i] != '\0'; i++) { \
@@ -39,7 +39,8 @@ DEFINE_FROM_ASCII_HEX(uint16)
 DEFINE_FROM_ASCII_HEX(uint32)
 
 #define DEFINE_TO_ASCII_HEX(type) \
-int8_t* type##_to_ascii_hex(type##_t x, int8_t* buffer, uint32_t n) \
+int8_t* type##_to_ascii_hex(type##_t const x, int8_t* const buffer, \
+                            uint32_t const n) \
 { \
     uint32_t i = 0; \
     uint32_t m = ((sizeof(type##_t) / sizeof(uint8_t)) << 1); \

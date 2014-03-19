@@ -98,16 +98,14 @@ typedef volatile gpcode_pp gpcode_pv;
 //MEMORY FIXED GLOBAL TEMPORARIES
 #define GPTEMP_PTR ((gpcode_pv)0x10003000) //FIXED location "global"
 #define GPTEMP_SZW (0x00000020)           //  32-words is...
-#define GPTEMP_SZB (GPTEMP_SZW*4)        //  128-bytes
+#define GPTEMP_SZB ((GPTEMP_SZW) << 2)   //  128-bytes
 
+#define PIX_PTR(FP,X,Y) ( (pixel_pv) (                    \
+    ((uint32_t)(FP)) | ((Y)<<(YSHIFT)) | ((X)<<(XSHIFT)) ) )
 
-#define FRAME_PTR(F)    ( (gframe_pv) (                      \
-    ((uint32_t)(F) & FPMASK) ? ((uint32_t)(F) & FPMASK)      \
-        : (0x10000000 | (((uint32_t)(F) & FNMASK)<<FSHIFT)) ) )
+#define FRAME_PTR(F) ( std_frame((uint32_t)(F)) );
 
-#define PIX_PTR(FP,X,Y) ( (pixel_pv) (                 \
-    ((uint32_t)(FP)) | ((Y)<<YSHIFT) | ((X)<<XSHIFT)  ) )
-
+gframe_pv std_frame(uint32_t fn_or_fp);
 
 void hwfill  (color_t color);
 void hwline  (color_t color,
