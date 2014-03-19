@@ -44,53 +44,49 @@ module LineEngine #(
     end
 
 
-/* Philosophy is to take preliminary cycle(s) normalizing the input points
-**   and establishing characteristics such as "steep".  This would allow a
-**   potentially faster clock rate to be applied to the more repetitive but
-**   simpler heart of the iteration.  Multi-cycle delays could even come in
-**   to play for preparatory or exceptional value handling.
+/* Philosophy is to take a few preliminary cycles normalizing input points
+**   and establishing parameters for the iteration.  This would allow a
+**   potentially faster clock rate to be applied overall, resource sharing
+**   such as adders/comparators with minimal cost of added latency.  Could
+**   even consider multi-cycle delays for any exceptionally slow prep work.
 */
 
-//Master-States:
-    localparam [2:0]
-        MS_DEAD     = 0, //Initial or fault (requires explicit reset)
-        MS_RSET     = 1, //Performing or coming out of reset
-        MS_IDLE     = 2, //Ready for initiation
-        MS_PREP     = 3, //Prepare/Normalize values for iteration
-        MS_PWR1     = 4, //First half of pixel DDR write
-        MS_PWR2     = 5; //Second half
-    localparam MS__LAST = 5;
+//Master-state Hotbit-index (as opposed to full Master-State register value)
+    localparam
+        MH_RSET     = 0, //Performing or coming out of reset
+        MH_IDLE     = 1, //Ready for initiation
+        MH_PRE3     = 2, //Prep/Normalize (examine raw x/y traits)
+        MH_PRE2     = 3, //Prep/Normalize (translate/normalize x/y)
+        MH_PRE1     = 4, //Prep/Normalize (finalize iteration params)
+        MH_RUN1     = 5, //1st-half DDR-write; next-iteration work-ahead
+        MH_RUN2     = 6; //2nd-half DDR-write; iteration finalize/advance
+    localparam MH__LAST = 6;
+    localparam [MH__LAST:0] MS__DEAD = 0, //Initial or fault (requires reset)
+        MS_RSET = (1<<MH_RSET), MS_IDLE = (1<<MH_IDLE),
+        MS_PRE3 = (1<<MH_PRE3), MS_PRE2 = (1<<MH_PRE2), MS_PRE1 = (1<<MH_PRE1),
+        MS_RUN1 = (1<<MH_RUN1), MS_RUN2 = (1<<MH_RUN2);
 
 //Key State Registers
-    reg  [ 2:0] ns_M, cs_M = MS_DEAD;
-    reg  [ 9:0] y,x, b0,a0, b1,a1;
+    reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
     reg  rst_r;
+    reg  [ 9:0] y,x, b0,a0, b1,a1;
 
+//Key Live-Wires & Assigns
     wire pastA = (a0 > a1);
-    //TODO:Watchout for locking up when no pixels to draw!
+    assign LE_ready = (cs_M[MH_IDLE]);
 
-//Triggers for state transitions & Mealy outputs (usually 1-cycle duration)
-    //   T_DEAD   = INITIAL upon FPGA config
-    wire T_RESET  = (rst);
-    wire T_READY  = (!rst_r);
-    wire T_START  = (LE_ready && LE_trigger);
-    wire T_NORML  = (cs_M==MS_PREP); //Normalized iteration values are ready
-    wire T_WRIT1  = (cs_M==MS_PWR1 && !wdf_full && !af_full); //DDR took first-half
-    wire T_WRIT2  = (cs_M==MS_PWR2 && !wdf_full); //DDR took second-half
-
-    assign LE_ready = (cs_M==MS_IDLE);
-
-
+//Master-State machine Next-States
     always @(*) begin
         ns_M = cs_M; //Default: Hold prior state if UNASSIGNED
-        case (cs_M)
-            MS_DEAD: if (T_RESET) ns_M = MS_RSET; //Redundant with machine reset
-            MS_RSET: if (T_READY) ns_M = MS_IDLE;
-            MS_IDLE: if (LE_trigger) ns_M = MS_PREP;
-            MS_PREP: ns_M = MS_PWR1; //TODO:Check non-draw
-            MS_PWR1: if (!wdf_full && !af_full) ns_M = MS_PWR2;
-            MS_PWR2: if (!wdf_full) ns_M = (pastA) ? MS_RSET : MS_PWR1;
-            default: ns_M = MS_DEAD;
+        case (cs_M) //TODO:Create MM_xyz "masks" & use Parallel-Case approach
+            MS_RSET: if (!rst_r) ns_M = MS_IDLE; //Come out with a full cycle
+            MS_IDLE: if (LE_trigger) ns_M = MS_PRE3;
+            MS_PRE3: ns_M = MS_PRE2;
+            MS_PRE2: ns_M = MS_PRE1;
+            MS_PRE1: ns_M = MS_RUN1; //TODO:Check non-draw
+            MS_RUN1: if (!wdf_full && !af_full) ns_M = MS_RUN2;
+            MS_RUN2: if (!wdf_full) ns_M = (pastA) ? MS_RSET : MS_RUN1;
+            default: ns_M = MS__DEAD;
         endcase
     end
 
@@ -102,15 +98,15 @@ reg  MODE_incY;
     wire [15:0] negY = (~errY + 1); //Error addend fake-signed (arrange "<=" 0)
     wire [15:0] posX = (errX + negY); //Error addend signed, net after errX/2 (guaranteed >= 0)
 */
+
+//Synchronous transistions & data-path
     always @(posedge clk) begin
         rst_r <= rst;
+        if (rst) cs_M <= MS_RSET; else cs_M <= ns_M;
+    end
 
-        if (T_RESET) begin
-            cs_M <= MS_RSET;
-        end else begin
-            cs_M <= ns_M;
-        end
 
+    always @(posedge clk) begin
 //TODO:These become "nextXYZ" signals instead (with don't cares)!
         if (LE_ready && LE_trigger) begin //Grab-ahead if simultaneous set & trigger
             a0 <= (LE_x0_valid) ? LE_point : x0;
@@ -119,22 +115,22 @@ reg  MODE_incY;
             b1 <= (LE_y1_valid) ? LE_point : y1;
 //$strobe("L:TRIG (%0d,%0d) (%0d,%0d)", a0,b0, a1,b1);
 //TODO:Make new PREP stage for "steep" pre-calcs
-        end else if (cs_M==MS_PREP) begin
+        end else if (cs_M[MH_PRE3]) begin
             //TODO:Normalize to increasing a0 (swap a0/b0 & a1/b1)
             //TODO:Apply steep (swap x & y) simultaneous with steep (4 possibilities)
             {a0,a1} <= {a0,a1};
             {b0,b1} <= {b0,b1};
             MODE_incY <= (b1 > b0) ? 1'b1 : 1'b0;
 //$strobe("L:PREP (%0d,%0d) (%0d,%0d)", a0,b0, a1,b1);
-        end else if (T_WRIT1) begin
+        end else if (cs_M[MH_RUN1] && !wdf_full && !af_full) begin
             a0 <= (a0+1);
             b0 <= (MODE_incY) ? (b0+1) : (b0-1);
 //$strobe("L:INC (a0=%0d)", a0);
         end
 
-        if (cs_M==MS_RSET) begin
+        if (cs_M[MH_RSET]) begin
             {x,y} <= 0;
-        end else if ((cs_M==MS_PREP) || T_WRIT2) begin
+        end else if ((cs_M[MH_PRE3]) || (cs_M[MH_RUN2] && !wdf_full)) begin
             {x,y} <= {a0,b0};
 //$strobe("L:ADV (x=%0d)", x);
         end
@@ -146,13 +142,13 @@ reg  MODE_incY;
     reg [3:0] maskW;
     wire [31:0] head_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //"Byte" address
     assign af_addr_din = {6'b000000, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
-    assign af_wr_en  = (cs_M == MS_PWR1);
+    assign af_wr_en  = (cs_M[MH_RUN1]);
     assign wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} };
     assign wdf_din = {4{color}}; //Replicate same color on all 4 pixels of both writes
-    assign wdf_wr_en = ((cs_M == MS_PWR1) || (cs_M == MS_PWR2));
+    assign wdf_wr_en = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
 
     always @(*) begin
-        case ({(cs_M==MS_PWR1),(cs_M==MS_PWR2),x[2:0]})
+        case ({cs_M[MH_RUN1],cs_M[MH_RUN2], x[2:0]})
             5'b10_000: maskW = 4'b0111;
             5'b10_001: maskW = 4'b1011;
             5'b10_010: maskW = 4'b1101;
@@ -167,12 +163,12 @@ reg  MODE_incY;
 
 
 //synthesis translate_off
-    initial $monitor("RT:%b/%b CN:%0d/%0d (%0d,%0d)->(%0d,%0d)/(%0d,%0d) %h/%b (%h) W%b/%b",
-                     T_RESET,LE_trigger, cs_M,ns_M, a0,b0, a1,b1, x,y,
+    initial $monitor("RT:%b/%b C/N:%b/%b (%0d,%0d)->(%0d,%0d)/(%0d,%0d) %h/%b (%h) W%b/%b",
+                     rst,LE_trigger, cs_M,ns_M, a0,b0, a1,b1, x,y,
                      af_addr_din, maskW, wdf_mask_din,
                      af_wr_en, wdf_wr_en);
     always @(posedge clk) begin
-        if (T_START) begin
+        if (LE_ready && LE_trigger) begin
             #1;
             $display("[=LINE=]: frame=%h color=%h (%0d,%0d,%0d)", framebits,
                      color, color[23:16], color[15:8], color[7:0]);
@@ -183,7 +179,10 @@ reg  MODE_incY;
 //synthesis translate_on
 
 endmodule
-/** ALORGITHM CORE (STEEP & SWAP REMOVED) **
+
+/** ALORGITHM CORE ("c" model code) **
+
+// SIMPLIFIED: STEEP & SWAP REMOVED
 void line_UI32( const uint16_t x0, const uint16_t y0, const uint16_t x1, const uint16_t y1) {
     const char incY = (y1 > y0);
     const uint32_t errX = (x1 - x0); //Error addend; (assumed >= 0)
@@ -206,5 +205,63 @@ void line_UI32( const uint16_t x0, const uint16_t y0, const uint16_t x1, const u
         if (errorA & 0x80000000) y += offY;
         x = nextX;
         //JOIN
+    }
+}
+
+// COMPLETE: UNSIGNED only, isolated PREP/ITER stages, identified PARALLEL blocks
+void swline(
+    gframe_pv const fp, uint32_t const color,
+    uint16_t const x0, uint16_t const y0,
+    uint16_t const x1, uint16_t const y1)
+{
+    int16_t const difXs = (x1 - x0);
+    int16_t const difYs = (y1 - y0);
+    BOOL const decrX = (difXs < 0), decrY = (difYs < 0);
+    uint16_t const difXu = (decrX) ? -difXs : difXs;
+    uint16_t const difYu = (decrY) ? -difYs : difYs;
+    BOOL const spin = (difYu > difXu) ? 1 : 0;
+    BOOL const flip = (spin) ? decrY : decrX;
+    uint16_t a0, a1, b0, b1;
+    if (spin) {
+        if (flip) {
+            a0 = y1; b0 = x1; //swap_u16(&x0, &y0) & swap_u16(&a0, &a1);
+            a1 = y0; b1 = x0; //swap_u16(&x1, &y1) & swap_u16(&b0, &b1);
+        } else {
+            a0 = y0; b0 = x0; //swap_u16(&x0, &y0);
+            a1 = y1; b1 = x1; //swap_u16(&x1, &y1);
+        }
+    } else {
+        if (flip) {
+            a0 = x1; b0 = y1; //swap_u16(&a0, &a1);
+            a1 = x0; b1 = y0; //swap_u16(&b0, &b1);
+        } else {
+            a0 = x0; b0 = y0;
+            a1 = x1; b1 = y1;
+        }
+    }
+    BOOL const incB = (b1 > b0);
+    uint32_t const offB = (incB) ? 1 : 0xFFFFFFFF; //B addend fake-signed (+/- 1)
+    //uint32_t const errB = (incB) ? (b1 - b0) : (b0 - b1); //Error subtracted portion (arrange >= 0)
+    //negB = (~errB + 1);
+    uint32_t const negB = (incB) ? (b0 - b1) : (b1 - b0); //Error addend fake-signed (arrange "<=" 0)
+    uint32_t const errA = (a1 - a0); //Error addend; (guaranteed >= 0)
+    uint32_t const posA = (errA + negB); //Error addend signed, net after errA/2 (guaranteed >= 0)
+    uint32_t error = (errA >> 1); //error is s30.1 fixed-point signed (guaranteed >= 0)
+    uint16_t a = a0, b = b0;
+    while (a <= a1) {
+        //FORK:iter-1
+        uint32_t const nextA = a + 1;
+        uint32_t const nextB = b + offB;
+        uint32_t const errorA = error + posA;
+        uint32_t const errorB = error + negB;
+        uint16_t x = ((spin) ? b : a);
+        uint16_t y = ((spin) ? a : b);
+        swpixel(fp,color, x,y);
+        //JOIN:iter-1
+        //FORK:iter-2
+        a     = nextA;
+        b     = (errorB & 0x80000000) ? nextB  : b;
+        error = (errorB & 0x80000000) ? errorA : errorB;
+        //JOIN:iter-2
     }
 } */
