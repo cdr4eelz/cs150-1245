@@ -1,0 +1,45 @@
+#!/bin/bash -eu
+
+COUNT=${1:-10}
+
+if [ ${COUNT} == 0 ]; then
+  shift
+  echo "x-git filter-branch --index-filter 'git rm -r --cached --ignore-unmatch $@'"
+  exit 0
+fi
+
+if [ ! -d .git ]; then
+  echo "Please run from repo base directory."
+  exit 1
+fi
+
+git count-objects -v
+git fsck
+git gc --aggressive
+git prune
+
+echo ""
+echo "-------------"
+rm -Rf .git/refs/original
+rm -Rf .git/logs/
+git gc
+git count-objects -v
+git fsck
+
+echo ""
+echo "-------------"
+git rev-list --objects --all |sort -k 2 >_REVS.txt
+git verify-pack -v .git/objects/pack/*.idx |grep blob |sort -k 3 -n -r >_SIZE.txt
+cut --delimiter ' ' --only-delimited -f 1 _SIZE.txt |head -n ${COUNT} |grep -f - _REVS.txt > _BIGO.txt
+cat _REVS.txt |cut --delimiter ' ' --only-delimited -f 2 |sort |uniq >_PATH.txt
+
+echo ""
+cat _BIGO.txt
+
+echo ""
+echo "-------------"
+echo "Generic filter-branch model:"
+echo "x-git filter-branch --index-filter 'git rm -r --cached --ignore-unmatch <PATH>'"
+echo ""
+echo "For convenient substitution call me again like this:"
+echo "git-nuke 0 a b c"
