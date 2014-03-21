@@ -104,6 +104,7 @@ module ddr2_phy_dqs_iob #
   reg                      dqs_rst_n_r /* synthesis syn_preserve = 1*/;
   wire                     dqs_out;
   wire                     en_dqs_sync /* synthesis syn_keep = 1 */;
+  wire                     i_delayed_dqs;
 
   // for simulation only. Synthesis should ignore this delay
   localparam    DQS_NET_DELAY = 0.8;

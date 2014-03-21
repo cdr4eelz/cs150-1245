@@ -310,6 +310,7 @@ module ddr2_phy_calib #
   reg                            calib_ctrl_rden;
   reg                            calib_ctrl_rden_r;
   wire                           calib_ctrl_rden_negedge;
+  wire                           calib_ctrl_gate_pulse;
   reg                            calib_ctrl_rden_negedge_r;
   reg [3:0]                      calib_done_r;
   reg [3:0]                      calib_err;

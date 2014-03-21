@@ -1,5 +1,5 @@
 ELF_INPUT = $(CSRCS) $(SSRCS)
-ELF_CCOPT = $(CCMIPS) $(CCOPTS)
+ELF_CCOPT = $(CCMIPS) $(CCOPTS) -Wl,--no-relax
 
 include ../makefile.pre
 

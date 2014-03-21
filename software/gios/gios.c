@@ -7,7 +7,7 @@
 
 #define BUFFER_LEN (0x00000080) //128-bytes
 
-#define VERSION_I 9
+#define VERSION_I 8
 #define VERSION_C ('0' + VERSION_I) //Turn into '<version>' char
 #define VERSION_S STIFIE(VERSION_I) //Turn into "<version>" const string
 #define STIFIE(Z) STIFIY(Z) //Stringify expanded macro value of Z
@@ -18,20 +18,19 @@
 typedef void (*entry_t)(void);
 
 
-int main(void)
+int main( void )
 {
     uwrite_int8s("\r\n\r\n[Golt45." VERSION_S "]\r\n\r\n");
 
-    int8_t buffer[BUFFER_LEN];
-    void* stash_address = (void*)0x10000000;
-    bcmdspec_t* priorbcs = NULL;
+    int8_t      buffer[BUFFER_LEN];
+    void*       stash_address   = (void*)0x10000000;
+    bcmdspec_t* priorbcs  = NULL;
+    color_t     sw_color = (color_t)0x4044FFAA;
+    color_t     hw_color = (color_t)0xC044AAFF;
+    gframe_pv   sw_frame = STD_FRAME1;
+                GP_FRAME = STD_FRAME1;
 
-    color_t sw_color = (color_t)0x4044FFAA;
-    color_t hw_color = (color_t)0xC044AAFF;
-    gframe_pv sw_frame = STD_FRAME1;
-    GP_FRAME = STD_FRAME1;
-
-    for ( ; ; ) {
+    forever: for ( ; ; ) {
         uwrite_int8('>'); uwrite_int8(' ');
         int8_t* input = read_token(buffer, BUFFER_LEN, NULL);
         bcmdspec_t* bcs = token_cmdspec(input);
@@ -52,62 +51,56 @@ int main(void)
             case BC_FILE: {
                 store(tok_addr(&stash_address), tok_dec32u());
             } break;
+
             case BC_JAL: {
-                uint32_t address = (uint32_t)tok_addr(&stash_address);
-                entry_t start = (entry_t)address;
-                start();
+                entry_t start = (entry_t)(uint32_t)tok_addr(&stash_address);
+                start(); //The double-cast above avoids a "pedantic" warning
             } break;
-            case BC_LW: {
-                volatile uint32_t* p = tok_addr(&stash_address);
+
+            case BC_LOAD: {
+                radixize_t rz = flags;
+                void* p       = tok_addr(&stash_address);
+                uint32_t u32  = 0;
+
+                switch (flags) {
+                    case RZ_HEX32: u32 = *((uint32_t*)p); break;
+                    case RZ_HEX16: u32 = *((uint16_t*)p); break;
+                    case  RZ_HEX8: u32 = *(( uint8_t*)p); break;
+                    default: goto forever;
+                }
 
                 bufw_hex32u((uint32_t)p);
                 uwrite_int8(':');
-                bufw_hex32u(*p);
+                bufw_radnum(rz, u32);
                 bufw_newline();
             } break;
-            case BC_LHU: {
-                volatile uint16_t* p = tok_addr(&stash_address);
 
-                bufw_hex32u((uint32_t)p);
-                uwrite_int8(':');
-                bufw_hex16u(*p);
-                bufw_newline();
-            } break;
-            case BC_LBU: {
-                volatile uint8_t* p = tok_addr(&stash_address);
+            case BC_STORE: {
+                radixize_t rz = flags;
+                uint32_t u32  = tok_radnum(rz);
+                void* p       = tok_addr(&stash_address);
 
-                bufw_hex32u((uint32_t)p);
-                uwrite_int8(':');
-                bufw_hex8u(*p);
-                bufw_newline();
-            } break;
-            case BC_SW: {
-                uint32_t word = tok_hex32u();
-                volatile uint32_t* p = tok_addr(&stash_address);
-
-                *p = word;
-            } break;
-            case BC_SH: {
-                uint16_t half = tok_hex16u();
-                volatile uint16_t* p = tok_addr(&stash_address);
-
-                *p = half;
-            } break;
-            case BC_SB: {
-                uint8_t byte = tok_hex8u ();
-                volatile uint8_t* p = tok_addr(&stash_address);
-
-                *p = byte;
+                switch (flags) {
+                    case RZ_HEX32: *((uint32_t*)p) = u32; break;
+                    case RZ_HEX16: *((uint16_t*)p) = u32; break;
+                    case  RZ_HEX8: *(( uint8_t*)p) = u32; break;
+                    default: goto forever;
+                }
             } break;
 
         //COLT45 extensions:
+            BC_HELP: {
+                bufw_cmdspec();
+            } break;
+
             case BC_DUMP: {
                 stash_address = (void*)dump_block(tok_addr(&stash_address), 16);
             } break;
+
             case BC_COPY: {
                 const uint32_t* a_src = tok_addr(&stash_address);
-                uint32_t* a_dst = (uint32_t*)tok_hex32u();
-                uint32_t l_cpy  = tok_hex32u();
+                uint32_t*       a_dst = (uint32_t*)tok_hex32u();
+                uint32_t        l_cpy = tok_hex32u();
 
                 uint32_t xor = copy_xor(a_src, l_cpy, a_dst);
 
@@ -123,19 +116,21 @@ int main(void)
                 uwrite_int8s(" PF#"); bufw_hex8u( stat.f.pf_feedframe );
                 uwrite_int8( (stat.f.video_ready)  ? 'R' : 'r');
                 uwrite_int8( (stat.f.video_valid)  ? 'V' : 'v');
-                uwrite_int8s(" HW#"); bufw_hex8u( stat.f.gp_procframe );
+                uwrite_int8s(" GF#"); bufw_hex8u( stat.f.gp_procframe );
                 uwrite_int8( (stat.f.line_ready)   ? 'L' : 'l');
                 uwrite_int8( (stat.f.filler_ready) ? 'F' : 'f');
                 uwrite_int8( (stat.f.gp_ready)     ? 'G' : 'g');
-                uwrite_int8s(" SW:"); bufw_hex32u( (uint32_t)sw_frame );
+                uwrite_int8s(" SF:"); bufw_hex32u( (uint32_t)sw_frame );
                 bufw_newline();
                 uwrite_int8s(" hw:"); bufw_hex32u( (uint32_t)hw_color );
                 uwrite_int8s(" sw:"); bufw_hex32u( (uint32_t)sw_color );
                 bufw_newline();
             } break;
+
             case BC_GCODE: {
                 GP_GCODE = tok_addr(&stash_address);
             } break;
+
             case BC_FRAME: {
                 gframe_pv frame = tok_addr(&stash_address);
                 if (flags & 0x04) PF_FRAME = frame;         //Test hw frame# conversion
@@ -149,10 +144,12 @@ int main(void)
                 if (flags & 0x02) hw_color = color;
                 if (flags & 0x01) sw_color = color;
             } break;
+
             case BC_FILL: {
                 if (gflag & 0x02) hwfill(hw_color);
                 if (gflag & 0x01) swfill(sw_frame, sw_color);
             } break;
+
             case BC_LINE: {
                 uint16_t x0           = tok_dec16u();
                 uint16_t y0           = tok_dec16u();
@@ -161,12 +158,14 @@ int main(void)
                 if (gflag & 0x02) hwline(hw_color, x0,y0, x1,y1);
                 if (gflag & 0x01) swline(sw_frame, sw_color, x0,y0, x1,y1);
             } break;
+
             case BC_PIXL: {
                 uint16_t x            = tok_dec16u();
                 uint16_t y            = tok_dec16u();
                 if (gflag & 0x02) hwpixel(hw_color, x,y);
                 if (gflag & 0x01) swpixel(sw_frame, sw_color, x,y);
             } break;
+
             case BC_ELIP: {
                 uint16_t xc           = tok_dec16u();
                 uint16_t yc           = tok_dec16u();
@@ -175,6 +174,7 @@ int main(void)
                 if (gflag & 0x02) hwelipse(hw_color, xc,yc, ox,oy);
                 if (gflag & 0x01) swelipse(sw_frame, sw_color, xc,yc, ox,oy);
             } break;
+
             case BC_CIRC: {
                 uint16_t xc           = tok_dec16u();
                 uint16_t yc           = tok_dec16u();
@@ -183,16 +183,15 @@ int main(void)
                 if (gflag & 0x01) swcircle(sw_frame, sw_color, xc,yc, rr);
             } break;
 
-            BC_HELP: {
-                bufw_cmdspec();
-            } break;
             BC_UNKNOWN: {
                 uwrite_int8('?');
-            } //FALLTHROUGH
-            default: { //UNKNOWN: "??" UNIMPLEMENTED/bad-case: "?"
-                uwrite_int8('?');
+            }
+            /* no break */
+            default: { //UNKNOWN: "?<>?" UNIMPLEMENTED/bad-case: "<>?"
                 uwrite_int8s(input);
-            } //FALLTHROUGH
+                uwrite_int8('?');
+            }
+            /* no break */
             BC_BLANK: {
                 bufw_newline();
             } break;

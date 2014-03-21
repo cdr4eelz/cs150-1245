@@ -1,6 +1,6 @@
-#!/bin/bash -euv
+#!/bin/bash -eu
 
-ACTION="${A:-b}"
+ACTION="${A:-f}"
 
 LOG="._mq0.log"
 LOGP="._mq1.log"
@@ -13,7 +13,9 @@ pwd
 if [ "${ACTION}" == "v" ]; then
   cat "${LOGP}" |${COLORIT} |less
   exit 0
-elif [ "${ACTION}" == "b" ]; then
+elif [ "${ACTION}" == "c" ]; then
+  make clean
+elif [ "${ACTION}" == "f" ]; then
   make clean
   ${RM} -rf "${LOGP}"
   [ -e "${LOG}" ] && ${MV} "${LOG}" "${LOGP}"
@@ -21,5 +23,6 @@ elif [ "${ACTION}" == "b" ]; then
   reset
   echo "LOG:${LOG}  COLORIT:${COLORIT}"
   make "$@" 2>&1 |tee "${LOG}" |${COLORIT}
+else
+  echo "Unrecognized???" >2
 fi
-

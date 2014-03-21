@@ -4,52 +4,49 @@
 #include "ascii.h"
 #include "uart.h"
 
-#define LOCALBUF_LEN 32
+#define LOCALBUF_LEN 64
 
 bcmdspec_t const bcmd_table[] = {
-    {"file",        BC_FILE,      0}, // "?"
-    {"jal",         BC_JAL,       0}, // "a"
-    {"l" "w",       BC_LW,        0}, // "a"
-    {"l" "hu",       BC_LHU,       0}, // "a"
-    {"l" "bu",       BC_LBU,       0}, // "a"
-    {"s" "w",       BC_SW,        0}, // "wa"
-    {"s" "h",        BC_SH,        0}, // "ha"
-    {"s" "b",        BC_SB,        0}, // "ba"
-
-    {"dump",        BC_DUMP,      0}, // "aw"
-    {"copy",        BC_COPY,      0}, // "aaw"
-
-    {"gstat",       BC_GSTAT,     0}, // ""
-    {"gcode",       BC_GCODE,    0}, // "w"
-    {"fr",          BC_FRAME,     7}, // "w"
-    {"pf" "fr",       BC_FRAME,     4}, // "w"
-    {"hw" "fr",       BC_FRAME,     2}, // "w"
-    {"sw" "fr",       BC_FRAME,     1}, // "w"
-
-    {"color",       BC_COLOR,     3}, // "w"
-    {"hw" "color",    BC_COLOR,     2}, // "w"
-    {"sw" "color",    BC_COLOR,     1}, // "w"
-    {"fill",        BC_FILL,      0}, // ""
-    {"hw" "fill",     BC_FILL,      2}, // ""
-    {"sw" "fill",     BC_FILL,      1}, // ""
-    {"line",        BC_LINE,      0}, // "hhhh"
-    {"hw" "line",     BC_LINE,      2}, // "hhhh"
-    {"sw" "line",     BC_LINE,      1}, // "hhhh"
-    {"pixl",        BC_PIXL,      0}, // "hh"
-    {"hw" "pixl",     BC_PIXL,      2}, // "hh"
-    {"sw" "pixl",     BC_PIXL,      1}, // "hh"
-    {"elip",        BC_ELIP,      0}, // "hhhh"
-    {"hw" "elip",     BC_ELIP,      2}, // "hhhh"
-    {"sw" "elip",     BC_ELIP,      1}, // "hhhh"
-    {"circ",        BC_CIRC,      0}, // "hhh"
-
-    {"?",           BC_HELP,      0},
-    {"?",           BC_UNKNOWN,   0xFFFF},
-    {"-",           BC_BLANK,     0xFFFF}
+    {"file",        BC_FILE,      0},       // "?"
+    {"jal",         BC_JAL,       0},       // "a"
+    {"l" "w",       BC_LOAD,    RZ_HEX32},  // "a"
+    {"l" "hu",       BC_LOAD,   RZ_HEX16},  // "a"
+    {"l" "bu",       BC_LOAD,    RZ_HEX8},  // "a"
+    {"s" "w",       BC_STORE,   RZ_HEX32},  // "wa"
+    {"s" "h",        BC_STORE,  RZ_HEX16},  // "ha"
+    {"s" "b",        BC_STORE,   RZ_HEX8},  // "ba"
+    {"",            BC_BLANK,     0},       // ""
+    {"color",        BC_HELP,      0},       // ""
+    {"?",           BC_HELP,      0},       // ""
+    {"dump",        BC_DUMP,      0},       // "aw"
+    {"copy",        BC_COPY,      0},       // "aaw"
+    {"gs",          BC_GSTAT,     0},       // ""
+    {"gc",          BC_GCODE,     0},       // "w"
+    {"ff",          BC_FRAME,     7},       // "w"
+    {"pf",            BC_FRAME,     4},     // "w"
+    {"gf",            BC_FRAME,     2},     // "w"
+    {"sf",            BC_FRAME,     1},     // "w"
+    {"help",       BC_COLOR,     3},       // "w"
+    {"hw" "color",    BC_COLOR,     2},     // "w"
+    {"sw" "color",    BC_COLOR,     1},     // "w"
+    {"fill",        BC_FILL,      0},       // ""
+    {"hw" "fill",     BC_FILL,      2},     // ""
+    {"sw" "fill",     BC_FILL,      1},     // ""
+    {"line",        BC_LINE,      0},       // "hhhh"
+    {"hw" "line",     BC_LINE,      2},     // "hhhh"
+    {"sw" "line",     BC_LINE,      1},     // "hhhh"
+    {"pixl",        BC_PIXL,      0},       // "hh"
+    {"hw" "pixl",     BC_PIXL,      2},     // "hh"
+    {"sw" "pixl",     BC_PIXL,      1},     // "hh"
+    {"elip",        BC_ELIP,      0},       // "hhhh"
+    {"hw" "elip",     BC_ELIP,      2},     // "hhhh"
+    {"sw" "elip",     BC_ELIP,      1},     // "hhhh"
+    {"circ",        BC_CIRC,      0},       // "hhh"
+    {"?",         BC_UNKNOWN,   0xFFFF},
 };
 
 const int8_t const DEF_DELIMS[] = " \x0d",
-                    *ERRS_ALIGN = "*ALIGN*";
+                    *ERRS_ALIGN = "*ALGN*";
 
 bcmdspec_t* token_cmdspec(const int8_t* const input)
 {

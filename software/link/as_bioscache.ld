@@ -1,12 +1,9 @@
+     PHDRS { bios PT_LOAD ; }
 SECTIONS
 {
-  . = 0x10000000;
-  .data : { /* Unused .data. portion; Would have to copy to manually */
-    *(.dss .data);
-  }
-
-  . = 0x40000000;
-  .text : { /* Use the .inst. portion as BIOS BRAM */
+  .text 0x40000000: 
+/* AT(0x00000000) */
+{ /* Use the .inst. portion as BIOS BRAM */
     *(.start); *(.text);
     . = ALIGN(4); _rodata = .; *(.rodata .rodata.*);
     . = ALIGN(4); _dadata = .; *(.data);
@@ -15,8 +12,9 @@ SECTIONS
     . = ALIGN(4); _sadata = .; *(.sdata);
     . = ALIGN(4); _szdata = .; *(.sbss .sbss.*);
     . = ALIGN(4); _dzdata = .; *(.bss .bss.*);
+    *(.reginfo);
     . = ALIGN(4);
-  }
+  /* . = 0x00003FFC; LONG(1); */
+  } : bios
 
-  .reginfo : { *(.reginfo) }
 }

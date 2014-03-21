@@ -247,7 +247,7 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
 
 //FIFO fetching GPCode chunks & presenting as 32-bit INSTruction stream
 //TODO:Early first fetch address mux on T_START
-    wire fifo_full;
+    wire fifo_full, prog_empty;
     wire [ 4:0] wr_count;
     wire fifo_low   = !(|wr_count[4:2] || fifo_full); //(wr_count < 4);
     wire fifo_reset = (cs_M==MS_RSET);

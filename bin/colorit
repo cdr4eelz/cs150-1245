@@ -1,13 +1,13 @@
 #!/bin/bash
 
-STYLE="all"
-SS="color_${STYLE}"
-SEDOPT="$@"
-#-n (to only print important matches)
+STYLE=""
+SS="color${STYLE}"
+SEDOPT="$*"
+#-n (to not auto-print)
 
 SDIR=`dirname $0`
-SS1="${SDIR}/${SS}_1.sed"
-SS2="${SDIR}/${SS}_2.sed"
+SS1="${SDIR}/${SS}_line.sed"
+SS2="${SDIR}/${SS}_word.sed"
 
 #while IFS= read -r LINE; do
 #  echo $LINE

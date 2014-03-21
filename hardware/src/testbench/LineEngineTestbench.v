@@ -97,11 +97,12 @@ module LineEngineTestbench;
         rst = 1'b0;
         #(Cycle);
 //      $monitor("R:%b T:%b (%0d,%0d) W:%b.%b", LE_ready, LE_trigger, x,y, af_wr_en,wdf_wr_en);
-        drawLine(10'd2, 10'd4, 10'd10, 10'd6, 32'h11_7F_00_00);
-        drawLine(10'd0, 10'd0, 10'd1023, 10'd767, 32'h22_7F_00_00);
-        drawLine(10'd1000, 10'd700, 10'd0, 10'd0, 32'h33_7F_00_00);
-        drawLine(10'd500, 10'd700, 10'd0, 10'd0, 32'h44_7F_00_00);
-        drawLine(10'd0, 10'd0, 10'd400, 10'd652, 32'h55_7F_00_00);
+        drawLine(   2,   4,    10,   6,  32'h11_7F_00_00);
+        drawLine(   0,   0,  1023, 767,  32'h22_7F_00_00);
+        drawLine(1000, 700,     0,   0,  32'h33_7F_00_00);
+        drawLine( 500, 700,     0,   0,  32'h44_7F_00_00);
+        drawLine(   0,   0,   400, 652,  32'h55_7F_00_00);
+        drawLine( 200, 200,   100, 500,  32'h66_7F_00_FF);
     end
 
     task drawLine;

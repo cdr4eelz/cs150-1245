@@ -209,7 +209,7 @@ module	DVI(
 								.Reset(				Reset),
 								.I2C_SDA_DVI(		I2C_SDA_DVI),
 								.I2C_SCL_DVI(		I2C_SCL_DVI),
-								.InitDone(			InitDone));					
+								.InitDone(			/*InitDone*/));					
 	//--------------------------------------------------------------------------
 endmodule
 //------------------------------------------------------------------------------

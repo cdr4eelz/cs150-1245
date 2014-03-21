@@ -70,14 +70,14 @@ module LineEngine #(
 
 //Master-state Hotbit-index (as opposed to full Master-State register value)
     localparam
-        MH_RSET     = 0, //Performing or coming out of reset
-        MH_IDLE     = 1, //Ready for initiation
-        MH_PRE4     = 2, //Prep/Normalize (examine raw x/y traits)
-        MH_PRE3     = 3, //Prep/Normalize (examine raw x/y traits)
-        MH_PRE2     = 4, //Prep/Normalize (translate/normalize x/y)
-        MH_PRE1     = 5, //Prep/Normalize (finalize iteration params)
-        MH_RUN1     = 6, //1st-half DDR-write; next-iteration work-ahead
-        MH_RUN2     = 7; //2nd-half DDR-write; iteration finalize/advance
+        MH_RSET     = 0, //Performing or coming out of reset          <=-._
+        MH_IDLE     = 1, //Ready for initiation                            \
+        MH_PRE4     = 2, //Prep/Normalize (examine raw x/y traits)          \
+        MH_PRE3     = 3, //Prep/Normalize (examine raw x/y traits)           \
+        MH_PRE2     = 4, //Prep/Normalize (translate/normalize x/y)           \
+        MH_PRE1     = 5, //Prep/Normalize (finalize iteration params)         |
+        MH_RUN1     = 6, //1st-half DDR-write; next-iteration work-ahead <-=\?/
+        MH_RUN2     = 7; //2nd-half DDR-write; iteration finalize/advance ->_/
     localparam MH__LAST = MH_RUN2;
     localparam [MH__LAST:0] MS__DEAD = 0, //Initial or fault (requires reset)
         MS_RSET = (1<<MH_RSET), MS_IDLE = (1<<MH_IDLE),
@@ -88,19 +88,20 @@ module LineEngine #(
 //Key State Registers
     reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
     reg  [ 9:0] a0,b0, a1,b1, a,b; //(a0,b0) & (a,b) redundant; kept for debug
+	reg  MODE_incB, MODE_tran, MODE_flip;
+	reg  [15:0] error, tempA,tempB, ADJ_negB,ADJ_posA;
 
 //Key Live-Wires & Assigns
-reg  MODE_incB, MODE_tran, MODE_flip, decrX, decrY;
-reg  [15:0] error, tempA,tempB, ADJ_negB,ADJ_posA;
-wire [15:0] difXu = ((decrX) ? x0 : x1) - ((decrX) ? x1 : x0); //Arrange >= 0 *in advance*
-wire [15:0] difYu = ((decrY) ? y0 : y1) - ((decrX) ? y1 : y0); //Arrange >= 0 *in advance*
-wire longerY = (difYu > difXu); //TODO:Consider algebraic re-grouping???
-wire passingA = (a >= a1);
-wire [ 9:0] x,y;
-assign {x,y} = (MODE_tran) ? {b,a} : {a,b};
-assign LE_ready = (cs_M[MH_IDLE]);
-//TODO:Segregate combinational (compare/adder/etc.) vs. sequential ("enables")
+	wire [ 9:0] x,y;
+	wire passingA = (a >= a1);
+	assign LE_ready = (cs_M[MH_IDLE]);
+	assign {x,y} = (MODE_tran) ? {b,a} : {a,b};
 
+//TODO:Segregate combinational (compare/adder/etc.) vs. sequential ("enables")
+	reg decrX, decrY;
+	wire [15:0] difXu = ((decrX) ? x0 : x1) - ((decrX) ? x1 : x0); //Arrange >= 0 *in advance*
+	wire [15:0] difYu = ((decrY) ? y0 : y1) - ((decrY) ? y1 : y0); //Arrange >= 0 *in advance*
+	wire longerY = (difYu > difXu); //TODO:Consider algebraic re-grouping
 
 //Master-State machine Next-States
     always @(*) begin
@@ -132,24 +133,25 @@ assign LE_ready = (cs_M[MH_IDLE]);
                 {decrX,decrY} <= {(x1 < x0),(y1 < y0)}; // the dude must abide!
 //TODO:Apply x/y CLIP or at least detect when needed & apply next
             end
+			//From MS_PRE4 onward, use registered xn_r/yn_r
             MS_PRE4: begin
                 {tempA,tempB} <= {difXu,difYu};
                 MODE_tran <= (longerY); //Translate axes to step along LONGER one
                 MODE_flip <= (longerY) ? decrY : decrX; //Stash for debug
             end
-            MS_PRE3: begin
+            MS_PRE3: begin // reG=>{INV=>}MUX=>Reg (TRIVIAL)
                 case ({MODE_tran, MODE_flip}) //Flat-MUXIE (x,y)'s -=> (a,b)'s
-                    2'b0_0: {a0,b0, a1,b1, MODE_incB} <= {x0,y0, x1,y1, !decrY};
-                    2'b0_1: {a0,b0, a1,b1, MODE_incB} <= {x1,y1, x0,y0,  decrY};
-                    2'b1_0: {a0,b0, a1,b1, MODE_incB} <= {y0,x0, y1,x1, !decrX};
-                    2'b1_1: {a0,b0, a1,b1, MODE_incB} <= {y1,x1, y0,x0,  decrX};
+                    2'b0_0: {a0,b0, a1,b1, MODE_incB} <= {x0_r,y0_r, x1_r,y1_r, !decrY};
+                    2'b0_1: {a0,b0, a1,b1, MODE_incB} <= {x1_r,y1_r, x0_r,y0_r,  decrY};
+                    2'b1_0: {a0,b0, a1,b1, MODE_incB} <= {y0_r,x0_r, y1_r,x1_r, !decrX};
+                    2'b1_1: {a0,b0, a1,b1, MODE_incB} <= {y1_r,x1_r, y0_r,x0_r,  decrX};
                 endcase //Case is fully covered
             end
-            MS_PRE2: begin
-                ADJ_negB  <= (MODE_incB) ? (b0 - b1) : (b1 - b0); //Arrange <= 0
+            MS_PRE2: begin // [ [(reG=>mux)|*2]=>SUB | SUB ]=>Reg
+                ADJ_negB  <= ((MODE_incB) ? b0 : b1) - ((MODE_incB) ? b1 : b0); //Arrange <= 0
                 tempA     <= (a1 - a0); //Guaranteed >= 0
             end
-            MS_PRE1: begin
+            MS_PRE1: begin // reG=>[ADD | wire]=>Reg
                 ADJ_posA  <= (tempA + ADJ_negB);
                 error     <= (tempA >> 1);
                 {a,b}     <= {a0,b0};
@@ -176,7 +178,7 @@ assign LE_ready = (cs_M[MH_IDLE]);
     assign af_addr_din  = {6'b000000, cpu_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign af_wr_en     = (cs_M[MH_RUN1]);
     assign wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} };
-    assign wdf_din      = {4{color}}; //Replicate same color on all 4 pixels of both writes
+    assign wdf_din      = {4{color_r}}; //Replicate same color on all 4 pixels of both writes
     assign wdf_wr_en    = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
 
     always @(*) begin
