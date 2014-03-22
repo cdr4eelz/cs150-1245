@@ -45,6 +45,7 @@ void hwelipse(uint32_t const color,
 uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
                         uint32_t const p0, uint32_t const p1)
 {
+    GP_WAIT();
     uint32_t* pINST = GPTEMP_PTR;
     *pINST++ = CMD_rgb(op, color);
     if (p0 != 0xFFFFFFFF) *pINST++ = p0;

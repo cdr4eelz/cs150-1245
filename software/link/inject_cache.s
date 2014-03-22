@@ -5,6 +5,6 @@
 
 _start:
     la      $gp, _gp
-    lui     $sp, 0x1001
-    lui     $ra, 0x4000
+    la      $sp, 0x10003000
+    lui     $ra, 0x4000 #0000
     j       main

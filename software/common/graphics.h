@@ -91,14 +91,17 @@ typedef volatile gpcode_pp gpcode_pv;
 #define GP_STATE  (*((gstate_pv)0x8000005C)) //READ:Status of PIX,GP,etc.
 
 //MEMORY FIXED GLOBAL TEMPORARIES
-#define GPTEMP_PTR ((gpcode_pv)0x10003000) //FIXED location "global"
-#define GPTEMP_SZW (0x00000020)           //  32-words is...
-#define GPTEMP_SZB ((GPTEMP_SZW) << 2)   //  128-bytes
+#define GPTEMP_PTR    ((gpcode_pv)0x10003000) //FIXED location "global"
+#define GPTEMP_SZW    (0x00000020)           //  32-words is...
+#define GPTEMP_SZB    ((GPTEMP_SZW) << 2)   //  128-bytes
 
 #define PIX_PTR(FP,X,Y) ( (pixel_pv) (                    \
     ((uint32_t)(FP)) | ((Y)<<(YSHIFT)) | ((X)<<(XSHIFT)) ) )
 
-#define FRAME_PTR(F) ( std_frame((uint32_t)(F)) );
+#define FRAME_PTR(F)  ( std_frame((uint32_t)(F)) )
+
+#define GP_READY()    ((BOOL)((GP_STATE.f.gp_ready) ? TRUE : FALSE))
+#define GP_WAIT()     do {} while (!GP_READY())
 
 gframe_pv std_frame(uint32_t fn_or_fp);
 
@@ -108,9 +111,6 @@ void hwline  (color_t color,
                 uint16_t x1, uint16_t y1);
 void hwpixel (color_t color,
                 uint16_t x,  uint16_t y);
-//void hwcircle(color_t color,
-//                uint16_t xc, uint16_t yc,
-//                uint16_t r);
 void hwelipse(color_t color,
                 uint16_t xc, uint16_t yc,
                 uint16_t rx, uint16_t ry);

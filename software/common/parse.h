@@ -4,10 +4,12 @@
 #include "types.h"
 
 typedef enum bcmd_e {
-    BC_UNKNOWN, BC_BLANK, BC_HELP,
-    BC_FILE, BC_JAL, BC_DUMP, BC_COPY, BC_LOAD, BC_STORE,
-    BC_GSTAT, BC_GCODE, BC_FRAME, BC_COLOR,
-    BC_FILL, BC_LINE, BC_PIXL, BC_ELIP, BC_CIRC
+    BC_FILE, BC_JAL, BC_LOAD, BC_STORE,
+    BC_DUMP, BC_COPY, BC_HELP, BC_BLANK,
+    BC_GSTAT, BC_GCODE, BC_FRAME,
+    BC_COLOR, BC_FILL, BC_LINE, BC_PIXL, BC_ELIP,
+    BC_CIRC,
+    BC_UNKNOWN
 } bcmd_t;
 
 typedef struct bcmdspec_s {
@@ -17,7 +19,7 @@ typedef struct bcmdspec_s {
 } const bcmdspec_t;
 
 extern bcmdspec_t const cmd_table[];
-extern const int8_t const DEF_DELIMS[], *ERRS_ALIGN;
+extern const int8_t const DEF_DELIMS[], ERRS_ALIGN[];
 
 typedef enum radixize_e {
     RZ_HEX32, RZ_HEX16, RZ_HEX8,

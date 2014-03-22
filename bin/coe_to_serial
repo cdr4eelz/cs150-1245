@@ -1,71 +1,98 @@
-#!/bin/bash
+#!/bin/bash -eu
 # author: jamesparker@berkeley.edu
 
-if [ -z "$1" ]
-then
-    echo "usage: $0 <coe_file> <address>"
+if [ "${1-x}" == "x" ]; then
+    echo "usage: $0 <coe_file> <address>" >&2
     exit 1
 fi
 
 FILE=$1
-ADDRESS=$2
+ADDRESS=${2-=30000000}
 SIZE="0"
+LOGO="_coe_out.log"
+LOGI="_coe_in.log"
+JALADDR="$(( ( 0x$ADDRESS ) & 0x1FFFFFFF ))"
+JALADDR=`echo "obase=16; ${JALADDR}" |bc`
+
 
 # check if the file exists
-if [ -f "$FILE" ];
-then
-   SIZE=$(stat -c%s $FILE)
-   echo -e  "\nFile $FILE is $SIZE bytes"
+if [ -f "$FILE" ]; then
+    SIZE=$(stat -c%s $FILE)
+    echo -e "\nFILE=${FILE} ADDRESS=${ADDRESS} SIZE=${SIZE} JALADDR=${JALADDR}" >&2
 else
-   echo -e "\nFile $FILE does not exist"
-   exit 1
+    echo -e "\nFile $FILE does not exist" >&2
+    exit 1
 fi
+
+# Send one character (safe to do slowly)
+function send_ch {
+    echo -ne "$1" |tee $SERIALTTY &>>"${LOGO}"
+}
+
+# Send the command one char at a time (avoid swamping)
+function send_str {
+    COMMAND="$1"
+    j=-1;
+    while (( j++ < ${#COMMAND} )); do
+        send_ch "${COMMAND:j:1}"
+    done
+}
 
 
 # count the bytes to semd
 COUNT=0
-while read LINE
-do
-    if [[ $LINE =~ ^[0-9a-f] ]];
-    then
-       COUNT=$[$COUNT+4]
-   fi
-done < $FILE
-
-echo -e "\n$COUNT bytes will be sent"
-
-#write a newline to clear any input tokens
-echo -ne "\x0d" |tee $SERIALTTY >>_coe.log
-
-# Send the command one char at a time
-COMMAND="file $ADDRESS $COUNT "
-j=-1;
-while (( j++ < ${#COMMAND} ))
-do
-    echo -n "${COMMAND:j:1}"  |tee $SERIALTTY >>_coe.log
-done
-
-echo -e "\nIssued command: $COMMAND"
-
-# Write the file out one character at a time
-# We should be able to just cat the bin file, but it doesn't seem to work
-# so the script sends the characters one at a time.
-echo -e "\nWriting $COUNT bytes..."
-SENT=0
-while read LINE
-do
-    if [[ $LINE =~ ^[0-9a-f] ]];
-    then
-       for i in {0..7}
-       do
-           echo -n "${LINE:i:1}" |tee $SERIALTTY >>_coe.log
-       done
-      SENT=$[$SENT+4]
-      echo -ne "Sent $SENT/$COUNT\r"
+while read LINE; do
+    if [[ $LINE =~ ^[0-9a-f] ]]; then
+        COUNT=$[$COUNT+4]
     fi
 done < $FILE
 
-echo -ne "\x0d" |tee $SERIALTTY >>_coe.log
+echo -e "\n$COUNT bytes will be sent" >&2
 
-echo -e  "\n\nFile written."
+echo "coetoserial OUTPUT:" &>"${LOGO}"
+echo "coetoserial INPUT:" &>"${LOGI}"
+sleep 1
 
+WATCH_PID=
+trap '[[ $WATCH_PID ]] && kill -HUP $WATCH_PID >&2' EXIT
+sleep 10000 & pid=$!
+(cat $SERIALTTY &>>"${LOGI}") & WATCH_PID=$!
+echo "BASH-PID=${BASHPID} SHELL-PID=${$} WATCH-PID=${WATCH_PID}" >&2
+
+#write a newline to clear any input tokens
+send_ch " \x0d"
+sleep 1
+send_str "file $ADDRESS ${COUNT} "
+echo -e "\nIssued command: $COMMAND" >&2
+
+# Write the file out one character at a time
+# We should be able to just cat the bin file, but it doesn't seem to work
+# so the script sends the characters one at a time. Maybe echo off would help?
+echo -e "\nWriting $COUNT bytes..." >&2
+SENT=0
+while read LINE; do
+    if [[ $LINE =~ ^[0-9a-f] ]]; then
+        send_str "${LINE:0:8}"
+        #for i in {0..7}; do
+        #    echo -n "${LINE:i:1}" |tee $SERIALTTY &>>"${LOGO}"
+        #done
+        SENT=$[$SENT+4]
+        echo -ne "Sent $SENT/$COUNT\r" >&2
+    fi
+done < $FILE
+
+echo -ne " \x0d " |tee $SERIALTTY &>>"${LOGO}"
+sleep 1
+
+echo -e  "\n\nFile written." >&2
+
+select yn in "jal" "nah"; do
+    if [ "$yn" == "jal" ]; then
+        send_str "jal ${JALADDR} "
+        echo "sent:jal ${JALADDR}" >&2
+        sleep 1
+        break
+    else
+        break
+    fi
+done
