@@ -1,18 +1,20 @@
-TARGET ?= example
-A_INC ?= 
+TARGET ?= experi
+A_INC ?=
 #C_INC ?= /opt/diet/include
 #L_INC ?= /opt/diet/lib-mips
 #L_INK ?= c gcc
-C_INC ?= #/opt/uclibc/usr/mips-linux-uclibc/usr/include
-L_INC ?= #/opt/uclibc/usr/mips-linux-uclibc/usr/lib
-L_INK ?= #c gcc
-L_OBJ ?= 
+C_INC ?= ${HOME}/local/mips-unknown-linux/include
+#/opt/uclibc/usr/mips-linux-uclibc/usr/include
+L_INC ?= ${HOME}/local/mips-unknown-linux/lib
+#/opt/uclibc/usr/mips-linux-uclibc/usr/lib
+L_INK ?= c gcc
+L_OBJ ?=
 
 M_PRE ?= mips-
 M_GCC ?= -nostartfiles -march=mips1 -mabi=32
 M_AS ?= $(A_INC:%=-I%)
 M_CC ?= -std=gnu99 $(C_INC:%=-I%)
-M_LD ?= -static $(L_INC:%=-L%) $(L_INK:%=-l%) $(L_OBJ)
+M_LD ?= -static -Wl,-gc-sections $(L_INC:%=-L%) $(L_INK:%=-l%) $(L_OBJ)
 
 CSRCS ?= $(wildcard *.c)
 SSRCS ?= $(wildcard *.s)

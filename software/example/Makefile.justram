@@ -41,7 +41,7 @@ mems: $(MEMS)
 	bin2hack test 0 < $< > $@
 
 clean:
-	rm -f rm *.coe *.mif *.mem *.v *.s
+	rm -f rm *.bin *.coe *.mif *.mem *.v
 
 .phony: clean all count mifs coes mems vees asms
 

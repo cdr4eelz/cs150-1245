@@ -1,6 +1,7 @@
 ELF_INPUT = $(OBJS)
 ELF_CCOPT = -mno-gpopt
 
-include ../makefile.pre
-
 all: elf dump $(SECS)
+
+include ../makefile.all
+

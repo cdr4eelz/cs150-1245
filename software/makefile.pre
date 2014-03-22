@@ -22,7 +22,7 @@ inst: $(OUTS:%=$(TARGET).inst.%)
 bins: $(SECS:%=$(TARGET).%.bin)
 
 
-RM ?= `which "/bin/rm" 2>/dev/null || which "rm" 2>/dev/null || echo "rm"`
+RM ?= `which "/bin/rm" 2>/dev/null || echo "rm"`
 CLANG  ?= clang
 LLC    ?= llc
 
@@ -52,66 +52,3 @@ PCLANG ?= $(CLANG) -cc1 -triple=$(M_TRI) -target-cpu mips1 -target-abi o32 -mrel
 LIBOPTS ?= -nostartfiles -nostdlib -nodefaultlibs -static
 PLLC   ?= $(LLC) -march=$(M_ARCH) -relocation-model=static
 
-$(TARGET).elf: $(ELF_INPUT)
-	$(PGCC) $(ELF_CCOPT) $^ $(LIBOPTS) -T $(LDSRC) -o $@
-	$(PSIZE) $@
-#	$(PSTRIP) -R .pdr -R .comment -R .reginfo $@
-#	$(PSIZE) $@
-	chmod -x $@
-
-%.c.o: %.c
-	$(PGCC) $(CCOPTS) -o $@ -c $<
-%.c.ll: %.c
-	$(PCLANG) $(CCOPTS) -emit-llvm -o $@ -x c $<
-%.c.ll.o: %.c.ll
-	$(PLLC) -o $@ $<
-%.c.ll.s: %.c
-	$(PCLANG) $(CCOPTS) -S -o $@ -x c $<
-%.s.o: %.s
-	$(PGAS) $(ASOPTS) -o $@ $<
-
-
-%.bin: %.elf
-	-$(PCOPY) -j .text -p -O binary $< $@
-	-chmod -x $@
-%.inst.bin: %.elf
-	-$(PCOPY) -j .text -p -O binary $^ $@
-	-chmod -x $@
-%.data.bin: %.elf
-	-$(PCOPY) -j .data -p -O binary $^ $@
-	-chmod -x $@
-#%.both.bin: %.elf
-#	-$(PCOPY) -j .both -p -O binary $^ $@
-#	-chmod -x $@
-#%.both.bin: %.data.bin %.inst.bin
-#	truncate -s 16K $@
-#	cat $^ > $@
-#%.both.mem: %.data.bin %.inst.bin
-#	bin2mem     0 < $*.data.bin > $@
-#	bin2mem 16384 < $*.inst.bin | sed s/^@00000000/@00004000/ >> $@
-
-
-%.dump: %.elf
-	-$(PDUMP) $^ -xsD >$@
-%.inst.dump: %.elf
-	-$(PDUMP) -j .text $^ -xsSDl >$@
-%.data.dump: %.elf
-	-$(PDUMP) -j .data $^ -xS >$@
-
-
-%.mif: %.bin
-	bin2mif < $^ > $@
-%.coe: %.bin
-	bin2coe < $^ > $@
-%.mem: %.bin
-	bin2mem 0 < $^ > $@
-%.v: %.bin
-	bin2rom < $^ > $@
-
-
-clean:
-	$(RM) -f *.o *.ll *.ll.s *.c.s *.elf *.bin *.mif *.coe *.mem *.v *.dump *.log $(OBJS)
-
-.PHONY: clean $(TARGET) elf dump data inst both bins
-.PRECIOUS: %.s %.c.ll %.c.ll.s
-.SECONDARY:
