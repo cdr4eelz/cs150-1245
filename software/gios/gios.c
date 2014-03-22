@@ -30,7 +30,7 @@ int main( void )
     gframe_pv   sw_frame = STD_FRAME1;
                 GP_FRAME = STD_FRAME1;
 
-    forever: for ( ; ; ) {
+    for ( ; ; ) forever: {
         uwrite_int8('>'); uwrite_int8(' ');
         int8_t* input = read_token(buffer, BUFFER_LEN, NULL);
         bcmdspec_t* bcs = token_cmdspec(input);
@@ -89,10 +89,6 @@ int main( void )
             } break;
 
         //COLT45 extensions:
-            BC_HELP: {
-                bufw_cmdspec();
-            } break;
-
             case BC_DUMP: {
                 stash_address = (void*)dump_block(tok_addr(&stash_address), 16);
             } break;
@@ -106,6 +102,10 @@ int main( void )
 
                 bufw_hex32u(xor);
                 bufw_newline();
+            } break;
+
+            BC_HELP: {
+                bufw_cmdspec();
             } break;
 
         //Graphics commands:

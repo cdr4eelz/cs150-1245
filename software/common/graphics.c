@@ -1,5 +1,7 @@
 #include "graphics.h"
 
+#include "mutmath.h"
+
 // *** UTILITY ROUTINES ***
 
 gframe_pv std_frame(uint32_t const fn_or_fp) {
@@ -15,27 +17,31 @@ gframe_pv std_frame(uint32_t const fn_or_fp) {
 uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
                         uint32_t const p0, uint32_t const p1);
 
-void hwfill(uint32_t const color)
+void hwfill(
+    uint32_t const color)
 {
     hw_OpRGB_PP_S(GOP_FILL, color, 0xFFFFFFFF, 0xFFFFFFFF);
 }
-void hwline(uint32_t const color,
-            uint16_t const x0, uint16_t const y0,
-            uint16_t const x1, uint16_t const y1)
+void hwline(
+    uint32_t const color,
+    uint16_t const x0, uint16_t const y0,
+    uint16_t const x1, uint16_t const y1)
 {
     hw_OpRGB_PP_S(GOP_LINE, color,
                   CMD_point(x0,y0),
                   CMD_point(x1,y1));
 }
-void hwpixel(uint32_t const color,
-             uint16_t const x, uint16_t const y)
+void hwpixel(
+    uint32_t const color,
+    uint16_t const x, uint16_t const y)
 {
     hw_OpRGB_PP_S(GOP_PIXEL, color,
                   CMD_point(x,y), 0xFFFFFFFF);
 }
-void hwelipse(uint32_t const color,
-              uint16_t const xc, uint16_t const yc,
-              uint16_t const rx, uint16_t const ry)
+void hwelipse(
+    uint32_t const color,
+    uint16_t const xc, uint16_t const yc,
+    uint16_t const rx, uint16_t const ry)
 {
     hw_OpRGB_PP_S(GOP_ELIPSE, color,
                   CMD_point(xc,yc),
@@ -59,7 +65,9 @@ uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
 
 // *** SOFTWARE IMPLEMENTATIONS ***
 
-void swfill(gframe_pv const fp, uint32_t const color)
+
+void swfill(
+    gframe_pv const fp, uint32_t const color)
 {
     pixel_pv pPIX = (pixel_pv)fp; //Start at pointer to frame base address
     for (int nROW = 0; nROW < ROW_SIZEP; nROW++) {
@@ -136,23 +144,25 @@ void swline(
     }
 }
 
-void swpixel(gframe_pv const fp, uint32_t const color,
-             uint16_t const x, uint16_t const y)
+void swpixel(
+    gframe_pv const fp, uint32_t const color,
+    uint16_t const x, uint16_t const y)
 {
     *PIX_PTR(fp, x, y) = color;
 //  printf("%4d %4d\n", x,y);
 }
 
-void swcircle(gframe_pv const fp, uint32_t const color,
-              uint16_t const xc, uint16_t const yc,
-              uint16_t const r)
+void swcircle(
+    gframe_pv const fp, uint32_t const color,
+    uint16_t const xc, uint16_t const yc,
+    uint16_t const r)
 {
-    int32_t x, y, d, dE, dSE;
-    x = 0; //theta=0; fake "origin" (translate pixels later)
-    y = r; //theta=0
-    d   = 1 - r;          //scale2x: 0.5*(1-r)
-    dE  = 2 + 1;          //scale2x: 1.5
-    dSE = (-2*r) + 4 + 1; //scale2x: -r + 2.5
+    int32_t d, dE, dSE;
+    uint16_t x=0, y=r; //theta=90 @"origin" (translate pixels later)
+
+    d   = 1 - r;            //scale2x: 0.5*(1-r)
+    dE  = 2 + 1;            //scale2x: 1.5
+    dSE = -(r<<1) + 4 + 1;  //scale2x: -r + 2.5
     swpixel_8way(fp,color, xc,yc, x,y);
     while (y > x) {
         if (d < 0) {
@@ -171,59 +181,52 @@ void swcircle(gframe_pv const fp, uint32_t const color,
     }
 }
 
-void swelipse(gframe_pv const fp, uint32_t const color,
-              uint16_t const xc, uint16_t const yc,
-              uint16_t const rx, uint16_t const ry)
+void swelipse(
+    gframe_pv const fp, uint32_t const color,
+    uint16_t const xc, uint16_t const yc,
+    uint16_t const a, uint16_t const b)
 {
-//TODO:Optimize SQUARE(uint16_t):uint32_t
-    uint16_t x = 0, y = ry; //theta=0; fake "origin" (translate pixels later)
-    uint32_t const a2p = (rx^2)<<1; //scale2x: rx^2
-    uint32_t const b2p = (ry^2)<<1; //scale2x: ry^2
+    uint16_t x = 0, y = b; //theta=90 @origin (offset pixels later)
+    uint32_t const AA = sqr32(a), BB = sqr32(b);
+    uint32_t const AABB = mul32(AA,BB);
     int32_t dd; //dd
 
-//TODO:Pre-compute dd increments
-//  dd = b2p - (a2p * (y   )) + (a2p /4);
-    dd = b2p - (a2p * (y<<1)) + (a2p>>2); //scale2x:
+    dd = BB - mul32(AA,(b  )) + (AA>>2);
     swpixel_4way(fp,color, xc,yc, x,y);
-//  while ((a2p*((y   )-(0.5))) > (b2p*((x   )+(1.0)))) {
-    while ((a2p*((y<<1)-(  1))) > (b2p*((x<<1)+(  2)))) {
-        if (dd < 0) {
-//          dd += (b2p * ((x *2) + 3));
-            dd += (b2p * ((x<<2) + 6)); //scale2x:
-        } else {
-//          dd += (b2p * ((x *2) + 3)) + (a2p * (-(y *2) + 2));
-            dd += (b2p * ((x<<2) + 6)) + (a2p * (-(y<<2) + 4)); //scale2x:
+
+    while ( (mul32(AA,y   )-(AA>>1)) > (mul32(BB,x   )+BB) ) {
+        if (dd >= 0) {
+            dd += (AA<<1)-mul32(AA,y<<1);
             --y;
         }
+        dd += mul32(BB,(x<<1)+3);
         ++x;
         swpixel_4way(fp,color, xc,yc, x,y);
     }
-
+//return;
+//printf("\\\\\\\n");
     //Transition at slope=1, whatever theta happens to be; Reverse x&y roles
-//  dd = (a2p*(((   y)-(1.0))^2)) + (b2p*(((x   )+0.5)^2)) - (a2p*b2p);
-    dd = (a2p*(((y<<1)-(  2))^2)) + (b2p*(((x<<1)+  1)^2)) - (a2p*b2p);
+    dd = mul32(BB,sqr32(x   )+x)+(BB>>2) + mul32(AA,sqr32((y   )-1)) - AABB;
     while (y > 0) {
         if (dd < 0) {
-//          dd += (a2p * (-(y *2) + 3)) + (b2p * ((x *2) + 2));
-            dd += (a2p * (-(y<<2) + 6)) + (b2p * ((x<<2) + 4)); //scale2x:
+            dd += mul32(BB,(x<<1)+2);
             ++x;
-        } else {
-//          dd += (a2p * (-(y *2) + 3)); //scale2x:
-            dd += (a2p * (-(y<<2) + 6)); //scale2x:
         }
+        dd += (AA<<1)+AA-mul32(AA,y<<1);
         --y;
         swpixel_4way(fp,color, xc,yc, x,y);
     }
 }
 
-void swcircle_old(gframe_pv const fp, uint32_t const color,
-                  uint16_t const xc, uint16_t const yc,
-                  uint16_t const r)
+
+void swcircle_old(
+    gframe_pv const fp, uint32_t const color,
+    uint16_t const xc, uint16_t const yc,
+    uint16_t const r)
 {
-    int32_t x, y, d;
-    x = 0;
-    y = r;
-    d = 1 - r;
+    int32_t d = 1-r;
+    uint16_t x = 0, y = r;
+
     swpixel_8way(fp,color, xc,yc, x,y);
     while(y > x) {
         if(d < 0) {
@@ -239,9 +242,10 @@ void swcircle_old(gframe_pv const fp, uint32_t const color,
 }
 
 
-void swpixel_4way(gframe_pv const fp, uint32_t const color,
-                  uint16_t const xc, uint16_t const yc,
-                  int16_t const ox,  int16_t const oy)
+void swpixel_4way(
+    gframe_pv const fp, uint32_t const color,
+    uint16_t const xc, uint16_t const yc,
+    uint16_t const ox, uint16_t const oy)
 {
 //TODO:Avoid recompute of pixel address
     *PIX_PTR(fp, xc - ox, yc - oy) = color;
@@ -250,9 +254,10 @@ void swpixel_4way(gframe_pv const fp, uint32_t const color,
     *PIX_PTR(fp, xc + ox, yc + oy) = color;
 }
 
-void swpixel_8way(gframe_pv const fp, uint32_t const color,
-                  uint16_t const xc, uint16_t const yc,
-                  int16_t const ox,  int16_t const oy)
+void swpixel_8way(
+    gframe_pv const fp, uint32_t const color,
+    uint16_t const xc, uint16_t const yc,
+    uint16_t const ox, uint16_t const oy)
 {
 //TODO:Avoid recompute of pixel address
 //    uint16_t o2x = (ox << 1);

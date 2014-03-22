@@ -38,6 +38,7 @@ static void dd_circle(color_t color,
           uint16_t xc, uint16_t yc, uint16_t r)
 {
     swcircle(sw_frame,  color, xc,yc, r);
+//  hwelipse(           color, xc,yc, r,r);
 }
 
 int main(int argc, char** argv)
@@ -50,7 +51,7 @@ int main(int argc, char** argv)
     dd_line  (0x10FFFFFF,  10, 10,  700,300);
     dd_line  (0x10FFFFFF, 400, 10,   10,500);
     dd_pixel (0x10FFFFFF,  20,250);
-    dd_elipse(0x10FF0000, 300,300,   50, 50);
+    dd_elipse(0x10FF0000, 100,100,   10, 10);
     PF_FRAME = STD_FRAME1;
     swcircle_old(sw_frame, 0x11000000, 650,200,   50);
     swcircle    (sw_frame, 0x12222222, 650,200,   40);
@@ -64,8 +65,8 @@ int main(int argc, char** argv)
     dd_line  (0x2000FF00,  10, 10,  700,300);
     dd_line  (0x200000FF, 500,250,  200, 90);
     dd_line  (0x20000000,  10,300,  400,500);
-    dd_elipse(0x20222222, 650,200,   50, 50);
-    dd_elipse(0x20008844, 250,120,  100, 25);
+    dd_elipse(0x20222222, 200,300,   20, 20);
+    dd_elipse(0x20008844, 600,300,  100, 50);
     dd_pixel (0x20023666,  21, 51);
     dd_circle(0x22222222, 650,200,   50);
 

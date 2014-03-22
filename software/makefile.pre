@@ -2,7 +2,9 @@ LDSTYLE ?= inject_basic
 LDSRC ?= ../link/$(LDSTYLE).ld
 START ?= ../link/$(LDSTYLE).s
 
-CSRCS ?= $(wildcard *.c)
+ALLCS ?= $(wildcard *.c)
+NOPTS ?= $(wildcard *.nopt.c)
+CSRCS ?= $(filter-out $(NOPTS),$(ALLCS))
 SSRCS ?= $(wildcard *.s) $(START)
 
 OUTS ?= mif coe mem # "dump v"
@@ -10,9 +12,10 @@ SECS ?= inst data
 
 OBJS = $(SOBJS) $(COBJS)
 SOBJS = $(SSRCS:%.s=%.s.o)
-COBJS = $(CSRCS:%.c=%.c.ll.s.o)
+#COBJS = $(CSRCS:%.c=%.c.ll.s.o)
 #COBJS = $(CSRCS:%.c=%.c.ll.o)
-#COBJS = $(CSRCS:%.c=%.c.o)
+COBJS = $(CSRCS:%.c=%.c.o)
+NOPTOBJS = $(NOPTS:%.c=%.c.o)
 
 default: all
 elf: $(TARGET).elf
@@ -38,11 +41,12 @@ PSIZE  ?= $(M_PRE)size
 PDUMP  ?= $(M_PRE)objdump
 PCOPY  ?= $(M_PRE)objcopy
 
-ASOPTS ?= -mips1 -march=mips1 -mabi=32 --no-break --no-trap  -mno-pdr -xgot -non_shared -mno-shared -R -g2
+ASOPTS ?= -mips1 -march=mips1 -mabi=32 --no-break --no-trap  -mno-pdr -non_shared -mno-shared -R -g2
 # -O0
-CCOPTS ?= -pipe -fasm -std=gnu99 -pedantic -ffreestanding -Os -fomit-frame-pointer -freorder-blocks-and-partition -foptimize-register-move -frename-registers -funit-at-a-time -g
-# -O0
-CCMIPS ?= -mips1 -march=mips1 -mabi=32 -mno-abicalls -msoft-float -mno-dsp -mno-mips3d -mlong32 -mno-branch-likely -mno-flush-func -fno-PIE -fno-PIC -fno-pie -fno-pic -fno-exceptions -Wa,-mno-pdr,-xgot,-non_shared,-mno-shared,-O,-R
+CCOPTS ?= -pipe -fasm -std=gnu99 -pedantic -ffreestanding -g
+OPTOPT ?= -Os
+NOPOPT ?= -O0
+CCMIPS ?= -mips1 -march=mips1 -mabi=32 -mno-abicalls -msoft-float -mno-dsp -mno-mips3d -mlong32 -mno-branch-likely -mno-flush-func -fno-PIE -fno-PIC -fno-pie -fno-pic -fno-exceptions -Wa,-mno-pdr,-non_shared,-mno-shared,-O,-R
 # -G0
 # -Wl,--strip-debug
 

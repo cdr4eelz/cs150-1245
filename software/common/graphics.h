@@ -134,10 +134,10 @@ void swcircle_old(gframe_pv frame, color_t color,
                     uint16_t r);
 void swpixel_4way(gframe_pv fp, color_t color,
                     uint16_t xc, uint16_t yc,
-                    int16_t ox, int16_t oy);
+                    uint16_t ox, uint16_t oy);
 void swpixel_8way(gframe_pv fp, color_t color,
                     uint16_t xc, uint16_t yc,
-                    int16_t ox, int16_t oy);
+                    uint16_t ox, uint16_t oy);
 
 
 // *** GP_GCODE COMMANDs: INST Fields, OpCodes, etc. ***

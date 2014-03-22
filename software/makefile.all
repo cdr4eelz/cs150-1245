@@ -2,18 +2,26 @@
 $(TARGET).elf: $(ELF_INPUT)
 	$(PGCC) $(ELF_CCOPT) $^ $(LIBOPTS) -T $(LDSRC) -o $@
 	$(PSIZE) $@
-#	$(PSTRIP) -R .pdr -R .comment -R .reginfo $@
-#	$(PSIZE) $@
+	$(PSTRIP) -R .pdr -R .comment -R .reginfo $@
+	$(PSIZE) $@
 	chmod -x $@
 
-%.c.o: %.c
-	$(PGCC) $(CCOPTS) -o $@ -c $<
-%.c.ll: %.c
-	$(PCLANG) $(CCOPTS) -emit-llvm -o $@ -x c $<
-%.c.ll.o: %.c.ll
+#C sources with .nopt.c get "NOPOPT"
+%.nopt.c.o: %.nopt.c
+	$(PGCC) $(CCMIPS) $(CCOPTS) $(NOPOPT) -o $@ -c $<
+%.nopt.c.ll: %.nopt.c
+	$(PCLANG) $(CCOPTS) $(NOPOPT) -emit-llvm -o $@ -x c $<
+%.nopt.c.ll.o: %.nopt.c.ll
 	$(PLLC) -o $@ $<
+%.nopt.c.ll.s: %.c
+	$(PCLANG) $(CCMIPS) $(CCOPTS) $(NOPOPT) -S -o $@ -x c $<
+#...others get "OPTOPT"
+%.c.o: %.c
+	$(PGCC) $(CCMIPS) $(CCOPTS) $(OPTOPT) -o $@ -c $<
+%.c.ll: %.c
+	$(PCLANG) $(CCOPTS) $(OPTOPT) -emit-llvm -o $@ -x c $<
 %.c.ll.s: %.c
-	$(PCLANG) $(CCOPTS) -S -o $@ -x c $<
+	$(PCLANG) $(CCMIPS) $(CCOPTS) $(OPTOPT) -S -o $@ -x c $<
 %.s.o: %.s
 	$(PGAS) $(ASOPTS) -o $@ $<
 
@@ -43,7 +51,7 @@ $(TARGET).elf: $(ELF_INPUT)
 %.inst.dump: %.elf
 	-$(PDUMP) -j .text $^ -xsSDl >$@
 %.data.dump: %.elf
-	-$(PDUMP) -j .data $^ -xS >$@
+	-($(PDUMP) -j .data $^ -xS >$@ || exit 0)
 
 
 %.mif: %.bin
