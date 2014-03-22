@@ -23,7 +23,7 @@ static void dd_pixel(color_t color,
                   uint16_t x, uint16_t y)
 {
     swpixel(sw_frame,  color, x,y);
-//  hwpixel(           color, x,y);
+    hwpixel(           color, x,y);
 }
 
 static void dd_elipse(color_t color,
@@ -31,14 +31,14 @@ static void dd_elipse(color_t color,
                    uint16_t rx, uint16_t ry)
 {
     swelipse(sw_frame,  color, xc,yc, rx,ry);
-//  hwelipse(           color, xc,yc, rx,ry);
+    hwelipse(           color, xc,yc, rx,ry);
 }
 
 static void dd_circle(color_t color,
           uint16_t xc, uint16_t yc, uint16_t r)
 {
     swcircle(sw_frame,  color, xc,yc, r);
-//  hwelipse(           color, xc,yc, r,r);
+    hwelipse(           color, xc,yc, r,r);
 }
 
 int main(int argc, char** argv)
@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     dd_line  (0x10FFFFFF,  10, 10,  700,300);
     dd_line  (0x10FFFFFF, 400, 10,   10,500);
     dd_pixel (0x10FFFFFF,  20,250);
-    dd_elipse(0x10FF0000, 100,100,   10, 10);
+    dd_elipse(0x10FF0000, 100,100,   20, 30);
     PF_FRAME = STD_FRAME1;
     swcircle_old(sw_frame, 0x11000000, 650,200,   50);
     swcircle    (sw_frame, 0x12222222, 650,200,   40);
@@ -70,7 +70,8 @@ int main(int argc, char** argv)
     dd_pixel (0x20023666,  21, 51);
     dd_circle(0x22222222, 650,200,   50);
 
-    PF_FRAME = STD_FRAME4;
+    GP_WAIT();
+    PF_FRAME = STD_FRAME3;
 //NOTE:start.s for target now handles jump to bios upon exit
 //    uint32_t bios = ascii_hex_to_uint32("40000000");
 //    entry_t start = (entry_t) (bios);

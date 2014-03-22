@@ -54,17 +54,19 @@ typedef uint32_t color_t, *color_p;
 typedef uint32_t pixel_tp, *pixel_pp;
 typedef pixel_tp volatile pixel_tv, *pixel_pv;
 typedef struct grow_s {
-    pixel_tp used[COL_SIZEP];
-    pixel_tp xtra[ROW_XTRAP];
+    pixel_tp uc[COL_SIZEP];
+    pixel_tp xc[ROW_XTRAP];
 } grow_tp, *grow_pp;
 typedef volatile grow_tp grow_tv, *grow_pv;
 typedef struct gframe_sx {
-    grow_tp used[ROW_SIZEP];
-    grow_tp xtra[FRAME_XTRAR];
+    grow_tp ur[ROW_SIZEP];
+    grow_tp xr[FRAME_XTRAR];
 } gframe_tp, *gframe_pp;
 typedef volatile gframe_tp gframe_tv, *gframe_pv;
 
-typedef uint32_t* gpcode_pp;
+typedef uint32_t gpcode_t;
+typedef gpcode_t *gpcode_pp;
+typedef volatile gpcode_t *gpcode_pv;
 #define XSHIFT  (2)
 #define YSHIFT  (12)
 #define FSHIFT  (22)
@@ -73,7 +75,6 @@ typedef uint32_t* gpcode_pp;
 #define YMASK   (0x003FF000)    //10-bits shifted into "y" coordinate
 #define FPMASK  (0xFFC00000)    //Upper nibble plus 6-bits for frame#
 #define FNMASK  (0x0000003F)    //Just the 6-bits for frame# (before shifting)
-typedef volatile gpcode_pp gpcode_pv;
 
 
 //Renumbered so FRAME0 is 0x10000000...but usually skip that one!
@@ -153,8 +154,7 @@ void swpixel_8way(gframe_pv fp, color_t color,
 #define CMD_LINE(C)     CMD_rgb(GOP_LINE,   C.u32) //Then 2 x CMD_point
 #define CMD_PIXEL(C)    CMD_rgb(GOP_PIXEL,  C.u32) //Then 1 x CMD_point
 #define CMD_ELIPSE(C)   CMD_rgb(GOP_ELIPSE, C.u32) //Then 2 x CMD_point
-#define CMD_rgb(OP,U24) ((uint32_t) ( (((OP)&0x0FF )<<24 ) | ((U24)&0x0FFFFFF) ))
-#define CMD_point(X,Y)  ((uint32_t) ( (((X)&(PMASK))<<16 ) | ((Y)&(PMASK))   ))
-//efine CMD_point(X,Y)  ((uint32_t) ( (((X)&(PMASK))<<16 ) | ((Y)&(PMASK)) | (T<<31) ))
+#define CMD_rgb(OP,U24) ((gpcode_t)( (((OP)&0x0FF )<<24 ) | ((U24)&0x0FFFFFF) ))
+#define CMD_point(X,Y)  ((gpcode_t)( (((X)&(PMASK))<<16 ) | ((Y)&(PMASK))     ))
 
 #endif

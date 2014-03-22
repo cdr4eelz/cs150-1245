@@ -1,6 +1,6 @@
 /*/*
 !Makefile
-!*.cgp
+!/*.cgp
 !*.xco
 !stash_*
 

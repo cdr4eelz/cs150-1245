@@ -14,7 +14,7 @@ gframe_pv std_frame(uint32_t const fn_or_fp) {
 
 // *** HARDWARE IMPLEMENTATION (Just single GPCODE command in GPTEMP_PTR) ***
 
-uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
+gpcode_pv hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
                         uint32_t const p0, uint32_t const p1);
 
 void hwfill(
@@ -48,11 +48,11 @@ void hwelipse(
                   CMD_point(rx,ry));
 }
 
-uint32_t* hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
+gpcode_pv hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
                         uint32_t const p0, uint32_t const p1)
 {
     GP_WAIT();
-    uint32_t* pINST = GPTEMP_PTR;
+    gpcode_pv pINST = GPTEMP_PTR;
     *pINST++ = CMD_rgb(op, color);
     if (p0 != 0xFFFFFFFF) *pINST++ = p0;
     if (p1 != 0xFFFFFFFF) *pINST++ = p1;

@@ -15,3 +15,25 @@
 *.mif
 *.mem
 *.v
+
+#The file names inside /common/ directory
+ascii.c
+ascii_defs.h
+ascii.h
+benchmark.c
+benchmark.h
+graphics.c
+graphics.h
+memory.c
+memory.h
+mutmath.c
+mutmath.h
+parse.c
+parse.h
+string.c
+string.h
+types.h
+uart.c
+uart.h
+#But not in their master location!
+!/common/*
