@@ -4,67 +4,37 @@
 
 // *** UTILITY ROUTINES ***
 
-gframe_pv std_frame(uint32_t const fn_or_fp) {
+__attribute__((always_inline)) inline
+gframe_pv std_frame(uint32_t const fn_or_fp)
+{
     uint32_t fp = (fn_or_fp & (FPMASK));
     if (!fp) fp = (0x10000000 | ((fn_or_fp & (FNMASK)) << (FSHIFT)));
     return (gframe_pv)fp;
 }
 
 
-
 // *** HARDWARE IMPLEMENTATION (Just single GPCODE command in GPTEMP_PTR) ***
 
-gpcode_pv hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
-                        uint32_t const p0, uint32_t const p1);
-
-void hwfill(
-    uint32_t const color)
+gpcode_p hw_OpRGB_PP_S(gpcode_p bINST,
+		const struct cmd_rgb const cmd,
+		const struct cmd_pnt const p0,
+		const struct cmd_pnt const p1)
 {
-    hw_OpRGB_PP_S(GOP_FILL, color, 0xFFFFFFFF, 0xFFFFFFFF);
-}
-void hwline(
-    uint32_t const color,
-    uint16_t const x0, uint16_t const y0,
-    uint16_t const x1, uint16_t const y1)
-{
-    hw_OpRGB_PP_S(GOP_LINE, color,
-                  CMD_point(x0,y0),
-                  CMD_point(x1,y1));
-}
-void hwpixel(
-    uint32_t const color,
-    uint16_t const x, uint16_t const y)
-{
-    hw_OpRGB_PP_S(GOP_PIXEL, color,
-                  CMD_point(x,y), 0xFFFFFFFF);
-}
-void hwelipse(
-    uint32_t const color,
-    uint16_t const xc, uint16_t const yc,
-    uint16_t const rx, uint16_t const ry)
-{
-    hw_OpRGB_PP_S(GOP_ELIPSE, color,
-                  CMD_point(xc,yc),
-                  CMD_point(rx,ry));
-}
-
-gpcode_pv hw_OpRGB_PP_S(uint8_t const op, uint32_t const color,
-                        uint32_t const p0, uint32_t const p1)
-{
+    gpcode_p pINST = (bINST) ? bINST : GPTEMP_PTR;
     GP_WAIT();
-    gpcode_pv pINST = GPTEMP_PTR;
-    *pINST++ = CMD_rgb(op, color);
-    if (p0 != 0xFFFFFFFF) *pINST++ = p0;
-    if (p1 != 0xFFFFFFFF) *pINST++ = p1;
-    *pINST++ = CMD_STOP();
-    GP_GCODE = GPTEMP_PTR;
+    (*pINST++).fRGB = cmd;
+    if (p0.flags != pnt_null.flags) (*pINST++).fPNT = p0;
+    if (p1.flags != pnt_null.flags) (*pINST++).fPNT = p1;
+    if (!bINST) {
+        (*pINST++).fRGB = CMD_STOP();
+    	GP_GCODE = GPTEMP_PTR;
+    }
     return pINST;
 }
 
-
+const struct cmd_pnt pnt_null = { .flags=0x3F };
 
 // *** SOFTWARE IMPLEMENTATIONS ***
-
 
 void swfill(
     gframe_pv const fp, uint32_t const color)
@@ -94,11 +64,11 @@ void swline(
 {
     int16_t const difXs = (x1 - x0);
     int16_t const difYs = (y1 - y0);
-    BOOL const decrX = (difXs < 0), decrY = (difYs < 0);
+    char const decrX = (difXs < 0), decrY = (difYs < 0);
     uint16_t const difXu = (decrX) ? -difXs : difXs;
     uint16_t const difYu = (decrY) ? -difYs : difYs;
-    BOOL const spin = (difYu > difXu) ? 1 : 0;
-    BOOL const flip = (spin) ? decrY : decrX;
+    char const spin = (difYu > difXu);
+    char const flip = (spin) ? decrY : decrX;
     uint16_t a0, a1, b0, b1;
     if (spin) {
         if (flip) {
@@ -117,7 +87,7 @@ void swline(
             a1 = x1; b1 = y1;
         }
     }
-    BOOL const incB = (b1 > b0);
+    char const incB = (b1 > b0);
     uint32_t const offB = (incB) ? 1 : 0xFFFFFFFF; //B addend fake-signed (+/- 1)
     //uint32_t const errB = (incB) ? (b1 - b0) : (b0 - b1); //Error subtracted portion (arrange >= 0)
     //negB = (~errB + 1);

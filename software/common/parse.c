@@ -187,7 +187,7 @@ uint32_t tok_radnum(radixize_t const rz)
 {
     int8_t localbuf[LOCALBUF_LEN];
     uint32_t val; //Smaller ints get promoted then demoted (MIPS passes words anyways)
-    BOOL negative;
+    char negative;
 
     int8_t *input = read_token(localbuf, LOCALBUF_LEN, NULL);
 

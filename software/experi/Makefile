@@ -24,7 +24,8 @@ SOBJS ?= $(SSRCS:%.s=%.s.o)
 
 LDSRC ?= $(TARGET).ld
 
-default: $(TARGET).coe $(TARGET).mif $(TARGET).dump
+default: all
+all: $(TARGET).coe $(TARGET).mif $(TARGET).dump
 .SECONDARY:
 
 $(TARGET).elf: $(CSRCS) $(SSRCS)

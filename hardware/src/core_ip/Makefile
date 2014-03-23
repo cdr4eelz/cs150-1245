@@ -3,11 +3,7 @@ SUBS ?= $(shell find * -mindepth 1 -maxdepth 1 -name "Makefile" -printf '%h ')
 
 .PHONY: all clean $(SUBS)
 
-all: $(SUBS)
-	echo "DONE: $@ ($^)"
-
-clean: $(SUBS)
-	-find . -name '*.o' -delete
+all clean: $(SUBS)
 	echo "DONE: $@ ($^)"
 
 $(SUBS):

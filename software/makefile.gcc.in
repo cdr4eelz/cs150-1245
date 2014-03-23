@@ -4,7 +4,6 @@ ELF_CCOPT = $(CCMIPS) $(CCOPTS) $(OPTOPT) -Wl,--no-relax
 default: all
 
 all: elf dump $(SECS)
+#all: $(TARGET).coe $(TARGET).mif
 
 include ../makefile.all
-
-#all: $(TARGET).coe $(TARGET).mif

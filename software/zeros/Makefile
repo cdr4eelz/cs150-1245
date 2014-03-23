@@ -1,3 +1,6 @@
+default: all
+all: zeros.coe
+
 zeros.coe: nada.bin
 	bin2coe < $^ > $@
 

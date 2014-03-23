@@ -8,7 +8,8 @@ SOBJS := $(SSRCS:%.s=%.s.o)
 
 LDSRC := $(TARGET).ld
 
-default: $(TARGET)
+default: all
+all: $(TARGET)
 
 
 $(TARGET): $(COBJS) $(SOBJS)

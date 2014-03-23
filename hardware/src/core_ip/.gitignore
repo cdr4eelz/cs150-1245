@@ -1,4 +1,6 @@
 /*/*
+*.cgp
+*.coe
 !Makefile
 !/*.cgp
 !*.xco

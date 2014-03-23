@@ -2,8 +2,8 @@
 $(TARGET).elf: $(ELF_INPUT)
 	$(PGCC) $(ELF_CCOPT) $^ $(LIBOPTS) -T $(LDSRC) -o $@
 	$(PSIZE) $@
-	$(PSTRIP) -R .pdr -R .comment -R .reginfo $@
-	$(PSIZE) $@
+#	$(PSTRIP) -R .pdr -R .comment -R .reginfo $@
+#	$(PSIZE) $@
 	chmod -x $@
 
 #C sources with .nopt.c get "NOPOPT"

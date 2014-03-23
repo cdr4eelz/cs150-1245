@@ -43,7 +43,7 @@ PCOPY  ?= $(M_PRE)objcopy
 
 ASOPTS ?= -mips1 -march=mips1 -mabi=32 --no-break --no-trap  -mno-pdr -non_shared -mno-shared -R -g2
 # -O0
-CCOPTS ?= -pipe -fasm -std=gnu99 -pedantic -ffreestanding -g
+CCOPTS ?= -pipe -fasm -std=gnu99 -ffreestanding -g
 OPTOPT ?= -Os
 NOPOPT ?= -O0
 CCMIPS ?= -mips1 -march=mips1 -mabi=32 -mno-abicalls -msoft-float -mno-dsp -mno-mips3d -mlong32 -mno-branch-likely -mno-flush-func -fno-PIE -fno-PIC -fno-pie -fno-pic -fno-exceptions -Wa,-mno-pdr,-non_shared,-mno-shared,-O,-R
