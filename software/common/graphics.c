@@ -16,9 +16,9 @@ gframe_pv std_frame(uint32_t const fn_or_fp)
 // *** HARDWARE IMPLEMENTATION (Just single GPCODE command in GPTEMP_PTR) ***
 
 gpcode_p hw_OpRGB_PP_S(gpcode_p bINST,
-		const struct cmd_rgb const cmd,
-		const struct cmd_pnt const p0,
-		const struct cmd_pnt const p1)
+    const struct cmd_rgb const cmd,
+    const struct cmd_pnt const p0,
+    const struct cmd_pnt const p1)
 {
     gpcode_p pINST = (bINST) ? bINST : GPTEMP_PTR;
     GP_WAIT();

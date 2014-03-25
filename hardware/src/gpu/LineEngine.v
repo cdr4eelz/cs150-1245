@@ -28,7 +28,7 @@ module LineEngine #(
 
     // Implement Bresenham's line drawing algorithm here!
 
-    reg  rst_r; //Detect & apply & release synchronously to our clock
+    reg  rst_r; //Release synchronously to our clock
     always @(posedge clk) begin
         rst_r <= rst; //Internal reset, rst_r, unless really must sync-up release!
     end
@@ -88,20 +88,21 @@ module LineEngine #(
 //Key State Registers
     reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
     reg  [ 9:0] a0,b0, a1,b1, a,b; //(a0,b0) & (a,b) redundant; kept for debug
-	reg  MODE_incB, MODE_tran, MODE_flip;
-	reg  [15:0] error, tempA,tempB, ADJ_negB,ADJ_posA;
+    reg  MODE_incB, MODE_tran, MODE_flip;
+    reg  [15:0] error, tempA,tempB, ADJ_negB,ADJ_posA;
 
 //Key Live-Wires & Assigns
-	wire [ 9:0] x,y;
-	wire passingA = (a >= a1);
-	assign LE_ready = (cs_M[MH_IDLE]);
-	assign {x,y} = (MODE_tran) ? {b,a} : {a,b};
+    wire [ 9:0] x,y;
+    wire finishingSweep = (a >= a1);
+    assign LE_ready = (cs_M[MH_IDLE]);
+    assign {x,y} = (MODE_tran) ? {b,a} : {a,b};
 
 //TODO:Segregate combinational (compare/adder/etc.) vs. sequential ("enables")
-	reg decrX, decrY;
-	wire [15:0] difXu = ((decrX) ? x0 : x1) - ((decrX) ? x1 : x0); //Arrange >= 0 *in advance*
-	wire [15:0] difYu = ((decrY) ? y0 : y1) - ((decrY) ? y1 : y0); //Arrange >= 0 *in advance*
-	wire longerY = (difYu > difXu); //TODO:Consider algebraic re-grouping
+    reg  decrX, decrY;
+    wire adv1, adv2;
+    wire [15:0] difXu = ((decrX) ? x0 : x1) - ((decrX) ? x1 : x0); //Arrange >= 0 *in advance*
+    wire [15:0] difYu = ((decrY) ? y0 : y1) - ((decrY) ? y1 : y0); //Arrange >= 0 *in advance*
+    wire longerY = (difYu > difXu); //TODO:Consider algebraic re-grouping
 
 //Master-State machine Next-States
     always @(*) begin
@@ -113,8 +114,8 @@ module LineEngine #(
             MS_PRE3: ns_M = MS_PRE2;
             MS_PRE2: ns_M = MS_PRE1;
             MS_PRE1: ns_M = MS_RUN1; //TODO:Check non-draw
-            MS_RUN1: if (!wdf_full && !af_full) ns_M = MS_RUN2;
-            MS_RUN2: if (!wdf_full) ns_M = (passingA) ? MS_RSET : MS_RUN1;
+            MS_RUN1: if (adv1) ns_M = MS_RUN2;
+            MS_RUN2: if (adv2) ns_M = (finishingSweep) ? MS_RSET : MS_RUN1;
             default: ns_M = MS__DEAD;
         endcase
     end
@@ -133,7 +134,7 @@ module LineEngine #(
                 {decrX,decrY} <= {(x1 < x0),(y1 < y0)}; // the dude must abide!
 //TODO:Apply x/y CLIP or at least detect when needed & apply next
             end
-			//From MS_PRE4 onward, use registered xn_r/yn_r
+        //From MS_PRE4 onward, use registered [x|y][0|1]_r directly
             MS_PRE4: begin
                 {tempA,tempB} <= {difXu,difYu};
                 MODE_tran <= (longerY); //Translate axes to step along LONGER one
@@ -154,13 +155,15 @@ module LineEngine #(
             MS_PRE1: begin // reG=>[ADD | wire]=>Reg
                 ADJ_posA  <= (tempA + ADJ_negB);
                 error     <= (tempA >> 1);
-                {a,b}     <= {a0,b0};
+                a         <= a0;
+                b         <= b0;
             end
-            MS_RUN1: if (!wdf_full && !af_full) begin
+            MS_RUN1: if (adv1) begin
                 tempA     <= error + ADJ_posA;
                 tempB     <= error + ADJ_negB;
             end
-            MS_RUN2: if (!wdf_full) begin
+            MS_RUN2: if (adv2) begin
+                //a & b affect x & y (preserve until x & y made it to PixelRunner)
                 a         <= (a+1); //up-counter w/enable
                 b         <= (tempB[15]) ? ((MODE_incB)?(b+1):(b-1)) : b; //up/down w/enable
                 error     <= (tempB[15]) ? tempA : tempB;
@@ -170,16 +173,32 @@ module LineEngine #(
     end
 
 
-//TODO:Write "run" of pixels instead
+//Write "run" of pixels instead via ScanLineRunner module
+ScanLineRunner slr(
+    .clk(clk), .rst(rst),
+    .af_full(af_full), .wdf_full(wdf_full),
+    .af_addr_din(af_addr_din), .af_wr_en(af_wr_en),
+    .wdf_din(wdf_din), .wdf_mask_din(wdf_mask_din), .wdf_wr_en(wdf_wr_en),
+    .SLR_ready(adv1), .SLR_valid(cs_M[MH_RUN1]),
+    .SLR_frame({4'h1, framebits[5:0], 22'b0}),
+    .SLR_color_fill(color_r), .SLR_color_edge(color_r),
+    .SLR_row(y),
+    .SLR_col_start(x), .SLR_col_finish(x)
+);
+    assign adv2 = 1'b1;
+
+/*
 //Drive DDR lines to write 1 pixel at-a-time
     reg  [3:0] maskW;
     wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
 
     assign af_addr_din  = {6'b000000, cpu_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
-    assign af_wr_en     = (cs_M[MH_RUN1]);
     assign wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} };
     assign wdf_din      = {4{color_r}}; //Replicate same color on all 4 pixels of both writes
+    assign af_wr_en     = (cs_M[MH_RUN1]);
     assign wdf_wr_en    = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
+    assign adv1 = (!wdf_full && !af_full);
+    assign adv2 = (!wdf_full);
 
     always @(*) begin
         case ({cs_M[MH_RUN1],cs_M[MH_RUN2], x[2:0]})
@@ -194,7 +213,7 @@ module LineEngine #(
             default:   maskW = 4'b1111;
         endcase
     end
-
+*/
 
 //synthesis translate_off
 /*

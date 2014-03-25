@@ -137,7 +137,7 @@ module LineEngineTestbench;
         LE_frame = 32'h1040_0000;
         LE_trigger  = 1'b1;
         $strobe("le-TB: TRIG (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h frame=%h",
-        x0,y0, x1,y1, x0,y0, x1,y1, color, LE_frame);
+                x0,y0, x1,y1, x0,y0, x1,y1, color, LE_frame);
         #(Cycle);
         LE_point = 32'bz;
         LE_frame = 32'bz;
@@ -150,8 +150,8 @@ module LineEngineTestbench;
             end
             #(Cycle);
         end
-        $display("le-TB: Done. (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h frame=%h",
-                x0,y0, x1,y1, x0,y0, x1,y1, color, LE_frame);
+        $display("le-TB: Done. (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h",
+                 x0,y0, x1,y1, x0,y0, x1,y1, color);
     end endtask
 
 endmodule

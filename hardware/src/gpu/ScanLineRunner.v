@@ -1,0 +1,101 @@
+module ScanLineRunner #(
+    parameter PIX_WIDTH=4 //NOTE:Unimplemented
+)(
+    input           clk,
+    input           rst, //Synchronized internally
+//DDR FIFOs (write-only):
+    input           af_full,
+    input           wdf_full,
+    output  [ 30:0] af_addr_din,
+    output          af_wr_en,
+    output  [127:0] wdf_din,
+    output  [ 15:0] wdf_mask_din,
+    output          wdf_wr_en,
+//ScanRun control <=> Engine/CPU:
+    input   [ 31:0] SLR_frame,
+    input   [ 31:0] SLR_color_edge,
+    input   [ 31:0] SLR_color_fill,
+    output          SLR_ready,
+    input           SLR_valid,
+    input   [  9:0] SLR_row,
+    input   [  9:0] SLR_col_start,
+    input   [  9:0] SLR_col_finish
+);
+
+    reg  rst_r; //Detect & apply & release synchronously to our clock
+    always @(posedge clk) begin
+        rst_r <= rst; //Internal reset, rst_r, unless really must sync-up release!
+    end
+
+    localparam
+        MH_RSET     = 0, //Performing or coming out of reset     <=-._
+        MH_IDLE     = 1, //Ready for initiation                       \
+        MH_DDR1     = 2, //1st-half DDR-write     <----------------=\?/
+        MH_DDR2     = 3; //2nd-half DDR-write; or done     -------->_/
+    localparam MH__LAST = MH_DDR2;
+    localparam [MH__LAST:0] MS__DEAD = 0, //Initial or fault (requires reset)
+        MS_RSET = (1<<MH_RSET),  MS_IDLE = (1<<MH_IDLE),
+        MS_DDR1 = (1<<MH_DDR1),  MS_DDR2 = (1<<MH_DDR2);
+
+//Drive DDR lines to write a "run" (series) of pixels
+    reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
+    reg  [ 3:0] maskW;
+    reg  [ 9:0] x, y, x_finish;
+
+    wire finishingSweep = (x >= x_finish);
+    wire [ 5:0] framebits = SLR_frame[27:22];
+    wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
+
+    assign SLR_ready = (cs_M[MH_IDLE]);
+
+//Master-State machine Next-States
+    always @(*) begin
+        ns_M = cs_M; //Default: Hold prior state if UNASSIGNED
+        case (cs_M) //TODO:Create MM_xyz "masks" & use Parallel-Case approach
+            MS_RSET: if (!rst_r) ns_M = MS_IDLE; //Come out with a full cycle
+            MS_IDLE: if (SLR_valid) ns_M = MS_DDR1;
+            MS_DDR1: if (!wdf_full && !af_full) ns_M = MS_DDR2;
+            MS_DDR2: if (!wdf_full) ns_M = (finishingSweep) ? MS_RSET : MS_DDR1;
+            default: ns_M = MS__DEAD;
+        endcase
+    end
+    always @(posedge clk) begin
+        if (rst) cs_M <= MS_RSET; else cs_M <= ns_M;
+        case (cs_M)
+            MS_RSET: begin
+                {y, x, x_finish} <= 0;
+            end
+            MS_IDLE: if (SLR_valid) begin
+                y         <= SLR_row;
+                x         <= SLR_col_start;
+                x_finish  <= SLR_col_finish;
+            end
+            MS_DDR2: if (!wdf_full) begin
+                x <= (x+1);
+            end
+        endcase
+    end
+
+
+    assign af_addr_din  = {6'b000000, cpu_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
+    assign af_wr_en     = (cs_M[MH_DDR1]);
+    assign wdf_wr_en    = (cs_M[MH_DDR1] || cs_M[MH_DDR2]);
+    assign wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} };
+    assign wdf_din      = {4{SLR_color_fill}};
+
+    always @(*) begin
+        case ({cs_M[MH_DDR1],cs_M[MH_DDR2], x[2:0]})
+            5'b10_000: maskW = 4'b0111;
+            5'b10_001: maskW = 4'b1011;
+            5'b10_010: maskW = 4'b1101;
+            5'b10_011: maskW = 4'b1110;
+            5'b01_100: maskW = 4'b0111;
+            5'b01_101: maskW = 4'b1011;
+            5'b01_110: maskW = 4'b1101;
+            5'b01_111: maskW = 4'b1110;
+            default:   maskW = 4'b1111;
+        endcase
+    end
+
+
+endmodule

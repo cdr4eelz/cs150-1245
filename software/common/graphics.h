@@ -49,17 +49,17 @@ struct __attribute__ ((aligned (4), packed)) gstate_s {
         2'b00, gp_procframe[5:0], //TODO:Count video_xyz activity, not snapshot
         video_ready, video_valid, 3'b00_0, line_ready, filler_ready, gp_ready
 }; */
-	unsigned unused_1:2;
-		unsigned pf_feedframe:6; //End Byte#1
-    unsigned unused_2:8;         //End Byte#2
+    unsigned unused_1:2;
+        unsigned pf_feedframe:6;    //End Byte#1
+    unsigned unused_2:8;            //End Byte#2
     unsigned unused_3:2;
-    	unsigned gp_procframe:6; //End Byte#3
+        unsigned gp_procframe:6;    //End Byte#3
     unsigned video_ready:1;
-    	unsigned video_valid:1;
-        int unused_4:3;
-        unsigned line_ready:1;
-        unsigned filler_ready:1;
-        unsigned gp_ready:1;     //End Byte#4
+        unsigned video_valid:1;
+            int unused_4:3;
+            unsigned line_ready:1;
+            unsigned filler_ready:1;
+            unsigned gp_ready:1;    //End Byte#4
 };
 typedef union gstate_u {
     uint32_t u32;
@@ -110,16 +110,16 @@ gframe_pv std_frame(uint32_t const fn_or_fp);
 
 // *** GP_GCODE COMMANDs: INST Fields, OpCodes, etc. ***
 
-struct __attribute__ ((aligned (4), packed)) cmd_rgb {
-	uint8_t gop;
-	unsigned rgb:24;
-};
-struct __attribute__ ((aligned (4), packed)) cmd_pnt {
-	unsigned flags:6;
-	unsigned x:10;
-	unsigned _u2:6;
-	unsigned y:10;
-};
+typedef struct __attribute__ ((aligned (4), packed)) cmd_rgb {
+    uint8_t gop;
+    unsigned rgb:24;
+} cmd_rgb_t, *cmd_rgb_p;
+typedef struct __attribute__ ((aligned (4), packed)) cmd_pnt {
+    unsigned flags:6;
+    unsigned x:10;
+    unsigned _u2:6;
+    unsigned y:10;
+} cmd_pnt_t, *cmd_pnt_p;
 typedef union gpcode_u {
     uint32_t u32;
     struct cmd_rgb fRGB;
@@ -129,40 +129,40 @@ typedef union gpcode_u {
 #define GOP_STOP    ((uint8_t) 0x00)
 #define GOP_FILL    ((uint8_t) 0x01)
 #define GOP_LINE    ((uint8_t) 0x02)
-#define GOP_PIXEL   ((uint8_t) 0x03)
-#define GOP_ELIPSE  ((uint8_t) 0x04)
+#define GOP_PIXL    ((uint8_t) 0x03)
+#define GOP_ELIP    ((uint8_t) 0x04)
 
-#define CMD_STOP()      CMD_rgb(GOP_STOP,   0    ) //No trailing words
-#define CMD_FILL(C)     CMD_rgb(GOP_FILL,   C.u32) //No trailing words
-#define CMD_LINE(C)     CMD_rgb(GOP_LINE,   C.u32) //Then 2 x CMD_point
-#define CMD_PIXEL(C)    CMD_rgb(GOP_PIXEL,  C.u32) //Then 1 x CMD_point
-#define CMD_ELIPSE(C)   CMD_rgb(GOP_ELIPSE, C.u32) //Then 2 x CMD_point
+#define CMD_STOP()      CMD_rgb(GOP_STOP, 0    ) //No trailing words
+#define CMD_FILL(C)     CMD_rgb(GOP_FILL, C.u32) //No trailing words
+#define CMD_LINE(C)     CMD_rgb(GOP_LINE, C.u32) //Then 2 x CMD_point
+#define CMD_PIXL(C)     CMD_rgb(GOP_PIXL, C.u32) //Then 1 x CMD_point
+#define CMD_ELIP(C)     CMD_rgb(GOP_ELIP, C.u32) //Then 2 x CMD_point
 
-#define CMD_rgb(OP,RGB) ({const struct cmd_rgb c={.gop=(OP),.rgb=(RGB)};          c;})
-#define CMD_pnt(X,Y)    ({const struct cmd_pnt p={.flags=0,.x=(X),._u2=0,.y=(Y)}; p;})
-//#define CMD32_rgb(OP,U24) ((uint32_t)( (((OP)& 0x0FF)<<24) | ((U24)& 0x0FFFFFF) ))
-//#define CMD32_pnt(X,Y)    ((uint32_t)( (((X)& 0x03FF)<<16) | (  (Y)&    0x03FF) ))
+#define CMD_rgb(OP,RGB) ({const cmd_rgb_t c={.gop=(OP),.rgb=(RGB)};          c;})
+#define CMD_pnt(X,Y)    ({const cmd_pnt_t p={.flags=0,.x=(X),._u2=0,.y=(Y)}; p;})
+#define CMD32_rgb(OP,U24) ((uint32_t)( (((OP)& 0x0FF)<<24) | ((U24)& 0x0FFFFFF) ))
+#define CMD32_pnt(X,Y)    ((uint32_t)( (((X)& 0x03FF)<<16) | (  (Y)&    0x03FF) ))
 
 gpcode_p hw_OpRGB_PP_S(
-		gpcode_p pINST, //NULL uses GPTEMP_PTR & launchs single cmd pronto
-		const struct cmd_rgb cmd, //Required: Use CMD_rgb(op,rgb) or CMD_XYZ(color)
-		const struct cmd_pnt p0, //pnt_NULL if op doesn't use point
-		const struct cmd_pnt p1);
+    gpcode_p pINST, //NULL uses GPTEMP_PTR & launchs single cmd pronto
+    const struct cmd_rgb cmd, //Required: Use CMD_rgb(op,rgb) or CMD_XYZ(color)
+    const struct cmd_pnt p0, //pnt_NULL if op doesn't use point
+    const struct cmd_pnt p1);
 
-extern const struct cmd_pnt pnt_null;
+extern const cmd_pnt_t pnt_null;
 
 #define hwfill(C)                             \
     hw_OpRGB_PP_S( NULL, CMD_rgb(GOP_FILL, C), \
-		pnt_null, pnt_null)
+    pnt_null, pnt_null)
 #define hwline(C,X0,Y0,X1,Y1)                 \
     hw_OpRGB_PP_S( NULL, CMD_rgb(GOP_LINE, C), \
-		CMD_pnt(x0,y0), CMD_pnt(x1,y1))
-#define hwpixel(C,X,Y)                         \
-    hw_OpRGB_PP_S( NULL, CMD_rgb(GOP_PIXEL, C), \
-		CMD_pnt(X,Y), pnt_null)
-#define hwelipse(C,XC,YC,RX,RY)                 \
-    hw_OpRGB_PP_S( NULL, CMD_rgb(GOP_ELIPSE, C), \
-		CMD_pnt(XC,YC), CMD_pnt(RX,RY))
+    CMD_pnt(x0,y0), CMD_pnt(x1,y1))
+#define hwpixel(C,X,Y)                        \
+    hw_OpRGB_PP_S( NULL, CMD_rgb(GOP_PIXL, C), \
+    CMD_pnt(X,Y), pnt_null)
+#define hwelipse(C,XC,YC,RX,RY)               \
+    hw_OpRGB_PP_S( NULL, CMD_rgb(GOP_ELIP, C), \
+    CMD_pnt(XC,YC), CMD_pnt(RX,RY))
 
 /*
 void hwfill  (color_t color);

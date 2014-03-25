@@ -6,10 +6,11 @@
 //Graphics-OPcode vocabulary (GOP)
 `define GOP_STOP    8'h00   //Terminate processing GP_CODE block
 `define GOP_FILL    8'h01   //w/color; auto-triggers fill
-`define GOP_LINE    8'h02   //w/color; followed by 2 x POINT (2nd point auto-triggers line)
-//`define GOP_LINE    8'h02   //w/color; followed by 2 x POINT (each point has TRIGGER bit)
-//`define GOP_STAMP   8'h03   //w/color; followed by n x POINT (See "MORE" bit below)
-`define GOP__LAST   2
+`define GOP_LINE    8'h02   //w/color; followed by 2 x POINT (2nd point triggers)
+`define GOP_PIXL    8'h03   //w/color; followed by 1 x POINT (point triggers)
+`define GOP_ELIP    8'h04   //w/color; followed by 2 x POINT (2nd point triggers)
+//`define GOP_STAMP   8'h05   //w/color; followed by n x POINT (See "MORE" bit below)
+`define GOP__LAST   4
 
 //INSTruction-initiation (opcode & packed fields)
 `define IX_INST_GOP    31:24 //Graphics-OpCode

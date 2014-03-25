@@ -5,40 +5,46 @@
 
 gframe_pv sw_frame;
 
-static void dd_fill(color_t color)
+static void dd_fill(
+    color_t color)
 {
     swfill(sw_frame,  color);
     hwfill(           color);
 }
 
-static void dd_line(color_t color,
-          uint16_t x0, uint16_t y0,
-          uint16_t x1, uint16_t y1)
+static void dd_line(
+    color_t color,
+    uint16_t x0, uint16_t y0,
+    uint16_t x1, uint16_t y1)
 {
     swline(sw_frame,  color, x0,y0, x1,y1);
     hwline(           color, x0,y0, x1,y1);
 }
 
-static void dd_pixel(color_t color,
-                  uint16_t x, uint16_t y)
+static void dd_pixel(
+    color_t color,
+    uint16_t x, uint16_t y)
 {
     swpixel(sw_frame,  color, x,y);
-    hwpixel(           color, x,y);
+//  hwpixel(           color, x,y);
 }
 
-static void dd_elipse(color_t color,
-                   uint16_t xc, uint16_t yc,
-                   uint16_t rx, uint16_t ry)
+static void dd_elipse(
+    color_t color,
+    uint16_t xc, uint16_t yc,
+    uint16_t rx, uint16_t ry)
 {
     swelipse(sw_frame,  color, xc,yc, rx,ry);
-    hwelipse(           color, xc,yc, rx,ry);
+//  hwelipse(           color, xc,yc, rx,ry);
 }
 
-static void dd_circle(color_t color,
-          uint16_t xc, uint16_t yc, uint16_t r)
+static void dd_circle(
+    color_t color,
+    uint16_t xc, uint16_t yc,
+    uint16_t r)
 {
     swcircle(sw_frame,  color, xc,yc, r);
-    hwelipse(           color, xc,yc, r,r);
+//  hwelipse(           color, xc,yc, r,r);
 }
 
 int main(int argc, char** argv)
