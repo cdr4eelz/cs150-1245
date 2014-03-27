@@ -1,10 +1,11 @@
 XCO_SRC = $(wildcard *.xco)
 V_SRC := $(patsubst %.xco,%.v,$(XCO_SRC))
+CG_FLAGS ?= -initstyle silent
 
 all: $(V_SRC)
 
-%.v: %.xco
-	coregen -p . -intstyle silent -b $*.xco
+%.v: %.xco coregen.cgp
+	coregen $(CG_FLAGS) -p coregen.cgp -b $*.xco
 	-rm -rf $*/* $*.xci $*.asy $*_*.tcl $*_*.txt $*.xise $*.gise *.cgc *.log tmp xlnx*
 	-rmdir $*
 

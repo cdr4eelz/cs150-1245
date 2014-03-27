@@ -1,12 +1,1 @@
-
-SUBS ?= $(shell find * -mindepth 1 -maxdepth 1 -name "Makefile" -printf '%h ')
-
-.PHONY: all clean $(SUBS)
-
-all clean: $(SUBS)
-	echo "DONE: $@ ($^)"
-
-$(SUBS):
-	@echo ""
-	$(MAKE) -C $@ $(MAKECMDGOALS)
-	@echo ""
+include makefile.sub1

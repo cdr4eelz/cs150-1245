@@ -1,5 +1,5 @@
 module ScanLineRunner #(
-    parameter PIX_WIDTH=4 //NOTE:Unimplemented
+    parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
     input           clk,
     input           rst, //Synchronized internally

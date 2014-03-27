@@ -22,6 +22,7 @@
 //TODO:Fault response?
 
 module GraphicsProcessor #(
+    parameter USE_SLR=0,
     parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 //TODO: Implement LITTLEWORDIAN
 )(
@@ -34,19 +35,27 @@ module GraphicsProcessor #(
     input   [ 31:0] GP_frame,
     output  [  5:0] GP_procframe,
     output          GP_interrupt,
-//DDR FIFOs (read-only for GP):
+//DDR FIFOs (read-only for GP cmd):
     input           rdf_valid,
     input           af_full,
     input   [127:0] rdf_dout,
     output          rdf_rd_en,
     output          af_wr_en,
     output  [ 30:0] af_addr_din,
-//FrameFiller interface:
+//DDR FIFOs (write-only): [if USE_SLR]
+    input           bypass_af_full,
+    input           bypass_wdf_full,
+    output  [ 30:0] bypass_af_addr_din,
+    output          bypass_af_wr_en,
+    output  [127:0] bypass_wdf_din,
+    output  [ 15:0] bypass_wdf_mask_din,
+    output          bypass_wdf_wr_en,
+//FrameFiller interface: [if !USE_SLR]
     input           FF_ready,
     output          FF_valid,
     output  [ 31:0] FF_color,
     output  [ 31:0] FF_frame,
-//LineEngine interface:
+//LineEngine interface: [if !USE_SLR]
     input           LE_ready,
     output          LE_color_valid,
     output  [ 31:0] LE_color,
@@ -106,8 +115,8 @@ module GraphicsProcessor #(
 
 
     wire fifo_valid;
+    wire ENGINES_ready;
     wire INST_valid    = (fifo_valid && (cs_M==MS_PROC)); //TODO:"Reset" on !MS_PROC???
-    wire ENGINES_ready = (FF_ready && LE_ready);
     wire CMD_advance   = (INST_valid && ENGINES_ready);
 
 
@@ -150,7 +159,7 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
     wire T_STOPS  = (hot_GOP_val && hot_GOP[`GOP_STOP]); //Sub-State triggers T_STOPS
 
 
-    assign GP_ready = (cs_M==MS_IDLE);
+    assign GP_ready     = (cs_M==MS_IDLE);
     assign GP_procframe = `FRAME_BITS(GP_frame); //Pass NEXT value through! (was framebits)
     assign GP_interrupt = T_STOPS; //TODO:Ensure clean for most of 1-cycle
 
@@ -207,27 +216,6 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
     end
 
 
-//MAP ENGINEs as appropriate (or continuous/junk when no harm):
-    wire engine_x = cs_S[0]; //ODDs: SS_X0||SS_XX
-    wire [ 9:0] engine_point = (engine_x) ? INST_pointX : INST_pointY;
-    wire [31:0] engine_color = INST_color;
-    wire [31:0] engine_frame = {4'h1,framebits,22'd0};
-
-    assign FF_valid   = (hot_GOP_val && hot_GOP[`GOP_FILL]);
-    assign FF_color   = engine_color,
-            FF_frame  = engine_frame;
-
-    assign LE_color_valid = (hot_GOP_val && hot_GOP[`GOP_LINE]),
-            LE_x0_valid   = (CMD_advance && hot_GOP[`GOP_LINE] && (cs_S==SS_X0)),
-            LE_y0_valid   = (CMD_advance && hot_GOP[`GOP_LINE] && (cs_S==SS_Y0)),
-            LE_x1_valid   = (CMD_advance && hot_GOP[`GOP_LINE] && (cs_S==SS_XX)),
-            LE_y1_valid   = (CMD_advance && hot_GOP[`GOP_LINE] && (cs_S==SS_YY)),
-            LE_trigger    = LE_y1_valid; //INST_trigger;
-    assign LE_color   = engine_color,
-            LE_point  = engine_point,
-            LE_frame  = engine_frame;
-
-
 //FIFO State-Machine
     always @(*) begin
         ns_F = cs_F; //Default: Hold prior state if UNASSIGNED
@@ -263,7 +251,7 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
         .wr_rst(fifo_reset),  // input wr_rst
         .full   (fifo_full),      // output full
         .wr_en  (fifo_write),     // input wr_en
-        .din    (rdf_dout),       // input [127 : 0] din
+        .din    (rdf_dout),   // input [127 : 0] din
         .wr_data_count(wr_count), // output [4 : 0] wr_data_count
 
         .rd_clk(clk),         // input rd_clk
@@ -274,6 +262,105 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
         .dout   (INST),           // output [31 : 0] dout
         .rd_en  (INST_advance)    // input rd_en
     );
+
+
+//MAP ENGINEs as appropriate (or continuous/junk when no harm):
+    wire engine_x = cs_S[0]; //ODDs: SS_X0||SS_XX
+    wire [ 9:0] engine_point = (engine_x) ? INST_pointX : INST_pointY;
+    wire [31:0] engine_color = INST_color;
+    wire [31:0] engine_frame = {4'h1,framebits,22'd0};
+
+    assign FF_valid       = (hot_GOP_val && hot_GOP[`GOP_FILL]);
+    assign FF_color   = engine_color,
+            FF_frame  = engine_frame;
+
+    assign LE_color_valid = (hot_GOP_val && hot_GOP[`GOP_LINE]),
+            LE_x0_valid   = (CMD_advance && hot_GOP[`GOP_LINE] && (cs_S==SS_X0)),
+            LE_y0_valid   = (CMD_advance && hot_GOP[`GOP_LINE] && (cs_S==SS_Y0)),
+            LE_x1_valid   = (CMD_advance && hot_GOP[`GOP_LINE] && (cs_S==SS_XX)),
+            LE_y1_valid   = (CMD_advance && hot_GOP[`GOP_LINE] && (cs_S==SS_YY)),
+            LE_trigger    = LE_y1_valid; //INST_trigger;
+    assign LE_color   = engine_color,
+            LE_point  = engine_point,
+            LE_frame  = engine_frame;
+
+generate if (USE_SLR) begin:_USE_SLR_
+
+    wire [ 31:0] SLR_frame;
+    wire [ 31:0] SLR_color_edge;
+    wire [ 31:0] SLR_color_fill;
+    wire         SLR_ready;
+    wire         SLR_valid;
+    wire [  9:0] SLR_row;
+    wire [  9:0] SLR_col_start;
+    wire [  9:0] SLR_col_finish;
+
+    wire line_ready_internal;
+
+    LineEngine #(
+        .USE_SLR(1),
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) le(
+        .clk(clk),
+        .rst(fifo_reset),
+    //SLR interface (write-only):
+        .SLR_frame      (SLR_frame),
+        .SLR_color_fill (SLR_color_fill),
+        .SLR_color_edge (SLR_color_edge),
+        .SLR_ready      (SLR_ready),
+        .SLR_valid      (SLR_valid),
+        .SLR_row        (SLR_row),
+        .SLR_col_start  (SLR_col_start),
+        .SLR_col_finish (SLR_col_finish),
+    //Line control <=> CPU:
+        .LE_ready(line_ready_internal),
+        .LE_color_valid(line_color_valid),
+        .LE_color(line_color),
+        .LE_x0_valid(line_x0_valid),
+        .LE_y0_valid(line_y0_valid),
+        .LE_x1_valid(line_x1_valid),
+        .LE_y1_valid(line_y1_valid),
+        .LE_point(line_point),
+        .LE_trigger(line_trigger),
+        .LE_frame(line_frame),
+    //DDR FIFOs (write-only):
+        .af_full(1'b1), .af_addr_din(), .af_wr_en(),
+        .wdf_full(1'b1), .wdf_din(), .wdf_mask_din(), .wdf_wr_en()
+    );
+
+    ScanLineRunner #(
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) slr(
+        .clk(clk),
+        .rst(fifo_reset),
+    //DDR FIFOs (write-only):
+        .af_full        (bypass_af_full),
+        .wdf_full       (bypass_wdf_full),
+        .af_addr_din    (bypass_af_addr_din),
+        .af_wr_en       (bypass_af_wr_en),
+        .wdf_din        (bypass_wdf_din),
+        .wdf_mask_din   (bypass_wdf_mask_din),
+        .wdf_wr_en      (bypass_wdf_wr_en),
+    //SLR interface:
+        .SLR_frame      (SLR_frame),
+        .SLR_color_fill (SLR_color_fill),
+        .SLR_color_edge (SLR_color_edge),
+        .SLR_ready      (SLR_ready),
+        .SLR_valid      (SLR_valid),
+        .SLR_row        (SLR_row),
+        .SLR_col_start  (SLR_col_start),
+        .SLR_col_finish (SLR_col_finish)
+    );
+
+    assign ENGINES_ready = (FF_ready && line_ready_internal);
+
+end else begin:_NO_SLR_
+
+    assign ENGINES_ready = (FF_ready && LE_ready);
+
+    assign bypass_af_wr_en = 1'b0, bypass_wdf_wr_en = 1'b0;
+
+end endgenerate
 
 
 //synthesis translate_off

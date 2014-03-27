@@ -4,7 +4,6 @@
 // drawing a few example lines
 //----------------------------------------------------------------------
 
-`define MODELSIM 1
 `timescale 1ns / 100ps
 
 module LineEngineTestbench;

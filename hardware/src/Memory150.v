@@ -12,6 +12,8 @@
 //----------------------------------------------------------------------
 
 module Memory150 #(
+    parameter USE_SLR=1,
+    parameter LITTLEWORDIAN=1, //Order of 32-bit words in each 256-bit DDR block (not byte order)
     parameter SIM_ONLY = 1'b0
 )(
 // Clocks & Resets:
@@ -128,7 +130,7 @@ output [31:0] DBG_MEM150
     wire         filler_af_wr_en;
     wire [ 15:0] filler_wdf_mask_din;
 
-    // Line Engine <=> RequestController wires:
+    // LineEngine/ScanLineRunner <=> RequestController wires:
     wire         line_af_full;
     wire         line_wdf_full;
     wire [127:0] line_wdf_din;
@@ -136,6 +138,15 @@ output [31:0] DBG_MEM150
     wire [ 30:0] line_addr_din;
     wire         line_af_wr_en;
     wire [ 15:0] line_wdf_mask_din;
+
+    // Bypass <=> RequestController wires: (extension!)
+    wire         bypass_af_full;
+    wire         bypass_wdf_full;
+    wire [127:0] bypass_wdf_din;
+    wire         bypass_wdf_wr_en;
+    wire [ 30:0] bypass_addr_din;
+    wire         bypass_af_wr_en;
+    wire [ 15:0] bypass_wdf_mask_din;
 
     // Graphics Command Processor <=> RequestController wires:
     wire         cmd_rdf_rd_en;
@@ -323,11 +334,11 @@ assign DBG_MEM150 = 0;
         .line_wdf_din(line_wdf_din),
         .line_wdf_mask_din(line_wdf_mask_din),
         .line_wdf_wr_en(line_wdf_wr_en),
-        .bypass_addr_din(31'b0), //not using this port
-        .bypass_af_wr_en(1'b0),  //not using this port
-        .bypass_wdf_din(128'b0),  //not using this port
-        .bypass_wdf_mask_din(),  //not using this port
-        .bypass_wdf_wr_en(1'b0),  //not using this port
+        .bypass_addr_din(bypass_addr_din), //NOTE:Extended to allow bypass input
+        .bypass_af_wr_en(bypass_af_wr_en),
+        .bypass_wdf_din(bypass_wdf_din),
+        .bypass_wdf_mask_din(bypass_wdf_mask_din),
+        .bypass_wdf_wr_en(bypass_wdf_wr_en),
         .filler_addr_din(filler_addr_din),
         .filler_af_wr_en(filler_af_wr_en),
         .filler_wdf_wr_en(filler_wdf_wr_en),
@@ -339,8 +350,8 @@ assign DBG_MEM150 = 0;
         // new outputs for cp4-5:
         .line_af_full(line_af_full),
         .line_wdf_full(line_wdf_full),
-        .bypass_af_full(), //not using this port
-        .bypass_wdf_full(), //not using this port
+        .bypass_af_full(bypass_af_full), //NOTE:Extended to allow bypass output
+        .bypass_wdf_full(bypass_wdf_full),
         .filler_af_full(filler_af_full),
         .filler_wdf_full(filler_wdf_full),
         .pixel_rdf_valid(pixel_rdf_valid),
@@ -357,7 +368,7 @@ assign DBG_MEM150 = 0;
 
     // The instruction cache:
     Cache #(
-        .LITTLEWORDIAN(1)
+        .LITTLEWORDIAN(LITTLEWORDIAN)
     ) icache(
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
@@ -382,7 +393,7 @@ assign DBG_MEM150 = 0;
 
     // Data cache:
     Cache #(
-        .LITTLEWORDIAN(1)
+        .LITTLEWORDIAN(LITTLEWORDIAN)
     ) dcache(
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
@@ -409,7 +420,9 @@ assign DBG_MEM150 = 0;
     assign stall = d_stall || i_stall;
 
     // For feeding pixels to the DVI module:
-    PixelFeeder pixelfeed(
+    PixelFeeder #(
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) pixelfeed(
         .cpu_clk_g(cpu_clk_g),
         .cpu_rst_g(rst_cpu_bus),
         .dvi_clk_g(dvi_clk_g),
@@ -432,7 +445,10 @@ assign DBG_MEM150 = 0;
         .PF_interrupt(frame_interrupt)
     );
 
-    FrameFiller framefill(
+    FrameFiller #(
+//        .USE_SLR(0),
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) framefill(
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
     //DDR FIFOs (write-only):
@@ -450,8 +466,63 @@ assign DBG_MEM150 = 0;
         .FF_frame(filler_frame)
     );
 
+generate if (USE_SLR) begin:_USE_SLR_
+
+//    assign filler_ready     = 1'b0;
+//    assign filler_wdf_wr_en = 1'b0;
+//    assign filler_af_wr_en  = 1'b0;
+    assign line_ready       = 1'b0;
+    assign line_wdf_wr_en   = 1'b0;
+    assign line_af_wr_en    = 1'b0;
+
+    GraphicsProcessor #(
+        .USE_SLR(1),
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) graphicsprocessor(
+        .clk                (cpu_clk_g),
+        .rst                (rst_cpu_bus),
+    //DDR FIFOs (read-only):
+        .rdf_valid          (cmd_rdf_valid),
+        .af_full            (cmd_af_full),
+        .rdf_dout           (rdf_dout),
+        .rdf_rd_en          (cmd_rdf_rd_en),
+        .af_wr_en           (cmd_af_wr_en),
+        .af_addr_din        (cmd_addr_din),
+    //DDR FIFOs (write-only):
+        .bypass_af_full     (bypass_af_full),
+        .bypass_wdf_full    (bypass_wdf_full),
+        .bypass_af_addr_din (bypass_af_addr_din),
+        .bypass_af_wr_en    (bypass_af_wr_en),
+        .bypass_wdf_din     (bypass_wdf_din),
+        .bypass_wdf_mask_din(bypass_wdf_mask_din),
+        .bypass_wdf_wr_en   (bypass_wdf_wr_en),
+    //CPU interface:
+        .GP_ready           (gp_ready),
+        .GP_valid           (cpu_gp_valid),
+        .GP_frame           (cpu_gp_frame),
+        .GP_code            (cpu_gp_code),
+        .GP_procframe       (gp_procframe),
+        .GP_interrupt       (gp_interrupt),
+    //LineEngine interface:
+        .LE_ready(1'b0), .LE_color_valid(), .LE_color(),
+        .LE_x0_valid(), .LE_y0_valid(), .LE_x1_valid(), .LE_y1_valid(),
+        .LE_point(), .LE_trigger(), .LE_frame(),
+    //FrameFiller interface:
+        .FF_ready(filler_ready),
+        .FF_valid(filler_valid),
+        .FF_color(filler_color),
+        .FF_frame(filler_frame)
+    );
+
+end else begin:_NO_SLR_
+    assign bypass_wdf_wr_en = 1'b0;
+    assign bypass_af_wr_en  = 1'b0;
+
     // For CP5:
-    LineEngine le(
+    LineEngine #(
+        .USE_SLR(0),
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) le(
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
     //DDR FIFOs (write-only):
@@ -472,11 +543,18 @@ assign DBG_MEM150 = 0;
         .LE_y1_valid(line_y1_valid),
         .LE_point(line_point),
         .LE_trigger(line_trigger),
-        .LE_frame(line_frame)
+        .LE_frame(line_frame),
+    //SLR interface (write-only):
+        .SLR_frame(), .SLR_color_fill(), .SLR_color_edge(),
+        .SLR_ready(1'b0), .SLR_valid(),
+        .SLR_row(), .SLR_col_start(), .SLR_col_finish()
     );
 
     //For CP5:
-    GraphicsProcessor graphicsprocessor(
+    GraphicsProcessor #(
+        .USE_SLR(0),
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) graphicsprocessor(
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
     //DDR FIFOs (read-only):
@@ -510,5 +588,6 @@ assign DBG_MEM150 = 0;
         .GP_procframe(gp_procframe),
         .GP_interrupt(gp_interrupt)
     );
+end endgenerate
 
 endmodule

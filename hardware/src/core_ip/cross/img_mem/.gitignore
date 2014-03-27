@@ -1,7 +1,0 @@
-*
-!.gitignore
-!Makefile
-!*.xco
-!*.cgp
-!*.cgc
-!./src/*

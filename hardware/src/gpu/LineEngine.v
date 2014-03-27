@@ -1,11 +1,20 @@
 
 module LineEngine #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, USE_SLR=0,
+    parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
     input           clk,
     input           rst, //Synchronized internally
-//DDR FIFOs (write-only):
+//SLR control (write-only): [if USE_SLR]
+    output  [ 31:0] SLR_frame,
+    output  [ 31:0] SLR_color_edge,
+    output  [ 31:0] SLR_color_fill,
+    input           SLR_ready,
+    output          SLR_valid,
+    output  [  9:0] SLR_row,
+    output  [  9:0] SLR_col_start,
+    output  [  9:0] SLR_col_finish,
+//DDR FIFOs (write-only): [if !USE_SLR]
     input           af_full,
     input           wdf_full,
     output  [ 30:0] af_addr_din,
@@ -173,32 +182,32 @@ module LineEngine #(
     end
 
 
-//Write "run" of pixels instead via ScanLineRunner module
-ScanLineRunner slr(
-    .clk(clk), .rst(rst),
-    .af_full(af_full), .wdf_full(wdf_full),
-    .af_addr_din(af_addr_din), .af_wr_en(af_wr_en),
-    .wdf_din(wdf_din), .wdf_mask_din(wdf_mask_din), .wdf_wr_en(wdf_wr_en),
-    .SLR_ready(adv1), .SLR_valid(cs_M[MH_RUN1]),
-    .SLR_frame({4'h1, framebits[5:0], 22'b0}),
-    .SLR_color_fill(color_r), .SLR_color_edge(color_r),
-    .SLR_row(y),
-    .SLR_col_start(x), .SLR_col_finish(x)
-);
-    assign adv2 = 1'b1;
+generate if (USE_SLR) begin:_USE_SLR_
 
-/*
+//Write "run" of pixels instead via ScanLineRunner module
+    assign SLR_frame        = {4'h1, framebits[5:0], 22'b0},
+            SLR_color_edge  = color_r,
+            SLR_color_fill  = color_r,
+            SLR_valid       = cs_M[MH_RUN1],
+            SLR_row         = y,
+            SLR_col_start   = x,
+            SLR_col_finish  = x;
+    assign adv1       = SLR_ready,
+            adv2      = 1'b1;
+
+end else begin:_NO_SLR_
+
 //Drive DDR lines to write 1 pixel at-a-time
-    reg  [3:0] maskW;
+    reg  [ 3:0] maskW;
     wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
 
-    assign af_addr_din  = {6'b000000, cpu_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
-    assign wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} };
-    assign wdf_din      = {4{color_r}}; //Replicate same color on all 4 pixels of both writes
-    assign af_wr_en     = (cs_M[MH_RUN1]);
-    assign wdf_wr_en    = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
-    assign adv1 = (!wdf_full && !af_full);
-    assign adv2 = (!wdf_full);
+    assign af_addr_din  = {6'b000000, cpu_addr[27:3]}, //Turn into 31-bit "DoubleWord" or DDR-address
+            wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} },
+            wdf_din      = {4{color_r}}, //Replicate same color on all 4 pixels of both writes
+            af_wr_en     = (cs_M[MH_RUN1]),
+            wdf_wr_en    = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
+    assign adv1 = (!wdf_full && !af_full),
+            adv2 = (!wdf_full);
 
     always @(*) begin
         case ({cs_M[MH_RUN1],cs_M[MH_RUN2], x[2:0]})
@@ -213,7 +222,8 @@ ScanLineRunner slr(
             default:   maskW = 4'b1111;
         endcase
     end
-*/
+
+end endgenerate
 
 //synthesis translate_off
 /*

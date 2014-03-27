@@ -14,7 +14,9 @@
 
 `timescale 1ns / 1ps
 
+`ifndef MODELSIM
 `define MODELSIM 1
+`endif
 
 module Memory150TestBench;
     parameter TB_DEBUG_OUT = 1;

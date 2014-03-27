@@ -1,2 +1,1 @@
-include ../makefile.in
-
+include ../makefile.sub1

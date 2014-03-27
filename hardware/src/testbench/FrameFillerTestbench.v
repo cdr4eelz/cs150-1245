@@ -3,7 +3,6 @@
 // This module tests the fill engine.
 //----------------------------------------------------------------------
 
-`define MODELSIM 1
 `timescale 1ns / 1ps
 
 module FrameFillerTestbench;
