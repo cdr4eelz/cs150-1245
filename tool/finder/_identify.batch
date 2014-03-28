@@ -1,0 +1,4 @@
+setlog -file ##HOST##_identify.log
+setmode -bscan
+setcable -port auto
+identify

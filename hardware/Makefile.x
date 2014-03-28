@@ -22,10 +22,11 @@ sync:
 	ln -sf _cfg/Makefile $(BUILDDIR)/Makefile
 
 cleaner:
+	rm -rf $(D_BLD)/*
 	rm -rf $(D_BLD)
 
 cleanerer:
-	-rm -rf build n_bld /scratch/*_build_$(USER) *.out *.err
+	rm -rf build n_bld /scratch/syn *.log *.err ._mq*
 	ls ./ /scratch
 
 .PHONY := $(TARGETS) sync cleaner cleanerer

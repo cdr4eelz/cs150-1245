@@ -3,14 +3,17 @@
 if   [[ "$0" == "./m" ]]; then
   D_BLD="build"
 elif [[ "$0" == "./n" ]]; then
-  D_BLD="$0_bld"
+  mkdir -p /scratch/syn/build
+  [ -d build ] && rm -rf build
+  ln -sf /scratch/syn/build build
+  D_BLD="build" #$0_bld"
 else
-  D_BLD="/scratch/$0_build_${USER}"
+  D_BLD="/scratch/syn/$0_build_${USER}"
 fi
 
 D_CFG="$0_cfg"
 F_PID="$0.pid"
-F_OUT="$0.out"
+F_OUT="$0.log"
 F_ERR="$0.err"
 echo "$0: $*"
 echo "  ${D_CFG}, ${F_PID}, ${F_OUT}, ${F_ERR}"
@@ -26,7 +29,7 @@ fi
 rm -Rf ${F_PID} #Shouldn't exist
 touch ${F_PID} #Temporary (don't know pid yet)
 
-#Start fresh logs (out & err)
+#Start fresh logs
 echo -e "MAKE '$0': $*" |tee ${F_OUT} ${F_ERR}
 date |tee -a ${F_OUT} ${F_ERR}
 echo -e "\n\n" |tee -a ${F_OUT} ${F_ERR}

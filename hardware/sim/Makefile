@@ -5,7 +5,7 @@ DOFILES := $(patsubst tests/%.do,build/%.do,$(CASES))
 TESTINPUTSBUILD := $(patsubst tests/%.input,build/%.input,$(TESTINPUTS))
 SRCDIR := ../src
 SRCS := $(shell find $(SRCDIR) -name '*.v' -type f)
-INC := $(shell find $(SRCDIR) -type d -exec echo -n '+incdir+../'{} \;)
+INC := $(shell find $(SRCDIR) -type d -exec echo -n '+incdir+'{} \;)
 STATUS := build/.status
 XILINX_LIBS := unisims_ver unimacro_ver xilinxcorelib_ver secureip
 XILINX_LIB_INC := $(foreach lib,$(XILINX_LIBS),$(addprefix -L ,$(lib)))
@@ -15,11 +15,13 @@ all: $(TRANSCRIPT)
 compile: $(STATUS)
 
 $(STATUS): $(SRCS) | build/Makefile
-	make -C build work/ml505top/_primary.dat
+	make -C ./build work/ml505top/_primary.dat
 	touch $@
 
 build/Makefile:
-	mkdir -p build
+	mkdir -p /scratch/sim/build
+	ln -sf /scratch/sim/build build
+	ln -sf -T $(realpath $(SRCDIR)) /scratch/sim/src
 	(cd build; vlib work; vmap work work)
 	(cd build; for file in $(XILINX_LIBS_MAP); do \
 	vmap $$(basename $$file) $$file || exit 1; done)
@@ -28,14 +30,17 @@ build/Makefile:
 	$(XILINX)/verilog/src/glbl.v \
 	|| exit 1)
 	(cd build; for file in $(SRCS); do \
-	vlog +acc -source -nocovercells $(INC) ../$$file || exit 1; done)
+	vlog +acc -source -nocovercells $(INC) $$file || exit 1; done)
 	(cd build; vmake > Makefile)
 
 results:
-	mkdir -p results
+	mkdir -p /scratch/sim/results
+	ln -sf /scratch/sim/results results
 
 $(DOFILES) : build/%.do : tests/%.do
-	mkdir -p build
+	mkdir -p /scratch/sim/build
+	ln -sf /scratch/sim/build build
+	ln -sf -T $(realpath $(SRCDIR)) /scratch/sim/src
 	echo 'proc start {m} {vsim $(XILINX_LIB_INC) work.glbl $$m}' \
 	| cat - $< > $@ 
 
@@ -48,6 +53,6 @@ $(TRANSCRIPT) : results/%.transcript : build/%.do $(STATUS) $(TESTINPUTSBUILD) |
 	cp build/vsim.wlf $(patsubst %.transcript,%.wlf,$@)
 
 clean:
-	rm -rf results/* build
+	rm -rf /scratch/sim results build
 
 .PHONY := all clean compile

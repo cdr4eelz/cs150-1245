@@ -1,5 +1,5 @@
-build/
-results/
-modelsim_libs/
+build
+results
+modelsim_libs
 tests/*.do
 !tests/src/*.do

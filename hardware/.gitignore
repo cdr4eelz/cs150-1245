@@ -1,8 +1,8 @@
 /*.err
 /*.out
 /*.pid
-/build/
-/*_bld/
+/build
+/*_bld
 
 /m
 /n
