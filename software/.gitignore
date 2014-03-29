@@ -16,34 +16,35 @@
 *.mem
 *.v
 
+#The alias names to /common/ files
+*/.gitignore
+*/ascii.c
+*/ascii_defs.h
+*/ascii.h
+*/benchmark.c
+*/benchmark.h
+*/graphics.c
+*/graphics.h
+*/memory.c
+*/memory.h
+*/mutmath.nopt.c
+*/mutmath.c
+*/mutmath.h
+*/parse.c
+*/parse.h
+*/string.c
+*/string.h
+*/types.h
+*/uart.c
+*/uart.h
+
 #Avoid aliases (helps egit)
 makefile.in
-_common.ignore
-
-#The alias names to /common/ files
-.gitignore
-ascii.c
-ascii_defs.h
-ascii.h
-benchmark.c
-benchmark.h
-graphics.c
-graphics.h
-memory.c
-memory.h
-mutmath.nopt.c
-mutmath.c
-mutmath.h
-parse.c
-parse.h
-string.c
-string.h
-types.h
-uart.c
-uart.h
+common.ignore
+!/common.ignore
+!/common
 
 #But not in their master location or some exceptions!
-!/common/*
 !/bios150v3/string.[ch]
 !.gitignore
 
