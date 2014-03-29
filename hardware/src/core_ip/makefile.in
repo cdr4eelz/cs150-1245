@@ -1,6 +1,6 @@
 XCO_SRC = $(wildcard *.xco)
 V_SRC := $(patsubst %.xco,%.v,$(XCO_SRC))
-CG_FLAGS ?= -initstyle silent
+CG_FLAGS ?= -intstyle silent
 
 all: $(V_SRC)
 
