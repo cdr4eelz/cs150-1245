@@ -10,4 +10,5 @@ all: $(V_SRC)
 	-rmdir $*
 
 clean:
-	find . ! -name '*.xco' -a ! -name '*.coe' -a ! -name 'coregen.cgp' -a ! -name 'Makefile' -a ! -name '.gitignore' -a ! -name '*.bz2' -a ! -name 'stash' -a ! -type l -delete
+	find . ! -name '*.xco' -a ! -name 'Makefile' -a ! -name '*.coe' -a ! -name '*.cgp' -a ! -name '.gitignore' -a ! -name 'stash*' -a ! -type l -delete
+

@@ -1,5 +1,6 @@
-XCO_SRC := $(wildcard *.xco)
+XCO_SRC = $(wildcard *.xco)
 V_SRC := $(patsubst %.xco,%.v,$(XCO_SRC))
+CG_FLAGS ?= -intstyle silent
 
 ifndef $(IMG_NAME)
 	IMG_NAME := blade1
@@ -14,8 +15,10 @@ all: $(V_SRC)
 link: src/$(COE_LINK)
 coe: src/$(COE_FILE)
 
-%.v: %.xco src/$(COE_LINK)
-	coregen -p coregen.cgp -b $*.xco
+%.v: %.xco coregen.cgp src/$(COE_LINK)
+	coregen $(CG_FLAGS) -p coregen.cgp -b $*.xco
+	-rm -rf $*/* $*.xci $*.asy $*_*.tcl $*_*.txt $*.xise $*.gise *.cgc *.log tmp xlnx*
+	-rmdir $*
 
 src/$(COE_FILE): src/$(IMG_FILE) src/img_to_coe.py src/img_to_coe.m
 	cd src; \
@@ -25,4 +28,4 @@ src/$(COE_LINK): src/$(COE_FILE)
 	cd src; rm -f $(COE_LINK); ln -s $(COE_FILE) $(COE_LINK)
 
 clean:
-	find . ! -name '*.xco' -a ! -name 'Makefile' -a ! -name '*.cgp' -a ! -name '*.cgc' -a ! -name '.gitignore' -a ! -name 'src' -a ! -name '*.jpg' -a ! -name '*.py' -a ! -name '*.m' -a ! -name 'stash_*' -delete
+	find . ! -name '*.xco' -a ! -name 'Makefile' -a ! -name '*.cgp' -a ! -name '.gitignore' -a ! -name 'stash*' -a ! -name 'src' -a ! -name '*.jpg' -a ! -name '*.py' -a ! -name '*.m' -delete
