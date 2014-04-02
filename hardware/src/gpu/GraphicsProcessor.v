@@ -17,12 +17,11 @@
 
 `include "gpcommands.vh"
 
-//TODO:Eliminate FIFO for less latency?
 //TODO:Preview code chunks for CC_STOP (not just zero data), and stop fetching ASAP
 //TODO:Fault response?
 
 module GraphicsProcessor #(
-    parameter USE_SLR=0,
+    parameter USE_SLR=1,
     parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 //TODO: Implement LITTLEWORDIAN
 )(
@@ -42,19 +41,24 @@ module GraphicsProcessor #(
     output          rdf_rd_en,
     output          af_wr_en,
     output  [ 30:0] af_addr_din,
-//DDR FIFOs (write-only): [if USE_SLR]
-    input           bypass_af_full,
-    input           bypass_wdf_full,
-    output  [ 30:0] bypass_af_addr_din,
-    output          bypass_af_wr_en,
-    output  [127:0] bypass_wdf_din,
-    output  [ 15:0] bypass_wdf_mask_din,
-    output          bypass_wdf_wr_en,
+//SLR control (write-only): [if USE_SLR]
+    output  [ 31:0] SLR_frame,
+    output  [ 31:0] SLR_color_edge,
+    output  [ 31:0] SLR_color_fill,
+    input           SLR_ready,
+    output          SLR_valid,
+    output  [  9:0] SLR_row,
+    output  [  9:0] SLR_col_start,
+    output  [  9:0] SLR_col_finish,
+//FrameFiller interface: [if USE_SLR]
+    output          FF_internal_ready,
 //FrameFiller interface: [if !USE_SLR]
     input           FF_ready,
     output          FF_valid,
     output  [ 31:0] FF_color,
     output  [ 31:0] FF_frame,
+//LineEngine interface: [if USE_SLR]
+    output          LE_internal_ready,
 //LineEngine interface: [if !USE_SLR]
     input           LE_ready,
     output          LE_color_valid,
@@ -286,21 +290,11 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
 
 generate if (USE_SLR) begin:_USE_SLR_
 
-    wire [ 31:0] SLR_frame;
-    wire [ 31:0] SLR_color_edge;
-    wire [ 31:0] SLR_color_fill;
-    wire         SLR_ready;
-    wire         SLR_valid;
-    wire [  9:0] SLR_row;
-    wire [  9:0] SLR_col_start;
-    wire [  9:0] SLR_col_finish;
-
-    wire line_ready_internal;
-
+// Embed Engines here & drive ScanLineRunner via output signals
     LineEngine #(
         .USE_SLR(1),
         .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) le(
+    ) le (
         .clk(clk),
         .rst(fifo_reset),
     //SLR interface (write-only):
@@ -313,52 +307,29 @@ generate if (USE_SLR) begin:_USE_SLR_
         .SLR_col_start  (SLR_col_start),
         .SLR_col_finish (SLR_col_finish),
     //Line control <=> CPU:
-        .LE_ready(line_ready_internal),
-        .LE_color_valid(line_color_valid),
-        .LE_color(line_color),
-        .LE_x0_valid(line_x0_valid),
-        .LE_y0_valid(line_y0_valid),
-        .LE_x1_valid(line_x1_valid),
-        .LE_y1_valid(line_y1_valid),
-        .LE_point(line_point),
-        .LE_trigger(line_trigger),
-        .LE_frame(line_frame),
+        .LE_ready       (LE_internal_ready),
+        .LE_color_valid (LE_color_valid),
+        .LE_color       (LE_color),
+        .LE_x0_valid    (LE_x0_valid),
+        .LE_y0_valid    (LE_y0_valid),
+        .LE_x1_valid    (LE_x1_valid),
+        .LE_y1_valid    (LE_y1_valid),
+        .LE_point       (LE_point),
+        .LE_trigger     (LE_trigger),
+        .LE_frame       (LE_frame),
     //DDR FIFOs (write-only):
-        .af_full(1'b1), .af_addr_din(), .af_wr_en(),
-        .wdf_full(1'b1), .wdf_din(), .wdf_mask_din(), .wdf_wr_en()
+        .af_full(1'b1), .wdf_full(1'b1),
+        .af_wr_en(), .wdf_wr_en(),
+        .af_addr_din(), .wdf_din(), .wdf_mask_din()
     );
 
-    ScanLineRunner #(
-        .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) slr(
-        .clk(clk),
-        .rst(fifo_reset),
-    //DDR FIFOs (write-only):
-        .af_full        (bypass_af_full),
-        .wdf_full       (bypass_wdf_full),
-        .af_addr_din    (bypass_af_addr_din),
-        .af_wr_en       (bypass_af_wr_en),
-        .wdf_din        (bypass_wdf_din),
-        .wdf_mask_din   (bypass_wdf_mask_din),
-        .wdf_wr_en      (bypass_wdf_wr_en),
-    //SLR interface:
-        .SLR_frame      (SLR_frame),
-        .SLR_color_fill (SLR_color_fill),
-        .SLR_color_edge (SLR_color_edge),
-        .SLR_ready      (SLR_ready),
-        .SLR_valid      (SLR_valid),
-        .SLR_row        (SLR_row),
-        .SLR_col_start  (SLR_col_start),
-        .SLR_col_finish (SLR_col_finish)
-    );
-
-    assign ENGINES_ready = (FF_ready && line_ready_internal);
+    assign ENGINES_ready = (FF_ready && LE_internal_ready);
 
 end else begin:_NO_SLR_
 
     assign ENGINES_ready = (FF_ready && LE_ready);
 
-    assign bypass_af_wr_en = 1'b0, bypass_wdf_wr_en = 1'b0;
+    assign SLR_valid = 1'b0;
 
 end endgenerate
 

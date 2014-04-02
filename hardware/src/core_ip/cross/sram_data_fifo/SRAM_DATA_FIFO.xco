@@ -1,7 +1,7 @@
 ##############################################################
 #
 # Xilinx Core Generator version 14.6
-# Date: Thu Mar 27 04:38:16 2014
+# Date: Mon Mar 31 11:23:56 2014
 #
 ##############################################################
 #
@@ -18,7 +18,7 @@
 #
 # BEGIN Project Options
 SET addpads = false
-SET asysymbol = true
+SET asysymbol = false
 SET busformat = BusFormatSquareBracketNotRipped
 SET createndf = false
 SET designentry = Verilog
@@ -134,7 +134,7 @@ CSET inject_sbit_error_rdch=false
 CSET inject_sbit_error_wach=false
 CSET inject_sbit_error_wdch=false
 CSET inject_sbit_error_wrch=false
-CSET input_data_width=32
+CSET input_data_width=36
 CSET input_depth=32
 CSET input_depth_axis=1024
 CSET input_depth_rach=16
@@ -143,7 +143,7 @@ CSET input_depth_wach=16
 CSET input_depth_wdch=1024
 CSET input_depth_wrch=16
 CSET interface_type=Native
-CSET output_data_width=32
+CSET output_data_width=36
 CSET output_depth=32
 CSET overflow_flag=true
 CSET overflow_flag_axi=false
@@ -210,4 +210,4 @@ CSET wuser_width=1
 MISC pkg_timestamp=2012-11-19T12:39:56Z
 # END Extra information
 GENERATE
-# CRC: 68e228f9
+# CRC: ef9f9eba

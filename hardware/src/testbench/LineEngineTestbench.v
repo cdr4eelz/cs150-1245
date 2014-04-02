@@ -59,7 +59,10 @@ module LineEngineTestbench;
     assign x = {af_addr_din[8:2], mask};
     assign y = af_addr_din[18:9];
 
-    LineEngine DUT (
+    LineEngine #(
+        .USE_SLR(0),
+        .LITTLEWORDIAN(1)
+    ) DUT (
         .clk(Clock),
         .rst(rst),
         .af_full(af_full),
@@ -78,7 +81,11 @@ module LineEngineTestbench;
         .LE_y1_valid(LE_y1_valid),
         .LE_point(LE_point),
         .LE_trigger(LE_trigger),
-        .LE_frame(LE_frame)
+        .LE_frame(LE_frame),
+    //SLR interface (write-only):
+        .SLR_frame(), .SLR_color_fill(), .SLR_color_edge(),
+        .SLR_ready(1'b0), .SLR_valid(),
+        .SLR_row(), .SLR_col_start(), .SLR_col_finish()
     );
 
     initial begin

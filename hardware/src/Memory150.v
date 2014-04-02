@@ -126,7 +126,7 @@ output [31:0] DBG_MEM150
     wire         filler_wdf_full;
     wire [127:0] filler_wdf_din;
     wire         filler_wdf_wr_en;
-    wire [ 30:0] filler_addr_din;
+    wire [ 30:0] filler_af_addr_din;
     wire         filler_af_wr_en;
     wire [ 15:0] filler_wdf_mask_din;
 
@@ -135,7 +135,7 @@ output [31:0] DBG_MEM150
     wire         line_wdf_full;
     wire [127:0] line_wdf_din;
     wire         line_wdf_wr_en;
-    wire [ 30:0] line_addr_din;
+    wire [ 30:0] line_af_addr_din;
     wire         line_af_wr_en;
     wire [ 15:0] line_wdf_mask_din;
 
@@ -144,14 +144,14 @@ output [31:0] DBG_MEM150
     wire         bypass_wdf_full;
     wire [127:0] bypass_wdf_din;
     wire         bypass_wdf_wr_en;
-    wire [ 30:0] bypass_addr_din;
+    wire [ 30:0] bypass_af_addr_din;
     wire         bypass_af_wr_en;
     wire [ 15:0] bypass_wdf_mask_din;
 
     // Graphics Command Processor <=> RequestController wires:
     wire         cmd_rdf_rd_en;
     wire         cmd_af_wr_en;
-    wire [ 30:0] cmd_addr_din;
+    wire [ 30:0] cmd_af_addr_din;
     wire         cmd_rdf_valid;
     wire         cmd_af_full;
 
@@ -300,7 +300,7 @@ assign DBG_MEM150 = 0;
         .rdf_valid(rdf_dout_valid),
         .i_rdf_rd_en(i_rdf_rd_en),
         .i_af_cmd_din(i_af_cmd_din),
-        .i_addr_din(i_af_addr_din),
+        .i_af_addr_din(i_af_addr_din),
         .i_af_wr_en(i_af_wr_en),
         .i_wdf_din(i_wdf_din),
         .i_wdf_mask_din(i_wdf_mask_din),
@@ -308,7 +308,7 @@ assign DBG_MEM150 = 0;
         .i_stall(i_stall),
         .d_rdf_rd_en(d_rdf_rd_en),
         .d_af_cmd_din(d_af_cmd_din),
-        .d_addr_din(d_af_addr_din),
+        .d_af_addr_din(d_af_addr_din),
         .d_af_wr_en(d_af_wr_en),
         .d_wdf_din(d_wdf_din),
         .d_wdf_mask_din(d_wdf_mask_din),
@@ -316,7 +316,7 @@ assign DBG_MEM150 = 0;
         .d_stall(d_stall),
         .rdf_rd_en(rdf_rd_en),
         .af_cmd_din(af_cmd_din),
-        .addr_din(af_addr_din),
+        .af_addr_din(af_addr_din),
         .af_wr_en(af_wr_en),
         .wdf_din(wdf_din),
         .wdf_mask_din(wdf_mask_din),
@@ -329,24 +329,24 @@ assign DBG_MEM150 = 0;
         .d_wdf_full(d_wdf_full),
 
         // new inputs for cp4-5:
-        .line_addr_din(line_addr_din),
+        .line_af_addr_din(line_af_addr_din),
         .line_af_wr_en(line_af_wr_en),
         .line_wdf_din(line_wdf_din),
         .line_wdf_mask_din(line_wdf_mask_din),
         .line_wdf_wr_en(line_wdf_wr_en),
-        .bypass_addr_din(bypass_addr_din), //NOTE:Extended to allow bypass input
+        .bypass_af_addr_din(bypass_af_addr_din), //NOTE:Extended to allow bypass input
         .bypass_af_wr_en(bypass_af_wr_en),
         .bypass_wdf_din(bypass_wdf_din),
         .bypass_wdf_mask_din(bypass_wdf_mask_din),
         .bypass_wdf_wr_en(bypass_wdf_wr_en),
-        .filler_addr_din(filler_addr_din),
+        .filler_af_addr_din(filler_af_addr_din),
         .filler_af_wr_en(filler_af_wr_en),
         .filler_wdf_wr_en(filler_wdf_wr_en),
         .filler_wdf_mask_din(filler_wdf_mask_din),
         .filler_wdf_din(filler_wdf_din),
         .pixel_rdf_rd_en(pixel_rdf_rd_en),
         .pixel_af_wr_en(pixel_af_wr_en),
-        .pixel_addr_din(pixel_af_addr_din),
+        .pixel_af_addr_din(pixel_af_addr_din),
         // new outputs for cp4-5:
         .line_af_full(line_af_full),
         .line_wdf_full(line_wdf_full),
@@ -360,7 +360,7 @@ assign DBG_MEM150 = 0;
         // new inputs for graphics command processor:
         .cmd_rdf_rd_en(cmd_rdf_rd_en),
         .cmd_af_wr_en(cmd_af_wr_en),
-        .cmd_addr_din(cmd_addr_din),
+        .cmd_af_addr_din(cmd_af_addr_din),
         // new outputs for graphics command processor:
         .cmd_rdf_valid(cmd_rdf_valid),
         .cmd_af_full(cmd_af_full)
@@ -456,7 +456,7 @@ assign DBG_MEM150 = 0;
         .wdf_full(filler_wdf_full),
         .wdf_din(filler_wdf_din),
         .wdf_wr_en(filler_wdf_wr_en),
-        .af_addr_din(filler_addr_din),
+        .af_addr_din(filler_af_addr_din),
         .af_wr_en(filler_af_wr_en),
         .wdf_mask_din(filler_wdf_mask_din),
     //Fill control <=> CPU:
@@ -468,12 +468,45 @@ assign DBG_MEM150 = 0;
 
 generate if (USE_SLR) begin:_USE_SLR_
 
-//    assign filler_ready     = 1'b0;
-//    assign filler_wdf_wr_en = 1'b0;
-//    assign filler_af_wr_en  = 1'b0;
-    assign line_ready       = 1'b0;
     assign line_wdf_wr_en   = 1'b0;
     assign line_af_wr_en    = 1'b0;
+//    assign bypass_af_wr_en   = 1'b0;
+//    assign bypass_wdf_wr_en    = 1'b0;
+//    assign filler_wdf_wr_en = 1'b0;
+//    assign filler_af_wr_en  = 1'b0;
+
+    wire [ 31:0] SLR_frame;
+    wire [ 31:0] SLR_color_edge;
+    wire [ 31:0] SLR_color_fill;
+    wire         SLR_ready;
+    wire         SLR_valid;
+    wire [  9:0] SLR_row;
+    wire [  9:0] SLR_col_start;
+    wire [  9:0] SLR_col_finish;
+
+    ScanLineRunner #(
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) slr (
+        .clk(cpu_clk_g),
+        .rst(rst_cpu_bus),
+    //DDR FIFOs (write-only):
+        .af_full        (bypass_af_full),
+        .wdf_full       (bypass_wdf_full),
+        .af_addr_din    (bypass_af_addr_din),
+        .af_wr_en       (bypass_af_wr_en),
+        .wdf_din        (bypass_wdf_din),
+        .wdf_mask_din   (bypass_wdf_mask_din),
+        .wdf_wr_en      (bypass_wdf_wr_en),
+    //SLR interface:
+        .SLR_frame      (SLR_frame),
+        .SLR_color_fill (SLR_color_fill),
+        .SLR_color_edge (SLR_color_edge),
+        .SLR_ready      (SLR_ready),
+        .SLR_valid      (SLR_valid),
+        .SLR_row        (SLR_row),
+        .SLR_col_start  (SLR_col_start),
+        .SLR_col_finish (SLR_col_finish)
+    );
 
     GraphicsProcessor #(
         .USE_SLR(1),
@@ -487,15 +520,16 @@ generate if (USE_SLR) begin:_USE_SLR_
         .rdf_dout           (rdf_dout),
         .rdf_rd_en          (cmd_rdf_rd_en),
         .af_wr_en           (cmd_af_wr_en),
-        .af_addr_din        (cmd_addr_din),
-    //DDR FIFOs (write-only):
-        .bypass_af_full     (bypass_af_full),
-        .bypass_wdf_full    (bypass_wdf_full),
-        .bypass_af_addr_din (bypass_af_addr_din),
-        .bypass_af_wr_en    (bypass_af_wr_en),
-        .bypass_wdf_din     (bypass_wdf_din),
-        .bypass_wdf_mask_din(bypass_wdf_mask_din),
-        .bypass_wdf_wr_en   (bypass_wdf_wr_en),
+        .af_addr_din        (cmd_af_addr_din),
+    //SLR interface:
+        .SLR_frame          (SLR_frame),
+        .SLR_color_fill     (SLR_color_fill),
+        .SLR_color_edge     (SLR_color_edge),
+        .SLR_ready          (SLR_ready),
+        .SLR_valid          (SLR_valid),
+        .SLR_row            (SLR_row),
+        .SLR_col_start      (SLR_col_start),
+        .SLR_col_finish     (SLR_col_finish),
     //CPU interface:
         .GP_ready           (gp_ready),
         .GP_valid           (cpu_gp_valid),
@@ -504,10 +538,12 @@ generate if (USE_SLR) begin:_USE_SLR_
         .GP_procframe       (gp_procframe),
         .GP_interrupt       (gp_interrupt),
     //LineEngine interface:
+        .LE_internal_ready(line_ready),
         .LE_ready(1'b0), .LE_color_valid(), .LE_color(),
         .LE_x0_valid(), .LE_y0_valid(), .LE_x1_valid(), .LE_y1_valid(),
         .LE_point(), .LE_trigger(), .LE_frame(),
     //FrameFiller interface:
+        .FF_internal_ready(/*filler_ready*/),
         .FF_ready(filler_ready),
         .FF_valid(filler_valid),
         .FF_color(filler_color),
@@ -528,7 +564,7 @@ end else begin:_NO_SLR_
     //DDR FIFOs (write-only):
         .af_full(line_af_full),
         .wdf_full(line_wdf_full),
-        .af_addr_din(line_addr_din),
+        .af_addr_din(line_af_addr_din),
         .af_wr_en(line_af_wr_en),
         .wdf_din(line_wdf_din),
         .wdf_mask_din(line_wdf_mask_din),
@@ -563,8 +599,13 @@ end else begin:_NO_SLR_
         .rdf_dout(rdf_dout),
         .rdf_rd_en(cmd_rdf_rd_en),
         .af_wr_en(cmd_af_wr_en),
-        .af_addr_din(cmd_addr_din),
+        .af_addr_din(cmd_af_addr_din),
+    //SLR interface (write-only):
+        .SLR_frame(), .SLR_color_fill(), .SLR_color_edge(),
+        .SLR_ready(1'b0), .SLR_valid(),
+        .SLR_row(), .SLR_col_start(), .SLR_col_finish(),
     //LineEngine interface:
+        .LE_internal_ready(),
         .LE_ready(line_ready),
         .LE_color_valid(line_color_valid),
         .LE_color(line_color),
@@ -576,6 +617,7 @@ end else begin:_NO_SLR_
         .LE_trigger(line_trigger),
         .LE_frame(line_frame),
     //FrameFiller interface:
+        .FF_internal_ready(),
         .FF_ready(filler_ready),
         .FF_valid(filler_valid),
         .FF_color(filler_color),

@@ -1,6 +1,6 @@
 
 module LineEngine #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, USE_SLR=0,
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, USE_SLR=1,
     parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
     input           clk,
