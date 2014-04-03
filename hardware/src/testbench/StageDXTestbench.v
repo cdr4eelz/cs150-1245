@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
-`include "cpuglobal.vh"
-`include "opcode.vh"
+`include "../cpuglobal.vh"
+`include "../innerds/opcode.vh"
 
 module StageDXTestbench;
 

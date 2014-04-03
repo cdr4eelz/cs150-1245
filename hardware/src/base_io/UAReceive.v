@@ -1,3 +1,8 @@
+`ifndef MACROSAFE
+`define MACROSAFE
+`endif // required to get this to compile...
+`include "../base_util/Const.v"
+
 module UAReceive(
   input   Clock,
   input   Reset,
@@ -8,8 +13,8 @@ module UAReceive(
 
   input         SIn
 );
-  // for log2 function
-  `include "util.vh"
+//// for log2 function
+//`include "../base_util/util.vh"
 
   //--|Parameters|--------------------------------------------------------------
 
@@ -19,7 +24,7 @@ module UAReceive(
   // See diagram in the lab guide
   localparam  SymbolEdgeTime    =   ClockFreq / BaudRate;
   localparam  SampleTime        =   SymbolEdgeTime / 2;
-  localparam  ClockCounterWidth =   log2(SymbolEdgeTime);
+  localparam  ClockCounterWidth =   `log2(SymbolEdgeTime);
 
   //--|Declarations|------------------------------------------------------------
 

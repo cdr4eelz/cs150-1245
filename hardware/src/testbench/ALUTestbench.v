@@ -11,9 +11,9 @@
 // If #1 is in the initial block of your testbench, time advances by
 // 1ns rather than 1ps
 
-`include "cpuglobal.vh"
-`include "opcode.vh"
-`include "aluop.vh"
+`include "../cpuglobal.vh"
+`include "../innerds/opcode.vh"
+`include "../innerds/aluop.vh"
 
 module ALUTestbench;
 

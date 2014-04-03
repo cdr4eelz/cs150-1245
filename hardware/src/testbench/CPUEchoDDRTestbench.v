@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 module CPUEchoDDRTestbench;
     parameter CPU_FREQ  = 50_000_000; //CPU-clock

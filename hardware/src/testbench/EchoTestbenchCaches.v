@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 module EchoTestbenchCaches;
     parameter CPU_FREQ  = 50_000_000; //CPU-clock

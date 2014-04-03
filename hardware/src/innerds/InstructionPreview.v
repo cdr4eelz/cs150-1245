@@ -1,4 +1,4 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 module InstructionPreview #(
     parameter DD=`COLT45_DD,

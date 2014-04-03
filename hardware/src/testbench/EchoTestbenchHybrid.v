@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 module EchoTestbenchHybrid;
     parameter MAXCHARS  = 45; //Stop simulation upon receipt of enough chars

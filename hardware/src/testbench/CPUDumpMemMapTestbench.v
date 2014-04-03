@@ -1,6 +1,6 @@
 `timescale 10ns/10ps
 
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 module CPUDumpMemMapTestbench;
     reg Clock, Reset, Stall;

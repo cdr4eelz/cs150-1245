@@ -1,3 +1,8 @@
+`ifndef MACROSAFE
+`define MACROSAFE
+`endif // required to get this to compile...
+`include "../base_util/Const.v"
+
 module UATransmit(
     input   Clock, Reset,
 
@@ -7,8 +12,8 @@ module UATransmit(
 
     output        SOut
 );
-    // for log2 function
-    `include "util.vh"
+//  // for log2 function
+//  `include "../base_util/util.vh"
 
     //--|Parameters|--------------------------------------------------------------
 
@@ -17,7 +22,7 @@ module UATransmit(
 
     // See diagram in the lab guide
     localparam  SymbolEdgeTime    =   ClockFreq / BaudRate;
-    localparam  ClockCounterWidth =   log2(SymbolEdgeTime);
+    localparam  ClockCounterWidth =   `log2(SymbolEdgeTime);
 
     //--|Solution|----------------------------------------------------------------
 

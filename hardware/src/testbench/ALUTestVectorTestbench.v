@@ -8,7 +8,7 @@
 //  it doesn't check that you're mux-ing the correct values into the inputs
 //  of the ALU. 
 
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 module ALUTestVectorTestbench;
 

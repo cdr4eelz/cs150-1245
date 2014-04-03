@@ -1,27 +1,11 @@
 
 module LineEngine #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, USE_SLR=1,
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, SCANLINERUNNER=1,
     parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
     input           clk,
     input           rst, //Synchronized internally
-//SLR control (write-only): [if USE_SLR]
-    output  [ 31:0] SLR_frame,
-    output  [ 31:0] SLR_color_edge,
-    output  [ 31:0] SLR_color_fill,
-    input           SLR_ready,
-    output          SLR_valid,
-    output  [  9:0] SLR_row,
-    output  [  9:0] SLR_col_start,
-    output  [  9:0] SLR_col_finish,
-//DDR FIFOs (write-only): [if !USE_SLR]
-    input           af_full,
-    input           wdf_full,
-    output  [ 30:0] af_addr_din,
-    output          af_wr_en,
-    output  [127:0] wdf_din,
-    output  [ 15:0] wdf_mask_din,
-    output          wdf_wr_en,
+
 //Line control <=> CPU:
     output          LE_ready, //Can start issuing values/trigger
     input           LE_color_valid, //LE_color capture
@@ -32,7 +16,26 @@ module LineEngine #(
     input           LE_y1_valid,//  ... y1
     input   [  9:0] LE_point,   //Point data with each LE_[x0,y0,x1,y1]_valid
     input           LE_trigger, //Trigger drawing (LE_frame captured)
-    input   [ 31:0] LE_frame    //Frame-base (modulo 0x0040_0000)
+    input   [ 31:0] LE_frame,   //Frame-base (modulo 0x0040_0000)
+
+//DDR FIFOs (write-only): [if !SCANLINERUNNER]
+    input           af_full,
+    input           wdf_full,
+    output          af_wr_en,
+    output  [ 30:0] af_addr_din,
+    output          wdf_wr_en,
+    output  [127:0] wdf_din,
+    output  [ 15:0] wdf_mask_din,
+
+//SLR control (write-only): [if SCANLINERUNNER]
+    input           SLR_ready,
+    output          SLR_valid,
+    output  [ 31:0] SLR_frame,
+    output  [ 31:0] SLR_color_edge,
+    output  [ 31:0] SLR_color_fill,
+    output  [  9:0] SLR_row,
+    output  [  9:0] SLR_col_start,
+    output  [  9:0] SLR_col_finish
 );
 
     // Implement Bresenham's line drawing algorithm here!
@@ -182,20 +185,29 @@ module LineEngine #(
     end
 
 
-generate if (USE_SLR) begin:_USE_SLR_
+generate if (SCANLINERUNNER) begin:_WITH_SLR_
 
 //Write "run" of pixels instead via ScanLineRunner module
-    assign SLR_frame        = {4'h1, framebits[5:0], 22'b0},
+    assign SLR_valid        = cs_M[MH_RUN1],
+            SLR_frame       = {4'h1, framebits[5:0], 22'b0},
             SLR_color_edge  = color_r,
             SLR_color_fill  = color_r,
-            SLR_valid       = cs_M[MH_RUN1],
             SLR_row         = y,
             SLR_col_start   = x,
             SLR_col_finish  = x;
-    assign adv1       = SLR_ready,
-            adv2      = 1'b1;
+
+    assign adv1   = SLR_ready, //Used iif MH_RUN1 implying SLR_valid
+            adv2  = 1'b1;
+
+    assign af_wr_en       = 1'b0,
+            af_addr_din   = 31'bx,
+            wdf_wr_en     = 1'b0,
+            wdf_din       = 128'bx,
+            wdf_mask_din  = 16'bx;
 
 end else begin:_NO_SLR_
+
+    assign SLR_valid = 1'b0;
 
 //Drive DDR lines to write 1 pixel at-a-time
     reg  [ 3:0] maskW;

@@ -14,7 +14,7 @@
 //  Author: <<YOUR NAME HERE>>
 //-----------------------------------------------------------------------------
 
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 
 module RegFile #(

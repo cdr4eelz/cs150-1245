@@ -6,17 +6,17 @@ module ScanLineRunner #(
 //DDR FIFOs (write-only):
     input           af_full,
     input           wdf_full,
-    output  [ 30:0] af_addr_din,
     output          af_wr_en,
+    output  [ 30:0] af_addr_din,
+    output          wdf_wr_en,
     output  [127:0] wdf_din,
     output  [ 15:0] wdf_mask_din,
-    output          wdf_wr_en,
 //ScanRun control <=> Engine/CPU:
+    output          SLR_ready,
+    input           SLR_valid,
     input   [ 31:0] SLR_frame,
     input   [ 31:0] SLR_color_edge,
     input   [ 31:0] SLR_color_fill,
-    output          SLR_ready,
-    input           SLR_valid,
     input   [  9:0] SLR_row,
     input   [  9:0] SLR_col_start,
     input   [  9:0] SLR_col_finish
@@ -63,7 +63,7 @@ module ScanLineRunner #(
         if (rst) cs_M <= MS_RSET; else cs_M <= ns_M;
         case (cs_M)
             MS_RSET: begin
-                {y, x, x_finish} <= 0;
+                y <= 0; x <= 10'd200; x_finish <= 10'd600;
             end
             MS_IDLE: if (SLR_valid) begin
                 y         <= SLR_row;

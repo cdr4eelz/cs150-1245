@@ -1,4 +1,4 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 /*
 **  Just a simple register w/synchronous-reset specified as a constant.

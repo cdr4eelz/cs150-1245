@@ -60,7 +60,7 @@ module LineEngineTestbench;
     assign y = af_addr_din[18:9];
 
     LineEngine #(
-        .USE_SLR(0),
+        .SCANLINERUNNER(0),
         .LITTLEWORDIAN(1)
     ) DUT (
         .clk(Clock),

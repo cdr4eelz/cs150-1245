@@ -42,7 +42,6 @@ module GraphicsProcessorTestbench;
     wire [31:0] LE_frame;
 
     GraphicsProcessor #(
-        .USE_SLR(0),
         .LITTLEWORDIAN(1)
     ) DUT(
         .clk(Clock),
@@ -62,18 +61,12 @@ module GraphicsProcessorTestbench;
         .rdf_rd_en(rdf_rd_en),
         .af_wr_en(af_wr_en),
         .af_addr_din(af_addr_din),
-    //SLR interface (write-only):
-        .SLR_frame(), .SLR_color_fill(), .SLR_color_edge(),
-        .SLR_ready(1'b0), .SLR_valid(),
-        .SLR_row(), .SLR_col_start(), .SLR_col_finish(),
     //FrameFiller control signals
-        .FF_internal_ready(),
         .FF_ready(FF_ready),
         .FF_valid(FF_valid),
         .FF_color(FF_color),
         .FF_frame(FF_frame),
     //LineEngine control signals
-        .LE_internal_ready(),
         .LE_ready(LE_ready),
         .LE_color_valid(LE_color_valid),
         .LE_color(LE_color),

@@ -1,6 +1,6 @@
 `timescale 1ns/1ns //NOTE: Very modest precision!
 
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 module PixelFeederTestbench;
 

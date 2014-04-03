@@ -1,4 +1,4 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 `include "opcode.vh"
 
 module InstructionControl #(

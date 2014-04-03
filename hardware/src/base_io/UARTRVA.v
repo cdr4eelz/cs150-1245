@@ -1,4 +1,4 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 /*
     UARTRVA patches a pair of RVA SHAKE busses through UART() for io serial lines

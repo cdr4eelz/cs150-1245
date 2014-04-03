@@ -21,7 +21,6 @@
 //TODO:Fault response?
 
 module GraphicsProcessor #(
-    parameter USE_SLR=1,
     parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 //TODO: Implement LITTLEWORDIAN
 )(
@@ -41,25 +40,12 @@ module GraphicsProcessor #(
     output          rdf_rd_en,
     output          af_wr_en,
     output  [ 30:0] af_addr_din,
-//SLR control (write-only): [if USE_SLR]
-    output  [ 31:0] SLR_frame,
-    output  [ 31:0] SLR_color_edge,
-    output  [ 31:0] SLR_color_fill,
-    input           SLR_ready,
-    output          SLR_valid,
-    output  [  9:0] SLR_row,
-    output  [  9:0] SLR_col_start,
-    output  [  9:0] SLR_col_finish,
-//FrameFiller interface: [if USE_SLR]
-    output          FF_internal_ready,
-//FrameFiller interface: [if !USE_SLR]
+//FrameFiller interface:
     input           FF_ready,
     output          FF_valid,
     output  [ 31:0] FF_color,
     output  [ 31:0] FF_frame,
-//LineEngine interface: [if USE_SLR]
-    output          LE_internal_ready,
-//LineEngine interface: [if !USE_SLR]
+//LineEngine interface:
     input           LE_ready,
     output          LE_color_valid,
     output  [ 31:0] LE_color,
@@ -288,50 +274,7 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
             LE_point  = engine_point,
             LE_frame  = engine_frame;
 
-generate if (USE_SLR) begin:_USE_SLR_
-
-// Embed Engines here & drive ScanLineRunner via output signals
-    LineEngine #(
-        .USE_SLR(1),
-        .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) le (
-        .clk(clk),
-        .rst(fifo_reset),
-    //SLR interface (write-only):
-        .SLR_frame      (SLR_frame),
-        .SLR_color_fill (SLR_color_fill),
-        .SLR_color_edge (SLR_color_edge),
-        .SLR_ready      (SLR_ready),
-        .SLR_valid      (SLR_valid),
-        .SLR_row        (SLR_row),
-        .SLR_col_start  (SLR_col_start),
-        .SLR_col_finish (SLR_col_finish),
-    //Line control <=> CPU:
-        .LE_ready       (LE_internal_ready),
-        .LE_color_valid (LE_color_valid),
-        .LE_color       (LE_color),
-        .LE_x0_valid    (LE_x0_valid),
-        .LE_y0_valid    (LE_y0_valid),
-        .LE_x1_valid    (LE_x1_valid),
-        .LE_y1_valid    (LE_y1_valid),
-        .LE_point       (LE_point),
-        .LE_trigger     (LE_trigger),
-        .LE_frame       (LE_frame),
-    //DDR FIFOs (write-only):
-        .af_full(1'b1), .wdf_full(1'b1),
-        .af_wr_en(), .wdf_wr_en(),
-        .af_addr_din(), .wdf_din(), .wdf_mask_din()
-    );
-
-    assign ENGINES_ready = (FF_ready && LE_internal_ready);
-
-end else begin:_NO_SLR_
-
     assign ENGINES_ready = (FF_ready && LE_ready);
-
-    assign SLR_valid = 1'b0;
-
-end endgenerate
 
 
 //synthesis translate_off

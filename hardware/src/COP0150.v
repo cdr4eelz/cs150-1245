@@ -42,7 +42,7 @@ wire                            firertc;
 wire        [5:0]               interrupts;
 
 
-reg         [31:0]              dataout;
+reg         [31:0]              dataout_r;
 
 reg         [31:0]              epc;
 reg         [31:0]              count;
@@ -57,7 +57,7 @@ wire                            ie;
 wire        [5:0]               next_ip;
 
 
-assign DataOut          = dataout;
+assign DataOut          = dataout_r;
 assign InterruptRequest = ie & |(im & ip);
 
 assign firetimer        = (count == compare);
@@ -74,12 +74,12 @@ assign next_ip          = ip | interrupts;
 
 always@(*) begin
     case(DataAddress)
-        5'hE:       dataout <= epc;
-        5'h9:       dataout <= count;
-        5'hB:       dataout <= compare;
-        5'hC:       dataout <= status;
-        5'hD:       dataout <= cause;
-        default:    dataout <= 32'bx;
+        5'hE:       dataout_r <= epc;
+        5'h9:       dataout_r <= count;
+        5'hB:       dataout_r <= compare;
+        5'hC:       dataout_r <= status;
+        5'hD:       dataout_r <= cause;
+        default:    dataout_r <= 32'bx;
     endcase
 end
 
