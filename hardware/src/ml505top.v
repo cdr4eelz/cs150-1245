@@ -221,12 +221,46 @@ wire [31:0] DBG_MEM150;
 .DBG_MEM150(DBG_MEM150)
     );
 
-    // MIPS 150 CPU
+
+// Memory/IO lines (snagged from MIPS150)
+    wire  [31: 0] IMEM_ADDR, DMEM_ADDR;
+    wire  [31: 0] IMEM_DATA, DMEM_DATA;
+    wire  [31: 0] _WDataMasked;
+    wire  [ 3: 0] _WriteMask;
+    wire  MemToRegDX_, MemWriteDX_, PCinBIOSDX_;
+    wire  [31: 0] MemAddr_MW;
+    wire  [31: 0] CNT_Cycle, CNT_Inst;
+
+    // Memory Bank & Memory Mapped I/O
     MIPS150 #(
         .CPU_FREQ(CPU_FREQ)
     ) CPU (
         .clk(cpu_clk_g),
         .rst(rst_cpu_cpu),
+    // Memory/IO <==> MemBank
+        .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
+        .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
+        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
+        .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
+        .PCinBIOSDX_(PCinBIOSDX_), .MemAddr_MW(MemAddr_MW),
+        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
+// Chipscope cross-module tap:
+.DBG_MEM150(DBG_MEM150)
+    );
+
+    // MIPS 150 CPU
+    MemBank #(
+        .CPU_FREQ(CPU_FREQ)
+    ) mem_bank (
+        .clk(cpu_clk_g),
+        .rst(rst_cpu_cpu),
+    // Memory/IO <==> MIPS150
+        .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
+        .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
+        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
+        .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
+        .PCinBIOSDX_(PCinBIOSDX_), .MemAddr_MW(MemAddr_MW),
+        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
     // Serial (UART):
         .FPGA_SERIAL_RX(FPGA_SERIAL1_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL1_TX),
@@ -250,9 +284,7 @@ wire [31:0] DBG_MEM150;
         .gp_valid       (gp_valid),
         .gp_frame       (gp_frame),
         .gp_code        (gp_code),
-        .gp_interrupt   (gp_interrupt),
-// Chipscope cross-module tap:
-.DBG_MEM150(DBG_MEM150)
+        .gp_interrupt   (gp_interrupt)
     );
 
 //RESOLUTION:          Width FrontH PulseH BackH Height FrontV PulseV BackV ClockFreq

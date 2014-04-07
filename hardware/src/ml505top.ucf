@@ -9,19 +9,23 @@
 # PROJECT SPECIFIC SPECIAL DATAPATHs/TIGs
 ################################################################################
 
-#TODO: Ensure "direction" correct on these paths
 #TODO: Apply ultra-consistent naming on cross-clock NET/INST & use wildcards (cautiously)
 
 # Avoid false path on cross-clock synchronizers & reset
+NET  "cpu_clk_g" TNM_NET = "TN_SYNC_FROM_CPU";
 INST "*/pixelfeed/*_clkDVI" TNM = "TN_SYNC_TO_DVI";
-#NET "/rst_dvi_*" TNM = "TN_SYNC_TO_DVI";
-TIMESPEC "TS_CPU_SYNC_DVI" = FROM "cpu_clk" TO "TN_SYNC_TO_DVI" 4 ns DATAPATHONLY; #TIG
+TIMESPEC "TS_CPU_SYNC_DVI" = FROM "TN_SYNC_FROM_CPU" TO "TN_SYNC_TO_DVI" 15 ns DATAPATHONLY;
+
+NET  "dvi_clk_g" TNM_NET = "TN_SYNC_FROM_DVI";
 INST "*/pixelfeed/*_clkCPU" TNM = "TN_SYNC_TO_CPU";
-#NET "/rst_cpu_*" TNM = "TN_SYNC_TO_CPU";
-TIMESPEC "TS_DVI_SYNC_CPU" = FROM "dvi_clk" TO "TN_SYNC_TO_CPU" 4 ns DATAPATHONLY; #TIG
+TIMESPEC "TS_DVI_SYNC_CPU" = FROM "TN_SYNC_FROM_DVI" TO "TN_SYNC_TO_CPU" 15 ns DATAPATHONLY;
 
+INST "rst_cpu_*" TNM = "TN_TO_RST_CPU";
+TIMESPEC "TS_RST_SYNC_CPU" = TO "TN_TO_RST_CPU" 20 ns DATAPATHONLY;
+INST "rst_dvi_*" TNM = "TN_TO_RST_DVI";
+TIMESPEC "TS_RST_SYNC_DVI" = TO "TN_TO_RST_DVI" 20 ns DATAPATHONLY;
+#INST "*reset_watch*" TIG;
 
-#TODO: Consider unifying UCF vs. synth-attribute vs. PCF constraint settings
 
 
 ################################################################################
@@ -73,20 +77,25 @@ NET "FPGA_CPU_RESET_B" TIG;
 # Bank  4, Vcco=3.3V,  No DCI
 NET  "FPGA_SERIAL1_RX"     LOC="AG15"  |  IOSTANDARD="LVCMOS33";
 NET  "FPGA_SERIAL1_TX"     LOC="AG20"  |  IOSTANDARD="LVCMOS33";
+NET "FPGA_SERIAL1_RX" TIG;
+NET "FPGA_SERIAL1_TX" TIG;
 # Bank 20, Vcco=3.3V,  DCI 49.9ohm
 #NET  "FPGA_SERIAL2_RX"    LOC="G10"   |  IOSTANDARD="LVCMOS33";
 #NET  "FPGA_SERIAL2_TX"    LOC="F10"   |  IOSTANDARD="LVCMOS33";
-NET "FPGA_SERIAL*" TIG; #Since clock/data in one, "sampled" asynchronously via quicker domain
+#NET "FPGA_SERIAL2_RX" TIG;
+#NET "FPGA_SERIAL2_TX" TIG;
 
 # PS/2
 # Bank 15, Vcco=1.8V,  DCI 49.9ohm
 #DEVICE generates the clock mostly, though HOST can pull it low at times to help sync up
 #NET  "KEYBOARD_CLK"       LOC="T26"  |  IOSTANDARD="LVCMOS18";
 #NET  "KEYBOARD_DATA"      LOC="T25"  |  IOSTANDARD="LVCMOS18";
-#NET "KEYBOARD_*" TIG;
+#NET "KEYBOARD_CLK" TIG;
+#NET "KEYBOARD_DATA" TIG;
 #NET  "MOUSE_CLK"          LOC="R27"  |  IOSTANDARD="LVCMOS18";
 #NET  "MOUSE_DATA"         LOC="U26"  |  IOSTANDARD="LVCMOS18";
-#NET "MOUSE_*" TIG;
+#NET "MOUSE_CLK" TIG;
+#NET "MOUSE_DATA" TIG;
 
 
 ################################################################################
@@ -124,7 +133,9 @@ NET "FPGA_ROTARY_*"     SLEW="SLOW" | DRIVE="2" | PULLDOWN;
 NET  "FPGA_ROTARY_INCA"   LOC="AH30"  |  IOSTANDARD="LVCMOS18";
 NET  "FPGA_ROTARY_INCB"   LOC="AG30"  |  IOSTANDARD="LVCMOS18";
 NET  "FPGA_ROTARY_PUSH"   LOC="AH29"  |  IOSTANDARD="LVCMOS18";
-NET "FPGA_ROTARY_*" TIG;
+NET "FPGA_ROTARY_INCA" TIG;
+NET "FPGA_ROTARY_INCB" TIG;
+NET "FPGA_ROTARY_PUSH" TIG;
 
 # LEDs "GPIO" green (BOTTOM-CENTER w/GAP)
 #    (Bus/Rename of GPIO_LED_0, GPIO_LED_1, ...GPIO_LED_7)
@@ -151,11 +162,10 @@ NET "GPIO_COMPLED[*]" TIG;
 
 # LEDs "ERRORS" red (BOTTOM-CENTER left of GPIO-LEDs) (ERR{2|1}==BUS_ERROR_{2|1}, respectively)
 # Bank 12, Vcco=3.3V,  DCI 49.9ohm  #NOTE: WHY 1.8V, not that LEDs care???
-NET "BUS_ERROR_*"       IOSTANDARD="LVCMOS18" | SLEW="SLOW" | DRIVE="2"; # | PULLDOWN;
-NET  "BUS_ERROR_1"        LOC="F6";
-NET  "BUS_ERROR_2"        LOC="T10";
-NET "BUS_ERROR_*" TIG;
-
+NET  "BUS_ERROR_1"        LOC="F6"    |  IOSTANDARD="LVCMOS18" | SLEW="SLOW" | DRIVE="2";
+NET  "BUS_ERROR_2"        LOC="T10"   |  IOSTANDARD="LVCMOS18" | SLEW="SLOW" | DRIVE="2";
+NET  "BUS_ERROR_1" TIG;
+NET  "BUS_ERROR_2" TIG;
 
 ################################################################################
 # AUDIO
@@ -211,7 +221,8 @@ NET  "DVI_XCLK_P"         LOC="AL11"  | IOSTANDARD="LVCMOS33";
 # Bank 15, Vcco=1.8V, DCI 49.9ohm
 NET  "IIC_SCL_VIDEO"      LOC="U27"   | IOSTANDARD="LVCMOS18";
 NET  "IIC_SDA_VIDEO"      LOC="T29"   | IOSTANDARD="LVCMOS18";
-NET "IIC_S*_VIDEO" TIG;
+NET "IIC_SCL_VIDEO" TIG;
+NET "IIC_SDA_VIDEO" TIG;
 
 ################################################################################
 # VGA
@@ -384,9 +395,6 @@ NET "SRAM_D[*]" PULLDOWN; #Likely necessary to read while high-z...examples DO d
 # Clock constraints                                                        #
 ############################################################################
 
-#NOTE: Seems these two clocks might matter more when giving the MIG it's own PLL...
-#NOTE: ...and also seem less relevant given multi-cycle delay approach???
-#
 #NET "u_ddr2_infrastructure/sys_clk_ibufg" TNM_NET =  "SYS_CLK" ;
 #TIMESPEC "TS_SYS_CLK" = PERIOD "SYS_CLK" 5 ns HIGH 50 %;
 #TIMESPEC "TS_SYS_CLK" = PERIOD "SYS_CLK" 3.75 ns HIGH 50 %;
@@ -394,8 +402,6 @@ NET "SRAM_D[*]" PULLDOWN; #Likely necessary to read while high-z...examples DO d
 #NET "u_ddr2_infrastructure/clk200_ibufg" TNM_NET = "SYS_CLK_200" ;
 #TIMESPEC "TS_SYS_CLK_200" = PERIOD "SYS_CLK_200" 5 ns HIGH 50 %;
 
-
-#TS_clk0 gets defined for us via tracing to it's PLL origin (200MHz)
 
 ############################################################################
 ########################################################################
@@ -549,8 +555,10 @@ NET  "DDR2_ODT0"              LOC = "F31" ;   # Bank 15, Vcco=1.8V, DCI 49.9ohm
 NET  "DDR2_RAS_B"             LOC = "H30" ;   # Bank 15, Vcco=1.8V, DCI 49.9ohm
 NET  "DDR2_WE_B"              LOC = "K29" ;   # Bank 15, Vcco=1.8V, DCI 49.9ohm
 
-#NET "DDR2_SCL"               LOC = "E29" ;   # Bank 15, Vcco=1.8V, DCI 49.9ohm
-#NET "DDR2_SDA"               LOC = "F29" ;   # Bank 15, Vcco=1.8V, DCI 49.9ohm
+#NET  "DDR2_SCL"              LOC = "E29" ;   # Bank 15, Vcco=1.8V, DCI 49.9ohm
+#NET  "DDR2_SDA"              LOC = "F29" ;   # Bank 15, Vcco=1.8V, DCI 49.9ohm
+#NET "DDR2_SCL" TIG;
+#NET "DDR2_SDA" TIG;
 
 
 ###############################################################################
@@ -564,19 +572,16 @@ NET  "DDR2_WE_B"              LOC = "K29" ;   # Bank 15, Vcco=1.8V, DCI 49.9ohm
 
 # MUX Select for either rising/falling CLK0 for 2nd stage read capture
 INST "*/u_phy_calib/gen_rd_data_sel*.u_ff_rd_data_sel" TNM = "TNM_RD_DATA_SEL";
-TIMESPEC "TS_MC_RD_DATA_SEL" = FROM "TNM_RD_DATA_SEL" TO FFS
-"TS_clk0" * 4;
+TIMESPEC "TS_MC_RD_DATA_SEL" = FROM "TNM_RD_DATA_SEL" TO FFS "TS_100MHZ" * 2;
 
 # MUX select for read data - optional delay on data to account for byte skews
 INST "*/u_usr_rd/gen_rden_sel_mux*.u_ff_rden_sel_mux" TNM = "TNM_RDEN_SEL_MUX";
-TIMESPEC "TS_MC_RDEN_SEL_MUX" = FROM "TNM_RDEN_SEL_MUX" TO FFS
-"TS_clk0" * 4;
+TIMESPEC "TS_MC_RDEN_SEL_MUX" = FROM "TNM_RDEN_SEL_MUX" TO FFS "TS_100MHZ" * 2;
 
 # Calibration/Initialization complete status flag (for PHY logic only) - can
 # be used to drive both flip-flops and BRAMs
 INST "*/u_phy_init/u_ff_phy_init_data_sel" TNM = "TNM_PHY_INIT_DATA_SEL";
-TIMESPEC "TS_MC_PHY_INIT_DATA_SEL_0" = FROM "TNM_PHY_INIT_DATA_SEL" TO FFS
-"TS_clk0" * 4;
+TIMESPEC "TS_MC_PHY_INIT_DATA_SEL_0" = FROM "TNM_PHY_INIT_DATA_SEL" TO FFS "TS_100MHZ" * 2;
 
 # The RAM path is only used in cases where Write Latency (Additive Latency + 
 # (CAS Latency - 1) + (1 in case of RDIMM)) is 2 or below. So these constraints are 
@@ -584,21 +589,18 @@ TIMESPEC "TS_MC_PHY_INIT_DATA_SEL_0" = FROM "TNM_PHY_INIT_DATA_SEL" TO FFS
 # If Write Latency is higher than 3, then a warning will appear in PAR, 
 # and the constraint can be ignored as this path does not exist. RAM constraint 
 # can be safely removed if the warning is not to be displayed.
-TIMESPEC "TS_MC_PHY_INIT_DATA_SEL_90" = FROM "TNM_PHY_INIT_DATA_SEL" TO RAMS
-"TS_clk0" * 4;
+TIMESPEC "TS_MC_PHY_INIT_DATA_SEL_90" = FROM "TNM_PHY_INIT_DATA_SEL" TO RAMS "TS_100MHZ" * 2;
 
 # Select (address) bits for SRL32 shift registers used in stage3/stage4
 # calibration
 INST "*/u_phy_calib/gen_gate_dly*.u_ff_gate_dly" TNM = "TNM_GATE_DLY";
-TIMESPEC "TS_MC_GATE_DLY" = FROM "TNM_GATE_DLY" TO FFS "TS_clk0" * 4;
+TIMESPEC "TS_MC_GATE_DLY" = FROM "TNM_GATE_DLY" TO FFS "TS_100MHZ" * 2;
 
 INST "*/u_phy_calib/gen_rden_dly*.u_ff_rden_dly" TNM = "TNM_RDEN_DLY";
-TIMESPEC "TS_MC_RDEN_DLY" = FROM "TNM_RDEN_DLY" TO FFS "TS_clk0" * 4;
+TIMESPEC "TS_MC_RDEN_DLY" = FROM "TNM_RDEN_DLY" TO FFS "TS_100MHZ" * 2;
 
-INST "*/u_phy_calib/gen_cal_rden_dly*.u_ff_cal_rden_dly"
-  TNM = "TNM_CAL_RDEN_DLY";
-TIMESPEC "TS_MC_CAL_RDEN_DLY" = FROM "TNM_CAL_RDEN_DLY" TO FFS
-"TS_clk0" * 4;
+INST "*/u_phy_calib/gen_cal_rden_dly*.u_ff_cal_rden_dly" TNM = "TNM_CAL_RDEN_DLY";
+TIMESPEC "TS_MC_CAL_RDEN_DLY" = FROM "TNM_CAL_RDEN_DLY" TO FFS "TS_100MHZ" * 2;
 
 
 ############################################################################### 
@@ -677,8 +679,8 @@ INST "*/u_phy_calib/gen_gate[7].u_en_dqs_ff"  LOC = SLICE_X0Y131;
 # In general PAR should be able to route this
 # within 900ps over all speed grades.
 NET "*/u_phy_io/en_dqs*" MAXDELAY = 600 ps;
-#NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 850 ps;
-NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 900 ps;
+NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 850 ps;
+#NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 900 ps;
 
 ###############################################################################
 # "Half-cycle" path constraint from IDDR to CE pin for all DQ IDDR's
@@ -691,6 +693,6 @@ NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 900 ps;
 #  time = 0.4*Tcyc + 0.40ns = 1.6ns @333MHz
 INST "*/gen_dqs[*].u_iob_dqs/u_iddr_dq_ce" TNM = "TNM_DQ_CE_IDDR";
 INST "*/gen_dq[*].u_iob_dq/gen_stg2_*.u_iddr_dq" TNM = "TNM_DQS_FLOPS";
-#TIMESPEC "TS_DQ_CE" = FROM "TNM_DQ_CE_IDDR" TO "TNM_DQS_FLOPS" 1.9 ns;
-TIMESPEC "TS_DQ_CE" = FROM "TNM_DQ_CE_IDDR" TO "TNM_DQS_FLOPS" 2.4 ns;
+TIMESPEC "TS_DQ_CE" = FROM "TNM_DQ_CE_IDDR" TO "TNM_DQS_FLOPS" 1.9 ns;
+#TIMESPEC "TS_DQ_CE" = FROM "TNM_DQ_CE_IDDR" TO "TNM_DQS_FLOPS" 2.4 ns;
 ################################################################################

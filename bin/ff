@@ -1,0 +1,7 @@
+#!/bin/bash -eu
+
+export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sww/bin
+export LD_LIBRARY_PATH=/usr/local/lib64:/usr/lib64:/lib64:/usr/sww/lib
+
+/usr/bin/firefox -remote $*
+

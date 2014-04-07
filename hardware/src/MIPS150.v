@@ -1,37 +1,22 @@
 `include "cpuglobal.vh"
 
 module MIPS150 #(
-    parameter CPU_FREQ = 50_000_000,
     parameter DD=`COLT45_DD,
-    parameter COLT45_SCOPE=0, COLT45_BRK=0, COLT45_SCRATCH=0, COLT45_PC=0,
-                COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
+    parameter COLT45_SCOPE=0, COLT45_BRK=0, COLT45_PC=0,
+                COLT45_REGREAD=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
     input   clk,
     input   rst,
-// Serial (UART):
-    input   FPGA_SERIAL_RX,
-    output  FPGA_SERIAL_TX,
-// Memory Caches:
-    output [ 31:0]  dcache_addr,
-    output [ 31:0]  icache_addr,
-    output [  3:0]  dcache_we,
-    output [  3:0]  icache_we,
-    output          dcache_re,
-    output          icache_re,
-    output [ 31:0]  dcache_din,
-    output [ 31:0]  icache_din,
-    input  [ 31:0]  dcache_dout,
-    input  [ 31:0]  icache_dout,
-    input           stall,
-// Graphics:
-    input  [ 31:0]  graphics_status,
-    output          pf_valid,
-    output [ 31:0]  pf_frame,
-    input           frame_interrupt,
-    output          gp_valid,
-    output [ 31:0]  gp_frame,
-    output [ 31:0]  gp_code,
-    input           gp_interrupt,
+
+// Memory lines
+    output [31: 0] IMEM_ADDR, DMEM_ADDR,
+    input  [31: 0] IMEM_DATA, DMEM_DATA,
+    output [31: 0] _WDataMasked,
+    output [ 3: 0] _WriteMask,
+    output MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
+    output [31: 0] MemAddr_MW,
+    output [31: 0] CNT_Cycle, CNT_Inst,
+
 // Chipscope cross-module tap:
 input [31:0] DBG_MEM150
 );
@@ -84,18 +69,14 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire         #DD WBK_CanFWD_MW2DX_;
     wire         #DD CNT_Reset_MW2F_;
 
-    // Memory lines
-    wire [31: 0] IMEM_ADDR, DMEM_ADDR;
-    wire [31: 0] IMEM_DATA, DMEM_DATA;
-
     // Declare outputs of F stage
     wire [31: 0] PC_F_, PCNEXT_F_;
     wire [31: 0] INST_F_;
-    wire [63: 0] CNT_Cycle, CNT_Inst, CNT_Stall, CNT_BRANCH, CNT_ISR;
+    wire [31: 0] CNT_Stall, CNT_BRANCH, CNT_ISR; //CNT_Cycle, CNT_Inst
     wire WAS_Running, WAS_Stall, WAS_Inst, WAS_Branch, WAS_ISR;
     wire INST_CouldBranch_F_, DO_ISR;
     StageF #(
-        .COUNTERWIDTH(64)
+        .COUNTERWIDTH(32)
     ) s_F ( .clk(clk), .rst(rst), .stall(stall),
         //Inputs (feedback from other stages)
         ._DoBranch(BRA_DoBranch_DX2F_), ._PCBranch(BRA_PCBranch_DX2F_),
@@ -169,7 +150,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [31: 0] MemAddrDX_, RegWValueDX_, MemWValueDX_;
     wire [ 4: 0] DestRegDX_;
     wire [ 1: 0] MemShiftDX_;
-    wire         MemToRegDX_, MemWriteDX_;
+//  wire         MemToRegDX_, MemWriteDX_;
     StageDX s_DX
     ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
         //Async regfile reads & COP access
@@ -191,8 +172,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
 
 //===============| PIPELINE-BORDER: DX/M >>>=============
-    assign DMEM_ADDR = MemAddrDX_;
-    wire  [31: 0]   MemAddr_MW;
+//  wire  [31: 0]   MemAddr_MW;
     wire  [31: 0]   RegWValue_MW;
     wire  [ 4: 0]   DestReg_MW;
     wire  [ 1: 0]   MemShift_MW;
@@ -219,13 +199,10 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
                             .In(PC_DX       ),  .Out(PC_MW        ) );
 //=============<<< PIPELINE-BORDER: DX/M |===============
 
-    // MEMORY/MMIO patchwork lines ("setups" prefixed with "_", "results" not)
-    wire [ 3: 0] _WriteMask;
-    wire [31: 0] _WDataMasked;
     StageMW s_MW
     ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
         // Inputs (pre-clock setup)
-        ._MemShift(MemShiftDX_), ._MemAddrShift(DMEM_ADDR[1:0]),
+        ._MemShift(MemShiftDX_), ._MemAddrShift(MemAddrDX_[1:0]),
         ._MemWValue(MemWValueDX_), ._MemWrite(MemWriteDX_),
         // Inputs (post-clock results)
         .MemShift_MW(MemShift_MW), .MemAddrShift_MW(MemAddr_MW[1:0]),
@@ -239,177 +216,8 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked)
     );
 
-
-    reg [3:0] hoti_;
-    always @(*) begin:_MUX_HOTI_ //Drive appropriate "activate" line for instruction fetch
-        case (IMEM_ADDR[31:28])
-            4'b1100: hoti_ = 4'b1000;       //0xC => ISR
-            4'b0100: hoti_ = 4'b0100;       //0x4 => BR
-            4'b0001: hoti_ = 4'b0010;       //0x1 => IC
-`ifndef COLT45_STRICT
-            4'b0110: hoti_ = 4'b0001; //XTRA: 0x6 => IB (Scratch-IMEM)
-`endif
-            default: hoti_ = 4'b0000;
-        endcase
-    end
-    //Not all instruction-fetch "drives" usable by memories (several are always enabled)
-    wire hoti_BR_  = hoti_[2]; //TODO: Consider this for PCinBIOS test
-    wire hoti_IC_  = hoti_[1];
-
-    wire PCinBIOSDX_ = (PC_DX[31:28]==4'b0100); //Borrow value from other stage (close enough)
-    reg _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_ISR;
-    reg _hot_IB, _hot_DB;
-    always @(*) begin
-        {_hot_IO,_hot_BR,_hot_DC,_hot_IB,_hot_DB,_hot_IC,_hot_ISR} = 0;
-        if (MemToRegDX_ || MemWriteDX_) begin
-            case (DMEM_ADDR[31:28])
-                4'b1000: _hot_IO = 1'b1;                        //  0x8
-                4'b0100: _hot_BR = !MemWriteDX_;        //Read-only 0x4
-                4'b0011: begin                                  //  0x3
-                        _hot_DC = 1'b1;
-                        _hot_IC = MemWriteDX_ && PCinBIOSDX_;
-                    end
-                4'b0010: _hot_IC = MemWriteDX_ && PCinBIOSDX_;  //  0x2
-                4'b0001: _hot_DC = 1'b1;                        //  0x1
-`ifndef COLT45_STRICT
-                4'b0110: _hot_IB = MemWriteDX_; //XTRA:Scratch-IMEM 0x6
-                4'b0101: _hot_DB = 1'b1;        //XTRA:Scratch-DMEM 0x5
-`endif //(!) COLT45_STRICT
-                4'b1100: _hot_ISR = MemWriteDX_; //ISR//
-            endcase
-        end
-    end
-
-
-reg [3:0] P_hoti;
-always @(posedge clk) begin:_REG_HOTI_
-    if (!stall) P_hoti <= hoti_;
-end
-
-    wire [31: 0] INST_ISR, INST_BR, INST_IC, INST_IB;
-    reg  [31: 0] MUX_IMEM;
-    always @(*) begin:_MUX_IMEM_ //Drive instruction from appropriate memory component
-        case (P_hoti)
-            4'b1000: MUX_IMEM = INST_ISR;       //0xC => ISR
-            4'b0100: MUX_IMEM = INST_BR;        //0x4 => BR
-            4'b0010: MUX_IMEM = INST_IC;        //0x1 => IC
-`ifndef COLT45_STRICT
-            4'b0001: MUX_IMEM = INST_IB; //XTRA:  0x6 => IB (Scratch-IMEM)
-`endif
-            default: MUX_IMEM = 0; //NOP
-        endcase
-    end
-    assign IMEM_DATA = MUX_IMEM;
-
-    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
-    reg  [31: 0] MUX_DMEM; //Registered elsewhere (just a reg for always@*)
-    always @(*) begin:_MUX_DMEM_
-        case (MemAddr_MW[31:28])
-            4'b1000: MUX_DMEM = RData_IO;                       //  0x8
-            4'b0100: MUX_DMEM = RData_BR;                       //  0x4
-            4'b0011: MUX_DMEM = RData_DC;                       //  0x3
-            4'b0001: MUX_DMEM = RData_DC;                       //  0x1
-`ifndef COLT45_STRICT //TODO: Ensure no other references to these if STRICT mode!
-            4'b0101: MUX_DMEM = RData_DB;   //XTRA: Scratchpad-DMEM  0x5
-`endif
-            default: MUX_DMEM = 32'd0;
-        endcase // CAUTIOUS trapping of EVERY case
-    end
-    assign DMEM_DATA = MUX_DMEM;
-
-
-    // MEMORY/MMIO ELEMENTS (straddle MW & F stages & interface outside CPU)
-
-//TODO: Apply selector to _WriteMask with repeat-concat and an AND
-//TODO: Ideally generate "isRead" signal WHILE generating _WriteMask
-
-reg [31:0] P_dcache_addr;
-reg P_dcache_re;
-always @(posedge clk) begin
-    P_dcache_addr <= dcache_addr;
-    P_dcache_re <= dcache_re;
-end
-    //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
-    assign dcache_addr = (stall) ? P_dcache_addr : {4'h0, DMEM_ADDR[27:0]},
-        dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
-        dcache_din  = _WDataMasked,
-        dcache_re   = (stall) ? P_dcache_re : (/*!stall &&*/ _hot_DC) && (_WriteMask == 4'b0000),
-        RData_DC    = dcache_dout;
-//    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
-
-    //NOTE: Both _hot_DC && _hot_IC ARE allowed to be active simultaneously for WRITE
-    //      but writability rules prevent INST-read & DATA-write collision
-    assign icache_addr = {4'h0, (hoti_IC_) ? IMEM_ADDR[27:0] : DMEM_ADDR[27:0]},
-        icache_we   = (!stall && !hoti_IC_ && _hot_IC) ? (_WriteMask) : 4'b0000,
-        icache_din  = _WDataMasked,
-        icache_re   = (!stall && hoti_IC_),
-        INST_IC     = icache_dout;
-//    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
-
-    isr_mem bram_isr
-    ( .clka(clk), .ena(!stall && _hot_ISR),
-        .addra(DMEM_ADDR[13:2]),
-      /*.douta(RData_IB),//OUT-32*/
-        .wea(_WriteMask), .dina(_WDataMasked),
-
-    // INSTRUCTION Fletch (sic :)
-      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-      /*.enb(1'b1)*/ .doutb(INST_ISR) //No use for hoti_ISR_
-    ) /* synthesis syn_noprune=1 */;
-
-    bios_mem brom_bios
-    ( .clka(clk), .ena(!stall && _hot_BR),
-        .addra(DMEM_ADDR[13:2]),
-        .douta(RData_BR),//OUT-32
-      /*.wea(_WriteMask), .dina(_WDataMasked),*/
-
-    // Instruction reading port (b)
-      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-        .enb(hoti_BR_), .doutb(INST_BR)
-    ) /* synthesis syn_noprune=1 */;
-
-    dmem_blk_ram bram_dmem
-    ( .clka(clk), .ena(!stall && _hot_DB),
-        .addra(DMEM_ADDR[13:2]),
-        .douta(RData_DB),//OUT-32
-        .wea(_WriteMask), .dina(_WDataMasked)
-    ) /* synthesis syn_noprune=1 */;
-
-    imem_blk_ram bram_imem
-    ( .clka(clk), .ena(!stall && _hot_IB),
-        .addra(DMEM_ADDR[13:2]),
-      /*.douta(RData_IB),//OUT-32*/
-        .wea(_WriteMask), .dina(_WDataMasked),
-
-    // INSTRUCTION Fletch (sic :)
-      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-      /*.enb(1'b1)*/ .doutb(INST_IB) //No use for hoti_IB_
-    ) /* synthesis syn_noprune=1 */;
-
-    `BUS_SHAKE_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
-    MemMapIO memmap_io
-    ( .clk(clk), .rst(rst), .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
-        .addra(DMEM_ADDR[13:2]),
-        .DOUTA(RData_IO),//OUT-32
-        .wea(_WriteMask), .dina(_WDataMasked),
-        //Mapped RVA devices
-        .RVa_RX(UARX),          .RVa_TX(UATX),
-        .RVa_RX_IRQ(uart0_irq), .RVa_TX_IRQ(uart1_irq),
-        //Counters
-        .CNT_Cycle(CNT_Cycle[31:0]), .CNT_Inst(CNT_Inst[31:0]),
-        .CNT_RESET_(CNT_Reset_MW2F_),
-        //PixelFeeder & GraphicsController
-        .graphics_status(graphics_status),
-        .PF_VALID(pf_valid), .PF_FRAME(pf_frame),
-        .GP_VALID(gp_valid), .GP_FRAME(gp_frame), .GP_CODE(gp_code)
-    ) /* synthesis syn_noprune=1 */;
-
-    UARTRVA #(.ClockFreq(CPU_FREQ)) uartrva
-    ( .Clock(clk), .Reset(rst),
-        .SIn(FPGA_SERIAL_RX), .UARX(UARX), //Receiver
-        .UATX(UATX), .SOut(FPGA_SERIAL_TX) //Transmitter
-    ) /* synthesis syn_noprune=1 */;
-
+    assign DMEM_ADDR = MemAddrDX_;
+    assign PCinBIOSDX_ = (PC_DX[31:28]==4'b0100); //Borrow value from other stage (close enough)
 
 //=============DEBUGGING TOOLS BELOW THIS POINT=============
 `ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
@@ -419,8 +227,8 @@ end
 wire [31:0] keywatch = {
     REGFILE_we,REGFILE_wa[4:0],REGFILE_ra2[4:0], REGFILE_ra1[4:0],
     FWD_Allow,FWD_2,FWD_1,DBG_MEM150[31],
-        _hot_IO,_hot_BR,_hot_IC,_hot_DC,
-        hoti_[3:0],
+        4'b0000, //_hot_IO,_hot_BR,_hot_IC,_hot_DC,
+        4'b0000, //hoti_[3:0],
         rst,BRA_IRQPending_DX2F_,BRA_DoBranch_DX2F_,stall
 };
 
@@ -430,11 +238,11 @@ assign trace = {
     PC_DX[31:0],        INST_DX[31:0],      CNT_Inst[31:0],     BRA_PCBranch_DX2F_[31:0],
     REGFILE_wd[31:0],   FWD_rd2[31:0],      FWD_rd1[31:0],      keywatch[31:0],
 
-    RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_DB[31:0],
+    128'd0, //RData_IO[31:0],     RData_BR[31:0],     RData_DC[31:0],     RData_DB[31:0],
     MemAddr_MW[31:0],   MemAddrDX_[31:0],   _WDataMasked[31:0],
-    {   _hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
-        dcache_we, 3'd0,dcache_re,
-        icache_we, 3'd0,icache_re,
+    {   8'b00000000, //_hot_IO,_hot_BR,_hot_IC,_hot_DC, 1'b0,_hot_ISR,_hot_IB,_hot_DB,
+        8'd0, //dcache_we, 3'd0,dcache_re,
+        8'd0, //icache_we, 3'd0,icache_re,
         _WriteMask, WAS_ISR,WAS_Stall,WAS_Inst,WAS_Branch
     },
 
@@ -445,9 +253,9 @@ assign trace = {
         3'd0, CopAddr[4:0]
     },
 
-    PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[63:0],
+    PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[31:0],    32'd0,
     DBG_MEM150[31:0],   CNT_BRANCH[31:0],   CNT_ISR[31:0],
-    graphics_status
+    32'd0 //graphics_status
 };
 
 
@@ -554,34 +362,6 @@ generate if (COLT45_REGREAD) begin:_REGREAD_ //REG reads are async, but only "ca
         if (REGFILE_ra2 != 0) begin
             $display(" reg2:FWD=%b R2(%h,%d)=%h (%d)", FWD_2, REGFILE_ra2, REGFILE_ra2, FWD_rd2, FWD_rd2);
         end
-    end
-end endgenerate
-
-generate if (COLT45_MEMWRITE) begin:_MEMWRITE_
-    always@(posedge clk) if (!stall && |_WriteMask) begin
-        // Plan to log these into a sequential list of critical actions (for stricter testing)
-        $display("** [%h,%d] <= %h(%d) {%b}",
-            MemAddrDX_, MemAddrDX_, _WDataMasked, _WDataMasked, _WriteMask);
-        $display("** TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b IB=%b DB=%b",
-            MemAddrDX_[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
-    end
-end endgenerate
-
-generate if (COLT45_SCRATCH) begin:_SCRATCH_
-    always@(posedge clk) if (!stall && _hot_DB) begin
-        $display("\n=============");
-        DUMP_PC();
-        $display("TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b IB=%b DB=%b",
-            MemAddrDX_[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
-        if (|_WriteMask) begin
-            regfile.DUMP();
-            $display("[%h,%d] <<= %h(%d) {%b}",
-                MemAddrDX_, MemAddrDX_, _WDataMasked, _WDataMasked, _WriteMask);
-        end else begin
-            $display("[%h,%d] ==> %h(%d)",
-                MemAddrDX_, MemAddrDX_, RData_DB, RData_DB);
-        end
-        $display("=============\n");
     end
 end endgenerate
 
