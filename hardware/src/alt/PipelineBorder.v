@@ -1,4 +1,4 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 /*
 **  Abstraction of inter-stage register'd or latch'd value at pipeline stage borders

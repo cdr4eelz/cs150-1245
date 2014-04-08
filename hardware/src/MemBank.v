@@ -7,15 +7,20 @@ module MemBank #(
 )(
     input   clk,
     input   rst,
+    input   stall,
 
-// Memory/IO lines (snagged from MIPS150)
-    input  [31: 0] IMEM_ADDR, DMEM_ADDR,
-    output [31: 0] IMEM_DATA, DMEM_DATA,
-    input  [31: 0] _WDataMasked,
-    input  [ 3: 0] _WriteMask,
-    input  MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
-    input  [31: 0] MemAddr_MW,
-    input  [31: 0] CNT_Cycle, CNT_Inst,
+// Memory/IO lines (snagged from MIPS150):
+    input  [31: 0]  IMEM_ADDR, DMEM_ADDR,
+    output [31: 0]  IMEM_DATA, DMEM_DATA,
+    input           MemToRegDX_, MemWriteDX_, PCinBIOSDX_, //TODO:Rename
+    input  [31: 0]  MemAddr_MW, //TODO:Eliminate
+    input  [31: 0]  _WDataMasked, //TODO:Rename
+    input  [ 3: 0]  _WriteMask,
+    input  [31: 0]  CNT_Cycle, CNT_Inst, //TODO:Move?
+    output          CNT_Reset_MW2F_,
+
+// Interrupts:
+    output uart0_irq, uart1_irq,
 
 // Serial (UART):
     input   FPGA_SERIAL_RX,
@@ -32,21 +37,21 @@ module MemBank #(
     output [ 31:0]  icache_din,
     input  [ 31:0]  dcache_dout,
     input  [ 31:0]  icache_dout,
-    input           stall,
 
 // Graphics:
     input  [ 31:0]  graphics_status,
     output          pf_valid,
     output [ 31:0]  pf_frame,
-    input           frame_interrupt,
     output          gp_valid,
     output [ 31:0]  gp_frame,
-    output [ 31:0]  gp_code,
-    input           gp_interrupt,
-
-// Chipscope cross-module tap:
-input [31:0] DBG_MEM150
+    output [ 31:0]  gp_code
 );
+
+/*
+PipelineRegister #( .Width(32) )
+PIPR_MemAddr_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
+.In(MemAddrDX_  ),  .Out(MemAddr_MW   ) );
+*/
 
     reg [3:0] hoti_;
     always @(*) begin:_MUX_HOTI_ //Drive appropriate "activate" line for instruction fetch
@@ -107,6 +112,7 @@ end
         endcase
     end
     assign IMEM_DATA = MUX_IMEM;
+
 
     wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
     reg  [31: 0] MUX_DMEM; //Registered elsewhere (just a reg for always@*)
@@ -203,7 +209,7 @@ end
         .RVa_RX(UARX),          .RVa_TX(UATX),
         .RVa_RX_IRQ(uart0_irq), .RVa_TX_IRQ(uart1_irq),
         //Counters
-        .CNT_Cycle(CNT_Cycle[31:0]), .CNT_Inst(CNT_Inst[31:0]),
+        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
         .CNT_RESET_(CNT_Reset_MW2F_),
         //PixelFeeder & GraphicsController
         .graphics_status(graphics_status),

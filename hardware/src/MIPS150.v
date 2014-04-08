@@ -7,15 +7,22 @@ module MIPS150 #(
 )(
     input   clk,
     input   rst,
+    input   stall,
 
 // Memory lines
-    output [31: 0] IMEM_ADDR, DMEM_ADDR,
-    input  [31: 0] IMEM_DATA, DMEM_DATA,
-    output [31: 0] _WDataMasked,
-    output [ 3: 0] _WriteMask,
-    output MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
-    output [31: 0] MemAddr_MW,
-    output [31: 0] CNT_Cycle, CNT_Inst,
+    output [31: 0]  IMEM_ADDR, DMEM_ADDR,
+    input  [31: 0]  IMEM_DATA, DMEM_DATA,
+    output          MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
+    output [31: 0]  MemAddr_MW,
+    output [31: 0]  _WDataMasked,
+    output [ 3: 0]  _WriteMask,
+    output [31: 0]  CNT_Cycle, CNT_Inst,
+    input           CNT_Reset_MW2F_,
+
+// Interrupts
+    input           frame_interrupt,
+    input           gp_interrupt,
+    input           uart0_irq, uart1_irq,
 
 // Chipscope cross-module tap:
 input [31:0] DBG_MEM150
@@ -67,7 +74,6 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [ 4: 0] #DD WBK_Reg_MW2DX_;
     wire [31: 0] #DD WBK_Val_MW2DX_;
     wire         #DD WBK_CanFWD_MW2DX_;
-    wire         #DD CNT_Reset_MW2F_;
 
     // Declare outputs of F stage
     wire [31: 0] PC_F_, PCNEXT_F_;
@@ -131,7 +137,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     // COPROCESSOR async-read via DX-stage (like REGFILE) but sync-write from REGFORWARD
     wire [ 4: 0] CopAddr;
     wire [31: 0] CopOut;
-    wire CopInHot, uart0_irq, uart1_irq;
+    wire CopInHot;
     COP0150 cop0 (
         .Clock(clk), .Reset(rst), .Enable(1'b1), //NOTE:Individual activities adhere to stall
         .DataAddress(CopAddr), //IN-5 (Cop Register to read/write)
@@ -177,7 +183,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire  [ 4: 0]   DestReg_MW;
     wire  [ 1: 0]   MemShift_MW;
     wire            MemToReg_MW;
-    PipelineRegister #( .Width(32) )
+    PipelineRegister #( .Width(32) ) //NOTE:Only uses low two bits! (Rest for debug)
         PIPR_MemAddr_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(MemAddrDX_  ),  .Out(MemAddr_MW   ) );
     PipelineRegister #( .Width(32) )
@@ -194,15 +200,18 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
                             .In(MemToRegDX_),  .Out(MemToReg_MW  ) );
 //Debug use only
     wire  [31: 0]   PC_MW;
-    PipelineRegister #( .Width(32) ) //NOTE: Only need 1 bit, but full value nice for debugging
+    PipelineRegister #( .Width(32) )
         PIPR_PC_MW        ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(PC_DX       ),  .Out(PC_MW        ) );
 //=============<<< PIPELINE-BORDER: DX/M |===============
 
+    assign DMEM_ADDR = MemAddrDX_;
+    assign PCinBIOSDX_ = (PC_DX[31:28]==4'b0100); //NOTE:Approximate by borrowing from other stage!
+
     StageMW s_MW
     ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
         // Inputs (pre-clock setup)
-        ._MemShift(MemShiftDX_), ._MemAddrShift(MemAddrDX_[1:0]),
+        ._MemShift(MemShiftDX_), ._MemAddrShift(DMEM_ADDR[1:0]),
         ._MemWValue(MemWValueDX_), ._MemWrite(MemWriteDX_),
         // Inputs (post-clock results)
         .MemShift_MW(MemShift_MW), .MemAddrShift_MW(MemAddr_MW[1:0]),
@@ -215,9 +224,6 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         //Memory/MMIO "pre-clock" drives OUT/IN
         ._WriteMask(_WriteMask), ._WDataMasked(_WDataMasked)
     );
-
-    assign DMEM_ADDR = MemAddrDX_;
-    assign PCinBIOSDX_ = (PC_DX[31:28]==4'b0100); //Borrow value from other stage (close enough)
 
 //=============DEBUGGING TOOLS BELOW THIS POINT=============
 `ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!

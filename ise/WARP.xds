@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<DesignStrategy goal="Timing Performance" strategy="Performance with IOB Packing" version="12.1">
+
+  <Description>This timing performance strategy will try to achieve timing closure while packing registers into the IOBs if possible.  Use this strategy if in timing closure, your design has tight I/O timing requirements.  If you don't meet timing with this strategy, consider trying SmartXplorer.</Description>
+
+  <DeviceList devices="virtex5"/>
+
+  <Properties>
+    <property name="Synthesize - XST:Optimization Goal" value="Speed"/>
+    <property name="Synthesize - XST:Optimization Effort" value="High"/>
+  </Properties>
+
+</DesignStrategy>

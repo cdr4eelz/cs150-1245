@@ -61,14 +61,14 @@ module EchoTestbench;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    MIPS150 #(.CPU_FREQ(CPU_FREQ)) DUT
+    MemMIPS150 #(.CPU_FREQ(CPU_FREQ)) DUT
     (   .clk(Clock), .rst(Reset), .stall( (1) ? Stall : 1'b0 ),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
 // CP2+
         .dcache_dout(32'b0), .icache_dout(32'b0),
 // CP4+
-        .frame_interrupt(1'b0)
+        .frame_interrupt(1'b0), .graphics_status(0), .gp_interrupt(1'b0)
     );
 /*
     // A shadow CPU using a gated clock

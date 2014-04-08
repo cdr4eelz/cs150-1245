@@ -72,9 +72,7 @@ module Memory150 #(
     input           cpu_gp_valid,
     input   [31:0]  cpu_gp_frame,
     input   [31:0]  cpu_gp_code,
-    output          gp_interrupt,
-// Chipscope cross-module tap:
-output [31:0] DBG_MEM150
+    output          gp_interrupt
 );
 
     // DDR2 & FIFO interface wires:
@@ -189,7 +187,7 @@ output [31:0] DBG_MEM150
         video_ready, video_valid, 3'b00_0, line_ready, filler_ready, gp_ready
     };
 
-assign DBG_MEM150 = 0;
+wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use separate scope)
 /*{
     d_stall, d_wdf_full, d_af_full, d_rdf_valid,
         1'b0, d_wdf_wr_en, d_af_wr_en, d_rdf_rd_en,

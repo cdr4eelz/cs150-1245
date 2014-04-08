@@ -1,4 +1,4 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 module CPUDumpMemMap #(
     parameter DD=`COLT45_DD,

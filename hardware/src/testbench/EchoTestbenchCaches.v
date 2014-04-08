@@ -143,7 +143,7 @@ module EchoTestbenchCaches;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    MIPS150 #(
+    MemMIPS150 #(
         .CPU_FREQ(50_000_000)
     ) DUT (
         .clk    (cpu_clk_g  ),

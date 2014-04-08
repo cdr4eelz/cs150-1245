@@ -64,20 +64,15 @@ module ml505top #(
     input         VGA_VSOUT
 );
 
-//Declare a couple custom signals & rename GPIO
-wire any_stall /* synthesis syn_maxfan = 10 */;
-// synthesis attribute max_fanout of any_stall is 10
-
-//IO hookups
-wire GPIO_SW_C;
-assign GPIO_COMPLED = GPIO_COMPPB; //Compass LED lights mimic pushbuttons
-assign GPIO_SW_C = GPIO_COMPPB[4];
-assign BUS_ERROR_1 = FPGA_CPU_RESET_B;
-assign BUS_ERROR_2 = !FPGA_CPU_RESET_B;
-wire [31:0] DBG_MEM150;
+    //Custom enhancements
+    wire [31:0] DBG_MEM150; //TODO:Use hierarchical name based "tap" instead
+    wire toggle_stall, stall_dip;
+    wire stall_top /* synthesis syn_maxfan="10" */;
+    // synthesis attribute max_fanout of stall_top is 10
 
     // Clocking (PLL/DCM/DLL) wires
-    wire user_clk_g, pll_lock, init_done;
+    wire user_reset;
+    wire user_clk_g, pll_lock, init_done, sram_locked;
     wire cpu_clk_g, dvi_clk_g, clk200_g, clk0_g, clk90_g, clkdiv0_g;
     // Resets named rst_{CLK-DOMAIN}_{RST-STAGE}
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE" *)
@@ -98,7 +93,7 @@ wire [31:0] DBG_MEM150;
     wire        dcache_re,      icache_re;
     wire [31:0] dcache_din,     icache_din;
     wire [31:0] dcache_dout,    icache_dout;
-    wire        stall;
+    wire        stall_cache;
     wire        video_ready;
     wire        video_valid;
     wire [23:0] video;
@@ -118,7 +113,7 @@ wire [31:0] DBG_MEM150;
        ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y0" *)
     reg  [ 3:0] reset_r;
     always @(posedge user_clk_g) begin
-        reset_r <= {reset_r[2:0], GPIO_SW_C}; //Synchronize external button signal
+        reset_r <= {reset_r[2:0], user_reset}; //Synchronize external button signal
     end
 
 //TODO:Move PLL & RESETs to module (maybe same as TestBenches use)
@@ -131,11 +126,12 @@ wire [31:0] DBG_MEM150;
 
     wire [ 7:0] reset_lines = (8'hFF << reset_stage); //Shifting-HOT representation
     wire [ 7:0] reset_watch_table = { //Criteria for advancing stage
-                    4'd0, 1'b1, init_done, pll_lock, 1'b1 };
-    wire reset_watch = (reset_watch_table >> reset_stage);
+                    5'b00001, init_done, pll_lock, 1'b1 };
+    wire reset_watch = (reset_watch_table[reset_stage]);
+    wire reset_bootstrap = {reset_lines[1:0]}; //First 2 stages bootstrap pll_lock
 
     always @(posedge user_clk_g) begin
-        if ({pll_lock,reset_lines[1:0]} == 3'b000) begin //First 2 stages bootstrap pll_lock
+        if (!pll_lock && (~|reset_bootstrap)) begin //Lost lock but not bootstrap stages
             {reset_stage, reset_advance, reset_count, reset_delay} <= 0;
         end else begin
             if (&reset_advance) begin
@@ -144,14 +140,16 @@ wire [31:0] DBG_MEM150;
                 //TODO: Update reset_delay
                 reset_advance <= 0;
             end else begin
-                reset_count <= reset_count - 1;
-                reset_advance <= {reset_advance[2:0], reset_watch};
+                if (reset_count != 0) reset_count <= reset_count - 1;
+                reset_advance <= {reset_advance[2:0], reset_watch}; //Sync & mini-delay
             end
         end
     end
 
 //TODO:Make a mini reset "tree" for distribution (within each domain)
-    always @(*) rst_user_pll = reset_lines[0] || (&reset_r); //USER-clock (already)
+    always @(posedge user_clk_g) begin
+        rst_user_pll = reset_lines[0] || (&reset_r); //USER-clock domain (already)
+    end
     always @(posedge cpu_clk_g) begin //CPU-clock
         rst_cpu_mem <= reset_lines[1];
         rst_cpu_bus <= reset_lines[2];
@@ -203,7 +201,7 @@ wire [31:0] DBG_MEM150;
         .icache_din (icache_din ),
         .dcache_dout(dcache_dout),
         .icache_dout(icache_dout),
-        .stall      (stall      ),
+        .stall      (stall_cache),
     // DVI driver:
         .video_ready    (video_ready    ),
         .video_valid    (video_valid    ),
@@ -216,44 +214,28 @@ wire [31:0] DBG_MEM150;
         .cpu_gp_valid   (gp_valid       ),
         .cpu_gp_frame   (gp_frame       ),
         .cpu_gp_code    (gp_code        ),
-        .gp_interrupt   (gp_interrupt   ),
-// Chipscope cross-module tap
-.DBG_MEM150(DBG_MEM150)
+        .gp_interrupt   (gp_interrupt   )
     );
 
 
-// Memory/IO lines (snagged from MIPS150)
+// Memory/IO "busses" (snagged from MIPS150)
     wire  [31: 0] IMEM_ADDR, DMEM_ADDR;
     wire  [31: 0] IMEM_DATA, DMEM_DATA;
+    wire  [31: 0] MemAddr_MW;
     wire  [31: 0] _WDataMasked;
     wire  [ 3: 0] _WriteMask;
     wire  MemToRegDX_, MemWriteDX_, PCinBIOSDX_;
-    wire  [31: 0] MemAddr_MW;
     wire  [31: 0] CNT_Cycle, CNT_Inst;
+    wire  CNT_Reset_MW2F_;
+    wire  uart0_irq, uart1_irq;
 
     // Memory Bank & Memory Mapped I/O
-    MIPS150 #(
-        .CPU_FREQ(CPU_FREQ)
-    ) CPU (
-        .clk(cpu_clk_g),
-        .rst(rst_cpu_cpu),
-    // Memory/IO <==> MemBank
-        .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
-        .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
-        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
-        .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_), .MemAddr_MW(MemAddr_MW),
-        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
-// Chipscope cross-module tap:
-.DBG_MEM150(DBG_MEM150)
-    );
-
-    // MIPS 150 CPU
     MemBank #(
         .CPU_FREQ(CPU_FREQ)
     ) mem_bank (
         .clk(cpu_clk_g),
         .rst(rst_cpu_cpu),
+        .stall(stall_top),
     // Memory/IO <==> MIPS150
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
@@ -261,6 +243,10 @@ wire [31:0] DBG_MEM150;
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
         .PCinBIOSDX_(PCinBIOSDX_), .MemAddr_MW(MemAddr_MW),
         .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
+        .CNT_Reset_MW2F_(CNT_Reset_MW2F_),
+    // Interrupts
+        .uart0_irq(uart0_irq),
+        .uart1_irq(uart1_irq),
     // Serial (UART):
         .FPGA_SERIAL_RX(FPGA_SERIAL1_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL1_TX),
@@ -275,17 +261,36 @@ wire [31:0] DBG_MEM150;
         .icache_din  (icache_din ),
         .dcache_dout (dcache_dout),
         .icache_dout (icache_dout),
-        .stall       (any_stall  ),
     // Graphics:
         .graphics_status(graphics_status),
-        .pf_valid       (pf_valid),
-        .pf_frame       (pf_frame),
-        .frame_interrupt(frame_interrupt),
-        .gp_valid       (gp_valid),
-        .gp_frame       (gp_frame),
-        .gp_code        (gp_code),
-        .gp_interrupt   (gp_interrupt)
+        .pf_valid    (pf_valid),
+        .pf_frame    (pf_frame),
+        .gp_valid    (gp_valid),
+        .gp_frame    (gp_frame),
+        .gp_code     (gp_code)
     );
+
+    // MIPS 150 CPU
+    MIPS150
+    CPU (
+        .clk(cpu_clk_g),
+        .rst(rst_cpu_cpu),
+        .stall(stall_top),
+    // Memory/IO <==> MemBank
+        .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
+        .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
+        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
+        .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
+        .PCinBIOSDX_(PCinBIOSDX_), .MemAddr_MW(MemAddr_MW),
+        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
+        .CNT_Reset_MW2F_(CNT_Reset_MW2F_),
+    // Interrupts
+        .frame_interrupt(frame_interrupt),
+        .gp_interrupt(gp_interrupt),
+        .uart0_irq(uart0_irq),
+        .uart1_irq(uart1_irq)
+    );
+
 
 //RESOLUTION:          Width FrontH PulseH BackH Height FrontV PulseV BackV ClockFreq
 //  VGA  640x480@60Hz:  800    16     96    48    525     10      2    33    25175000
@@ -306,6 +311,7 @@ wire [31:0] DBG_MEM150;
         .VideoReady(video_ready), //Ready/Valid interface for 24-bit pixel RGB feed
         .VideoValid(video_valid), .Video(video)
     );
+
 
     wire cpu_clk, dvi_clk, clk200, clk0, clk90, clkdiv0, pll_fb;
     PLL_BASE #(
@@ -339,12 +345,11 @@ wire [31:0] DBG_MEM150;
     BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
 
 
-`ifndef COLT45_KILLFUN //Mostly to trigger text editor to hide this whole mess!
+`ifndef COLT45_KILLFUN //Just to trigger text editor to hide this section
 
-//Minor mods for debug (like old dip stall toggle from prior checkpoint)
+//Minor mods (like old dip stall toggle from prior checkpoint)
 
 generate if (COLT45_STALLDIP) begin:_STALL_DIP_
-    wire stall_toggle;
     Debouncer #(
         .Width(16) // 2^16 / 50MHz => apprx 1.3 ms?
     ) togglestall_debone (
@@ -352,26 +357,24 @@ generate if (COLT45_STALLDIP) begin:_STALL_DIP_
         .Reset(rst_cpu_bus),
         .Enable(1'b1),
         .In(GPIO_DIP[0]),
-        .Out(stall_toggle)
+        .Out(toggle_stall)
     );
 
     reg man_stall_reg; //TODO: Upgrade to "stall ring" from testbenches
     always@(posedge cpu_clk_g) begin:_MAN_STALL_REG_
         if(rst_cpu_bus) begin
             man_stall_reg <= 1'b0;
-        end else if (stall_toggle) begin
+        end else if (toggle_stall) begin
             man_stall_reg <= ~man_stall_reg;
         end else begin
             man_stall_reg <= 1'b0;
         end
     end
 
-    assign any_stall = stall || man_stall_reg;
-    assign GPIO_LED = {3'b0, stall_toggle, any_stall,
-                             stall, pll_lock, init_done};
+    assign stall_dip = man_stall_reg;
+
 end else begin:_STALL_MEMONLY_
-    assign any_stall = stall;
-    assign GPIO_LED = {5'b0, stall, pll_lock, init_done};
+    assign toggle_stall = 1'b0, stall_dip = 1'b0;
 end endgenerate
 
 
@@ -379,7 +382,7 @@ end endgenerate
   // -- |SRAM Controller| ------------------------------------------------------
   `define SRAM_ENABLE
 
-  wire sram_clock, sram_locked, sram_ready, sram_addr_valid, sram_data_out_valid;
+  wire sram_clock, sram_ready, sram_addr_valid, sram_data_out_valid;
   wire [17:0] sram_addr;
   wire [ 3:0] sram_write_mask;
   wire [35:0] sram_data_in,sram_data_out;
@@ -410,20 +413,21 @@ end endgenerate
       .SRAM_ADDR    (SRAM_A),
       .SRAM_BW_L    (SRAM_BW));
   `else
-    assign SRAM_CLK=0;
-    assign SRAM_CS_B=1;
-    assign SRAM_WE_B=1;
-    assign SRAM_MODE=0;
-    assign SRAM_ADV_LD_B=1;
-    assign SRAM_OE_B=1;
-    assign SRAM_D={36{1'bz}};
-    assign SRAM_A=0;
-    assign SRAM_BW=4'b1111;
+    assign sram_locked = 1'b0;
+    assign SRAM_CLK=1'b0, SRAM_CS_B=1'b1, SRAM_WE_B=1'b1, SRAM_MODE=1'b0,
+            SRAM_ADV_LD_B=1'b1, SRAM_OE_B=1'b1, SRAM_D={36{1'bz}}, SRAM_A=0,
+            SRAM_BW=4'b1111; //TODO:What is width of SRAM_BW with parity???
   `endif // SRAM_ENABLE
 
-`else
-    assign any_stall = stall;
-    assign GPIO_LED = {5'b0, stall, pll_lock, init_done};
 `endif // COLT45_KILLFUN
+
+//Master & I/O hookups
+assign stall_top = stall_cache || stall_dip;
+assign user_reset = GPIO_COMPPB[4]; //GPIO_SW_C (Center Push-button)
+assign GPIO_LED = {sram_locked, 1'b0, 1'b0, toggle_stall,
+                    stall_dip, stall_top, pll_lock, init_done};
+assign GPIO_COMPLED = reset_lines[4:0] ^ GPIO_COMPPB; //Compass LED lights mimic pushbuttons
+assign BUS_ERROR_1 = sram_locked ^ FPGA_CPU_RESET_B;
+assign BUS_ERROR_2 = pll_lock ^ FPGA_CPU_RESET_B;
 
 endmodule
