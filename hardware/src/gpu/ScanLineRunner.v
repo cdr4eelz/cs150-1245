@@ -40,11 +40,17 @@ module ScanLineRunner #(
 //Drive DDR lines to write a "run" (series) of pixels
     reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
     reg  [ 3:0] maskW;
-    reg  [ 9:0] x, y, x_finish;
+    reg  [ 9:0] y;
+//  reg  [ 9:0] x, x_finish; //Old "stride 1" version
+    reg  [ 6:0] X8, X8_finish;
+    reg  isFIRST; //Manipulate reg rather than using comparators
 
-    wire finishingSweep = (x >= x_finish);
+    wire [ 9:0] x = {X8[6:0], 3'b000}; //Truncate to first pixel of chunk
     wire [ 5:0] framebits = SLR_frame[27:22];
     wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
+    wire isLAST = (X8 >= X8_finish); //(x >= x_finish)
+    wire wdr_advance1 = (!wdf_full && !af_full);
+    wire wdr_advance2 = (!wdf_full);
 
     assign SLR_ready = (cs_M[MH_IDLE]);
 
@@ -53,25 +59,31 @@ module ScanLineRunner #(
         ns_M = cs_M; //Default: Hold prior state if UNASSIGNED
         case (cs_M) //TODO:Create MM_xyz "masks" & use Parallel-Case approach
             MS_RSET: if (!rst_r) ns_M = MS_IDLE; //Come out with a full cycle
-            MS_IDLE: if (SLR_valid) ns_M = MS_DDR1;
-            MS_DDR1: if (!wdf_full && !af_full) ns_M = MS_DDR2;
-            MS_DDR2: if (!wdf_full) ns_M = (finishingSweep) ? MS_RSET : MS_DDR1;
+            MS_IDLE: if (SLR_valid) ns_M = MS_DDR1; //We know we are ready since MS_IDLE
+            MS_DDR1: if (wdr_advance1) ns_M = MS_DDR2;
+            MS_DDR2: if (wdr_advance2) ns_M = (isLAST) ? MS_RSET : MS_DDR1;
             default: ns_M = MS__DEAD;
         endcase
     end
     always @(posedge clk) begin
         if (rst) cs_M <= MS_RSET; else cs_M <= ns_M;
+
         case (cs_M)
             MS_RSET: begin
-                y <= 0; x <= 10'd200; x_finish <= 10'd600;
+                {y,X8,X8_finish,isFIRST} <= 'bx;
             end
             MS_IDLE: if (SLR_valid) begin
                 y         <= SLR_row;
-                x         <= SLR_col_start;
-                x_finish  <= SLR_col_finish;
+                X8        <= SLR_col_start[9:3];  //Round to a chunk of 8 pixels
+                X8_finish <= SLR_col_finish[9:3]; //  so stride matches DDR width
+                isFIRST   <= 1'b1;
             end
-            MS_DDR2: if (!wdf_full) begin
-                x <= (x+1);
+            MS_DDR1: begin
+                //NADA
+            end
+            MS_DDR2: if (wdr_advance2) begin
+                X8 <= (X8+1);
+                isFIRST <= 1'b0;
             end
         endcase
     end
@@ -83,6 +95,20 @@ module ScanLineRunner #(
     assign wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} };
     assign wdf_din      = {4{SLR_color_fill}};
 
+    always @(*) begin
+        maskW = 4'b0000; //Temporarily write ALL pixels!
+        case ({cs_M[MH_DDR1],cs_M[MH_DDR2], isFIRST, isLAST})
+            4'b10_00: begin
+                     maskW = 4'b0111;
+            end
+            4'b01_01: begin
+                     maskW = 4'b1110;
+            end
+            default:   maskW = 4'b0000;
+        endcase
+    end
+
+/*  OLD VERSION which swept each "x" individually
     always @(*) begin
         case ({cs_M[MH_DDR1],cs_M[MH_DDR2], x[2:0]})
             5'b10_000: maskW = 4'b0111;
@@ -96,6 +122,6 @@ module ScanLineRunner #(
             default:   maskW = 4'b1111;
         endcase
     end
-
+*/
 
 endmodule

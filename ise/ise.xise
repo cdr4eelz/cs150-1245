@@ -538,10 +538,10 @@
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="287"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
-    <file xil_pn:name="../hardware/src/alt/pblocks.ucf" xil_pn:type="FILE_UCF">
+    <file xil_pn:name="../hardware/cfg/pblocks.ucf" xil_pn:type="FILE_UCF">
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
-    <file xil_pn:name="../hardware/src/alt/pdevices.ucf" xil_pn:type="FILE_UCF">
+    <file xil_pn:name="../hardware/cfg/pdevices.ucf" xil_pn:type="FILE_UCF">
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
     <file xil_pn:name="../hardware/src/MemBank.v" xil_pn:type="FILE_VERILOG">
@@ -566,6 +566,9 @@
     </file>
     <file xil_pn:name="../hardware/src/alt/CPUEchoDDR.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="299"/>
+      <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
+    </file>
+    <file xil_pn:name="../hardware/cfg/pfixed.ucf" xil_pn:type="FILE_UCF">
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
     <file xil_pn:name="ipcore_dir/bios_mem.xise" xil_pn:type="FILE_COREGENISE">
@@ -634,47 +637,46 @@
   </files>
 
   <properties>
+    <property xil_pn:name="Allow Unmatched LOC Constraints" xil_pn:value="true" xil_pn:valueState="non-default"/>
     <property xil_pn:name="BRAM Utilization Ratio" xil_pn:value="-1" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Bus Delimiter" xil_pn:value="[]" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Change Device Speed To Post Trace" xil_pn:value="-1" xil_pn:valueState="default" xil_pn:x_locked="true"/>
-    <property xil_pn:name="Combinatorial Logic Optimization" xil_pn:value="true" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Cores Search Directories" xil_pn:value="ipcore_dir" xil_pn:valueState="non-default"/>
     <property xil_pn:name="DSP Utilization Ratio" xil_pn:value="-1" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Device" xil_pn:value="xc5vlx110t" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Device Family" xil_pn:value="Virtex5" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Do Not Escape Signal and Instance Names in Netlist" xil_pn:value="true" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Enable Message Filtering" xil_pn:value="true" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Enable Multi-Threading" xil_pn:value="2" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Enable Multi-Threading par virtex5" xil_pn:value="4" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Equivalent Register Removal" xil_pn:value="false" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Equivalent Register Removal XST" xil_pn:value="false" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Evaluation Development Board" xil_pn:value="XUPV5-LX110T Evaluation Platform" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Extra Effort (Highest PAR level only)" xil_pn:value="Continue on Impossible" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Extra Effort (Highest PAR level only)" xil_pn:value="Normal" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Generate Asynchronous Delay Report" xil_pn:value="true" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Generate Clock Region Report" xil_pn:value="true" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Generate Constraints Interaction Report Post Trace" xil_pn:value="true" xil_pn:valueState="non-default" xil_pn:x_locked="true"/>
-    <property xil_pn:name="Generate Datasheet Section" xil_pn:value="false" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Generate Detailed MAP Report" xil_pn:value="true" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Generate Timegroups Section" xil_pn:value="true" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Generate Testbench File" xil_pn:value="true" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Generate Timegroups Section Post Trace" xil_pn:value="true" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Implementation Top" xil_pn:value="Module|ml505top" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Implementation Top File" xil_pn:value="../hardware/src/ml505top.v" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Implementation Top Instance Path" xil_pn:value="/ml505top" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Last Applied Goal" xil_pn:value="Timing Performance" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Last Applied Strategy" xil_pn:value="Performance with IOB Packing;/home/cc/cs199/fa12/class/cs199-fu/team45/ise/WARP.xds" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Last Selected UCF File" xil_pn:value="/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/src/alt/pblocks.ucf" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Move First Flip-Flop Stage" xil_pn:value="false" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Move Last Flip-Flop Stage" xil_pn:value="false" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Last Selected UCF File" xil_pn:value="/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/cfg/pfixed.ucf" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Netlist Hierarchy" xil_pn:value="Rebuilt" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Number of Paths in Error/Verbose Report" xil_pn:value="50" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Number of Paths in Error/Verbose Report Post Trace" xil_pn:value="10" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Number of Paths in Error/Verbose Report" xil_pn:value="25" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Number of Paths in Error/Verbose Report Post Trace" xil_pn:value="100" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Optimization Effort" xil_pn:value="High" xil_pn:valueState="non-default" xil_pn:x_locked="true"/>
     <property xil_pn:name="Optimization Goal" xil_pn:value="Speed" xil_pn:valueState="default" xil_pn:x_locked="true"/>
     <property xil_pn:name="Optimization Strategy (Cover Mode)" xil_pn:value="Balanced" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Package" xil_pn:value="ff1136" xil_pn:valueState="default"/>
-    <property xil_pn:name="Placer Extra Effort Map" xil_pn:value="Continue on Impossible" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Placer Extra Effort Map" xil_pn:value="Normal" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Preferred Language" xil_pn:value="Verilog" xil_pn:valueState="default"/>
     <property xil_pn:name="Property Specification in Project File" xil_pn:value="Store non-default values only" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Report Unconstrained Paths" xil_pn:value="5" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Report Unconstrained Paths Post Trace" xil_pn:value="50" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Report Unconstrained Paths Post Trace" xil_pn:value="200" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Resource Sharing" xil_pn:value="false" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Selected Module Instance Name" xil_pn:value="/ml505top" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Selected Simulation Root Source Node Behavioral" xil_pn:value="work.ml505top" xil_pn:valueState="non-default"/>
@@ -683,9 +685,8 @@
     <property xil_pn:name="Speed Grade" xil_pn:value="-1" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Synthesis Tool" xil_pn:value="XST (VHDL/Verilog)" xil_pn:valueState="default"/>
     <property xil_pn:name="Top-Level Source Type" xil_pn:value="HDL" xil_pn:valueState="default"/>
-    <property xil_pn:name="Use RLOC Constraints" xil_pn:value="For Packing Only" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Use Synthesis Constraints File" xil_pn:value="false" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="User Browsed Strategy Files" xil_pn:value="/opt/Xilinx/14.6/ISE_DS/ISE/virtex5/data/virtex5_performance_with_iobpacking.xds" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="User Browsed Strategy Files" xil_pn:value="/home/cc/cs199/fa12/class/cs199-fu/team45/ise/WARP.xds" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Work Directory" xil_pn:value="/scratch/ise45/xst" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Working Directory" xil_pn:value="." xil_pn:valueState="non-default"/>
     <property xil_pn:name="iMPACT Project File" xil_pn:value="impact.ipf" xil_pn:valueState="non-default"/>
@@ -720,8 +721,6 @@
     <file xil_pn:name="../hardware/src/innerds/opcode.vh" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../hardware/src/innerds/aluop.vh" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../hardware/src/innerds/branchcmpop.vh" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../hardware/src/base_mem/mig_v3_61/ddr2_model_parameters.vh" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../hardware/src/testbench/CacheTestTasks.vh" xil_pn:type="FILE_VERILOG"/>
   </autoManagedFiles>
 
 </project>

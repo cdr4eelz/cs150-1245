@@ -14,16 +14,16 @@
 # Avoid false path on cross-clock synchronizers & reset
 NET  "cpu_clk_g" TNM_NET = "TN_SYNC_FROM_CPU";
 INST "*/pixelfeed/*_clkDVI" TNM = "TN_SYNC_TO_DVI";
-#TIMESPEC "TS_CPU_SYNC_DVI" = FROM "TN_SYNC_FROM_CPU" TO "TN_SYNC_TO_DVI" 15 ns DATAPATHONLY;
+TIMESPEC "TS_CPU_SYNC_DVI" = FROM "TN_SYNC_FROM_CPU" TO "TN_SYNC_TO_DVI" 10 ns DATAPATHONLY;
 
 NET  "dvi_clk_g" TNM_NET = "TN_SYNC_FROM_DVI";
 INST "*/pixelfeed/*_clkCPU" TNM = "TN_SYNC_TO_CPU";
-#TIMESPEC "TS_DVI_SYNC_CPU" = FROM "TN_SYNC_FROM_DVI" TO "TN_SYNC_TO_CPU" 15 ns DATAPATHONLY;
+TIMESPEC "TS_DVI_SYNC_CPU" = FROM "TN_SYNC_FROM_DVI" TO "TN_SYNC_TO_CPU" 10 ns DATAPATHONLY;
 
 INST "rst_cpu_*" TNM = "TN_TO_RST_CPU";
-#TIMESPEC "TS_RST_SYNC_CPU" = TO "TN_TO_RST_CPU" 20 ns DATAPATHONLY;
+TIMESPEC "TS_RST_SYNC_CPU" = TO "TN_TO_RST_CPU" 40 ns DATAPATHONLY;
 INST "rst_dvi_*" TNM = "TN_TO_RST_DVI";
-#TIMESPEC "TS_RST_SYNC_DVI" = TO "TN_TO_RST_DVI" 20 ns DATAPATHONLY;
+TIMESPEC "TS_RST_SYNC_DVI" = TO "TN_TO_RST_DVI" 40 ns DATAPATHONLY;
 #INST "*reset_watch*" TIG;
 
 
@@ -679,8 +679,8 @@ INST "*/u_phy_calib/gen_gate[7].u_en_dqs_ff"  LOC = SLICE_X0Y131;
 # In general PAR should be able to route this
 # within 900ps over all speed grades.
 NET "*/u_phy_io/en_dqs*" MAXDELAY = 600 ps;
-#NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 850 ps;
-NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 950 ps;
+NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 850 ps;
+#NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 900 ps;
 
 ###############################################################################
 # "Half-cycle" path constraint from IDDR to CE pin for all DQ IDDR's
@@ -693,6 +693,6 @@ NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 950 ps;
 #  time = 0.4*Tcyc + 0.40ns = 1.6ns @333MHz
 INST "*/gen_dqs[*].u_iob_dqs/u_iddr_dq_ce" TNM = "TNM_DQ_CE_IDDR";
 INST "*/gen_dq[*].u_iob_dq/gen_stg2_*.u_iddr_dq" TNM = "TNM_DQS_FLOPS";
-#TIMESPEC "TS_DQ_CE" = FROM "TNM_DQ_CE_IDDR" TO "TNM_DQS_FLOPS" 1.9 ns;
-TIMESPEC "TS_DQ_CE" = FROM "TNM_DQ_CE_IDDR" TO "TNM_DQS_FLOPS" 2.4 ns;
+TIMESPEC "TS_DQ_CE" = FROM "TNM_DQ_CE_IDDR" TO "TNM_DQS_FLOPS" 1.9 ns;
+#TIMESPEC "TS_DQ_CE" = FROM "TNM_DQ_CE_IDDR" TO "TNM_DQS_FLOPS" 2.4 ns;
 ################################################################################

@@ -50,7 +50,7 @@ module MemBank #(
 /*
 PipelineRegister #( .Width(32) )
 PIPR_MemAddr_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
-.In(MemAddrDX_  ),  .Out(MemAddr_MW   ) );
+.In(DMEM_ADDR  ),  .Out(MemAddr_MW   ) );
 */
 
     reg [3:0] hoti_;
@@ -235,9 +235,9 @@ generate if (COLT45_MEMWRITE) begin:_MEMWRITE_
     always@(posedge clk) if (!stall && |_WriteMask) begin
         // Plan to log these into a sequential list of critical actions (for stricter testing)
         $display("** [%h,%d] <= %h(%d) {%b}",
-            MemAddrDX_, MemAddrDX_, _WDataMasked, _WDataMasked, _WriteMask);
+            DMEM_ADDR, DMEM_ADDR, _WDataMasked, _WDataMasked, _WriteMask);
         $display("** TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b IB=%b DB=%b",
-            MemAddrDX_[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
+            DMEM_ADDR[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
     end
 end endgenerate
 
@@ -246,14 +246,14 @@ generate if (COLT45_SCRATCH) begin:_SCRATCH_
         $display("\n=============");
         DUMP_PC();
         $display("TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b IB=%b DB=%b",
-            MemAddrDX_[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
+            DMEM_ADDR[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
         if (|_WriteMask) begin
             regfile.DUMP();
             $display("[%h,%d] <<= %h(%d) {%b}",
-                MemAddrDX_, MemAddrDX_, _WDataMasked, _WDataMasked, _WriteMask);
+                DMEM_ADDR, DMEM_ADDR, _WDataMasked, _WDataMasked, _WriteMask);
         end else begin
             $display("[%h,%d] ==> %h(%d)",
-                MemAddrDX_, MemAddrDX_, RData_DB, RData_DB);
+                DMEM_ADDR, DMEM_ADDR, RData_DB, RData_DB);
         end
         $display("=============\n");
     end

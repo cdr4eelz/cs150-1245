@@ -10,14 +10,14 @@ INST "mem_bank/bram_isr"          AREA_GROUP = "pblock_bram_isr";
 INST "mem_bank/memmap_io"         AREA_GROUP = "pblock_memmap_io";
 INST "mem_bank/uartrva"           AREA_GROUP = "pblock_memmap_io";
 
-INST "mem_arch/icache"            AREA_GROUP = "pblock_cache";
-INST "mem_arch/dcache"            AREA_GROUP = "pblock_cache";
+INST "mem_arch/dcache"            AREA_GROUP = "pblock_cache_d";
+INST "mem_arch/icache"            AREA_GROUP = "pblock_cache_i";
 
 INST "mem_arch/ddr2"              AREA_GROUP = "pblock_ddr2";
 INST "mem_arch/req_con"           AREA_GROUP = "pblock_req_con";
-INST "mem_arch/ddr2_write_fifo"   AREA_GROUP = "pblock_ddr2"; #"pblock_ddr2_write_fifo";
-INST "mem_arch/ddr2_read_fifo"    AREA_GROUP = "pblock_ddr2"; #"pblock_ddr2_read_fifo";
-INST "mem_arch/ddr2_addr_fifo"    AREA_GROUP = "pblock_ddr2"; #"pblock_ddr2_addr_fifo";
+INST "mem_arch/ddr2_write_fifo"   AREA_GROUP = "pblock_ddr2_write_fifo";
+INST "mem_arch/ddr2_read_fifo"    AREA_GROUP = "pblock_ddr2_read_fifo";
+INST "mem_arch/ddr2_addr_fifo"    AREA_GROUP = "pblock_ddr2_addr_fifo";
 
 INST "mem_arch/*scanlinerunner*" AREA_GROUP = "pblock_gpu";
 INST "mem_arch/graphicsprocessor" AREA_GROUP = "pblock_gpu";
@@ -33,5 +33,3 @@ INST "dvi" AREA_GROUP = "pblock_pixelfeed";
 INST "sram" AREA_GROUP = "pblock_sram";
 
 #INST "*togglestall_debone" AREA_GROUP = "pblock_req_con";
-
-#INST "mem_arch/ddr2/u_ddr2_top_0/u_mem_if_top/u_usr_top/u_usr_addr_fifo/u_af" LOC = RAMB36_X0Y16;

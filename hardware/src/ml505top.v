@@ -75,41 +75,20 @@ module ml505top #(
     wire user_clk_g, pll_lock, init_done, sram_locked;
     wire cpu_clk_g, dvi_clk_g, clk200_g, clk0_g, clk90_g, clkdiv0_g;
     // Resets named rst_{CLK-DOMAIN}_{RST-STAGE}
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE" *)
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
     reg  rst_user_pll /* synthesis syn_maxfan = 10 */;
 // synthesis attribute max_fanout of rst_user_pll is 10
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE" *)
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
     reg  rst_cpu_mem, rst_cpu_bus, rst_cpu_cpu /* synthesis syn_maxfan = 10 */;
 // synthesis attribute max_fanout of rst_cpu_mem is 10
 // synthesis attribute max_fanout of rst_cpu_bus is 10
 // synthesis attribute max_fanout of rst_cpu_cpu is 10
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE" *)
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
     reg  rst_dvi_bus /* synthesis syn_maxfan = 10 */;
 // synthesis attribute max_fanout of rst_dvi_bus is 10
 
-    // Memory150
-    wire [31:0] dcache_addr,    icache_addr;
-    wire [ 3:0] dcache_we,      icache_we;
-    wire        dcache_re,      icache_re;
-    wire [31:0] dcache_din,     icache_din;
-    wire [31:0] dcache_dout,    icache_dout;
-    wire        stall_cache;
-    wire        video_ready;
-    wire        video_valid;
-    wire [23:0] video;
-    wire [31:0] pf_frame;
-    wire        pf_valid;
-    wire        frame_interrupt;
-    wire [31:0] gp_code;
-    wire [31:0] gp_frame;
-    wire        gp_valid;
-    wire        gp_interrupt;
-    wire [31:0] graphics_status;
-//  wire        fb0; ???Was this like pf_frame???
-
-
 //TODO:Use debouncer module on all buttons
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF",
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
        ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y0" *)
     reg  [ 3:0] reset_r;
     always @(posedge user_clk_g) begin
@@ -117,7 +96,7 @@ module ml505top #(
     end
 
 //TODO:Move PLL & RESETs to module (maybe same as TestBenches use)
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF",
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
        ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y1" *)
     reg  [ 3:0] reset_advance; //A wee synchronization & debounce FF-chain
 
@@ -127,8 +106,8 @@ module ml505top #(
     wire [ 7:0] reset_lines = (8'hFF << reset_stage); //Shifting-HOT representation
     wire [ 7:0] reset_watch_table = { //Criteria for advancing stage
                     5'b00001, init_done, pll_lock, 1'b1 };
-    wire reset_watch = (reset_watch_table[reset_stage]);
-    wire reset_bootstrap = {reset_lines[1:0]}; //First 2 stages bootstrap pll_lock
+    wire        reset_watch = (reset_watch_table[reset_stage]);
+    wire [ 1:0] reset_bootstrap = {reset_lines[1:0]}; //First 2 stages bootstrap pll_lock
 
     always @(posedge user_clk_g) begin
         if (!pll_lock && (~|reset_bootstrap)) begin //Lost lock but not bootstrap stages
@@ -149,6 +128,7 @@ module ml505top #(
 //TODO:Make a mini reset "tree" for distribution (within each domain)
     always @(posedge user_clk_g) begin
         rst_user_pll = reset_lines[0] || (&reset_r); //USER-clock domain (already)
+        //Though no need to sync here, nice to pin down signal origin to sync element
     end
     always @(posedge cpu_clk_g) begin //CPU-clock
         rst_cpu_mem <= reset_lines[1];
@@ -159,6 +139,26 @@ module ml505top #(
         rst_dvi_bus <= reset_lines[2];
     end
 
+
+    // Memory150
+    wire [31:0] dcache_addr,    icache_addr;
+    wire [ 3:0] dcache_we,      icache_we;
+    wire        dcache_re,      icache_re;
+    wire [31:0] dcache_din,     icache_din;
+    wire [31:0] dcache_dout,    icache_dout;
+    wire        stall_cache;
+    wire        video_ready;
+    wire        video_valid;
+    wire [23:0] video;
+    wire [31:0] pf_frame;
+    wire        pf_valid;
+    wire        frame_interrupt;
+    wire [31:0] gp_code;
+    wire [31:0] gp_frame;
+    wire        gp_valid;
+    wire        gp_interrupt;
+    wire [31:0] graphics_status;
+//  wire        fb0; ???Was this like pf_frame???
 
     Memory150 #(
         .SIM_ONLY(1'b0)
@@ -218,7 +218,7 @@ module ml505top #(
     );
 
 
-// Memory/IO "busses" (snagged from MIPS150)
+// MemoryBank/IO "busses" (snagged from MIPS150)
     wire  [31: 0] IMEM_ADDR, DMEM_ADDR;
     wire  [31: 0] IMEM_DATA, DMEM_DATA;
     wire  [31: 0] MemAddr_MW;
@@ -230,9 +230,8 @@ module ml505top #(
     wire  uart0_irq, uart1_irq;
 
     // Memory Bank & Memory Mapped I/O
-    MemBank #(
-        .CPU_FREQ(CPU_FREQ)
-    ) mem_bank (
+    MemBank #( .CPU_FREQ(CPU_FREQ) )
+    mem_bank (
         .clk(cpu_clk_g),
         .rst(rst_cpu_cpu),
         .stall(stall_top),
@@ -347,8 +346,11 @@ module ml505top #(
 
 `ifndef COLT45_KILLFUN //Just to trigger text editor to hide this section
 
-//Minor mods (like old dip stall toggle from prior checkpoint)
+//Mods, Extras, Crossover from Fall13
+  `define SRAM_ENABLE
 
+
+//Old dip stall toggle from prior checkpoints
 generate if (COLT45_STALLDIP) begin:_STALL_DIP_
     Debouncer #(
         .Width(16) // 2^16 / 50MHz => apprx 1.3 ms?
@@ -380,8 +382,6 @@ end endgenerate
 
 //CROSS: SRAM driver from FALL13
   // -- |SRAM Controller| ------------------------------------------------------
-  `define SRAM_ENABLE
-
   wire sram_clock, sram_ready, sram_addr_valid, sram_data_out_valid;
   wire [17:0] sram_addr;
   wire [ 3:0] sram_write_mask;
@@ -423,11 +423,11 @@ end endgenerate
 
 //Master & I/O hookups
 assign stall_top = stall_cache || stall_dip;
-assign user_reset = GPIO_COMPPB[4]; //GPIO_SW_C (Center Push-button)
-assign GPIO_LED = {sram_locked, 1'b0, 1'b0, toggle_stall,
-                    stall_dip, stall_top, pll_lock, init_done};
-assign GPIO_COMPLED = reset_lines[4:0] ^ GPIO_COMPPB; //Compass LED lights mimic pushbuttons
-assign BUS_ERROR_1 = sram_locked ^ FPGA_CPU_RESET_B;
-assign BUS_ERROR_2 = pll_lock ^ FPGA_CPU_RESET_B;
+assign user_reset   = GPIO_COMPPB[4]; //GPIO_SW_C (Center Push-button)
+assign GPIO_LED     = {sram_locked, 1'b0, 1'b0, toggle_stall,
+                        stall_dip, stall_top, pll_lock, init_done};
+assign GPIO_COMPLED = reset_lines[4:0] ^ GPIO_COMPPB; //Compass LED lights mimic pushbuttons (invert)
+assign BUS_ERROR_1  = sram_locked ^ FPGA_CPU_RESET_B;
+assign BUS_ERROR_2  = pll_lock ^ FPGA_CPU_RESET_B;
 
 endmodule
