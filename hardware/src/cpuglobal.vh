@@ -3,7 +3,7 @@
 
 `define COLT45_DD 0
 
-//NOTE:Trick for tagging signals with foul state in simulation which propagates when misued
+//NOTE:For tagging signals with foul state in simulation which propagates when misued
 `define NOUNKLE         1
 `define UNCLEBIT        1'b0
 // synthesis translate_off

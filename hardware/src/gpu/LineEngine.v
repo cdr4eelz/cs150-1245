@@ -197,8 +197,8 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
                                 color_r[23:16] >> 1, //Darkened
                                 color_r[15: 8] >> 1,
                                 color_r[ 7: 0] },
-            SLR_col_start   = x, //x - 1,
-            SLR_col_finish  = x, //x + 1,
+            SLR_col_start   = x - 0,//2,
+            SLR_col_finish  = x + 0,//2,
             SLR_row         = y;
 
     assign adv1   = SLR_ready, //Used iif MH_RUN1 implying SLR_valid

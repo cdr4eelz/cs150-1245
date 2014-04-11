@@ -168,7 +168,7 @@ module ml505top #(
 // MemoryBank/IO "busses" (snagged from MIPS150)
     wire  [31: 0] IMEM_ADDR, DMEM_ADDR;
     wire  [31: 0] IMEM_DATA, DMEM_DATA;
-    wire  [31: 0] MemAddr_MW;
+//  wire  [31: 0] MemAddr_MW;
     wire  [31: 0] _WDataMasked;
     wire  [ 3: 0] _WriteMask;
     wire  MemToRegDX_, MemWriteDX_, PCinBIOSDX_;
@@ -187,7 +187,7 @@ module ml505top #(
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
         ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_), .MemAddr_MW(MemAddr_MW),
+        .PCinBIOSDX_(PCinBIOSDX_), //.MemAddr_MW(MemAddr_MW),
         .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
         .CNT_Reset_MW2F_(CNT_Reset_MW2F_),
     // Interrupts
@@ -227,7 +227,7 @@ module ml505top #(
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
         ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_), .MemAddr_MW(MemAddr_MW),
+        .PCinBIOSDX_(PCinBIOSDX_), //.MemAddr_MW(MemAddr_MW),
         .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
         .CNT_Reset_MW2F_(CNT_Reset_MW2F_),
     // Interrupts

@@ -579,7 +579,7 @@
     <property xil_pn:name="Implementation Top Instance Path" xil_pn:value="/ml505top" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Last Applied Goal" xil_pn:value="Timing Performance" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Last Applied Strategy" xil_pn:value="Performance with IOB Packing;/home/cc/cs199/fa12/class/cs199-fu/team45/ise/WARP.xds" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Last Selected UCF File" xil_pn:value="/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/cfg/pfixed.ucf" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Last Selected UCF File" xil_pn:value="/home/cc/cs199/fa12/class/cs199-fu/team45/hardware/cfg/pblocks.ucf" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Netlist Hierarchy" xil_pn:value="Rebuilt" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Number of Paths in Error/Verbose Report" xil_pn:value="25" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Number of Paths in Error/Verbose Report Post Trace" xil_pn:value="100" xil_pn:valueState="non-default"/>

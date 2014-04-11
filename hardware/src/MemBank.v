@@ -2,6 +2,8 @@
 
 module MemBank #(
     parameter CPU_FREQ = 50_000_000,
+    parameter [31:0] DEAD_DMEM = 32'd0, DEAD_IMEM = 32'd0,
+    parameter XTRA_IMEM = 0, XTRA_DMEM = 0, //Scratchpad extra block-rams
     parameter DD=`COLT45_DD,
     parameter COLT45_SCRATCH=0, COLT45_MEMWRITE=0
 )(
@@ -13,7 +15,6 @@ module MemBank #(
     input  [31: 0]  IMEM_ADDR, DMEM_ADDR,
     output [31: 0]  IMEM_DATA, DMEM_DATA,
     input           MemToRegDX_, MemWriteDX_, PCinBIOSDX_, //TODO:Rename
-    input  [31: 0]  MemAddr_MW, //TODO:Eliminate
     input  [31: 0]  _WDataMasked, //TODO:Rename
     input  [ 3: 0]  _WriteMask,
     input  [31: 0]  CNT_Cycle, CNT_Inst, //TODO:Move?
@@ -47,22 +48,16 @@ module MemBank #(
     output [ 31:0]  gp_code
 );
 
-/*
-PipelineRegister #( .Width(32) )
-PIPR_MemAddr_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
-.In(DMEM_ADDR  ),  .Out(MemAddr_MW   ) );
-*/
+//TODO: Ideally generate "isRead/isWrite" signals WHILE generating _WriteMask
 
-    reg [3:0] hoti_;
+    reg  [3:0] hoti_;
     always @(*) begin:_MUX_HOTI_ //Drive appropriate "activate" line for instruction fetch
         case (IMEM_ADDR[31:28])
             4'b1100: hoti_ = 4'b1000;       //0xC => ISR
             4'b0100: hoti_ = 4'b0100;       //0x4 => BR
             4'b0001: hoti_ = 4'b0010;       //0x1 => IC
-`ifndef COLT45_STRICT
-            4'b0110: hoti_ = 4'b0001; //XTRA: 0x6 => IB (Scratch-IMEM)
-`endif
-            default: hoti_ = 4'b0000;
+            4'b0110: hoti_ = (XTRA_IMEM)?4'b0001:0; //XTRA: 0x6 => IB (Scratch-IMEM)
+            default: hoti_ = 0;
         endcase
     end
     //Not all instruction-fetch "drives" usable by memories (several are always enabled)
@@ -83,20 +78,26 @@ PIPR_MemAddr_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
                     end
                 4'b0010: _hot_IC = MemWriteDX_ && PCinBIOSDX_;  //  0x2
                 4'b0001: _hot_DC = 1'b1;                        //  0x1
-`ifndef COLT45_STRICT
-                4'b0110: _hot_IB = MemWriteDX_; //XTRA:Scratch-IMEM 0x6
-                4'b0101: _hot_DB = 1'b1;        //XTRA:Scratch-DMEM 0x5
-`endif //(!) COLT45_STRICT
+                4'b0110: _hot_IB = XTRA_IMEM && MemWriteDX_; //XTRA:Scratch-IMEM 0x6
+                4'b0101: _hot_DB = XTRA_IMEM && 1'b1;        //XTRA:Scratch-DMEM 0x5
                 4'b1100: _hot_ISR = MemWriteDX_; //ISR//
             endcase
         end
     end
 
 
-reg [3:0] P_hoti;
-always @(posedge clk) begin:_REG_HOTI_
-    if (!stall) P_hoti <= hoti_;
-end
+    reg         P_dcache_re;
+    reg  [31:0] P_dcache_addr;
+    reg  [ 3:0] P_hoti;
+    reg  [ 3:0] P_selD;
+    always @(posedge clk) begin:_REG_PRIOR_
+        P_dcache_re <= dcache_re;
+        P_dcache_addr <= dcache_addr;
+        if (!stall) begin
+            P_hoti <= hoti_;
+            P_selD <= DMEM_ADDR[31:28];
+        end
+    end
 
     wire [31: 0] INST_ISR, INST_BR, INST_IC, INST_IB;
     reg  [31: 0] MUX_IMEM;
@@ -105,27 +106,23 @@ end
             4'b1000: MUX_IMEM = INST_ISR;       //0xC => ISR
             4'b0100: MUX_IMEM = INST_BR;        //0x4 => BR
             4'b0010: MUX_IMEM = INST_IC;        //0x1 => IC
-`ifndef COLT45_STRICT
-            4'b0001: MUX_IMEM = INST_IB; //XTRA:  0x6 => IB (Scratch-IMEM)
-`endif
-            default: MUX_IMEM = 0; //NOP
+            4'b0001: MUX_IMEM = (XTRA_IMEM)?INST_IB:DEAD_IMEM;//XTRA:  0x6 => IB (Scratch-IMEM)
+            default: MUX_IMEM = DEAD_IMEM; //TODO: Make "HALT" instruction rather than "NOP"
         endcase
     end
     assign IMEM_DATA = MUX_IMEM;
 
 
     wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
-    reg  [31: 0] MUX_DMEM; //Registered elsewhere (just a reg for always@*)
+    reg  [31: 0] MUX_DMEM;
     always @(*) begin:_MUX_DMEM_
-        case (MemAddr_MW[31:28])
+        case (P_selD)
             4'b1000: MUX_DMEM = RData_IO;                       //  0x8
             4'b0100: MUX_DMEM = RData_BR;                       //  0x4
             4'b0011: MUX_DMEM = RData_DC;                       //  0x3
             4'b0001: MUX_DMEM = RData_DC;                       //  0x1
-`ifndef COLT45_STRICT //TODO: Ensure no other references to these if STRICT mode!
-            4'b0101: MUX_DMEM = RData_DB;   //XTRA: Scratchpad-DMEM  0x5
-`endif
-            default: MUX_DMEM = 32'd0;
+            4'b0101: MUX_DMEM = (XTRA_DMEM)?RData_DB:DEAD_DMEM;//XTRA: Scratchpad-DMEM  0x5
+            default: MUX_DMEM = DEAD_DMEM;
         endcase // CAUTIOUS trapping of EVERY case
     end
     assign DMEM_DATA = MUX_DMEM;
@@ -133,15 +130,6 @@ end
 
     // MEMORY/MMIO ELEMENTS (straddle MW & F stages & interface outside CPU)
 
-//TODO: Apply selector to _WriteMask with repeat-concat and an AND
-//TODO: Ideally generate "isRead" signal WHILE generating _WriteMask
-
-reg [31:0] P_dcache_addr;
-reg P_dcache_re;
-always @(posedge clk) begin
-    P_dcache_addr <= dcache_addr;
-    P_dcache_re <= dcache_re;
-end
     //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
     assign dcache_addr = (stall) ? P_dcache_addr : {4'h0, DMEM_ADDR[27:0]},
         dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,

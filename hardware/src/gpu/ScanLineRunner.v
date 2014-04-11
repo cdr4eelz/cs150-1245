@@ -64,16 +64,16 @@ module ScanLineRunner #(
     reg  [31:0] maskC [3:0]; //Array rather than "bus style" vector concatenation
 
     wire [ 7:0] edge8 = ( (r_edge_L | {8{!isFIRST8}}) & (r_edge_R | {8{!isLAST8}}) );
-    wire [ 7:0] fill8 = 8'b1111_1111; //( (r_fill_L & {8{isFIRST8}} ) | (r_fill_R & {8{isLAST8}})  );
+    wire [ 7:0] fill8 = ( (r_fill_L & {8{ isFIRST8}}) | (r_fill_R & {8{ isLAST8}}) );
 //  wire [ 7:0] mask8 = (edge8 & fill8); //"either is active" (active-lo)
-    wire       hi4 = (LITTLEWORDIAN) ? cs_M[MH_DDR2] : ~cs_M[MH_DDR2];
+    wire        hi4 = (LITTLEWORDIAN) ? cs_M[MH_DDR1] : cs_M[MH_DDR2];
 
     integer b;
     always @(*) begin
         for (b=0; b<4; b=b+1) begin
             maskW[b] = 1'b0;            //Default to ENABLE pixel write
             maskC[b] = SLR_color_edge;  //  in EDGE color
-            casez ({hi4, edge8[b], fill8[b], edge8[4+b], edge8[4+b]})
+            casez ({hi4, edge8[b], fill8[b], edge8[4+b], fill8[4+b]})
                 5'b0_11_zz: maskW[b] = 1'b1; //AND of active-lo -=> OR the two enables
                 5'b0_10_zz: maskC[b] = SLR_color_fill; //When only FILL active
                 5'b1_zz_11: maskW[b] = 1'b1; //As above, for 2nd pair
@@ -93,10 +93,10 @@ module ScanLineRunner #(
     assign af_addr_din  = {6'b000000, cpu_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign af_wr_en     = (cs_M[MH_DDR1]);
     assign wdf_wr_en    = (cs_M[MH_DDR1] || cs_M[MH_DDR2]);
-    assign wdf_din      = (LITTLEWORDIAN) ? { maskC[0], maskC[1], maskC[2], maskC[3] }
-                                        : { maskC[3], maskC[2], maskC[1], maskC[0] };
-    assign wdf_mask_din = (LITTLEWORDIAN) ? { {4{maskW[0]}}, {4{maskW[1]}}, {4{maskW[2]}}, {4{maskW[3]}} }
-                                        : { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} };
+    assign wdf_din      = (LITTLEWORDIAN) ? { maskC[3], maskC[2], maskC[1], maskC[0] }
+                                        : { maskC[0], maskC[1], maskC[2], maskC[3] };
+    assign wdf_mask_din = (LITTLEWORDIAN) ? { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} }
+                                        : { {4{maskW[0]}}, {4{maskW[1]}}, {4{maskW[2]}}, {4{maskW[3]}} };
 
 //Master-State machine Next-States
     always @(*) begin
@@ -137,7 +137,7 @@ module ScanLineRunner #(
 /*  OLD VERSION which swept each "x" individually
     always @(*) begin
         case ({cs_M[MH_DDR1],cs_M[MH_DDR2], x[2:0]})
-            5'b10_000: maskW = 4'b0111; //NOTE: is LITTLEWORDIAN "flipped" x[2:0]
+            5'b10_000: maskW = 4'b0111;
             5'b10_001: maskW = 4'b1011;
             5'b10_010: maskW = 4'b1101;
             5'b10_011: maskW = 4'b1110;
