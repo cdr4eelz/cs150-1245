@@ -2,13 +2,14 @@ INST "CPU" AREA_GROUP = "pblock_cpu";
 #INST "CPU/PIPR*" AREA_GROUP = "pblock_cpu_pipe";
 #INST "CPU/regfile" AREA_GROUP = "pblock_regfile";
 
-#INST "mem_bank" AREA_GROUP = "pblock_membank";
-INST "mem_bank/bram_dmem"         AREA_GROUP = "pblock_bram_dmem";
-INST "mem_bank/bram_imem"         AREA_GROUP = "pblock_bram_imem";
-INST "mem_bank/brom_bios"         AREA_GROUP = "pblock_brom_bios";
-INST "mem_bank/bram_isr"          AREA_GROUP = "pblock_bram_isr";
-INST "mem_bank/memmap_io"         AREA_GROUP = "pblock_memmap_io";
-INST "mem_bank/uartrva"           AREA_GROUP = "pblock_memmap_io";
+##INST "mem_bank/" AREA_GROUP = "pblock_membank";
+#INST "mem_bank/bram_dmem"         AREA_GROUP = "pblock_bram_dmem";
+#INST "mem_bank/bram_imem"         AREA_GROUP = "pblock_bram_imem";
+#INST "mem_bank/brom_bios"         AREA_GROUP = "pblock_brom_bios";
+#INST "mem_bank/bram_isr"          AREA_GROUP = "pblock_bram_isr";
+#INST "mem_bank/memmap_io"         AREA_GROUP = "pblock_memmap_io";
+#INST "mem_bank/uartrva"           AREA_GROUP = "pblock_memmap_io";
+INST "mem_bank" AREA_GROUP = "pblock_cpu";
 
 INST "mem_arch/dcache"            AREA_GROUP = "pblock_cache_d";
 INST "mem_arch/icache"            AREA_GROUP = "pblock_cache_i";

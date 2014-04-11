@@ -1,7 +1,7 @@
 ##############################################################
 #
 # Xilinx Core Generator version 14.6
-# Date: Thu Mar 27 05:32:03 2014
+# Date: Fri Apr 11 12:51:13 2014
 #
 ##############################################################
 #
@@ -18,7 +18,7 @@
 #
 # BEGIN Project Options
 SET addpads = false
-SET asysymbol = false
+SET asysymbol = true
 SET busformat = BusFormatSquareBracketNotRipped
 SET createndf = false
 SET designentry = Verilog
@@ -210,4 +210,4 @@ CSET wuser_width=1
 MISC pkg_timestamp=2012-11-19T12:39:56Z
 # END Extra information
 GENERATE
-# CRC: 4d93658f
+# CRC: 3caec734

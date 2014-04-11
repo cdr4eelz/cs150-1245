@@ -40,9 +40,11 @@ module LineEngine #(
 
     // Implement Bresenham's line drawing algorithm here!
 
-    reg  rst_r; //Release synchronously to our clock
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
+    reg  rst_r; //Detect & apply & release synchronously to our clock
     always @(posedge clk) begin
-        rst_r <= rst; //Internal reset, rst_r, unless really must sync-up release!
+        rst_r <= rst; //Internal reset, <rst>_r, unless really must sync-up release!
     end
 
 // Manage line values (each is a register with RVA style "set")
@@ -134,7 +136,7 @@ module LineEngine #(
 
 //Synchronous transistions & data-path
     always @(posedge clk) begin
-        if (rst) cs_M <= MS_RSET; else cs_M <= ns_M;
+        if (rst_r) cs_M <= MS_RSET; else cs_M <= ns_M;
 
 //TODO:Set registers to "don't care" when possible (allow re-use/optimizations)
         case (cs_M)
@@ -191,10 +193,13 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
     assign SLR_valid        = cs_M[MH_RUN1],
             SLR_frame       = {4'h1, framebits[5:0], 22'b0},
             SLR_color_edge  = color_r,
-            SLR_color_fill  = color_r,
-            SLR_row         = y,
-            SLR_col_start   = x,
-            SLR_col_finish  = x;
+            SLR_color_fill  = { color_r[31:24], //Left/Right 1-pixel
+                                color_r[23:16] >> 1, //Darkened
+                                color_r[15: 8] >> 1,
+                                color_r[ 7: 0] },
+            SLR_col_start   = x, //x - 1,
+            SLR_col_finish  = x, //x + 1,
+            SLR_row         = y;
 
     assign adv1   = SLR_ready, //Used iif MH_RUN1 implying SLR_valid
             adv2  = 1'b1;
@@ -212,6 +217,7 @@ end else begin:_NO_SLR_
 //Drive DDR lines to write 1 pixel at-a-time
     reg  [ 3:0] maskW;
     wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
+    wire [ 2:0] offset_pixel  = (LITTLEWORDIAN) ? x[2:0] : ~x[2:0];
 
     assign af_addr_din  = {6'b000000, cpu_addr[27:3]}, //Turn into 31-bit "DoubleWord" or DDR-address
             wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} },
@@ -222,8 +228,8 @@ end else begin:_NO_SLR_
             adv2 = (!wdf_full);
 
     always @(*) begin
-        case ({cs_M[MH_RUN1],cs_M[MH_RUN2], x[2:0]})
-            5'b10_000: maskW = 4'b0111;
+        case ({cs_M[MH_RUN1],cs_M[MH_RUN2], offset_pixel})
+            5'b10_000: maskW = 4'b0111; //NOTE: LITTLEWORDIAN
             5'b10_001: maskW = 4'b1011;
             5'b10_010: maskW = 4'b1101;
             5'b10_011: maskW = 4'b1110;

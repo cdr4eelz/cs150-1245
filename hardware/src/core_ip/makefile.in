@@ -6,7 +6,7 @@ all: $(V_SRC)
 
 %.v: %.xco coregen.cgp
 	coregen $(CG_FLAGS) -p coregen.cgp -b $*.xco
-	-rm -rf $*/* $*.xci $*.asy $*_*.tcl $*_*.txt $*.xise $*.gise *.cgc *.log tmp xlnx*
+	-rm -rf $*/* $*.xci $*_*.tcl $*_*.txt $*.gise *.cgc *.log tmp xlnx*
 	-rmdir $*
 
 clean:

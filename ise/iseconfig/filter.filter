@@ -24,6 +24,7 @@
 <filter task="xst" file="Xst" num="2385" type="info"><arg index="1">Mmult__COND_38</arg><arg index="2">1</arg></filter>
 <filter task="map" file="Place" num="838" type="warning"></filter>
 <filter task="map" file="Timing" num="3386" type="info"></filter>
+<filter task="xst" file="Xst" num="1872" type="warning"><arg index="1">j</arg></filter>
 <filter task="xst" file="Xst" num="3216" type="info"><arg index="1">Mram_R_ren</arg></filter>
 <filter task="xst" file="Xst" num="1901" type="info"></filter>
 <filter task="xst" file="Xst" num="2679" type="info"><arg index="1">reset_delay</arg><arg index="2">ml505top</arg><arg index="3">00000000</arg></filter>
@@ -31,6 +32,7 @@
 <filter task="ngdbuild" file="ConstraintSystem" num="178" type="info"></filter>
 <filter task="trce" file="Timing" num="3412" type="info"></filter>
 <filter task="xst" file="Xst" num="646" type="warning"><arg index="1">lastX</arg></filter>
+<filter task="xst" file="Xst" num="1872" type="warning"><arg index="1">x</arg></filter>
 <filter task="xst" file="Xst" num="2385" type="info"><arg index="1">Mmult__COND_37</arg><arg index="2">1</arg></filter>
 <filter task="xst" file="Xst" num="741" type="info"><arg index="1">25</arg><arg index="2">mem_arch/ddr2/u_ddr2_infrastructure/rst200_sync_r_24</arg><arg index="3">25</arg><arg index="4">12</arg><arg index="5">32</arg></filter>
 <filter task="xst" file="Xst" num="1433" type="info"><arg index="1">calib_rden_dly</arg></filter>

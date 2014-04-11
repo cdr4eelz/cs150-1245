@@ -21,7 +21,7 @@
 //TODO:Fault response?
 
 module GraphicsProcessor #(
-    parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 //TODO: Implement LITTLEWORDIAN
 )(
     input clk,
@@ -59,6 +59,13 @@ module GraphicsProcessor #(
 );
 
    //Your code goes here. GL HF.
+
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
+    reg  rst_r; //Detect & apply & release synchronously to our clock
+    always @(posedge clk) begin
+        rst_r <= rst; //Internal reset, <rst>_r, unless really must sync-up release!
+    end
 
 //Three semi-independent machines coordinating with each other:
 //    MASTER: Master state of GPCODE chunk processing.
@@ -100,8 +107,6 @@ module GraphicsProcessor #(
     reg  [ 5:0] framebits;  //Insist on aligning with multiples of 0x0040_0000
     reg  [22:0] code_chunk; //256-bit chunk # within 256MB range of DDR (8 x 32-bit words each)
     reg  [ 2:0] code_skips; //Offset of first 32-bit CODE within 256-bit chunk (skip on fifo read)
-    reg  rst_r;
-    always @(posedge clk) rst_r <= rst;
 
 
     wire fifo_valid;
@@ -142,7 +147,7 @@ module GraphicsProcessor #(
 
 //Triggers for state transitions & Mealy outputs (usually 1-cycle duration)
     //   T_DEAD   = INITIAL upon FPGA config
-    wire T_RESET  = (rst); //TODO:OR with T_STOPS to piggyback on sync-reset???
+    wire T_RESET  = (rst_r); //TODO:OR with T_STOPS to piggyback on sync-reset???
 wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
     wire T_READY  = (!rst_r && fifo_empty); //FIFO-State influences T_READY
     wire T_START  = (GP_ready && GP_valid); //MASTER-State alone for ready/valid enable
@@ -237,15 +242,16 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
     assign rdf_rd_en    = (cs_F[FS_READ1] || cs_F[FS_READ2]);
 
     gpcode_fifo GPCODE_FIFO (
+        .rst(fifo_reset),
         .wr_clk(clk),         // input wr_clk
-        .wr_rst(fifo_reset),  // input wr_rst
+//      .wr_rst(fifo_reset),  // input wr_rst
         .full   (fifo_full),      // output full
         .wr_en  (fifo_write),     // input wr_en
         .din    (rdf_dout),   // input [127 : 0] din
         .wr_data_count(wr_count), // output [4 : 0] wr_data_count
 
         .rd_clk(clk),         // input rd_clk
-        .rd_rst(fifo_reset),  // input rd_rst
+//      .rd_rst(fifo_reset),  // input rd_rst
         .empty  (fifo_empty),     // output empty
         .prog_empty(prog_empty),  // output prog_empty
         .valid  (fifo_valid),     // output valid
@@ -278,7 +284,7 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
 
 
 //synthesis translate_off
-    always @(posedge clk) if (!rst) begin
+    always @(posedge clk) if (!rst_r) begin
         if (fifo_write)
             $display("fifo-W: data=%h %h %h %h (full=%b count=%0d)",
                      rdf_dout[127:96], rdf_dout[95:64], rdf_dout[63:32],

@@ -5,7 +5,7 @@
 module PixelFeeder #(
     parameter DVI_CLOCK_HZ=50_000_000,
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter LITTLEWORDIAN=0, //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter LITTLEWORDIAN=1, //Order of 32-bit words in each 256-bit DDR block (not byte order)
     parameter PIXFO_CAPACITY=(2048/2), //max pixel_fifo "chunk" capacity (adjust to 256-bit units)
     parameter PIXFO_STARTUP =PIXFO_CAPACITY - 100, //fake source until pixel_fifo is this full
     parameter PIXFO_TARGET  =PIXFO_CAPACITY - 5, //1 "af" req => 2 "rdf" 128b resp => 8 pixfo 32b "rd"
@@ -38,6 +38,16 @@ module PixelFeeder #(
     localparam IDLE = 1'b0;
     localparam FETCH = 1'b1;
 
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
+    reg  cpu_rst_r, dvi_rst_r; //Release synchronously to our clock
+    always @(posedge cpu_clk_g) begin
+        cpu_rst_r <= cpu_rst_g; //Internal reset, <rst>_r, unless really must sync-up release!
+    end
+    always @(posedge dvi_clk_g) begin
+        dvi_rst_r <= dvi_rst_g; //Internal reset, <rst>_r, unless really must sync-up release!
+    end
+
+
 //***CLOCK CROSSING STRATEGY***
     // 1-request to wf => 2-responses on rdf => 8-pixels out of fifo (all 256-bits).
     //    Don't care about individual pixels in PixelFeeder!
@@ -50,7 +60,8 @@ module PixelFeeder #(
 
 // Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13 for chunks)
     reg chunk_inc, chunk_ack, fifo_start;
-(* SHREG_EXTRACT="NO", ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
     reg chunk_inc_clkCPU, chunk_ack_clkDVI, fifo_start_clkDVI;
 
     always @(posedge dvi_clk_g) begin //Synchronize to DVI-clock
@@ -73,7 +84,7 @@ module PixelFeeder #(
     wire rollROW = (curROW >= SCREEN_HEIGHT-1);
 
     always @(posedge dvi_clk_g) begin
-        if (dvi_rst_g) begin //Use synchronized reset
+        if (dvi_rst_r) begin //Use synchronized reset
             {curCOL, curROW, curFRAME} <= 0;
             {feeder_valid, isRunning, wasRunning, count_dviread, chunk_inc} <= 0;
         end else begin
@@ -107,22 +118,20 @@ module PixelFeeder #(
     wire         feeder_den, feeder_full, feeder_empty;
     wire [ 31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
+    assign feeder_dout = feeder_raw; //(isRunning) ? feeder_raw : ignore_pixel;
+    assign rdf_rd_en = 1'b1;
+
     pixel_fifo feeder_fifo (
-        //.rst(cpu_rst_g), //Internal syncronization across clock domains
+        .rst(cpu_rst_g), //Internal syncronization across clock domains
         .wr_clk(cpu_clk_g),
-        .wr_rst(cpu_rst_g),
         .wr_en(feeder_den), //rdf_valid
         .din(feeder_din), //rdf_dout
         .full(feeder_full),
         .rd_clk(dvi_clk_g),
-        .rd_rst(dvi_rst_g),
         .rd_en(video_ready && isRunning),
         .dout(feeder_raw), //NOTE: First-word-fallthrough but no "valid" signal avail!
         .empty(feeder_empty)
     );
-
-    assign feeder_dout = (isRunning) ? feeder_raw : ignore_pixel;
-    assign rdf_rd_en = 1'b1; //Really a "ready" signal, not standard FIFO "enable"
 
 
 generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
@@ -168,12 +177,22 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 
     always @(posedge cpu_clk_g) begin
         //NOTE:Allow PF_frame "set" during "reset" to allow user init
-        if (cpu_rst_g && !PF_valid) frame_next <= 0;
-        else if (PF_valid) frame_next <= `FRAME_BITS(PF_frame); //Either addr style
+        //NOTE:***This particular implementation turns out bad for timing as it puts
+        //      the reset with PF_valid which is a complicated memory-mapped
+        //      I/O arrangement!  Then "frame_next" is fed back as output optionally
+        //      read by the CPU via memory-mapped address.
+        //      Perhaps the framebits assignments below are bad for setup times since
+        //      they involve last minute decision based on "advance".  Also, simply
+        //      creating an internal reset mini-tree in this module (and at top) is good.
+        //TODO: Disable these features or implement properly (register the output at least)!
+        if (cpu_rst_r)// && !PF_valid)
+            frame_next <= 0;
+        else if (PF_valid)
+            frame_next <= `FRAME_BITS(PF_frame); //Either addr style
     end
 
     always @(posedge cpu_clk_g) begin
-        if (cpu_rst_g) begin //Standard reset for other stuff
+        if (cpu_rst_r) begin //Standard reset for other stuff
             {chunk_ack, pend, fifo_start} <= 0;
             state <= IDLE;
             {fr, fr_r, head_y, head_x, pixel_count} <= 0;
@@ -224,7 +243,7 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
     reg [15:0] sweep_RGB;
     reg [63:0] sweep_cnt;
     always @(posedge cpu_clk_g) begin
-        if (cpu_rst_g) begin
+        if (cpu_rst_r) begin
             sweep_RGB <= 16'hE2A2;
             sweep_cnt <= 0;
         end else if (feeder_den) begin
@@ -248,7 +267,7 @@ end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
     assign video = {sweep_RGB[15:8], sweep_RGB[11:4], sweep_RGB[7:0]};
     assign video_valid = 1'b1;
     always @(posedge dvi_clk_g) begin
-        if (dvi_rst_g) sweep_RGB <= 16'hE2A2;
+        if (dvi_rst_r) sweep_RGB <= 16'hE2A2;
         else if (video_valid && video_ready) sweep_RGB <= sweep_RGB+5;
     end
 
@@ -260,7 +279,7 @@ end else if (COLT45_TESTPAT == 3) begin:DIRECT_PAT
         .SCREEN_WIDTH(800), .SCREEN_HEIGHT(600),
         .SCENES_PER_SEC(1)
     ) patgen (
-        .clock(dvi_clk_g), .reset(dvi_rst_g),
+        .clock(dvi_clk_g), .reset(dvi_rst_r),
         .video(video), .video_valid(video_valid),
         .video_ready(video_ready)
     );

@@ -11,20 +11,20 @@
 
 #TODO: Apply ultra-consistent naming on cross-clock NET/INST & use wildcards (cautiously)
 
-# Avoid false path on cross-clock synchronizers & reset
-NET  "cpu_clk_g" TNM_NET = "TN_SYNC_FROM_CPU";
+# Avoid false path on cross-clock synchronizers & resets (but impose an arbitrary max)
+NET  "cpu_clk_g" TNM = "TN_SYNC_FROM_CPU";
 INST "*/pixelfeed/*_clkDVI" TNM = "TN_SYNC_TO_DVI";
 TIMESPEC "TS_CPU_SYNC_DVI" = FROM "TN_SYNC_FROM_CPU" TO "TN_SYNC_TO_DVI" 10 ns DATAPATHONLY;
 
-NET  "dvi_clk_g" TNM_NET = "TN_SYNC_FROM_DVI";
+NET  "dvi_clk_g" TNM = "TN_SYNC_FROM_DVI";
 INST "*/pixelfeed/*_clkCPU" TNM = "TN_SYNC_TO_CPU";
 TIMESPEC "TS_DVI_SYNC_CPU" = FROM "TN_SYNC_FROM_DVI" TO "TN_SYNC_TO_CPU" 10 ns DATAPATHONLY;
 
-INST "rst_cpu_*" TNM = "TN_TO_RST_CPU";
-TIMESPEC "TS_RST_SYNC_CPU" = TO "TN_TO_RST_CPU" 40 ns DATAPATHONLY;
-INST "rst_dvi_*" TNM = "TN_TO_RST_DVI";
-TIMESPEC "TS_RST_SYNC_DVI" = TO "TN_TO_RST_DVI" 40 ns DATAPATHONLY;
-#INST "*reset_watch*" TIG;
+INST "*_clkCPU*" TNM = "TN_TO_RST_CPU";
+TIMESPEC "TS_RST_SYNC_CPU" = TO "TN_TO_RST_CPU" 10 ns DATAPATHONLY;
+INST "*_clkDVI*" TNM = "TN_TO_RST_DVI";
+TIMESPEC "TS_RST_SYNC_DVI" = TO "TN_TO_RST_DVI" 10 ns DATAPATHONLY;
+#NET "reset_advance[0]" TIG;
 
 
 

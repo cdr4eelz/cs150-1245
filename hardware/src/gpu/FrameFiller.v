@@ -33,6 +33,13 @@ module FrameFiller #(
 
 //Your code goes here. GL HF DD DS
 
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
+    reg  rst_r; //Detect & apply & release synchronously to our clock
+    always @(posedge clk) begin
+        rst_r <= rst; //Internal reset, <rst>_r, unless really must sync-up release!
+    end
+
 //NOTE: DDR addressible to 64-bit "resolution", meaning lo 3-bits of address stripped.
 //      Also, 4x64=256-bits accessed per request, so ideal is 32-byte align (lo 5-bits zero).
 //      Chosen approach simply imposes 32-byte alignment by clipping the frame base address.
@@ -58,7 +65,7 @@ module FrameFiller #(
     always @(*) begin
         ns = cs; //Default for unassigned
         case (cs)
-            S_RESET: ns = S_IDLE; //Gives 1-cycle in S_RESET after !rst
+            S_RESET: ns = S_IDLE; //Gives 1-cycle in S_RESET after !rst_r
             S_IDLE:  if (T_START) ns = S_RUN;
             S_RUN:   if (T_DONE_FULL) ns = S_RESET;
             default: ns = S_DEAD; //Default for untrapped
@@ -70,7 +77,7 @@ module FrameFiller #(
     wire lastX = (x > (rR-4));
 
     always @(posedge clk) begin
-        if (rst) cs <= S_RESET;
+        if (rst_r) cs <= S_RESET;
         else cs <= ns;
 
         if (T_START) begin

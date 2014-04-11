@@ -59,6 +59,8 @@ module Memory150 #(
     input   [31:0]  icache_din,
     output  [31:0]  dcache_dout,
     output  [31:0]  icache_dout,
+    output          dcache_stall,
+    output          icache_stall,
     output          stall,
 // DVI Interface:
     input           video_ready,
@@ -207,14 +209,14 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
         .BURST_LEN(4), //TODO: Try 8
         .APPDATA_WIDTH(128),
         .CLK_PERIOD(5000), //5000ns==200MHz (3750ns==266MHz, challenging for SpeedGrade-1)
-        .RST_ACT_LOW(1) //Maybe flip this to avoid double inversion
+        .RST_ACT_LOW(0) // was 1: flipped this to avoid double inversion
     ) ddr2(
         .clk200(clk200_g),
         .clk0(clk0_g),
         .clk90(clk90_g),
         .clkdiv0(clkdiv0_g),
         .locked(locked),
-        .sys_rst_n(~rst_cpu_mem),
+        .sys_rst_n(rst_cpu_mem), //~rst_cpu_mem
         .phy_init_done(init_done),
         .clk0_tb(ddr2_clock_tb),
         .rst0_tb(rst_tb),
@@ -421,6 +423,8 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
 
      // assignments
     assign stall = d_stall || i_stall;
+    assign dcache_stall = d_stall;
+    assign icache_stall = i_stall;
 
     // For feeding pixels to the DVI module:
     PixelFeeder #(

@@ -64,80 +64,23 @@ module ml505top #(
     input         VGA_VSOUT
 );
 
-    //Custom enhancements
+    //Debug lines
     wire [31:0] DBG_MEM150; //TODO:Use hierarchical name based "tap" instead
-    wire toggle_stall, stall_dip;
-    wire stall_top /* synthesis syn_maxfan="10" */;
-    // synthesis attribute max_fanout of stall_top is 10
 
-    // Clocking (PLL/DCM/DLL) wires
-    wire user_reset;
+
+    // Clocking (PLL/DCM/DLL) & Reset & Stall
     wire user_clk_g, pll_lock, init_done, sram_locked;
     wire cpu_clk_g, dvi_clk_g, clk200_g, clk0_g, clk90_g, clkdiv0_g;
-    // Resets named rst_{CLK-DOMAIN}_{RST-STAGE}
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
-    reg  rst_user_pll /* synthesis syn_maxfan = 10 */;
-// synthesis attribute max_fanout of rst_user_pll is 10
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
-    reg  rst_cpu_mem, rst_cpu_bus, rst_cpu_cpu /* synthesis syn_maxfan = 10 */;
-// synthesis attribute max_fanout of rst_cpu_mem is 10
-// synthesis attribute max_fanout of rst_cpu_bus is 10
-// synthesis attribute max_fanout of rst_cpu_cpu is 10
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
-    reg  rst_dvi_bus /* synthesis syn_maxfan = 10 */;
-// synthesis attribute max_fanout of rst_dvi_bus is 10
-
-//TODO:Use debouncer module on all buttons
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
-       ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y0" *)
-    reg  [ 3:0] reset_r;
-    always @(posedge user_clk_g) begin
-        reset_r <= {reset_r[2:0], user_reset}; //Synchronize external button signal
-    end
-
-//TODO:Move PLL & RESETs to module (maybe same as TestBenches use)
-    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
-       ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y1" *)
-    reg  [ 3:0] reset_advance; //A wee synchronization & debounce FF-chain
-
-    reg  [ 7:0] reset_count, reset_delay; //Count range for short delay
-    reg  [ 2:0] reset_stage = 0; //Numeric stage representation
-
-    wire [ 7:0] reset_lines = (8'hFF << reset_stage); //Shifting-HOT representation
-    wire [ 7:0] reset_watch_table = { //Criteria for advancing stage
-                    5'b00001, init_done, pll_lock, 1'b1 };
-    wire        reset_watch = (reset_watch_table[reset_stage]);
-    wire [ 1:0] reset_bootstrap = {reset_lines[1:0]}; //First 2 stages bootstrap pll_lock
-
-    always @(posedge user_clk_g) begin
-        if (!pll_lock && (~|reset_bootstrap)) begin //Lost lock but not bootstrap stages
-            {reset_stage, reset_advance, reset_count, reset_delay} <= 0;
-        end else begin
-            if (&reset_advance) begin
-                reset_stage <= reset_stage + 1;
-                reset_count <= reset_delay;
-                //TODO: Update reset_delay
-                reset_advance <= 0;
-            end else begin
-                if (reset_count != 0) reset_count <= reset_count - 1;
-                reset_advance <= {reset_advance[2:0], reset_watch}; //Sync & mini-delay
-            end
-        end
-    end
-
-//TODO:Make a mini reset "tree" for distribution (within each domain)
-    always @(posedge user_clk_g) begin
-        rst_user_pll = reset_lines[0] || (&reset_r); //USER-clock domain (already)
-        //Though no need to sync here, nice to pin down signal origin to sync element
-    end
-    always @(posedge cpu_clk_g) begin //CPU-clock
-        rst_cpu_mem <= reset_lines[1];
-        rst_cpu_bus <= reset_lines[2];
-        rst_cpu_cpu <= reset_lines[3];
-    end
-    always @(posedge dvi_clk_g) begin //DVI-clock
-        rst_dvi_bus <= reset_lines[2];
-    end
+    // Distributed resets named rst_{CLK-DOMAIN}_{RST-STAGE}_g
+    wire rst_cpu_mem_g, rst_cpu_bus_g, rst_cpu_cpu_g, rst_dvi_bus_g /* synthesis syn_maxfan = 10 */;
+        // synthesis attribute max_fanout of rst_cpu_mem_g is 10
+        // synthesis attribute max_fanout of rst_cpu_bus_g is 10
+        // synthesis attribute max_fanout of rst_cpu_cpu_g is 10
+        // synthesis attribute max_fanout of rst_dvi_bus_g is 10
+    wire stall_top /* synthesis syn_maxfan = 10 */;
+        // synthesis attribute max_fanout of stall_top is 10
+    wire toggle_stall, stall_dip;
+    wire button_reset;
 
 
     // Memory150
@@ -146,7 +89,7 @@ module ml505top #(
     wire        dcache_re,      icache_re;
     wire [31:0] dcache_din,     icache_din;
     wire [31:0] dcache_dout,    icache_dout;
-    wire        stall_cache;
+    wire        stall_cache, stall_dcache, stall_icache;
     wire        video_ready;
     wire        video_valid;
     wire [23:0] video;
@@ -172,9 +115,9 @@ module ml505top #(
         .clk90_g    (clk90_g),
         .locked     (pll_lock),
         .init_done  (init_done),
-        .rst_cpu_mem(rst_cpu_mem),
-        .rst_cpu_bus(rst_cpu_bus),
-        .rst_dvi_bus(rst_dvi_bus),
+        .rst_cpu_mem(rst_cpu_mem_g), //rst_cpu_mem),
+        .rst_cpu_bus(rst_cpu_bus_g),
+        .rst_dvi_bus(rst_dvi_bus_g),
     // DDR2 pads:
         .DDR2_A     (DDR2_A),
         .DDR2_BA    (DDR2_BA),
@@ -201,6 +144,8 @@ module ml505top #(
         .icache_din (icache_din ),
         .dcache_dout(dcache_dout),
         .icache_dout(icache_dout),
+        .dcache_stall(stall_dcache),
+        .icache_stall(stall_icache),
         .stall      (stall_cache),
     // DVI driver:
         .video_ready    (video_ready    ),
@@ -216,6 +161,8 @@ module ml505top #(
         .cpu_gp_code    (gp_code        ),
         .gp_interrupt   (gp_interrupt   )
     );
+
+    assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
 
 
 // MemoryBank/IO "busses" (snagged from MIPS150)
@@ -233,7 +180,7 @@ module ml505top #(
     MemBank #( .CPU_FREQ(CPU_FREQ) )
     mem_bank (
         .clk(cpu_clk_g),
-        .rst(rst_cpu_cpu),
+        .rst(rst_cpu_cpu_g),
         .stall(stall_top),
     // Memory/IO <==> MIPS150
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
@@ -273,7 +220,7 @@ module ml505top #(
     MIPS150
     CPU (
         .clk(cpu_clk_g),
-        .rst(rst_cpu_cpu),
+        .rst(rst_cpu_cpu_g),
         .stall(stall_top),
     // Memory/IO <==> MemBank
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
@@ -303,13 +250,80 @@ module ml505top #(
 //      .Width (1328), .FrontH( 24), .PulseH(136), .BackH(144), // VESA 1024x768@70Hz
 //      .Height( 806), .FrontV(  3), .PulseV(  6), .BackV( 29), .ClockFreq(75_000_000)
     ) dvi (
-        .Clock(dvi_clk_g), .Reset(rst_dvi_bus), .DVI_RESET_B(DVI_RESET_B),
+        .Clock(dvi_clk_g), .Reset(rst_dvi_bus_g),
+        .DVI_RESET_B(DVI_RESET_B),                              //Reset Chrontel CH-7301
         .DVI_D(DVI_D), .DVI_DE(DVI_DE), .DVI_H(DVI_H), .DVI_V(DVI_V), //Data,Ena,Hor,Ver
-        .DVI_XCLK_N(DVI_XCLK_N), .DVI_XCLK_P(DVI_XCLK_P),         //Differential clock
-        .I2C_SCL_DVI(IIC_SCL_VIDEO), .I2C_SDA_DVI(IIC_SDA_VIDEO), //Configuration IIC
-        .VideoReady(video_ready), //Ready/Valid interface for 24-bit pixel RGB feed
-        .VideoValid(video_valid), .Video(video)
+        .DVI_XCLK_N(DVI_XCLK_N), .DVI_XCLK_P(DVI_XCLK_P),           //Differential clock
+        .I2C_SCL_DVI(IIC_SCL_VIDEO), .I2C_SDA_DVI(IIC_SDA_VIDEO),    //Configuration IIC
+        .VideoReady(video_ready), .VideoValid(video_valid), //Ready/Valid interface...
+        .Video(video) // ... for 24-bit pixel RGB feed
     );
+
+
+//TODO:Use debouncer module on all buttons
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y0" *)
+    reg  [ 3:0] reset_r;
+    always @(posedge user_clk_g) begin
+        reset_r <= {reset_r[2:0], button_reset}; //Synchronize external button signal
+    end
+
+
+//TODO:Move PLL & RESETs to module (maybe same as TestBenches use)
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF", RLOC="X0Y1" *)
+    reg  [ 3:0] reset_advance; //A wee synchronization & debounce FF-chain
+
+    reg  [ 7:0] reset_count, reset_delay; //Count range for short delay
+    reg  [ 2:0] reset_stage = 0; //Numeric stage representation
+
+    wire [ 7:0] reset_lines = (8'hFF << reset_stage); //Shifting-HOT representation
+    wire [ 7:0] reset_watch_table = { //Criteria for advancing stage
+                    5'b00001, init_done, pll_lock, 1'b1 };
+    wire        reset_watch = (reset_watch_table[reset_stage]);
+    wire [ 1:0] reset_bootstrap = {reset_lines[1:0]}; //First 2 stages bootstrap pll_lock
+
+    always @(posedge user_clk_g) begin
+        if (!pll_lock && (~|reset_bootstrap)) begin //Lost lock but not bootstrap stages
+            {reset_stage, reset_advance, reset_count, reset_delay} <= 0;
+        end else begin
+            if (&reset_advance) begin
+                reset_stage <= reset_stage + 1;
+                reset_count <= reset_delay;
+                //TODO: Update reset_delay
+                reset_advance <= 0;
+            end else begin
+                if (reset_count != 0) reset_count <= reset_count - 1;
+                reset_advance <= {reset_advance[2:0], reset_watch}; //Sync & mini-delay
+            end
+        end
+    end
+
+    reg  rst_user_base;
+    always @(posedge user_clk_g) begin
+        rst_user_base = reset_lines[0] || (&reset_r); //USER-clock domain (already)
+        //Though no need to sync here, nice to pin down signal origin to sync element
+    end
+
+    //A mini reset "tree" for more flexible placement on the way to each domain
+    //NOTE:Creates a little latency & discrepancies based on each domain period
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE" *)
+    reg  [ 7:0] reset_cpu_clkCPU, reset_dvi_clkDVI;
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF" *)
+    reg  [ 7:0] reset_cpu_rr, reset_dvi_rr;
+    always @(posedge cpu_clk_g) begin //CPU-clock
+        reset_cpu_clkCPU  <= reset_lines;
+        reset_cpu_rr      <= reset_cpu_clkCPU;
+    end
+    always @(posedge dvi_clk_g) begin //DVI-clock
+        reset_dvi_clkDVI  <= reset_lines;
+        reset_dvi_rr      <= reset_dvi_clkDVI;
+    end
+
+    assign rst_cpu_mem_g = reset_cpu_rr[1],
+            rst_cpu_bus_g = reset_cpu_rr[2],
+            rst_cpu_cpu_g = reset_cpu_rr[3];
+    assign rst_dvi_bus_g = reset_dvi_rr[2];
 
 
     wire cpu_clk, dvi_clk, clk200, clk0, clk90, clkdiv0, pll_fb;
@@ -326,7 +340,7 @@ module ml505top #(
         .CLKOUT5_DIVIDE( 6),    .CLKOUT5_PHASE(  0.0),  .CLKOUT5_DUTY_CYCLE(0.5),
         .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
     ) user_clk_pll (
-        .CLKIN(user_clk_g), .RST(rst_user_pll), .LOCKED(pll_lock),
+        .CLKIN(user_clk_g), .RST(rst_user_base), .LOCKED(pll_lock),
         .CLKOUT0(cpu_clk),
         .CLKOUT1(dvi_clk),
         .CLKOUT2(clk200),
@@ -344,6 +358,7 @@ module ml505top #(
     BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
 
 
+
 `ifndef COLT45_KILLFUN //Just to trigger text editor to hide this section
 
 //Mods, Extras, Crossover from Fall13
@@ -356,7 +371,7 @@ generate if (COLT45_STALLDIP) begin:_STALL_DIP_
         .Width(16) // 2^16 / 50MHz => apprx 1.3 ms?
     ) togglestall_debone (
         .Clock(cpu_clk_g),
-        .Reset(rst_cpu_bus),
+        .Reset(rst_cpu_bus_g),
         .Enable(1'b1),
         .In(GPIO_DIP[0]),
         .Out(toggle_stall)
@@ -364,7 +379,7 @@ generate if (COLT45_STALLDIP) begin:_STALL_DIP_
 
     reg man_stall_reg; //TODO: Upgrade to "stall ring" from testbenches
     always@(posedge cpu_clk_g) begin:_MAN_STALL_REG_
-        if(rst_cpu_bus) begin
+        if(rst_cpu_bus_g) begin
             man_stall_reg <= 1'b0;
         end else if (toggle_stall) begin
             man_stall_reg <= ~man_stall_reg;
@@ -422,8 +437,7 @@ end endgenerate
 `endif // COLT45_KILLFUN
 
 //Master & I/O hookups
-assign stall_top = stall_cache || stall_dip;
-assign user_reset   = GPIO_COMPPB[4]; //GPIO_SW_C (Center Push-button)
+assign button_reset = GPIO_COMPPB[4]; //GPIO_SW_C (Center Push-button)
 assign GPIO_LED     = {sram_locked, 1'b0, 1'b0, toggle_stall,
                         stall_dip, stall_top, pll_lock, init_done};
 assign GPIO_COMPLED = reset_lines[4:0] ^ GPIO_COMPPB; //Compass LED lights mimic pushbuttons (invert)
