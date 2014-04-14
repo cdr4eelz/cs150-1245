@@ -30,9 +30,7 @@ module MemMIPS150 #(
     output          gp_valid,
     output [ 31:0]  gp_frame,
     output [ 31:0]  gp_code,
-    input           gp_interrupt,
-// Chipscope cross-module tap:
-input [31:0] DBG_MEM150
+    input           gp_interrupt
 );
 
 // Memory/IO "busses" (snagged from MIPS150)
@@ -41,9 +39,6 @@ input [31:0] DBG_MEM150
     wire  [31: 0] _WDataMasked;
     wire  [ 3: 0] _WriteMask;
     wire  MemToRegDX_, MemWriteDX_, PCinBIOSDX_;
-    wire  [31: 0] MemAddr_MW;
-    wire  [31: 0] CNT_Cycle, CNT_Inst;
-    wire  CNT_Reset_MW2F_;
     wire  uart0_irq, uart1_irq;
 
     // Memory Bank & Memory Mapped I/O
@@ -52,17 +47,13 @@ input [31:0] DBG_MEM150
         .COLT45_SCRATCH(COLT45_SCRATCH),
         .COLT45_MEMWRITE(COLT45_MEMWRITE)
     ) mem_bank (
-        .clk(clk),
-        .rst(rst),
-        .stall(stall),
+        .clk(clk), .rst(rst), .stall(stall),
     // Memory/IO <==> MIPS150
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
         ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_), .MemAddr_MW(MemAddr_MW),
-        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
-        .CNT_Reset_MW2F_(CNT_Reset_MW2F_),
+        .PCinBIOSDX_(PCinBIOSDX_),
     // Interrupts
         .uart0_irq(uart0_irq),
         .uart1_irq(uart1_irq),
@@ -98,17 +89,13 @@ input [31:0] DBG_MEM150
         .COLT45_CONTROL(COLT45_CONTROL),
         .COLT45_STEPMAX(COLT45_STEPMAX)
     ) CPU (
-        .clk(clk),
-        .rst(rst),
-        .stall(stall),
+        .clk(clk), .rst(rst), .stall(stall),
     // Memory/IO <==> MemBank
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
         ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_), .MemAddr_MW(MemAddr_MW),
-        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
-        .CNT_Reset_MW2F_(CNT_Reset_MW2F_),
+        .PCinBIOSDX_(PCinBIOSDX_),
     // Interrupts
         .frame_interrupt(frame_interrupt),
         .gp_interrupt(gp_interrupt),

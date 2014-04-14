@@ -55,7 +55,18 @@ module GraphicsProcessor #(
     output          LE_y1_valid,
     output  [  9:0] LE_point,
     output          LE_trigger,
-    output  [ 31:0] LE_frame
+    output  [ 31:0] LE_frame,
+//ElipseEngine interface:
+    input           EL_ready,
+    output          EL_color_valid,
+    output  [ 31:0] EL_color,
+    output          EL_x0_valid,
+    output          EL_y0_valid,
+    output          EL_x1_valid,
+    output          EL_y1_valid,
+    output  [  9:0] EL_point,
+    output          EL_trigger,
+    output  [ 31:0] EL_frame
 );
 
    //Your code goes here. GL HF.
@@ -133,8 +144,8 @@ module GraphicsProcessor #(
     always @(*) begin
 //      hot_GOP_err = 1'b0;
         case (INST_gop) //If big/slow, maybe barrel-shift or ROM lookup.
-            `GOP_STOP, `GOP_FILL, `GOP_LINE:   //If sparse, let it prune,
-                hot_GOP_cal = (1 << INST_gop); //  or make new constants.
+            `GOP_STOP, `GOP_FILL, `GOP_LINE, `GOP_ELIP:
+                hot_GOP_cal = (1 << INST_gop);
             default: begin
                 hot_GOP_cal = `GOP_STOP;
 //              hot_GOP_err = 1'b1; //This is RAW signal
@@ -161,10 +172,11 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
 
 //Sub-State machine & Mealy outputs: CMD_advance, INST_advance
     wire INST_advance = (CMD_advance && !cs_S[0]); //EVENs: SS_TOP||SS_Y0||SS_YY
+    wire INST_dopoints = (INST_gop==`GOP_LINE) || (INST_gop==`GOP_ELIP);
     always @(*) begin
         ns_S = cs_S; //Hold current state until valid
         case (cs_S) //Just a ring shifter with extra enable test!
-            SS_TOP: if (INST_gop==`GOP_LINE) ns_S = SS_X0; //else SS_TOP
+            SS_TOP: if (INST_dopoints) ns_S = SS_X0; //else SS_TOP
             SS_X0:  ns_S = SS_Y0;
             SS_Y0:  ns_S = SS_XX;
             SS_XX:  ns_S = SS_YY;
@@ -280,7 +292,17 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
             LE_point  = engine_point,
             LE_frame  = engine_frame;
 
-    assign ENGINES_ready = (FF_ready && LE_ready);
+    assign EL_color_valid = (hot_GOP_val && hot_GOP[`GOP_ELIP]),
+            EL_x0_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_X0)),
+            EL_y0_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_Y0)),
+            EL_x1_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_XX)),
+            EL_y1_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_YY)),
+            EL_trigger    = EL_y1_valid; //INST_trigger;
+    assign EL_color   = engine_color,
+            EL_point  = engine_point,
+            EL_frame  = engine_frame;
+
+    assign ENGINES_ready = (FF_ready && LE_ready && EL_ready);
 
 
 //synthesis translate_off

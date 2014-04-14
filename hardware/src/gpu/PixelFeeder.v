@@ -147,8 +147,8 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     reg [12:0] pend, pend_next; //pending mig_af requests (represent 256-bits each)
     reg [ 9:0] head_y, head_x;
     reg fr, fr_r; // Flag for frame transition
-    reg [ 5:0] framebits, frame_next=0; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
-    reg state;
+    reg [ 5:0] framebits, framebits_r, frame_next=0; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
+    reg interrupt_r, state;
 
     wire [31:0] head_addr = {4'h1, framebits, head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
     wire last_x = (head_x >= (((800/8)-1) * 8));
@@ -159,8 +159,20 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
 
     assign af_addr_din = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign af_wr_en = (state == FETCH); //Declare when FETCH addr ready (but might not happen)
-    assign PF_feedframe = framebits;
-    assign PF_interrupt = (fr != fr_r); //Fires right after request gets queued (not resp or pix)
+    assign PF_feedframe = framebits_r; //1-cycle latency to avoid overly tight interconnect
+    assign PF_interrupt = interrupt_r;
+
+    always @(posedge cpu_clk_g) begin
+        if (cpu_rst_r) begin
+            frame_next <= 0;
+            framebits_r <= 0;
+            interrupt_r <= 0;
+        end else begin
+            framebits_r <= framebits;
+            interrupt_r <= (fr != fr_r); //Fires 1-cycle after REQ queued (not RESP or PIX)
+            if (PF_valid) frame_next <= `FRAME_BITS(PF_frame); //Either addr style
+        end
+    end
 
     always @(*) begin
         case ( {chunk_edge, af_advance} ) //chunk reduces by 2, fetch increases by 1
@@ -174,22 +186,6 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     //Ensures 1+ IDLEs between FETCHs; also note (state==IDLE) ensures !af_advance
     wire next_state = ((pend < PIXFO_TARGET) && !af_advance) ? FETCH : IDLE;
 //  wire next_state = ((pend < PIXFO_TARGET) && (state == IDLE)) ? FETCH : IDLE;
-
-    always @(posedge cpu_clk_g) begin
-        //NOTE:Allow PF_frame "set" during "reset" to allow user init
-        //NOTE:***This particular implementation turns out bad for timing as it puts
-        //      the reset with PF_valid which is a complicated memory-mapped
-        //      I/O arrangement!  Then "frame_next" is fed back as output optionally
-        //      read by the CPU via memory-mapped address.
-        //      Perhaps the framebits assignments below are bad for setup times since
-        //      they involve last minute decision based on "advance".  Also, simply
-        //      creating an internal reset mini-tree in this module (and at top) is good.
-        //TODO: Disable these features or implement properly (register the output at least)!
-        if (cpu_rst_r)// && !PF_valid)
-            frame_next <= 0;
-        else if (PF_valid)
-            frame_next <= `FRAME_BITS(PF_frame); //Either addr style
-    end
 
     always @(posedge cpu_clk_g) begin
         if (cpu_rst_r) begin //Standard reset for other stuff

@@ -135,7 +135,7 @@ module Memory150 #(
     wire         filler_af_wr_en;
     wire [ 15:0] filler_wdf_mask_din;
 
-    // LineEngine/ScanLineRunner <=> RequestController wires:
+    // LineEngine <=> RequestController wires:
     wire         line_af_full;
     wire         line_wdf_full;
     wire [127:0] line_wdf_din;
@@ -144,7 +144,7 @@ module Memory150 #(
     wire         line_af_wr_en;
     wire [ 15:0] line_wdf_mask_din;
 
-    // Bypass <=> RequestController wires: (extension!)
+    // Bypass/ScanLineRunner <=> RequestController wires: (extension!)
     wire         bypass_af_full;
     wire         bypass_wdf_full;
     wire [127:0] bypass_wdf_din;
@@ -178,6 +178,18 @@ module Memory150 #(
     wire         line_trigger;
     wire [ 31:0] line_frame;
 
+    // Graphics Command Processor <=> Elipse Engine wires:
+    wire         elip_ready;
+    wire [ 31:0] elip_color;
+    wire [  9:0] elip_point;
+    wire         elip_color_valid;
+    wire         elip_x0_valid;
+    wire         elip_y0_valid;
+    wire         elip_x1_valid;
+    wire         elip_y1_valid;
+    wire         elip_trigger;
+    wire [ 31:0] elip_frame;
+
 // Extra feedback status from graphics controllers
     wire [  5:0] pf_feedframe, gp_procframe;
     wire         gp_ready;
@@ -186,7 +198,7 @@ module Memory150 #(
         2'b00, pf_feedframe[5:0],
         8'b0000_0000, //Maybe for overlay stuff later
         2'b00, gp_procframe[5:0], //TODO:Count video_xyz activity, not snapshot
-        video_ready, video_valid, 3'b00_0, line_ready, filler_ready, gp_ready
+        video_ready, video_valid, 2'b00, elip_ready, line_ready, filler_ready, gp_ready
     };
 
 wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use separate scope)
@@ -465,34 +477,46 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
         .rdf_rd_en(cmd_rdf_rd_en),
         .af_wr_en(cmd_af_wr_en),
         .af_addr_din(cmd_af_addr_din),
-    //LineEngine interface:
-        .LE_ready(line_ready),
-        .LE_color_valid(line_color_valid),
-        .LE_color(line_color),
-        .LE_x0_valid(line_x0_valid),
-        .LE_y0_valid(line_y0_valid),
-        .LE_x1_valid(line_x1_valid),
-        .LE_y1_valid(line_y1_valid),
-        .LE_point(line_point),
-        .LE_trigger(line_trigger),
-        .LE_frame(line_frame),
     //FrameFiller interface:
         .FF_ready(filler_ready),
         .FF_valid(filler_valid),
         .FF_color(filler_color),
         .FF_frame(filler_frame),
+    //LineEngine interface:
+        .LE_ready(line_ready),
+        .LE_color_valid(line_color_valid),
+        .LE_color      (line_color),
+        .LE_x0_valid(line_x0_valid),
+        .LE_y0_valid(line_y0_valid),
+        .LE_x1_valid(line_x1_valid),
+        .LE_y1_valid(line_y1_valid),
+        .LE_point   (line_point),
+        .LE_trigger(line_trigger),
+        .LE_frame  (line_frame),
+    //ElipseEngine interface:
+        .EL_ready(elip_ready),
+        .EL_color_valid(elip_color_valid),
+        .EL_color      (elip_color),
+        .EL_x0_valid(elip_x0_valid),
+        .EL_y0_valid(elip_y0_valid),
+        .EL_x1_valid(elip_x1_valid),
+        .EL_y1_valid(elip_y1_valid),
+        .EL_point   (elip_point),
+        .EL_trigger(elip_trigger),
+        .EL_frame  (elip_frame),
     //CPU interface:
         .GP_ready(gp_ready),
         .GP_valid(cpu_gp_valid),
         .GP_frame(cpu_gp_frame),
-        .GP_code(cpu_gp_code),
+        .GP_code (cpu_gp_code),
         .GP_procframe(gp_procframe),
         .GP_interrupt(gp_interrupt)
     );
 
     localparam SLR_FF = 0,
                 SLR_LE = 1,
-                SLR_LAST = SLR_LE;
+                SLR_EL = 2,
+                SLR_LAST = SLR_EL;
 
     wire [0:SLR_LAST] SLR_ready;
     wire SLR_MASTER_ready;
@@ -508,21 +532,19 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
 
     assign SLR_ready[SLR_FF] = (live_SLR == SLR_FF) ? SLR_MASTER_ready : 1'b0;
     assign SLR_ready[SLR_LE] = (live_SLR == SLR_LE) ? SLR_MASTER_ready : 1'b0;
+    assign SLR_ready[SLR_EL] = (live_SLR == SLR_EL) ? SLR_MASTER_ready : 1'b0;
 
-    always @(*) begin
-        casex ({SLR_valid[SLR_FF],SLR_valid[SLR_LE]})
-            3'b1?: next_SLR = SLR_FF;
-            3'b01: next_SLR = SLR_LE;
-            default: next_SLR = live_SLR;
-        endcase
+    always @(*) begin //Next SLR assignment (priority based, not round-robin)
+        if      (SLR_valid[SLR_FF]) next_SLR = SLR_FF;
+        else if (SLR_valid[SLR_LE]) next_SLR = SLR_LE;
+        else if (SLR_valid[SLR_EL]) next_SLR = SLR_EL;
+        else next_SLR = live_SLR;
     end
 
     always @(posedge cpu_clk_g) begin
         if (rst_cpu_bus) live_SLR <= 0;
         else if (SLR_MASTER_ready & !SLR_valid[live_SLR]) live_SLR <= next_SLR;
     end
-
-generate if (SCANLINERUNNER) begin:_WITH_SLR_
 
     ScanLineRunner #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
@@ -548,22 +570,11 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
         .SLR_col_finish(SLR_col_finish   [live_SLR])
     );
 
-end else begin:_NO_SLR_
-
-    assign SLR_MASTER_ready = 0;
-    assign bypass_af_wr_en       = 1'b0,
-            bypass_wdf_wr_en     = 1'b0,
-            bypass_af_addr_din   = 31'bx,
-            bypass_wdf_din       = 128'bx,
-            bypass_wdf_mask_din  = 16'bx;
-
-end endgenerate
-
 
     FrameFiller #(
         .SCANLINERUNNER(SCANLINERUNNER),
         .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) framefill(
+    ) framefill (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
     //Fill control <=> CPU:
@@ -581,7 +592,7 @@ end endgenerate
         .wdf_mask_din(filler_wdf_mask_din),
     //SLR interface (write-only):
         .SLR_ready(SLR_ready[SLR_FF]),
-        .SLR_valid     (SLR_valid[SLR_FF]),
+        .SLR_valid(SLR_valid[SLR_FF]),
         .SLR_frame     (SLR_frame      [SLR_FF]),
         .SLR_color_fill(SLR_color_fill [SLR_FF]),
         .SLR_color_edge(SLR_color_edge [SLR_FF]),
@@ -594,7 +605,7 @@ end endgenerate
     LineEngine #(
         .SCANLINERUNNER(SCANLINERUNNER),
         .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) le(
+    ) le (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
     //Line control <=> CPU:
@@ -618,7 +629,7 @@ end endgenerate
         .wdf_mask_din(line_wdf_mask_din),
     //SLR interface (write-only):
         .SLR_ready(SLR_ready[SLR_LE]),
-        .SLR_valid     (SLR_valid[SLR_LE]),
+        .SLR_valid(SLR_valid[SLR_LE]),
         .SLR_frame     (SLR_frame      [SLR_LE]),
         .SLR_color_fill(SLR_color_fill [SLR_LE]),
         .SLR_color_edge(SLR_color_edge [SLR_LE]),
@@ -627,4 +638,30 @@ end endgenerate
         .SLR_col_finish(SLR_col_finish [SLR_LE])
     );
 
+    ElipseEngine #(
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) el (
+        .clk(cpu_clk_g),
+        .rst(rst_cpu_bus),
+    //Elipse control <=> CPU:
+        .EL_ready(elip_ready),
+        .EL_color_valid(elip_color_valid),
+        .EL_color      (elip_color),
+        .EL_x0_valid(elip_x0_valid),
+        .EL_y0_valid(elip_y0_valid),
+        .EL_x1_valid(elip_x1_valid),
+        .EL_y1_valid(elip_y1_valid),
+        .EL_point   (elip_point),
+        .EL_trigger(elip_trigger),
+        .EL_frame  (elip_frame),
+    //SLR interface (write-only):
+        .SLR_ready(SLR_ready[SLR_EL]),
+        .SLR_valid(SLR_valid[SLR_EL]),
+        .SLR_frame     (SLR_frame      [SLR_EL]),
+        .SLR_color_fill(SLR_color_fill [SLR_EL]),
+        .SLR_color_edge(SLR_color_edge [SLR_EL]),
+        .SLR_row       (SLR_row        [SLR_EL]),
+        .SLR_col_start (SLR_col_start  [SLR_EL]),
+        .SLR_col_finish(SLR_col_finish [SLR_EL])
+    );
 endmodule

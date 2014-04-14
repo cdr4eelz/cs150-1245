@@ -156,34 +156,42 @@ void swelipse(
     uint16_t const xc, uint16_t const yc,
     uint16_t const a, uint16_t const b)
 {
-    uint16_t x = 0, y = b; //theta=90 @origin (offset pixels later)
+    uint16_t x = 0, y = b; //theta=90 @origin (offset pixels in 4way)
     uint32_t const AA = sqr32(a), BB = sqr32(b);
     uint32_t const AABB = mul32(AA,BB);
+
+    //Helper values to pre-compute multiplied values then adjust with addition
+    uint32_t AAy    = mul32(AA,y);
+    uint32_t BBx    = mul32(BB,x);
+    uint32_t BB2xp3 = (mul32(BB,x)<<1) + (BB<<1) + BB;
+    uint32_t AA2y   = (mul32(AA,y)<<1);
+
     int32_t dd; //dd
 
-    dd = BB - mul32(AA,(b  )) + (AA>>2);
+    dd = BB - mul32(AA,b) + (AA>>2);
     swpixel_4way(fp,color, xc,yc, x,y);
 
-    while ( (mul32(AA,y   )-(AA>>1)) > (mul32(BB,x   )+BB) ) {
+    while ( (AAy-(AA>>1)) > (BBx+BB) ) {
         if (dd >= 0) {
-            dd += (AA<<1)-mul32(AA,y<<1);
-            --y;
+            dd += (AA<<1) - AA2y; //mul32(AA,y<<1);
+            y--; AAy -= AA; AA2y -= (AA<<1);
         }
-        dd += mul32(BB,(x<<1)+3);
-        ++x;
+        dd += BB2xp3; //mul32(BB,(x<<1)+3);
+        x++; BBx += BB; BB2xp3 += (BB<<1);
         swpixel_4way(fp,color, xc,yc, x,y);
     }
 //return;
 //printf("\\\\\\\n");
     //Transition at slope=1, whatever theta happens to be; Reverse x&y roles
-    dd = mul32(BB,sqr32(x   )+x)+(BB>>2) + mul32(AA,sqr32((y   )-1)) - AABB;
+    uint32_t BB2xp2 = BB2xp3 - BB; //mul32(BB,(x<<1)+2);
+    dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
     while (y > 0) {
         if (dd < 0) {
-            dd += mul32(BB,(x<<1)+2);
-            ++x;
+            dd += BB2xp2; //mul32(BB,(x<<1)+2);
+            x++; BB2xp2 += (BB<<1);
         }
-        dd += (AA<<1)+AA-mul32(AA,y<<1);
-        --y;
+        dd += (AA<<1)+AA - AA2y; //mul32(AA,y<<1);
+        y--; AA2y -= (AA<<1);
         swpixel_4way(fp,color, xc,yc, x,y);
     }
 }

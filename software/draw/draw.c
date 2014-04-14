@@ -26,7 +26,7 @@ static void dd_pixel(
     uint16_t x, uint16_t y)
 {
     swpixel(sw_frame,  color, x,y);
-//  hwpixel(           color, x,y);
+    hwline(            color, x,y, x,y);
 }
 
 static void dd_elipse(
@@ -35,7 +35,7 @@ static void dd_elipse(
     uint16_t rx, uint16_t ry)
 {
     swelipse(sw_frame,  color, xc,yc, rx,ry);
-//  hwelipse(           color, xc,yc, rx,ry);
+    hwelipse(           color, xc,yc, rx,ry);
 }
 
 static void dd_circle(
@@ -44,7 +44,7 @@ static void dd_circle(
     uint16_t r)
 {
     swcircle(sw_frame,  color, xc,yc, r);
-//  hwelipse(           color, xc,yc, r,r);
+    hwelipse(           color, xc,yc, r,r);
 }
 
 int main(int argc, char** argv)

@@ -164,7 +164,7 @@ int main( void )
             case BC_PIXL: {
                 uint16_t x            = tok_dec16u();
                 uint16_t y            = tok_dec16u();
-                if (gflag & 0x02) hwpixel(hw_color, x,y);
+                if (gflag & 0x02) hwline(hw_color, x,y, x,y);
                 if (gflag & 0x01) swpixel(sw_frame, sw_color, x,y);
             } break;
 

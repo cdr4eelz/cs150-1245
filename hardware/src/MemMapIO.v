@@ -4,7 +4,7 @@ module MemMapIO #(
     parameter BADNESS=0, BAD_WORD=32'hFED1C007, BAD_BYTE=8'h11,
     parameter COLT45_SHAKE=1, COLT45_POLLS=0
 )(
-    input clk, rst,
+    input clk, rst, stall,
 // DAS BUS:
     input           ena,    //ena is like "memory" style "enable port a"
     input  [11: 0]  addra,  //Address for read or write (use zero if worried about side effects)
@@ -13,10 +13,6 @@ module MemMapIO #(
     output reg [31:0] DOUTA,//DATA read (behaves like synchronous memory with registered output)
 // DOS SHAKES POR FAVOR:
     inout `BUS_SHAKE_type(8) RVa_RX, RVa_TX,
-    output RVa_RX_IRQ, RVa_TX_IRQ,
-// Counter taps & reset pulse output:
-    input  [31: 0] CNT_Cycle, CNT_Inst,
-    output CNT_RESET_,
 // PixelFeeder & GraphicsProcessor control:
     input  [31: 0] graphics_status,
     output [31: 0] PF_FRAME, GP_FRAME, GP_CODE,
@@ -86,15 +82,6 @@ parameter [5:0]             //   DATA-ENCODING/DESC
     wire       Tx_Valid;   // OUT: We announce a byte
     wire      Tx_Ready;     // IN : UART can take a byte from us
 
-    // Prior clock state for "edge" -> "pulse" conversion
-    reg WAS_Rx_Valid, WAS_Tx_Ready; //TODO:Move to RVAUtility
-    always @(posedge clk) begin:_REG_WAS_
-        //NOTE:Avoid unnecessary resets --if (rst) {WAS_Rx_Valid,WAS_Tx_Ready} <= 0; else
-        {WAS_Rx_Valid,WAS_Tx_Ready} <= {Rx_Valid,Tx_Ready};
-    end
-    assign RVa_RX_IRQ = (Rx_Valid && !WAS_Rx_Valid);
-    assign RVa_TX_IRQ = (Tx_Ready && !WAS_Tx_Ready);
-
     // Drive these pre-clock (continuous drive) so other RVA sees them at clock
     assign Rx_Ready = isRead && HOT_ADDR[H_D0RxData]; //(addra==12'h003)
     assign Tx_Valid = isWrite && HOT_ADDR[H_D0TxData]; //(addra==12'h002)
@@ -104,21 +91,37 @@ parameter [5:0]             //   DATA-ENCODING/DESC
 
 
 // Stats & Counters
-//    reg  [31: 0] CNT_Rx, CNT_Tx; //Minimal IO statistics
-    assign CNT_RESET_ = isWrite && HOT_ADDR[H_ResetCnt]; //(addra==12'h006);
-
+//  reg  [31: 0] CNT_Rx, CNT_Tx; //Minimal IO statistics
+    reg  [31: 0] CNT_Cycle, CNT_Inst;
+    wire rst_CNT = (isWrite && HOT_ADDR[H_ResetCnt]);
+    always @(posedge clk) begin:_REG_CNT_
+        if (rst | rst_CNT) begin
+            {CNT_Cycle, CNT_Inst} <= 0;
+        end else begin
+            CNT_Cycle <= CNT_Cycle+1;
+            if (!stall) CNT_Inst <= CNT_Inst+1;
+        end
+    end
 
 // PixelFeeder & GraphicsController
-    reg  [31: 0] reg_gpframe = 0; //Stash this internally, others just "pass through"
-    always @(posedge clk) begin:_REG_GPFRAME_
-        //NOTE:Avoid unnecessary resets --if (rst) reg_gpframe <= 0; else
-        if (isWrite && HOT_ADDR[H_GPFrame]) reg_gpframe <= dina; //(addra==12'h015)
+    reg  [31: 0] graphics_status_r = 0;
+    reg  [31: 0] reg_gpframe; //Stash this internally, others USED TO just "pass through"
+    reg  [31: 0] reg_pfframe, reg_gpcode; //...but now stash others too (optional to losen timing)
+    reg          reg_pfvalid, reg_gpvalid; //...and delay valid pulses by 1-cycle also!
+    always @(posedge clk) begin:_REG_GPU_
+        //NOTE:Avoid unnecessary resets here
+        graphics_status_r <= graphics_status; //1-cycle latency (don't check too quick after trigger)!
+        if (isWrite && HOT_ADDR[H_PFFrame]) reg_pfframe <= dina;
+        reg_pfvalid <= (isWrite && HOT_ADDR[H_PFFrame]);
+        if (isWrite && HOT_ADDR[H_GPFrame]) reg_gpframe <= dina;
+        if (isWrite && HOT_ADDR[H_GPCode])  reg_gpcode  <= dina;
+        reg_gpvalid <= (isWrite && HOT_ADDR[H_GPCode]);
     end
-    assign PF_VALID = (isWrite && HOT_ADDR[H_PFFrame]); //(addra==12'h014)
-    assign PF_FRAME = (BADNESS && !PF_VALID) ? BAD_WORD : dina;
-    assign GP_VALID = (isWrite && HOT_ADDR[H_GPCode]); //(addra==12'h016)
+    assign PF_FRAME = reg_pfframe; //(BADNESS && !PF_VALID) ? BAD_WORD : dina;
+    assign PF_VALID = reg_pfvalid; //(isWrite && HOT_ADDR[H_PFFrame]);
     assign GP_FRAME = reg_gpframe; //(BADNESS && !GP_VALID) ? BAD_WORD : reg_gpframe;
-    assign GP_CODE  = (BADNESS && !GP_VALID) ? BAD_WORD : dina;
+    assign GP_CODE  = reg_gpcode;  //(BADNESS && !GP_VALID) ? BAD_WORD : dina;
+    assign GP_VALID = reg_gpvalid; //(isWrite && HOT_ADDR[H_GPCode]);
 
 
 // Reading operations
@@ -132,7 +135,7 @@ parameter [5:0]             //   DATA-ENCODING/DESC
             A_CntCycle  : MUX_DOUTA = CNT_Cycle[31:0];
             A_CntInst   : MUX_DOUTA = CNT_Inst[31:0];
             //A_ResetCnt,A_PFFrame,A_GPFrame,A_GPCode
-            A_GPUStatus : MUX_DOUTA = graphics_status;
+            A_GPUStatus : MUX_DOUTA = graphics_status_r;
             default: MUX_DOUTA = (BADNESS) ? BAD_WORD : 32'dx;
         endcase
     end

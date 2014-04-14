@@ -8,13 +8,23 @@ module UARTRVA #(
 )(
     input   Clock, Reset,
     input   SIn,
-    inout `BUS_SHAKE_type(8) UARX,
-    inout `BUS_SHAKE_type(8) UATX,
+    inout   `BUS_SHAKE_type(8) UARX,
+    output  IRQ_RX, IRQ_TX,
+    inout   `BUS_SHAKE_type(8) UATX,
     output  SOut
 );
     //Individual RVA lines related to each serial line
     wire Rx_Ready, Rx_Valid, Tx_Valid, Tx_Ready;
     wire [7:0] Rx_Data, Tx_Data;
+
+    // Prior clock state for "edge" -> "pulse" conversion
+    reg WAS_Rx_Valid, WAS_Tx_Ready;
+    always @(posedge Clock) begin:_REG_WAS_
+        //NOTE:Avoid unnecessary resets --if (Reset) {WAS_Rx_Valid,WAS_Tx_Ready} <= 0; else
+        {WAS_Rx_Valid,WAS_Tx_Ready} <= {Rx_Valid,Tx_Ready};
+    end
+    assign IRQ_RX = (Rx_Valid && !WAS_Rx_Valid);
+    assign IRQ_TX = (Tx_Ready && !WAS_Tx_Ready);
 
     //UART & submodules do the work
     UART #(

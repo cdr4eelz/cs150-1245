@@ -105,7 +105,7 @@ module ScanLineRunner #(
             MS_RSET: if (!rst_r) ns_M = MS_IDLE; //Come out with a full cycle
             MS_IDLE: if (SLR_valid) ns_M = MS_DDR1; //We know we are ready since MS_IDLE
             MS_DDR1: if (wdr_advance1) ns_M = MS_DDR2;
-            MS_DDR2: if (wdr_advance2) ns_M = (isLAST8) ? MS_RSET : MS_DDR1;
+            MS_DDR2: if (wdr_advance2) ns_M = (isLAST8) ? MS_IDLE : MS_DDR1;
             default: ns_M = MS__DEAD;
         endcase
     end

@@ -65,7 +65,7 @@ module ml505top #(
 );
 
     //Debug lines
-    wire [31:0] DBG_MEM150; //TODO:Use hierarchical name based "tap" instead
+//  wire [31:0] DBG_MEM150; //TODO:Use hierarchical name based "tap" instead
 
 
     // Clocking (PLL/DCM/DLL) & Reset & Stall
@@ -168,28 +168,21 @@ module ml505top #(
 // MemoryBank/IO "busses" (snagged from MIPS150)
     wire  [31: 0] IMEM_ADDR, DMEM_ADDR;
     wire  [31: 0] IMEM_DATA, DMEM_DATA;
-//  wire  [31: 0] MemAddr_MW;
     wire  [31: 0] _WDataMasked;
     wire  [ 3: 0] _WriteMask;
     wire  MemToRegDX_, MemWriteDX_, PCinBIOSDX_;
-    wire  [31: 0] CNT_Cycle, CNT_Inst;
-    wire  CNT_Reset_MW2F_;
     wire  uart0_irq, uart1_irq;
 
     // Memory Bank & Memory Mapped I/O
     MemBank #( .CPU_FREQ(CPU_FREQ) )
     mem_bank (
-        .clk(cpu_clk_g),
-        .rst(rst_cpu_cpu_g),
-        .stall(stall_top),
+        .clk(cpu_clk_g), .rst(rst_cpu_cpu_g), .stall(stall_top),
     // Memory/IO <==> MIPS150
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
         ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_), //.MemAddr_MW(MemAddr_MW),
-        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
-        .CNT_Reset_MW2F_(CNT_Reset_MW2F_),
+        .PCinBIOSDX_(PCinBIOSDX_),
     // Interrupts
         .uart0_irq(uart0_irq),
         .uart1_irq(uart1_irq),
@@ -219,17 +212,13 @@ module ml505top #(
     // MIPS 150 CPU
     MIPS150
     CPU (
-        .clk(cpu_clk_g),
-        .rst(rst_cpu_cpu_g),
-        .stall(stall_top),
+        .clk(cpu_clk_g), .rst(rst_cpu_cpu_g), .stall(stall_top),
     // Memory/IO <==> MemBank
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
         ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_), //.MemAddr_MW(MemAddr_MW),
-        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
-        .CNT_Reset_MW2F_(CNT_Reset_MW2F_),
+        .PCinBIOSDX_(PCinBIOSDX_),
     // Interrupts
         .frame_interrupt(frame_interrupt),
         .gp_interrupt(gp_interrupt),

@@ -5,9 +5,7 @@ module MIPS150 #(
     parameter COLT45_SCOPE=0, COLT45_BRK=0,
     parameter COLT45_PC=0, COLT45_REGREAD=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
-    input   clk,
-    input   rst,
-    input   stall,
+    input   clk, rst, stall,
 
 // Memory lines
     output [31: 0]  IMEM_ADDR, DMEM_ADDR,
@@ -16,16 +14,11 @@ module MIPS150 #(
     output [31: 0]  MemAddr_MW,
     output [31: 0]  _WDataMasked,
     output [ 3: 0]  _WriteMask,
-    output [31: 0]  CNT_Cycle, CNT_Inst,
-    input           CNT_Reset_MW2F_,
 
 // Interrupts
     input           frame_interrupt,
     input           gp_interrupt,
-    input           uart0_irq, uart1_irq,
-
-// Chipscope cross-module tap:
-input [31:0] DBG_MEM150
+    input           uart0_irq, uart1_irq
 );
 
 //BRK tap (in transition)
@@ -78,7 +71,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     // Declare outputs of F stage
     wire [31: 0] PC_F_, PCNEXT_F_;
     wire [31: 0] INST_F_;
-    wire [31: 0] CNT_Stall, CNT_BRANCH, CNT_ISR; //CNT_Cycle, CNT_Inst
+    wire [31: 0] CNT_Stall, CNT_BRANCH, CNT_ISR, CNT_Cycle, CNT_Inst;
     wire WAS_Running, WAS_Stall, WAS_Inst, WAS_Branch, WAS_ISR;
     wire INST_CouldBranch_F_, DO_ISR;
     StageF #(
@@ -86,7 +79,8 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     ) s_F ( .clk(clk), .rst(rst), .stall(stall),
         //Inputs (feedback from other stages)
         ._DoBranch(BRA_DoBranch_DX2F_), ._PCBranch(BRA_PCBranch_DX2F_),
-        ._ResetCounters(CNT_Reset_MW2F_), ._DoISR(DO_ISR),
+        ._ResetCounters(1'b0), //CNT_Reset_MW2F_
+        ._DoISR(DO_ISR),
         //Outputs (toward next stage)
         .PC_(PC_F_), .INST_(INST_F_), .PCNEXT_(PCNEXT_F_),
         //CPU Counters & Prior-state flags
@@ -232,7 +226,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
 wire [31:0] keywatch = {
     REGFILE_we,REGFILE_wa[4:0],REGFILE_ra2[4:0], REGFILE_ra1[4:0],
-    FWD_Allow,FWD_2,FWD_1,DBG_MEM150[31],
+    FWD_Allow,FWD_2,FWD_1,32'd0,//DBG_MEM150[31]
         4'b0000, //_hot_IO,_hot_BR,_hot_IC,_hot_DC,
         4'b0000, //hoti_[3:0],
         rst,BRA_IRQPending_DX2F_,BRA_DoBranch_DX2F_,stall
@@ -260,7 +254,7 @@ assign trace = {
     },
 
     PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[31:0],    32'd0,
-    DBG_MEM150[31:0],   CNT_BRANCH[31:0],   CNT_ISR[31:0],
+    32'd0/*DBG_MEM150[31:0]*/,   CNT_BRANCH[31:0],   CNT_ISR[31:0],
     32'd0 //graphics_status
 };
 

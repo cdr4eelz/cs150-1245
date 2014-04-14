@@ -7,9 +7,7 @@ module MemBank #(
     parameter DD=`COLT45_DD,
     parameter COLT45_SCRATCH=0, COLT45_MEMWRITE=0
 )(
-    input   clk,
-    input   rst,
-    input   stall,
+    input   clk, rst, stall,
 
 // Memory/IO lines (snagged from MIPS150):
     input  [31: 0]  IMEM_ADDR, DMEM_ADDR,
@@ -17,8 +15,6 @@ module MemBank #(
     input           MemToRegDX_, MemWriteDX_, PCinBIOSDX_, //TODO:Rename
     input  [31: 0]  _WDataMasked, //TODO:Rename
     input  [ 3: 0]  _WriteMask,
-    input  [31: 0]  CNT_Cycle, CNT_Inst, //TODO:Move?
-    output          CNT_Reset_MW2F_,
 
 // Interrupts:
     output uart0_irq, uart1_irq,
@@ -189,16 +185,13 @@ module MemBank #(
 
     `BUS_SHAKE_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
     MemMapIO memmap_io
-    ( .clk(clk), .rst(rst), .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
+    ( .clk(clk), .rst(rst), .stall(stall),
+        .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
         .addra(DMEM_ADDR[13:2]),
         .DOUTA(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
         //Mapped RVA devices
         .RVa_RX(UARX),          .RVa_TX(UATX),
-        .RVa_RX_IRQ(uart0_irq), .RVa_TX_IRQ(uart1_irq),
-        //Counters
-        .CNT_Cycle(CNT_Cycle), .CNT_Inst(CNT_Inst),
-        .CNT_RESET_(CNT_Reset_MW2F_),
         //PixelFeeder & GraphicsController
         .graphics_status(graphics_status),
         .PF_VALID(pf_valid), .PF_FRAME(pf_frame),
@@ -207,8 +200,8 @@ module MemBank #(
 
     UARTRVA #(.ClockFreq(CPU_FREQ)) uartrva
     ( .Clock(clk), .Reset(rst),
-        .SIn(FPGA_SERIAL_RX), .UARX(UARX), //Receiver
-        .UATX(UATX), .SOut(FPGA_SERIAL_TX) //Transmitter
+        .SIn(FPGA_SERIAL_RX),  .UARX(UARX),   .IRQ_RX(uart0_irq), //Receiver
+        .UATX(UATX),  .SOut(FPGA_SERIAL_TX),  .IRQ_TX(uart1_irq) //Transmitter
     ) /* synthesis syn_noprune=1 */;
 
 
