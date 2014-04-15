@@ -1,6 +1,12 @@
 
+`ifndef MACROSAFE
+`define MACROSAFE
+`endif // required to get this to compile...
+`include "../base_util/Const.v"
+
 module ScanLineRunner #(
-    parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter LITTLEWORDIAN=1,  //Order of 32-bit WORDS within each 256-bit block
+    parameter SLR_COUNT=1       //Arbitrate multiple SLRs
 )(
     input           clk, rst,
 
@@ -13,15 +19,15 @@ module ScanLineRunner #(
     output  [127:0] wdf_din,
     output  [ 15:0] wdf_mask_din,
 
-//ScanRun control <=> Engine/GPU:
-    output          SLR_ready,
-    input           SLR_valid,
-    input   [ 31:0] SLR_frame,
-    input   [ 31:0] SLR_color_edge,
-    input   [ 31:0] SLR_color_fill,
-    input   [  9:0] SLR_row,
-    input   [  9:0] SLR_col_start,
-    input   [  9:0] SLR_col_finish
+//ScanRun control(s) <=> Engine/GPU (concatenated buses):
+    output [(SLR_COUNT)-1:0] SLRs_ready,
+    input  [(SLR_COUNT)-1:0]    SLRs_valid,
+    input  [(SLR_COUNT*32)-1:0] SLRs_frame,
+    input  [(SLR_COUNT*32)-1:0] SLRs_color_edge,
+    input  [(SLR_COUNT*32)-1:0] SLRs_color_fill,
+    input  [(SLR_COUNT*10)-1:0] SLRs_row,
+    input  [(SLR_COUNT*10)-1:0] SLRs_col_start,
+    input  [(SLR_COUNT*10)-1:0] SLRs_col_finish
 );
 
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
@@ -30,6 +36,42 @@ module ScanLineRunner #(
     always @(posedge clk) begin
         rst_r <= rst; //Internal reset, <rst>_r, unless really must sync-up release!
     end
+
+    wire SLR_MASTER_ready;
+    reg  [`log2(SLR_COUNT-1):0] live_SLR=0, next_SLR;
+    reg  [(SLR_COUNT)-1:0] ready_SLRs;
+
+    //Drive readyness only to one SLR
+    always @(live_SLR or SLR_MASTER_ready) begin:_SLR_RDY_
+        ready_SLRs = 0;
+        ready_SLRs[live_SLR] = SLR_MASTER_ready;
+    end
+    assign SLRs_ready = ready_SLRs;
+
+    //Next SLR selection (priority based)
+    always @(live_SLR or SLRs_valid) begin:_SLR_PRI_
+        integer idx;
+        next_SLR = live_SLR;
+        for (idx = (SLR_COUNT-1); idx >= 0; idx = idx - 1)
+            if (SLRs_valid[idx]) next_SLR = idx; //Lowest index wins
+    end
+
+    //Next SLR assignment (sticky...only change if current not "valid")
+    always @(posedge clk) begin:_SLR_REG_
+        if (rst_r) begin
+            live_SLR <= 0;
+        end else if (SLR_MASTER_ready & !SLRs_valid[live_SLR]) begin
+            live_SLR <= next_SLR;
+        end
+    end
+
+    wire        SLR_valid        = SLRs_valid     [ live_SLR ];
+    wire [31:0] SLR_frame        = SLRs_frame     [(live_SLR*32)+31 -: 32],
+                  SLR_color_fill = SLRs_color_fill[(live_SLR*32)+31 -: 32],
+                  SLR_color_edge = SLRs_color_edge[(live_SLR*32)+31 -: 32];
+    wire [ 9:0] SLR_row          = SLRs_row       [(live_SLR*10)+ 9 -: 10],
+                  SLR_col_start  = SLRs_col_start [(live_SLR*10)+ 9 -: 10],
+                  SLR_col_finish = SLRs_col_finish[(live_SLR*10)+ 9 -: 10];
 
     localparam
         MH_RSET     = 0, //Performing or coming out of reset     <=-._
@@ -91,7 +133,7 @@ module ScanLineRunner #(
     wire wdr_advance1 = (!wdf_full && !af_full);
     wire wdr_advance2 = (!wdf_full);
 
-    assign SLR_ready = (cs_M[MH_IDLE]);
+    assign SLR_MASTER_ready = (cs_M[MH_IDLE]);
     assign af_addr_din  = {6'b000000, cpu_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign af_wr_en     = (cs_M[MH_DDR1]);
     assign wdf_wr_en    = (cs_M[MH_DDR1] || cs_M[MH_DDR2]);

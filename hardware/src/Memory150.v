@@ -11,11 +11,6 @@
 // interface implemented in this module to design the FSM in your cache.
 //----------------------------------------------------------------------
 
-`ifndef MACROSAFE
-`define MACROSAFE
-`endif // required to get this to compile...
-`include "base_util/Const.v"
-
 module Memory150 #(
     parameter SCANLINERUNNER=1,
     parameter LITTLEWORDIAN=1, //Order of 32-bit words in each 256-bit DDR block (not byte order)
@@ -183,10 +178,10 @@ module Memory150 #(
     wire [ 31:0] elip_color;
     wire [  9:0] elip_point;
     wire         elip_color_valid;
-    wire         elip_x0_valid;
-    wire         elip_y0_valid;
-    wire         elip_x1_valid;
-    wire         elip_y1_valid;
+    wire         elip_xc_valid;
+    wire         elip_yc_valid;
+    wire         elip_a_valid;
+    wire         elip_b_valid;
     wire         elip_trigger;
     wire [ 31:0] elip_frame;
 
@@ -500,10 +495,10 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
         .EL_ready(elip_ready),
         .EL_color_valid(elip_color_valid),
         .EL_color      (elip_color),
-        .EL_x0_valid(elip_x0_valid),
-        .EL_y0_valid(elip_y0_valid),
-        .EL_x1_valid(elip_x1_valid),
-        .EL_y1_valid(elip_y1_valid),
+        .EL_xc_valid(elip_xc_valid),
+        .EL_yc_valid(elip_yc_valid),
+        .EL_a_valid (elip_a_valid),
+        .EL_b_valid (elip_b_valid),
         .EL_point   (elip_point),
         .EL_trigger(elip_trigger),
         .EL_frame  (elip_frame),
@@ -517,41 +512,23 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
         .GP_interrupt(gp_interrupt)
     );
 
-    localparam SLR_FF = 0,
-                SLR_LE = 1,
-                SLR_EL = 2,
-                SLR_LAST = SLR_EL;
+    localparam SLR_FF       = 0,
+                SLR_LE      = 1,
+                SLR_EL      = 2;
+    localparam  SLR__CNT = 3;
 
-    wire [0:SLR_LAST] SLR_ready;
-    wire SLR_MASTER_ready;
-    wire [0:SLR_LAST] SLR_valid;
-    wire [ 31:0] SLR_frame      [0:SLR_LAST];
-    wire [ 31:0] SLR_color_edge [0:SLR_LAST];
-    wire [ 31:0] SLR_color_fill [0:SLR_LAST];
-    wire [  9:0] SLR_row        [0:SLR_LAST];
-    wire [  9:0] SLR_col_start  [0:SLR_LAST];
-    wire [  9:0] SLR_col_finish [0:SLR_LAST];
-
-    reg  [`log2(SLR_LAST):0] live_SLR=0, next_SLR;
-
-    assign SLR_ready[SLR_FF] = (live_SLR == SLR_FF) ? SLR_MASTER_ready : 1'b0;
-    assign SLR_ready[SLR_LE] = (live_SLR == SLR_LE) ? SLR_MASTER_ready : 1'b0;
-    assign SLR_ready[SLR_EL] = (live_SLR == SLR_EL) ? SLR_MASTER_ready : 1'b0;
-
-    always @(*) begin //Next SLR assignment (priority based, not round-robin)
-        if      (SLR_valid[SLR_FF]) next_SLR = SLR_FF;
-        else if (SLR_valid[SLR_LE]) next_SLR = SLR_LE;
-        else if (SLR_valid[SLR_EL]) next_SLR = SLR_EL;
-        else next_SLR = live_SLR;
-    end
-
-    always @(posedge cpu_clk_g) begin
-        if (rst_cpu_bus) live_SLR <= 0;
-        else if (SLR_MASTER_ready & !SLR_valid[live_SLR]) live_SLR <= next_SLR;
-    end
+    wire [(SLR__CNT)-1:0] SLRs_ready;
+    wire [(SLR__CNT)-1:0] SLRs_valid;
+    wire [(SLR__CNT*32)-1:0] SLRs_frame;
+    wire [(SLR__CNT*32)-1:0] SLRs_color_edge;
+    wire [(SLR__CNT*32)-1:0] SLRs_color_fill;
+    wire [(SLR__CNT*10)-1:0] SLRs_row;
+    wire [(SLR__CNT*10)-1:0] SLRs_col_start;
+    wire [(SLR__CNT*10)-1:0] SLRs_col_finish;
 
     ScanLineRunner #(
-        .LITTLEWORDIAN(LITTLEWORDIAN)
+        .LITTLEWORDIAN(LITTLEWORDIAN),
+        .SLR_COUNT(SLR__CNT)
     ) scanlinerunner (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
@@ -564,14 +541,14 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
         .wdf_din     (bypass_wdf_din),
         .wdf_mask_din(bypass_wdf_mask_din),
     //SLR interface:
-        .SLR_ready(SLR_MASTER_ready),
-        .SLR_valid     (SLR_valid        [live_SLR]),
-        .SLR_frame     (SLR_frame        [live_SLR]),
-        .SLR_color_fill(SLR_color_fill   [live_SLR]),
-        .SLR_color_edge(SLR_color_edge   [live_SLR]),
-        .SLR_row       (SLR_row          [live_SLR]),
-        .SLR_col_start (SLR_col_start    [live_SLR]),
-        .SLR_col_finish(SLR_col_finish   [live_SLR])
+        .SLRs_ready(SLRs_ready),
+        .SLRs_valid     (SLRs_valid),
+        .SLRs_frame     (SLRs_frame),
+        .SLRs_color_fill(SLRs_color_fill),
+        .SLRs_color_edge(SLRs_color_edge),
+        .SLRs_row       (SLRs_row),
+        .SLRs_col_start (SLRs_col_start),
+        .SLRs_col_finish(SLRs_col_finish)
     );
 
 
@@ -595,14 +572,14 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
         .wdf_din     (filler_wdf_din),
         .wdf_mask_din(filler_wdf_mask_din),
     //SLR interface (write-only):
-        .SLR_ready(SLR_ready[SLR_FF]),
-        .SLR_valid(SLR_valid[SLR_FF]),
-        .SLR_frame     (SLR_frame      [SLR_FF]),
-        .SLR_color_fill(SLR_color_fill [SLR_FF]),
-        .SLR_color_edge(SLR_color_edge [SLR_FF]),
-        .SLR_row       (SLR_row        [SLR_FF]),
-        .SLR_col_start (SLR_col_start  [SLR_FF]),
-        .SLR_col_finish(SLR_col_finish [SLR_FF])
+        .SLR_ready(SLRs_ready           [SLR_FF]                    ),
+        .SLR_valid(SLRs_valid           [SLR_FF]                    ),
+        .SLR_frame     (SLRs_frame     [(SLR_FF*32)+31:(SLR_FF*32)] ),
+        .SLR_color_fill(SLRs_color_fill[(SLR_FF*32)+31:(SLR_FF*32)] ),
+        .SLR_color_edge(SLRs_color_edge[(SLR_FF*32)+31:(SLR_FF*32)] ),
+        .SLR_row       (SLRs_row       [(SLR_FF*10)+ 9:(SLR_FF*10)] ),
+        .SLR_col_start (SLRs_col_start [(SLR_FF*10)+ 9:(SLR_FF*10)] ),
+        .SLR_col_finish(SLRs_col_finish[(SLR_FF*10)+ 9:(SLR_FF*10)] )
     );
 
     // For CP5:
@@ -632,14 +609,14 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
         .wdf_din     (line_wdf_din),
         .wdf_mask_din(line_wdf_mask_din),
     //SLR interface (write-only):
-        .SLR_ready(SLR_ready[SLR_LE]),
-        .SLR_valid(SLR_valid[SLR_LE]),
-        .SLR_frame     (SLR_frame      [SLR_LE]),
-        .SLR_color_fill(SLR_color_fill [SLR_LE]),
-        .SLR_color_edge(SLR_color_edge [SLR_LE]),
-        .SLR_row       (SLR_row        [SLR_LE]),
-        .SLR_col_start (SLR_col_start  [SLR_LE]),
-        .SLR_col_finish(SLR_col_finish [SLR_LE])
+        .SLR_ready(SLRs_ready           [SLR_LE]                    ),
+        .SLR_valid(SLRs_valid           [SLR_LE]                    ),
+        .SLR_frame     (SLRs_frame     [(SLR_LE*32)+31:(SLR_LE*32)] ),
+        .SLR_color_fill(SLRs_color_fill[(SLR_LE*32)+31:(SLR_LE*32)] ),
+        .SLR_color_edge(SLRs_color_edge[(SLR_LE*32)+31:(SLR_LE*32)] ),
+        .SLR_row       (SLRs_row       [(SLR_LE*10)+ 9:(SLR_LE*10)] ),
+        .SLR_col_start (SLRs_col_start [(SLR_LE*10)+ 9:(SLR_LE*10)] ),
+        .SLR_col_finish(SLRs_col_finish[(SLR_LE*10)+ 9:(SLR_LE*10)] )
     );
 
     ElipseEngine #(
@@ -651,21 +628,21 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
         .EL_ready(elip_ready),
         .EL_color_valid(elip_color_valid),
         .EL_color      (elip_color),
-        .EL_x0_valid(elip_x0_valid),
-        .EL_y0_valid(elip_y0_valid),
-        .EL_x1_valid(elip_x1_valid),
-        .EL_y1_valid(elip_y1_valid),
+        .EL_xc_valid(elip_xc_valid),
+        .EL_yc_valid(elip_yc_valid),
+        .EL_a_valid (elip_a_valid),
+        .EL_b_valid (elip_b_valid),
         .EL_point   (elip_point),
         .EL_trigger(elip_trigger),
         .EL_frame  (elip_frame),
     //SLR interface (write-only):
-        .SLR_ready(SLR_ready[SLR_EL]),
-        .SLR_valid(SLR_valid[SLR_EL]),
-        .SLR_frame     (SLR_frame      [SLR_EL]),
-        .SLR_color_fill(SLR_color_fill [SLR_EL]),
-        .SLR_color_edge(SLR_color_edge [SLR_EL]),
-        .SLR_row       (SLR_row        [SLR_EL]),
-        .SLR_col_start (SLR_col_start  [SLR_EL]),
-        .SLR_col_finish(SLR_col_finish [SLR_EL])
+        .SLR_ready(SLRs_ready           [SLR_EL]                    ),
+        .SLR_valid(SLRs_valid           [SLR_EL]                    ),
+        .SLR_frame     (SLRs_frame     [(SLR_EL*32)+31:(SLR_EL*32)] ),
+        .SLR_color_fill(SLRs_color_fill[(SLR_EL*32)+31:(SLR_EL*32)] ),
+        .SLR_color_edge(SLRs_color_edge[(SLR_EL*32)+31:(SLR_EL*32)] ),
+        .SLR_row       (SLRs_row       [(SLR_EL*10)+ 9:(SLR_EL*10)] ),
+        .SLR_col_start (SLRs_col_start [(SLR_EL*10)+ 9:(SLR_EL*10)] ),
+        .SLR_col_finish(SLRs_col_finish[(SLR_EL*10)+ 9:(SLR_EL*10)] )
     );
 endmodule

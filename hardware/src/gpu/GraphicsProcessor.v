@@ -66,10 +66,10 @@ module GraphicsProcessor #(
     input           EL_ready,
     output          EL_color_valid,
     output  [ 31:0] EL_color,
-    output          EL_x0_valid,
-    output          EL_y0_valid,
-    output          EL_x1_valid,
-    output          EL_y1_valid,
+    output          EL_xc_valid,
+    output          EL_yc_valid,
+    output          EL_a_valid,
+    output          EL_b_valid,
     output  [  9:0] EL_point,
     output          EL_trigger,
     output  [ 31:0] EL_frame
@@ -269,11 +269,11 @@ module GraphicsProcessor #(
             LE_frame  = engine_frame;
 
     assign EL_color_valid = (hot_GOP_val && hot_GOP[`GOP_ELIP]),
-            EL_x0_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_X0)),
-            EL_y0_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_Y0)),
-            EL_x1_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_XX)),
-            EL_y1_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_YY)),
-            EL_trigger    = EL_y1_valid; //INST_trigger;
+            EL_xc_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_X0)),
+            EL_yc_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_Y0)),
+            EL_a_valid    = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_XX)),
+            EL_b_valid    = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_YY)),
+            EL_trigger    = EL_b_valid; //INST_trigger;
     assign EL_color   = engine_color,
             EL_point  = engine_point,
             EL_frame  = engine_frame;

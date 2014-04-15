@@ -45,10 +45,10 @@ module GraphicsProcessorTestbench;
     reg         EL_ready;
     wire        EL_color_valid;
     wire [31:0] EL_color;
-    wire        EL_x0_valid;
-    wire        EL_y0_valid;
-    wire        EL_x1_valid;
-    wire        EL_y1_valid;
+    wire        EL_xc_valid;
+    wire        EL_yc_valid;
+    wire        EL_a_valid;
+    wire        EL_b_valid;
     wire [ 9:0] EL_point;
     wire        EL_trigger;
     wire [31:0] EL_frame;
@@ -94,10 +94,10 @@ module GraphicsProcessorTestbench;
         .EL_ready(EL_ready),
         .EL_color_valid(EL_color_valid),
         .EL_color(EL_color),
-        .EL_x0_valid(EL_x0_valid),
-        .EL_y0_valid(EL_y0_valid),
-        .EL_x1_valid(EL_x1_valid),
-        .EL_y1_valid(EL_y1_valid),
+        .EL_xc_valid(EL_xc_valid),
+        .EL_yc_valid(EL_yc_valid),
+        .EL_a_valid(EL_a_valid),
+        .EL_b_valid(EL_b_valid),
         .EL_point(EL_point),
         .EL_trigger(EL_trigger),
         .EL_frame(EL_frame)
@@ -325,19 +325,19 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
                          EL_color[23:16], EL_color[15:8], EL_color[7:0]);
                 EL__color <= EL_color;
             end
-            if (EL_x0_valid) begin
+            if (EL_xc_valid) begin
                 $display(" ELIP: x0=%h (%0d)", EL_point, EL_point);
                 EL__x0 <= EL_point;
             end
-            if (EL_y0_valid) begin
+            if (EL_yc_valid) begin
                 $display(" ELIP: y0=%h (%0d)", EL_point, EL_point);
                 EL__y0 <= EL_point;
             end
-            if (EL_x1_valid) begin
+            if (EL_a_valid) begin
                 $display(" ELIP: x1=%h (%0d)", EL_point, EL_point);
                 EL__x1 <= EL_point;
             end
-            if (EL_y1_valid) begin
+            if (EL_b_valid) begin
                 $display(" ELIP: y1=%h (%0d)", EL_point, EL_point);
                 EL__y1 <= EL_point;
             end
@@ -356,8 +356,8 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
                 EL__countdown <= 3;
             end
         end else begin
-            if (EL_color_valid || EL_x0_valid || EL_y0_valid
-                    || EL_x1_valid || EL_y1_valid || EL_trigger)
+            if (EL_color_valid || EL_xc_valid || EL_yc_valid
+                    || EL_a_valid || EL_b_valid || EL_trigger)
                 ELOG_ERROR("ELIP", "Premature");
         end
     end
