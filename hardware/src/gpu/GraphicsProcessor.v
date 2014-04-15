@@ -26,25 +26,30 @@ module GraphicsProcessor #(
 )(
     input clk,
     input rst,
+
 //GraphicsProcessor interface:
     output          GP_ready,
     input           GP_valid,
     input   [ 31:0] GP_code,
     input   [ 31:0] GP_frame,
+    output reg      GP_fault,
     output  [  5:0] GP_procframe,
     output          GP_interrupt,
+
 //DDR FIFOs (read-only for GP cmd):
-    input           rdf_valid,
-    input           af_full,
-    input   [127:0] rdf_dout,
-    output          rdf_rd_en,
     output          af_wr_en,
     output  [ 30:0] af_addr_din,
+    input           af_full,
+    output          rdf_rd_en,
+    input           rdf_valid,
+    input   [127:0] rdf_dout,
+
 //FrameFiller interface:
     input           FF_ready,
     output          FF_valid,
     output  [ 31:0] FF_color,
     output  [ 31:0] FF_frame,
+
 //LineEngine interface:
     input           LE_ready,
     output          LE_color_valid,
@@ -56,6 +61,7 @@ module GraphicsProcessor #(
     output  [  9:0] LE_point,
     output          LE_trigger,
     output  [ 31:0] LE_frame,
+
 //ElipseEngine interface:
     input           EL_ready,
     output          EL_color_valid,
@@ -102,72 +108,74 @@ module GraphicsProcessor #(
         SS_YY       = 4; //  INST at SS_TOP
     localparam SS__LAST = 4;
 
-//FIFO-States:
-    localparam
-        FS_READY    = 0, //Can fetch if other conditions right
-    //TODO:Add FS_FETCH  (& FS_START???)
-        FS_READ1    = 1, //Awaiting 1st read 128-bits
-        FS_READ2    = 2; //Awaiting 2nd read 128-bits
-    localparam FS__LAST = 2;
-
 //Key State Registers
     reg  [ 1:0] ns_M, cs_M = MS_DEAD; //Master-State
     reg  [ 2:0] ns_S, cs_S = SS_TOP;  //Sub-State
     //TODO:One/Zero-hot MS_ & SS_ also
-    reg  [FS__LAST:0] ns_F, cs_F = (1<<FS_READY); //FIFO-State
     reg  [ 5:0] framebits;  //Insist on aligning with multiples of 0x0040_0000
     reg  [22:0] code_chunk; //256-bit chunk # within 256MB range of DDR (8 x 32-bit words each)
-    reg  [ 2:0] code_skips; //Offset of first 32-bit CODE within 256-bit chunk (skip on fifo read)
+    reg  [ 2:0] code_index; //Offset of 32-bit CODE within 256-bit chunk
 
-
-    wire fifo_valid;
-    wire ENGINES_ready;
-    wire INST_valid    = (fifo_valid && (cs_M==MS_PROC)); //TODO:"Reset" on !MS_PROC???
+    wire ENGINES_ready, chunk_valid;
+    wire INST_valid    = (chunk_valid && (cs_M==MS_PROC)); //TODO:"Reset" on !MS_PROC???
     wire CMD_advance   = (INST_valid && ENGINES_ready);
+    wire chunk_reset   = (rst_r || (cs_M==MS_IDLE)); //Reset chunk on IDLE to let pending read clear
+    wire chunk_advance = (!chunk_valid || (&code_index && CMD_advance));
+    wire [255:0] chunk_data;
 
 
 //INSTruction RAW decode (includes invalid/inactive signals)
-    wire [31:0] INST;
+    wire [ 7:0] code_shift  = (code_index << 5);
+    wire [31:0] INST        = (chunk_data >> code_shift);
     wire [ 7:0] INST_gop    = INST[`IX_INST_GOP];
     wire [31:0] INST_color  = {8'd0, INST[`IX_INST_COLOR]};
     wire [ 9:0] INST_pointX = INST[`IX_POINT_X];
     wire [ 9:0] INST_pointY = INST[`IX_POINT_Y];
 //  wire        INST_trigger = INST[`IX_POINT_TRIG]);
 
-
-//  reg  hot_GOP_err;
+    reg  hot_GOP_err;
     reg  [`GOP__LAST:0] hot_GOP_cal, hot_GOP_reg;
     wire [`GOP__LAST:0] hot_GOP;
     wire hot_GOP_sel, hot_GOP_val;
     assign hot_GOP_sel = (cs_S==SS_TOP); //Check INST_valid later after MUX
     assign hot_GOP_val = (CMD_advance && hot_GOP_sel);
-    always @(*) begin
-//      hot_GOP_err = 1'b0;
-        case (INST_gop) //If big/slow, maybe barrel-shift or ROM lookup.
-            `GOP_STOP, `GOP_FILL, `GOP_LINE, `GOP_ELIP:
-                hot_GOP_cal = (1 << INST_gop);
-            default: begin
-                hot_GOP_cal = `GOP_STOP;
-//              hot_GOP_err = 1'b1; //This is RAW signal
-            end
-        endcase
-    end
-    always @(posedge clk) if (hot_GOP_val)   hot_GOP_reg <= hot_GOP_cal;
-    assign hot_GOP         = (hot_GOP_sel) ? hot_GOP_cal :  hot_GOP_reg;
-
 
 //Triggers for state transitions & Mealy outputs (usually 1-cycle duration)
     //   T_DEAD   = INITIAL upon FPGA config
     wire T_RESET  = (rst_r); //TODO:OR with T_STOPS to piggyback on sync-reset???
-wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
-    wire T_READY  = (!rst_r && fifo_empty); //FIFO-State influences T_READY
+    wire T_READY  = (!rst_r && !rdf_rd_en); //Not ready until pending read clears
     wire T_START  = (GP_ready && GP_valid); //MASTER-State alone for ready/valid enable
     wire T_STOPS  = (hot_GOP_val && hot_GOP[`GOP_STOP]); //Sub-State triggers T_STOPS
 
+    reg  [5:0] procframe_r;
+    always @(posedge clk) begin
+        procframe_r <= `FRAME_BITS(GP_frame); //Pass NEXT value through, 1-cycle later!
+    end
 
     assign GP_ready     = (cs_M==MS_IDLE);
-    assign GP_procframe = `FRAME_BITS(GP_frame); //Pass NEXT value through! (was framebits)
+    assign GP_procframe = procframe_r;
     assign GP_interrupt = T_STOPS; //TODO:Ensure clean for most of 1-cycle
+
+    always @(*) begin
+        hot_GOP_cal = (1 << `GOP_STOP);
+        hot_GOP_err = 1'b1; //This is RAW signal
+        case (INST_gop) //If big/slow, maybe barrel-shift or ROM lookup.
+            `GOP_FILL, `GOP_LINE, `GOP_ELIP: begin
+                hot_GOP_cal = (1 << INST_gop);
+                hot_GOP_err = 1'b0;
+            end
+            `GOP_STOP: begin
+                hot_GOP_err = |INST; //Valid STOP must be all zeros
+            end
+        endcase
+    end
+    always @(posedge clk) begin
+        if (T_RESET || T_START) GP_fault <= 1'b0;
+        else if (hot_GOP_val && hot_GOP_err) GP_fault <= 1'b1;
+
+        if (hot_GOP_val) hot_GOP_reg <= hot_GOP_cal;
+    end
+    assign hot_GOP = (hot_GOP_sel) ? hot_GOP_cal :  hot_GOP_reg;
 
 
 //Sub-State machine & Mealy outputs: CMD_advance, INST_advance
@@ -187,9 +195,8 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
         //ENABLE:((cs_S!=SS_TOP)||(INST_gop==`GOP_LINE))&&CMD_advance
         //Optionally invert TOP in/out so reset state is all zeros
     end
-    //TODO:Make exception for GOP_STOP (wait during MS_RSET instead)
     always @(posedge clk) begin
-        if (T_RESET) cs_S <= SS_TOP;
+        if (cs_M==MS_RSET) cs_S <= SS_TOP;
         else if (CMD_advance) cs_S <= ns_S;
     end
 
@@ -198,77 +205,46 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
     always @(*) begin
         ns_M = cs_M; //Default: Hold prior state if UNASSIGNED
         case (cs_M)
-            MS_DEAD: if (T_RESET) ns_M = MS_RSET; //Redundant with machine reset
+            //MS_DEAD: if (T_RESET) ns_M = MS_RSET; //Redundant with machine reset
             MS_RSET: if (T_READY) ns_M = MS_IDLE;
             MS_IDLE: if (T_START) ns_M = MS_PROC;
             MS_PROC: if (T_STOPS) ns_M = MS_RSET;
         endcase
     end
     always @(posedge clk) begin
-        if (T_RESET) cs_M <= MS_RSET; else cs_M <= ns_M;
-    end
-    always @(posedge clk) begin
+        if (T_RESET) cs_M <= MS_RSET;
+        else cs_M <= ns_M;
+
         if (T_START) begin //Capture incoming values
-            //            GP-code[31:28] -- Ignore hi-nibble which likely specified D-Cache from CPU's POV
+            //            GP-code[31:28] -- Ignore hi-nibble (hopefully specified D-Cache from CPU's POV)
             code_chunk <= GP_code[27:5]; //Take enough to address a 256-bit-chunk in DDR
-            code_skips <= GP_code[ 4:2]; //Take 3-bits for 32-bit word offset within chunk
+            code_index <= GP_code[ 4:2]; //Take 3-bits for 32-bit word offset within chunk
             //            GP_code[ 1:0] -- Ignore lo 2-bits (would specify byte within a word)
             framebits <= `FRAME_BITS(GP_frame); //Either addr style
         end else begin
-            if (!af_full && af_wr_en) begin //Advance for next chunk
-                code_chunk <= (code_chunk + 1); //1 x "chunk" af-request -=> 2 x 128-bit rdf-response
-            end
-            //TODO:ADJUST "pending" by simultaneous INC x2 vs. DEC x1 on fifo_write
+            if (INST_advance) code_index <= (code_index + 1); //"index" -=> 32-bit word within chunk
+            if (chunk_advance) code_chunk <= (code_chunk + 1); //"chunk" -=> 2 x 128-bit
         end
     end
 
 
-//FIFO State-Machine
-    always @(*) begin
-        ns_F = cs_F; //Default: Hold prior state if UNASSIGNED
-        case (cs_F)
-        //TODO:New states on the way!
-            (1<<FS_READY): if (!af_full && af_wr_en) ns_F = (1<<FS_READ1);
-            (1<<FS_READ1): if (rdf_valid) ns_F = (1<<FS_READ2);
-            (1<<FS_READ2): if (rdf_valid) ns_F = (1<<FS_READY);
-        endcase
-    end
-    always @(posedge clk) begin
-        if (T_START) cs_F <= (1<<FS_READY); else cs_F <= ns_F;
-//$display("FIFO-STATE: %b  af_full:%b af_wr_en:%b rdf_valid:%b af_addr_din:%h",
-//         cs_F, af_full, af_wr_en, rdf_valid, af_addr_din);
-    end
 
-
-//FIFO fetching GPCode chunks & presenting as 32-bit INSTruction stream
-//TODO:Early first fetch address mux on T_START
-    wire fifo_full, prog_empty;
-    wire [ 4:0] wr_count;
-    wire fifo_low   = !(|wr_count[4:2] || fifo_full); //(wr_count < 4);
-    wire fifo_reset = (cs_M==MS_RSET);
-    wire fifo_write = (cs_M==MS_PROC) && (rdf_valid && rdf_rd_en);
-
-    //NOTE:Don't base af_wr_en on af_full when using RequestController!!!
-    assign af_wr_en     = (cs_M==MS_PROC) && cs_F[FS_READY] && fifo_low;
+//FETCH GPCode chunks & present as 32-bit INSTruction stream
     assign af_addr_din  = {6'd0, code_chunk, 2'b00}; //Chunk addr (64-bit "resolution")
-    assign rdf_rd_en    = (cs_F[FS_READ1] || cs_F[FS_READ2]);
+    assign af_wr_en     = (cs_M==MS_PROC) && !rdf_rd_en && chunk_advance;
+    //NOTE:Don't base af_wr_en on af_full when using RequestController!!!
 
-    gpcode_fifo GPCODE_FIFO (
-        .rst(fifo_reset),
-        .wr_clk(clk),         // input wr_clk
-//      .wr_rst(fifo_reset),  // input wr_rst
-        .full   (fifo_full),      // output full
-        .wr_en  (fifo_write),     // input wr_en
-        .din    (rdf_dout),   // input [127 : 0] din
-        .wr_data_count(wr_count), // output [4 : 0] wr_data_count
-
-        .rd_clk(clk),         // input rd_clk
-//      .rd_rst(fifo_reset),  // input rd_rst
-        .empty  (fifo_empty),     // output empty
-        .prog_empty(prog_empty),  // output prog_empty
-        .valid  (fifo_valid),     // output valid
-        .dout   (INST),           // output [31 : 0] dout
-        .rd_en  (INST_advance)    // input rd_en
+    DDRStage #(
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) ddr_stage (
+        .clk(clk), .rst(chunk_reset), //MS_RSET waits for !af_rdf_rd_en
+        .af_wr_en(af_wr_en), //Ignored if rdf_rd_en; resets chunk_valid regardless of af_full
+        .af_full(af_full),  //Advances if (!af_full && af_wr_en)
+        .rdf_rd_en(rdf_rd_en),
+        .rdf_valid(rdf_valid),
+        .rdf_dout(rdf_dout),
+        .chunk_valid(chunk_valid),
+        .chunk_data(chunk_data)
     );
 
 
@@ -278,7 +254,7 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
     wire [31:0] engine_color = INST_color;
     wire [31:0] engine_frame = {4'h1,framebits,22'd0};
 
-    assign FF_valid       = (hot_GOP_val && hot_GOP[`GOP_FILL]);
+    assign FF_valid   = (hot_GOP_val && hot_GOP[`GOP_FILL]);
     assign FF_color   = engine_color,
             FF_frame  = engine_frame;
 
@@ -307,13 +283,18 @@ wire fifo_empty; //TODO:FIFO-State embed all fifo info (also check FULL)
 
 //synthesis translate_off
     always @(posedge clk) if (!rst_r) begin
-        if (fifo_write)
-            $display("fifo-W: data=%h %h %h %h (full=%b count=%0d)",
-                     rdf_dout[127:96], rdf_dout[95:64], rdf_dout[63:32],
-                     rdf_dout[31:0], fifo_full, wr_count);
-        if (fifo_valid || INST_advance)
-            $display("fifo-R: %h gop=%h  valid=%b advance=%b (rst=%b empty=%b)",
-                     INST, INST_gop, fifo_valid, INST_advance, fifo_reset, fifo_empty);
+        if (af_wr_en)
+            $display("stage-F: addr=%h full=%b",
+                     af_addr_din, af_full
+            );
+        if (rdf_rd_en)
+            $display("stage-W: valid=%b data=%h.%h.%h.%h",
+                     rdf_valid, rdf_dout[127:96], rdf_dout[95:64],
+                     rdf_dout[63:32], rdf_dout[31:0]
+            );
+        if (INST_advance)
+            $display("stage-R: %h gop=%h  valid=%b advance=%b index=%0d",
+                     INST, INST_gop, INST_valid, INST_advance, code_index);
     end
 //synthesis translate_on
 

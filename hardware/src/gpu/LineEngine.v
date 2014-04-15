@@ -1,12 +1,11 @@
 
 module LineEngine #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, SCANLINERUNNER=1,
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, SCANLINERUNNER=0,
     parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
-    input           clk,
-    input           rst, //Synchronized internally
+    input           clk, rst,
 
-//Line control <=> CPU:
+//Line control <=> GPU:
     output          LE_ready, //Can start issuing values/trigger
     input           LE_color_valid, //LE_color capture
     input   [ 31:0] LE_color,   //8-zeros, 3 x 8-bit R/G/B
@@ -84,19 +83,21 @@ module LineEngine #(
 
 //Master-state Hotbit-index (as opposed to full Master-State register value)
     localparam
-        MH_RSET     = 0, //Performing or coming out of reset          <=-._
-        MH_IDLE     = 1, //Ready for initiation                            \
-        MH_PRE4     = 2, //Prep/Normalize (examine raw x/y traits)          \
-        MH_PRE3     = 3, //Prep/Normalize (examine raw x/y traits)           \
-        MH_PRE2     = 4, //Prep/Normalize (translate/normalize x/y)           \
-        MH_PRE1     = 5, //Prep/Normalize (finalize iteration params)         |
-        MH_RUN1     = 6, //1st-half DDR-write; next-iteration work-ahead <-=\?/
-        MH_RUN2     = 7; //2nd-half DDR-write; iteration finalize/advance ->_/
+        MH_RSET     = 0, //Performing or coming out of reset       <=-.___
+        MH_IDLE     = 1, //Ready for initiation                           \
+        MH_PRE5     = 2, //Prep/Normalize (examine raw x/y traits)         \
+        MH_PRE4     = 3, //Prep/Normalize (examine raw x/y traits)          \
+        MH_PRE3     = 4, //Prep/Normalize (examine raw x/y traits)           \
+        MH_PRE2     = 5, //Prep/Normalize (translate/normalize x/y)           \
+        MH_PRE1     = 6, //Prep/Normalize (finalize iteration params)         |
+        MH_RUN1     = 7, //1st-half DDR-write; next-iteration work-ahead <-=\?/
+        MH_RUN2     = 8; //2nd-half DDR-write; iteration finalize/advance ->_/
     localparam MH__LAST = MH_RUN2;
     localparam [MH__LAST:0] MS__DEAD = 0, //Initial or fault (requires reset)
         MS_RSET = (1<<MH_RSET), MS_IDLE = (1<<MH_IDLE),
-        MS_PRE4 = (1<<MH_PRE4), MS_PRE3 = (1<<MH_PRE3),
-        MS_PRE2 = (1<<MH_PRE2), MS_PRE1 = (1<<MH_PRE1),
+        MS_PRE5 = (1<<MH_PRE5), MS_PRE4 = (1<<MH_PRE4),
+        MS_PRE3 = (1<<MH_PRE3), MS_PRE2 = (1<<MH_PRE2),
+        MS_PRE1 = (1<<MH_PRE1),
         MS_RUN1 = (1<<MH_RUN1), MS_RUN2 = (1<<MH_RUN2);
 
 //Key State Registers
@@ -114,8 +115,8 @@ module LineEngine #(
 //TODO:Segregate combinational (compare/adder/etc.) vs. sequential ("enables")
     reg  decrX, decrY;
     wire adv1, adv2;
-    wire [15:0] difXu = ((decrX) ? x0 : x1) - ((decrX) ? x1 : x0); //Arrange >= 0 *in advance*
-    wire [15:0] difYu = ((decrY) ? y0 : y1) - ((decrY) ? y1 : y0); //Arrange >= 0 *in advance*
+    wire [15:0] difXu = ((decrX) ? x0_r : x1_r) - ((decrX) ? x1_r : x0_r); //Arrange >= 0 *in advance*
+    wire [15:0] difYu = ((decrY) ? y0_r : y1_r) - ((decrY) ? y1_r : y0_r); //Arrange >= 0 *in advance*
     wire longerY = (difYu > difXu); //TODO:Consider algebraic re-grouping
 
 //Master-State machine Next-States
@@ -123,7 +124,8 @@ module LineEngine #(
         ns_M = cs_M; //Default: Hold prior state if UNASSIGNED
         case (cs_M) //TODO:Create MM_xyz "masks" & use Parallel-Case approach
             MS_RSET: if (!rst_r) ns_M = MS_IDLE; //Come out with a full cycle
-            MS_IDLE: if (LE_trigger) ns_M = MS_PRE4;
+            MS_IDLE: if (LE_trigger) ns_M = MS_PRE5;
+            MS_PRE5: ns_M = MS_PRE4;
             MS_PRE4: ns_M = MS_PRE3;
             MS_PRE3: ns_M = MS_PRE2;
             MS_PRE2: ns_M = MS_PRE1;
@@ -144,11 +146,12 @@ module LineEngine #(
                 {a,b} <= 0; //Not much important about reset, better to not-care!
             end
             MS_IDLE: if (LE_trigger) begin
-                //Modest comparator delay imposed on predecessor as "setup" time,
-                {decrX,decrY} <= {(x1 < x0),(y1 < y0)}; // the dude must abide!
-//TODO:Apply x/y CLIP or at least detect when needed & apply next
+                //TODO:Apply x/y CLIP or at least detect when needed & apply next
             end
-        //From MS_PRE4 onward, use registered [x|y][0|1]_r directly
+        //From MS_PRE5 onward, use registered [x|y][0|1]_r directly
+            MS_PRE5: begin
+                {decrX,decrY} <= {(x1_r < x0_r),(y1_r < y0_r)};
+            end
             MS_PRE4: begin
                 {tempA,tempB} <= {difXu,difYu};
                 MODE_tran <= (longerY); //Translate axes to step along LONGER one

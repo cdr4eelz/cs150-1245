@@ -1,8 +1,9 @@
+
 module ScanLineRunner #(
     parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
-    input           clk,
-    input           rst, //Synchronized internally
+    input           clk, rst,
+
 //DDR FIFOs (write-only):
     input           af_full,
     input           wdf_full,
@@ -11,7 +12,8 @@ module ScanLineRunner #(
     output          wdf_wr_en,
     output  [127:0] wdf_din,
     output  [ 15:0] wdf_mask_din,
-//ScanRun control <=> Engine/CPU:
+
+//ScanRun control <=> Engine/GPU:
     output          SLR_ready,
     input           SLR_valid,
     input   [ 31:0] SLR_frame,

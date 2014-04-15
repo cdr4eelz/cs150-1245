@@ -1,11 +1,11 @@
+
 module FrameFiller #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, SCANLINERUNNER=0,
     parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
-    input           clk,
-    input           rst,
+    input           clk, rst,
 
-//Fill control <=> CPU:
+//Fill control <=> GPU:
     output          FF_ready, //Can start issuing values/trigger
     input           FF_valid,   //Trigger drawing (FF_frame & FF_color captured)
     input  [ 31:0]  FF_color,   //8-zeros, 3 x 8-bit R/G/B

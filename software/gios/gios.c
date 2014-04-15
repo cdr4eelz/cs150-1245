@@ -115,13 +115,15 @@ int main( void )
                 bufw_hex32u( stat.u32 );
                 uwrite_int8s(" PF#"); bufw_hex8u( stat.f.pf_feedframe );
                 uwrite_int8('-');
-                uwrite_int8( (stat.f.video_ready)  ? 'R' : 'r');
-                uwrite_int8( (stat.f.video_valid)  ? 'V' : 'v');
+                uwrite_int8( (stat.f.pf_active)  ? 'V' : 'v');
+                uwrite_int8( (stat.f.pf_fault)   ? '*' : ' ');
                 uwrite_int8s(" GF#"); bufw_hex8u( stat.f.gp_procframe );
                 uwrite_int8('-');
+                uwrite_int8( (stat.f.elipse_ready) ? 'E' : 'e');
                 uwrite_int8( (stat.f.line_ready)   ? 'L' : 'l');
                 uwrite_int8( (stat.f.filler_ready) ? 'F' : 'f');
                 uwrite_int8( (stat.f.gp_ready)     ? 'G' : 'g');
+                uwrite_int8( (stat.f.gp_fault)     ? '*' : ' ');
                 uwrite_int8s(" SF:"); bufw_hex32u( (uint32_t)sw_frame );
                 bufw_newline();
                 uwrite_int8s(" hw:"); bufw_hex32u( (uint32_t)hw_color );

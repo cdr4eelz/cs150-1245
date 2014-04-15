@@ -28,9 +28,10 @@ module PixelFeeder #(
     output          video_valid,
     output [ 23:0]  video,
 // FRAME control <=> CPU @cpu_clk_g:
-    output [  5:0]  PF_feedframe, //Frame being actively used for the feed
     input           PF_valid, //Signal new PF_frame is to be captured this clock cycle
     input  [ 31:0]  PF_frame, //Address or Frame# for base of NEXT frame once this one is done
+    output          PF_active, PF_fault,
+    output [  5:0]  PF_feedframe, //Frame being actively used for the feed
     output          PF_interrupt //1-cycle pulse after frame transition (except startup frame)
 );
 
@@ -132,6 +133,36 @@ module PixelFeeder #(
         .dout(feeder_raw), //NOTE: First-word-fallthrough but no "valid" signal avail!
         .empty(feeder_empty)
     );
+
+//FAULT and ACTVE detection
+    reg  video_fault_dvi, video_fault_cpu;
+    always @(posedge dvi_clk_g) begin
+        if (dvi_rst_g) video_fault_dvi <= 1'b0;
+        else if (video_ready && isRunning && feeder_empty) video_fault_dvi <= 1'b1;
+    end
+    always @(posedge cpu_clk_g) begin
+        if (cpu_rst_g) video_fault_cpu <= 1'b0;
+        else if (feeder_den && feeder_full) video_fault_cpu <= 1'b1;
+    end
+
+    (* EQUIVALENT_REGISTER_REMOVAL="OFF" *)
+    reg  [7:0] video_active_dvi, video_active_cpu;
+    (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",
+       ASYNC_REG="TRUE", OPTIMIZE="OFF" *)
+    reg  video_active_clkCPU, video_fault_clkCPU;
+    reg  video_active,        video_fault;
+
+    always @(posedge dvi_clk_g) begin
+        video_active_dvi[7:0] <= {video_active_dvi[6:0], (video_ready && video_valid)};
+    end
+    always @(posedge cpu_clk_g) begin
+        video_active_clkCPU   <= |video_active_dvi;
+        video_active_cpu[7:0] <= {video_active_cpu[6:0], video_active_clkCPU};
+        video_active          <= |video_active_cpu || video_active_clkCPU;
+        video_fault_clkCPU    <= video_fault_dvi;
+        video_fault           <= video_fault_cpu || video_fault_clkCPU;
+    end
+    assign PF_active = video_active, PF_fault = video_fault;
 
 
 generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD

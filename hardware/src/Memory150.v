@@ -192,13 +192,14 @@ module Memory150 #(
 
 // Extra feedback status from graphics controllers
     wire [  5:0] pf_feedframe, gp_procframe;
-    wire         gp_ready;
+    wire         pf_active, pf_fault, gp_fault, gp_ready;
 
     assign graphics_status = {
         2'b00, pf_feedframe[5:0],
         8'b0000_0000, //Maybe for overlay stuff later
         2'b00, gp_procframe[5:0], //TODO:Count video_xyz activity, not snapshot
-        video_ready, video_valid, 2'b00, elip_ready, line_ready, filler_ready, gp_ready
+        pf_active, pf_fault, gp_fault, 1'b0,
+            elip_ready, line_ready, filler_ready, gp_ready
     };
 
 wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use separate scope)
@@ -460,6 +461,8 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
     // FRAME control <=> CPU:
         .PF_frame(cpu_pf_frame),
         .PF_valid(cpu_pf_valid),
+        .PF_active(pf_active),
+        .PF_fault(pf_fault),
         .PF_feedframe(pf_feedframe),
         .PF_interrupt(frame_interrupt)
     );
@@ -509,6 +512,7 @@ wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use se
         .GP_valid(cpu_gp_valid),
         .GP_frame(cpu_gp_frame),
         .GP_code (cpu_gp_code),
+        .GP_fault(gp_fault),
         .GP_procframe(gp_procframe),
         .GP_interrupt(gp_interrupt)
     );

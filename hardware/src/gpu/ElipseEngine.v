@@ -5,7 +5,7 @@ module ElipseEngine #(
 )(
     input           clk, rst,
 
-//Line control <=> CPU:
+//Elipse control <=> GPU:
     output          EL_ready, //Can start issuing values/trigger
     input           EL_color_valid, //EL_color capture
     input   [ 31:0] EL_color,   //8-zeros, 3 x 8-bit R/G/B
@@ -35,7 +35,7 @@ module ElipseEngine #(
         rst_r <= rst; //Internal reset, <rst>_r, unless really must sync-up release!
     end
 
-// Manage line values (each is a register with RVA style "set")
+// Manage elipse values (each is a register with RVA style "set")
                 //Grabbed @clk & trigger  //MUXed to expose value @trigger
     reg  [ 5:0] framebits_r,              framebits;
     reg  [31:0] color_r,                  color;
@@ -44,7 +44,7 @@ module ElipseEngine #(
         if (rst_r) begin //Internal reset (don't bog global rst unless needed)
             {framebits_r, color_r  } <= 0;
             {x0_r,y0_r,   x1_r,y1_r} <= 0;
-        end else if (EL_ready) begin //Convenient "enable" line (redundant)
+        end else if (EL_ready) begin //Convenient "enable" elipse (redundant)
             {framebits_r, color_r  } <= {framebits, color}; //Feedback muxed vals
             {x0_r,y0_r,   x1_r,y1_r} <= {x0,y0,     x1,y1}; // since available.
         end
@@ -188,7 +188,7 @@ module ElipseEngine #(
     always @(posedge clk) begin
         if (EL_ready && EL_trigger) begin
             #1;
-            $display("[=LINE=]: frame=%h color=%h (%0d,%0d,%0d)", framebits,
+            $display("[=ELIP=]: frame=%h color=%h (%0d,%0d,%0d)", framebits,
                      color, color[23:16], color[15:8], color[7:0]);
             $display("        : (%4d,%4d)=>(%4d,%4d)  (%h,%h)=>(%h,%h)",
                      x0,y0, x1,y1,  x0,y0, x1,y1);
