@@ -6,16 +6,16 @@
 //MEMORY MAPPED CONTROLS
 #define PF_FRAME  (*((gframe_pv volatile *)0x80000050)) //WRITE:PixelFeeder source frame addr/num
 #define GP_FRAME  (*((gframe_pv volatile *)0x80000054)) //WRITE:GraphicsProcessor frame addr/num
-#define GP_GCODE  (*((gpcode_p volatile *)0x80000058)) //WRITE:Set code-addr, trigger GP now!
-#define GP_STATE  (*((gstate_pv)0x8000005C)) //READ:Status of PIX,GP,etc.
+#define GP_GCODE  (*((gpcode_p  volatile *)0x80000058)) //WRITE:Set code-addr, trigger GP now!
+#define GP_STATE  (*((gstate_pv           )0x8000005C)) //READ:Status of PIX,GP,etc.
 
 //MEMORY FIXED GLOBAL TEMPORARIES
 #define GPTEMP_PTR    ((gpcode_p)0x10003000) //FIXED location "global"
-#define GPTEMP_SZW    (0x00000020)           //  32-words is...
-#define GPTEMP_SZB    ((GPTEMP_SZW) << 2)   //  128-bytes
+#define GPTEMP_SZW    (0x00000020)          //  32-words is...
+#define GPTEMP_SZB    ((GPTEMP_SZW) << 2)  //  128-bytes
 
 
-// DVI Mode: VESA 800x600 pixels @72Hz
+// DVI Mode: VESA 800x600 pixels @72Hz (***INCOMPLETE/INCORRECT***)
 #define PIX_SIZEB     (4)
 #define COL_SIZEP     (0x0320)      //800P
 #define COL_SIZEB     (4*COL_SIZEP)             //3200B (0x0C80)
@@ -44,21 +44,19 @@
 
 struct __attribute__ ((aligned (4), packed)) gstate_s {
 /*  assign graphics_status = {
-        2'b00, pf_feedframe[5:0],
+        pf_fault, pf_dormant, pf_feedframe[5:0],
         8'b0000_0000, //Maybe for overlay stuff later
-        2'b00, gp_procframe[5:0], //TODO:Count video_xyz activity, not snapshot
-        pf_active, pf_fault, gp_fault, 1'b0,
-            elip_ready, line_ready, filler_ready, gp_ready
+        gp_fault, 1'b0, gp_procframe[5:0],
+        4'b0000, elip_ready, line_ready, filler_ready, gp_ready
     }; */
-    unsigned UNUSED_1:2;
+    unsigned pf_fault:1;
+        unsigned pf_dormant:1;
         unsigned pf_feedframe:6;    //End Byte#1
-    unsigned UNUSED_2:8;            //End Byte#2
-    unsigned UNUSED_3:2;
+    unsigned UNUSED_1a:8;           //End Byte#2
+    unsigned gp_fault:1;
+        unsigned UNUSED_2a:1;
         unsigned gp_procframe:6;    //End Byte#3
-    unsigned pf_active:1;
-        unsigned pf_fault:1;
-        unsigned gp_fault:1;
-        unsigned UNUSED_4:1;
+    unsigned UNUSED_3a:4;
         unsigned elipse_ready:1;
         unsigned line_ready:1;
         unsigned filler_ready:1;
@@ -133,16 +131,20 @@ typedef union gpcode_u {
 #define GOP_FILL    ((uint8_t) 0x01)
 #define GOP_LINE    ((uint8_t) 0x02)
 #define GOP_ELIP    ((uint8_t) 0x03)
+#define GOP_BACK    ((uint8_t) 0x04)
+#define GOP_CLIP    ((uint8_t) 0x05)
 
-#define CMD_STOP()      CMD_rgb(GOP_STOP, 0    ) //No trailing words
-#define CMD_FILL(C)     CMD_rgb(GOP_FILL, C.u32) //No trailing words
-#define CMD_LINE(C)     CMD_rgb(GOP_LINE, C.u32) //Then 2 x CMD_point
-#define CMD_ELIP(C)     CMD_rgb(GOP_ELIP, C.u32) //Then 2 x CMD_point
+#define CMD_STOP()    CMD_rgb(GOP_STOP, 0 ) //ZEROS; No trailing words
+#define CMD_FILL(_C)  CMD_rgb(GOP_FILL, _C) //COLOR; No trailing words
+#define CMD_LINE(_C)  CMD_rgb(GOP_LINE, _C) //COLOR; 2 x CMD_point (X0,Y0,X1,Y1)
+#define CMD_ELIP(_C)  CMD_rgb(GOP_ELIP, _C) //COLOR; 2 x CMD_point (XC,YC,A,B)
+#define CMD_BACK(_C)  CMD_rgb(GOP_BACK, _C) //COLOR; No trailing words
+#define CMD_CLIP(_P)  CMD_rgb(GOP_CLIP, _P) //PARMS; 2 x CMD_point (L,T,R,B)
 
-#define CMD_rgb(OP,RGB) ({const cmd_rgb_t c={.gop=(OP),.rgb=(RGB)};          c;})
-#define CMD_pnt(X,Y)    ({const cmd_pnt_t p={.flags=0,.x=(X),._u2=0,.y=(Y)}; p;})
-#define CMD32_rgb(OP,U24) ((uint32_t)( (((OP)& 0x0FF)<<24) | ((U24)& 0x0FFFFFF) ))
-#define CMD32_pnt(X,Y)    ((uint32_t)( (((X)& 0x03FF)<<16) | (  (Y)&    0x03FF) ))
+#define CMD_rgb(_OP,_RGB) ({const cmd_rgb_t c={.gop=(_OP),.rgb=(_RGB)};          c;})
+#define CMD_pnt(_X,_Y)    ({const cmd_pnt_t p={.flags=0,.x=(_X),._u2=0,.y=(_Y)}; p;})
+#define CMD32_rgb(_OP,_U24) ((uint32_t)( (((_OP)& 0x0FF)<<24) | ((_U24)& 0x0FFFFFF) ))
+#define CMD32_pnt(_X,_Y)    ((uint32_t)( (((_X)& 0x03FF)<<16) | (  (_Y)&    0x03FF) ))
 
 gpcode_p hw_OpRGB_PP_S(
     gpcode_p pINST, //NULL uses GPTEMP_PTR & launchs single cmd pronto
@@ -152,46 +154,57 @@ gpcode_p hw_OpRGB_PP_S(
 
 extern const cmd_pnt_t pnt_null;
 
-#define hwfill(_C)                             \
-    hw_OpRGB_PP_S( NULL, CMD_rgb(GOP_FILL, _C), \
+#define hwfill(_C)                      \
+    hw_OpRGB_PP_S( NULL, CMD_FILL(_C),   \
     pnt_null, pnt_null)
-#define hwline(_C,_X0,_Y0,_X1,_Y1)             \
-    hw_OpRGB_PP_S( NULL, CMD_rgb(GOP_LINE, _C), \
+#define hwline(_C,_X0,_Y0,_X1,_Y1)      \
+    hw_OpRGB_PP_S( NULL, CMD_LINE(_C),   \
     CMD_pnt(_X0,_Y0), CMD_pnt(_X1,_Y1))
-#define hwelipse(_C,_XC,_YC,_RX,_RY)           \
-    hw_OpRGB_PP_S( NULL, CMD_rgb(GOP_ELIP, _C), \
-    CMD_pnt(_XC,_YC), CMD_pnt(_RX,_RY))
+#define hwelip(_C,_XC,_YC,_A,_B)        \
+    hw_OpRGB_PP_S( NULL, CMD_ELIP(_C),   \
+    CMD_pnt(_XC,_YC), CMD_pnt(_A,_B))
+#define hwback(_C)                      \
+    hw_OpRGB_PP_S( NULL, CMD_BACK(_C),   \
+    pnt_null, pnt_null)
+#define hwclip(_P,_L,_T,_R,_B)          \
+    hw_OpRGB_PP_S( NULL, CMD_CLIP(_P),   \
+    CMD_pnt(_L,_T), CMD_pnt(_R,_B))
 
 /*
-void hwfill  (color_t color);
-void hwline  (color_t color,
-                uint16_t x0, uint16_t y0,
-                uint16_t x1, uint16_t y1);
-void hwelipse(color_t color,
-                uint16_t xc, uint16_t yc,
-                uint16_t rx, uint16_t ry);
+void hwfill(color_t color);
+void hwline(color_t color,
+              uint16_t x0, uint16_t y0,
+              uint16_t x1, uint16_t y1);
+void hwelip(color_t color,
+              uint16_t xc, uint16_t yc,
+              uint16_t a,  uint16_t b);
+void hwback(color_t color);
+void hwclip(uint32_t parms,
+              uint16_t l,  uint16_t t,
+              uint16_t r,  uint16_t b);
 */
 
-void swfill  (gframe_pv frame, color_t color);
-void swline  (gframe_pv frame, color_t color,
-                uint16_t x0, uint16_t y0,
-                uint16_t x1, uint16_t y1);
-void swpixel (gframe_pv frame, color_t color,
-                uint16_t x,  uint16_t y);
-void swcircle(gframe_pv frame, color_t color,
-                uint16_t xc, uint16_t yc,
-                uint16_t r);
-void swelipse(gframe_pv frame, color_t color,
-                uint16_t xc, uint16_t yc,
-                uint16_t rx, uint16_t ry);
+void swfill(gframe_pv frame, color_t color);
+void swline(gframe_pv frame, color_t color,
+              uint16_t x0, uint16_t y0,
+              uint16_t x1, uint16_t y1);
+void swelip(gframe_pv frame, color_t color,
+              uint16_t xc, uint16_t yc,
+              uint16_t a,  uint16_t b);
 
-void swcircle_old(gframe_pv frame, color_t color,
-                    uint16_t xc, uint16_t yc,
-                    uint16_t r);
-void swpixel_4way(gframe_pv fp, color_t color,
+void swcirc(gframe_pv frame, color_t color,
+              uint16_t xc, uint16_t yc,
+              uint16_t r);
+void swcirc_old(gframe_pv frame, color_t color,
+                  uint16_t xc, uint16_t yc,
+                  uint16_t r);
+
+void swpixl(gframe_pv frame, color_t color,
+              uint16_t x,  uint16_t y);
+void swpixl_4way(gframe_pv fp, color_t color,
                     uint16_t xc, uint16_t yc,
                     uint16_t ox, uint16_t oy);
-void swpixel_8way(gframe_pv fp, color_t color,
+void swpixl_8way(gframe_pv fp, color_t color,
                     uint16_t xc, uint16_t yc,
                     uint16_t ox, uint16_t oy);
 

@@ -19,36 +19,36 @@ module FrameFillerTestbench;
     reg  [ 31:0]    FF_color; // 8-bits zeros then 8-bit each for RGB
     reg  [ 31:0]    FF_frame; // Frame base (clipped to multiple of 0x0040_0000)
     // FIFO connections
-    reg             af_full;
-    wire            af_wr_en;
-    wire [ 30:0]    af_addr_din;
+    reg             caf_full;
+    wire            caf_wren;
+    wire [ 30:0]    caf_addr;
     reg             wdf_full;
-    wire            wdf_wr_en;
-    wire [ 15:0]    wdf_mask_din;
-    wire [127:0]    wdf_din;
+    wire            wdf_wren;
+    wire [ 15:0]    wdf_mask;
+    wire [127:0]    wdf_data;
 
 
     wire [  9:0]    x, y;
     reg  [  2:0]    mask;
 
     always@(*) begin
-        if(af_wr_en) begin
-            if(wdf_mask_din[15:12] == 4'h0) mask = 3'h0;
-            else if(wdf_mask_din[11:8] == 4'h0) mask = 3'h1;
-            else if(wdf_mask_din[7:4] == 4'h0) mask = 3'h2;
-            else if(wdf_mask_din[3:0] == 4'h0) mask = 3'h3;
+        if(caf_wren) begin
+            if(wdf_mask[15:12] == 4'h0) mask = 3'h0;
+            else if(wdf_mask[11:8] == 4'h0) mask = 3'h1;
+            else if(wdf_mask[7:4] == 4'h0) mask = 3'h2;
+            else if(wdf_mask[3:0] == 4'h0) mask = 3'h3;
             else mask = 3'h0;
         end else begin
-            if(wdf_mask_din[15:12] == 4'h0) mask = 3'h4;
-            else if(wdf_mask_din[11:8] == 4'h0) mask = 3'h5;
-            else if(wdf_mask_din[7:4] == 4'h0) mask = 3'h6;
-            else if(wdf_mask_din[3:0] == 4'h0) mask = 3'h7;
+            if(wdf_mask[15:12] == 4'h0) mask = 3'h4;
+            else if(wdf_mask[11:8] == 4'h0) mask = 3'h5;
+            else if(wdf_mask[7:4] == 4'h0) mask = 3'h6;
+            else if(wdf_mask[3:0] == 4'h0) mask = 3'h7;
             else mask = 3'h0;
         end
     end
 
-    assign x = {af_addr_din[8:2], mask};
-    assign y = af_addr_din[18:9];
+    assign x = {caf_addr[8:2], mask};
+    assign y = caf_addr[18:9];
 
     FrameFiller #(
         .SCANLINERUNNER(0),
@@ -56,13 +56,13 @@ module FrameFillerTestbench;
     ) DUT (
         .clk(Clock),
         .rst(rst),
-        .af_full(af_full),
-        .af_wr_en(af_wr_en),
-        .af_addr_din(af_addr_din),
+        .caf_full(caf_full),
+        .caf_wren(caf_wren),
+        .caf_addr(caf_addr),
         .wdf_full(wdf_full),
-        .wdf_wr_en(wdf_wr_en),
-        .wdf_din(wdf_din),
-        .wdf_mask_din(wdf_mask_din),
+        .wdf_wren(wdf_wren),
+        .wdf_data(wdf_data),
+        .wdf_mask(wdf_mask),
         .FF_ready(FF_ready),
         .FF_valid(FF_valid),
         .FF_color(FF_color),
@@ -76,13 +76,13 @@ module FrameFillerTestbench;
     initial begin
         #(Cycle);
         @(posedge Clock);
-        af_full = 1'b1;
+        caf_full = 1'b1;
         wdf_full = 1'b1;
         FF_valid = 1'b0;
         rst = 1'b1;
         #(10*Cycle);
         rst = 1'b0;
-        af_full = 1'b0;
+        caf_full = 1'b0;
         wdf_full = 1'b0;
 
 $display("FrameFiller: Fake memory...");
@@ -110,7 +110,7 @@ $display("fill-TB: color=%h  frame=%h", FF_color, FF_frame);
         FF_frame = 32'bz;
         #(Cycle);
         while (!FF_ready) begin
-            if (wdf_wr_en && wdf_mask_din != 16'hFFFF) begin
+            if (wdf_wren && wdf_mask != 16'hFFFF) begin
 $display("fill-TB: %4d %4d", x, y);
             end
             #(Cycle);

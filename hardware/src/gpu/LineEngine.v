@@ -1,7 +1,7 @@
 
 module LineEngine #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, SCANLINERUNNER=0,
-    parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
+    parameter SCANLINERUNNER=0, LITTLEWORDIAN=1
 )(
     input           clk, rst,
 
@@ -18,13 +18,13 @@ module LineEngine #(
     input   [ 31:0] LE_frame,   //Frame-base (modulo 0x0040_0000)
 
 //DDR FIFOs (write-only): [if !SCANLINERUNNER]
-    input           af_full,
+    input           caf_full,
     input           wdf_full,
-    output          af_wr_en,
-    output  [ 30:0] af_addr_din,
-    output          wdf_wr_en,
-    output  [127:0] wdf_din,
-    output  [ 15:0] wdf_mask_din,
+    output          caf_wren,
+    output  [ 30:0] caf_addr,
+    output          wdf_wren,
+    output  [127:0] wdf_data,
+    output  [ 15:0] wdf_mask,
 
 //SLR control (write-only): [if SCANLINERUNNER]
     input           SLR_ready,
@@ -207,11 +207,11 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
     assign adv1   = SLR_ready, //Used iif MH_RUN1 implying SLR_valid
             adv2  = 1'b1;
 
-    assign af_wr_en       = 1'b0,
-            af_addr_din   = 31'bx,
-            wdf_wr_en     = 1'b0,
-            wdf_din       = 128'bx,
-            wdf_mask_din  = 16'bx;
+    assign caf_wren       = 1'b0,
+            caf_addr   = 31'bx,
+            wdf_wren     = 1'b0,
+            wdf_data       = 128'bx,
+            wdf_mask  = 16'bx;
 
 end else begin:_NO_SLR_
 
@@ -222,12 +222,12 @@ end else begin:_NO_SLR_
     wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
     wire [ 2:0] offset_pixel  = (LITTLEWORDIAN) ? x[2:0] : ~x[2:0];
 
-    assign af_addr_din  = {6'b000000, cpu_addr[27:3]}, //Turn into 31-bit "DoubleWord" or DDR-address
-            wdf_mask_din = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} },
-            wdf_din      = {4{color_r}}, //Replicate same color on all 4 pixels of both writes
-            af_wr_en     = (cs_M[MH_RUN1]),
-            wdf_wr_en    = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
-    assign adv1 = (!wdf_full && !af_full),
+    assign caf_addr  = {6'b000000, cpu_addr[27:3]}, //Turn into 31-bit "DoubleWord" or DDR-address
+            wdf_mask = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} },
+            wdf_data      = {4{color_r}}, //Replicate same color on all 4 pixels of both writes
+            caf_wren     = (cs_M[MH_RUN1]),
+            wdf_wren    = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
+    assign adv1 = (!wdf_full && !caf_full),
             adv2 = (!wdf_full);
 
     always @(*) begin
@@ -250,8 +250,8 @@ end endgenerate
 /*
     initial $monitor("RT:%b/%b C/N:%b/%b (%0d,%0d)->(%0d,%0d)/(%0d,%0d) %h/%b (%h) W%b/%b",
                      rst,LE_trigger, cs_M,ns_M, a0,b0, a1,b1, x,y,
-                     af_addr_din, maskW, wdf_mask_din,
-                     af_wr_en, wdf_wr_en);
+                     caf_addr, maskW, wdf_mask,
+                     caf_wren, wdf_wren);
 */
     always @(posedge clk) begin
         if (LE_ready && LE_trigger) begin

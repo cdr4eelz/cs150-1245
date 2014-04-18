@@ -16,8 +16,8 @@ module MIPS150 #(
     output [ 3: 0]  _WriteMask,
 
 // Interrupts
-    input           frame_interrupt,
-    input           gp_interrupt,
+    input           pf_irq,
+    input           gp_irq,
     input           uart0_irq, uart1_irq
 );
 
@@ -142,8 +142,8 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         .InterruptHandled(!stall && WAS_ISR), //IN (Acknowledge the ISR is happening)
         .InterruptRequest(BRA_IRQPending_DX2F_), //OUT (Like a branch to fixed address)
         .UART0Request(uart0_irq), .UART1Request(uart1_irq), //IN (edge detect "pulse")
-        .PixelFeederRequest(frame_interrupt),
-        .GraphicsProcessorRequest(gp_interrupt)
+        .PixelFeederRequest(pf_irq),
+        .GraphicsProcessorRequest(gp_irq)
     );
 
     // Declare outputs of DX stage

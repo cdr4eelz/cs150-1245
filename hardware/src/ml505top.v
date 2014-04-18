@@ -67,7 +67,6 @@ module ml505top #(
     //Debug lines
 //  wire [31:0] DBG_MEM150; //TODO:Use hierarchical name based "tap" instead
 
-
     // Clocking (PLL/DCM/DLL) & Reset & Stall
     wire user_clk_g, pll_lock, init_done, sram_locked;
     wire cpu_clk_g, dvi_clk_g, clk200_g, clk0_g, clk90_g, clkdiv0_g;
@@ -79,9 +78,7 @@ module ml505top #(
         // synthesis attribute max_fanout of rst_dvi_bus_g is 10
     wire stall_top /* synthesis syn_maxfan = 10 */;
         // synthesis attribute max_fanout of stall_top is 10
-    wire toggle_stall, stall_dip;
-    wire button_reset;
-
+    wire toggle_stall, stall_dip, button_reset;
 
     // Memory150
     wire [31:0] dcache_addr,    icache_addr;
@@ -89,19 +86,16 @@ module ml505top #(
     wire        dcache_re,      icache_re;
     wire [31:0] dcache_din,     icache_din;
     wire [31:0] dcache_dout,    icache_dout;
-    wire        stall_cache, stall_dcache, stall_icache;
-    wire        video_ready;
-    wire        video_valid;
+//  wire        stall_cache;
+    wire        stall_dcache,   stall_icache;
+    wire        video_ready, video_valid;
     wire [23:0] video;
-    wire [31:0] pf_frame;
-    wire        pf_valid;
-    wire        frame_interrupt;
-    wire [31:0] gp_code;
-    wire [31:0] gp_frame;
-    wire        gp_valid;
-    wire        gp_interrupt;
-    wire [31:0] graphics_status;
-//  wire        fb0; ???Was this like pf_frame???
+//  wire        fb0; ???Was this "framebuffer0" like pf_frame???
+    wire        gp_ready;
+    wire [31:0] pf_frame,   gp_frame,   gp_code;
+    wire        pf_fvalid,  gp_fvalid,  gp_cvalid;
+    wire        pf_irq,     gp_irq;
+    wire [15:0] pf_status,  gp_status;
 
     Memory150 #(
         .SIM_ONLY(1'b0)
@@ -134,35 +128,24 @@ module ml505top #(
         .DDR2_RAS_B (DDR2_RAS_B),
         .DDR2_WE_B  (DDR2_WE_B),
     // Cache <=> CPU interface:
-        .dcache_addr(dcache_addr),
-        .icache_addr(icache_addr),
-        .dcache_we  (dcache_we  ),
-        .icache_we  (icache_we  ),
-        .dcache_re  (dcache_re  ),
-        .icache_re  (icache_re  ),
-        .dcache_din (dcache_din ),
-        .icache_din (icache_din ),
-        .dcache_dout(dcache_dout),
-        .icache_dout(icache_dout),
-        .dcache_stall(stall_dcache),
-        .icache_stall(stall_icache),
-        .stall      (stall_cache),
-    // DVI driver:
+        .dcache_addr(dcache_addr), .icache_addr(icache_addr),
+        .dcache_we  (dcache_we  ), .icache_we  (icache_we  ),
+        .dcache_re  (dcache_re  ), .icache_re  (icache_re  ),
+        .dcache_din (dcache_din ), .icache_din (icache_din ),
+        .dcache_dout(dcache_dout), .icache_dout(icache_dout),
+        .stall  (/*stall_cache*/),
+        .d_stall(stall_dcache),    .i_stall(stall_icache),
+    // PixelFeeder <=> DVI driver:
         .video_ready    (video_ready    ),
         .video_valid    (video_valid    ),
         .video          (video          ),
-    // Graphics <=> CPU interface:
-        .graphics_status(graphics_status),
-        .cpu_pf_valid   (pf_valid       ),
-        .cpu_pf_frame   (pf_frame       ),
-        .frame_interrupt(frame_interrupt),
-        .cpu_gp_valid   (gp_valid       ),
-        .cpu_gp_frame   (gp_frame       ),
-        .cpu_gp_code    (gp_code        ),
-        .gp_interrupt   (gp_interrupt   )
+    // GPU <=> CPU interface:
+        .gp_ready (pf_ready ),
+        .pf_fvalid(pf_fvalid),  .gp_fvalid(gp_fvalid),  .gp_cvalid(gp_cvalid),
+        .pf_frame (pf_frame ),  .gp_frame (gp_frame ),  .gp_code  (gp_code  ),
+        .pf_irq   (pf_irq   ),  .gp_irq   (gp_irq   ),
+        .pf_status(pf_status),  .gp_status(gp_status)
     );
-
-    assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
 
 
 // MemoryBank/IO "busses" (snagged from MIPS150)
@@ -190,28 +173,21 @@ module ml505top #(
         .FPGA_SERIAL_RX(FPGA_SERIAL1_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL1_TX),
     // Memory Caches:
-        .dcache_addr (dcache_addr),
-        .icache_addr (icache_addr),
-        .dcache_we   (dcache_we  ),
-        .icache_we   (icache_we  ),
-        .dcache_re   (dcache_re  ),
-        .icache_re   (icache_re  ),
-        .dcache_din  (dcache_din ),
-        .icache_din  (icache_din ),
-        .dcache_dout (dcache_dout),
-        .icache_dout (icache_dout),
-    // Graphics:
-        .graphics_status(graphics_status),
-        .pf_valid    (pf_valid),
-        .pf_frame    (pf_frame),
-        .gp_valid    (gp_valid),
-        .gp_frame    (gp_frame),
-        .gp_code     (gp_code)
+        .dcache_addr (dcache_addr), .icache_addr (icache_addr),
+        .dcache_we   (dcache_we  ), .icache_we   (icache_we  ),
+        .dcache_re   (dcache_re  ), .icache_re   (icache_re  ),
+        .dcache_din  (dcache_din ), .icache_din  (icache_din ),
+        .dcache_dout (dcache_dout), .icache_dout (icache_dout),
+    // GPU:
+        .gp_ready (gp_ready),
+        .PF_FVALID(pf_fvalid),  .GP_FVALID(gp_fvalid),  .GP_CVALID(gp_cvalid),
+        .PF_FRAME (pf_frame),   .GP_FRAME (gp_frame),   .GP_CODE  (gp_code),
+        .pf_status(pf_status),  .gp_status(gp_status)
     );
 
     // MIPS 150 CPU
-    MIPS150
-    CPU (
+    MIPS150 #(
+    ) cpu (
         .clk(cpu_clk_g), .rst(rst_cpu_cpu_g), .stall(stall_top),
     // Memory/IO <==> MemBank
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
@@ -220,8 +196,8 @@ module ml505top #(
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
         .PCinBIOSDX_(PCinBIOSDX_),
     // Interrupts
-        .frame_interrupt(frame_interrupt),
-        .gp_interrupt(gp_interrupt),
+        .pf_irq(pf_irq),
+        .gp_irq(gp_irq),
         .uart0_irq(uart0_irq),
         .uart1_irq(uart1_irq)
     );
@@ -310,8 +286,8 @@ module ml505top #(
     end
 
     assign rst_cpu_mem_g = reset_cpu_rr[1],
-            rst_cpu_bus_g = reset_cpu_rr[2],
-            rst_cpu_cpu_g = reset_cpu_rr[3];
+           rst_cpu_bus_g = reset_cpu_rr[2],
+           rst_cpu_cpu_g = reset_cpu_rr[3];
     assign rst_dvi_bus_g = reset_dvi_rr[2];
 
 
@@ -353,9 +329,6 @@ module ml505top #(
 //Mods, Extras, Crossover from Fall13
   `define SRAM_ENABLE
 
-
-//Old dip stall toggle from prior checkpoints
-generate if (COLT45_STALLDIP) begin:_STALL_DIP_
     Debouncer #(
         .Width(16) // 2^16 / 50MHz => apprx 1.3 ms?
     ) togglestall_debone (
@@ -365,6 +338,9 @@ generate if (COLT45_STALLDIP) begin:_STALL_DIP_
         .In(GPIO_DIP[0]),
         .Out(toggle_stall)
     );
+
+//Old dip stall toggle from prior checkpoints
+generate if (COLT45_STALLDIP) begin:_STALL_DIP_
 
     reg man_stall_reg; //TODO: Upgrade to "stall ring" from testbenches
     always@(posedge cpu_clk_g) begin:_MAN_STALL_REG_
@@ -380,7 +356,7 @@ generate if (COLT45_STALLDIP) begin:_STALL_DIP_
     assign stall_dip = man_stall_reg;
 
 end else begin:_STALL_MEMONLY_
-    assign toggle_stall = 1'b0, stall_dip = 1'b0;
+    assign stall_dip = 1'b0;
 end endgenerate
 
 
@@ -426,11 +402,12 @@ end endgenerate
 `endif // COLT45_KILLFUN
 
 //Master & I/O hookups
-assign button_reset = GPIO_COMPPB[4]; //GPIO_SW_C (Center Push-button)
-assign GPIO_LED     = {sram_locked, 1'b0, 1'b0, toggle_stall,
-                        stall_dip, stall_top, pll_lock, init_done};
-assign GPIO_COMPLED = reset_lines[4:0] ^ GPIO_COMPPB; //Compass LED lights mimic pushbuttons (invert)
-assign BUS_ERROR_1  = sram_locked ^ FPGA_CPU_RESET_B;
-assign BUS_ERROR_2  = pll_lock ^ FPGA_CPU_RESET_B;
+  assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
+  assign button_reset = GPIO_COMPPB[4]; //GPIO_SW_C (Center Push-button)
+  assign GPIO_LED     = {sram_locked, 1'b0, 1'b0, toggle_stall,
+                          stall_dip, stall_top, pll_lock, init_done};
+  assign GPIO_COMPLED = reset_lines[4:0] ^ GPIO_COMPPB; //Compass LED lights mimic pushbuttons (invert)
+  assign BUS_ERROR_1  = sram_locked ^ FPGA_CPU_RESET_B;
+  assign BUS_ERROR_2  = pll_lock ^ FPGA_CPU_RESET_B;
 
 endmodule

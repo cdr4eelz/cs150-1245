@@ -18,9 +18,8 @@ bcmdspec_t const bcmd_table[] = {
 
     {"dump",        BC_DUMP,      0},           // "aw"
     {"copy",        BC_COPY,      0},           // "aaw"
-    {"help",        BC_HELP,      0},           // ""
-    {"?",           BC_HELP,      0},           // ""
     {"",            BC_BLANK,     0},           // ""
+    {"cmds",        BC_HELP,      0},           // ""
 
     {"gs",          BC_GSTAT,     0},           // ""
     {"gc",          BC_GCODE,     0},           // "w"
@@ -28,6 +27,8 @@ bcmdspec_t const bcmd_table[] = {
     {"pf",            BC_FRAME,     4},         // "w"
     {"gf",            BC_FRAME,     2},         // "w"
     {"sf",            BC_FRAME,     1},         // "w"
+    {"back",        BC_BACK,      2},           // "w"
+    {"clip",        BC_CLIP,      2},           // "hhhh"
 
     {"color",       BC_COLOR,     3},           // "w"
     {"hw" "color",    BC_COLOR,     2},         // "w"
@@ -38,14 +39,14 @@ bcmdspec_t const bcmd_table[] = {
     {"line",        BC_LINE,      0},           // "hhhh"
     {"hw" "line",     BC_LINE,      2},         // "hhhh"
     {"sw" "line",     BC_LINE,      1},         // "hhhh"
-    {"pixl",        BC_PIXL,      0},           // "hh"
-    {"hw" "pixl",     BC_PIXL,      2},         // "hh"
-    {"sw" "pixl",     BC_PIXL,      1},         // "hh"
     {"elip",        BC_ELIP,      0},           // "hhhh"
     {"hw" "elip",     BC_ELIP,      2},         // "hhhh"
     {"sw" "elip",     BC_ELIP,      1},         // "hhhh"
-    {"swcirc",      BC_CIRC,      0},           // "hhh"
-    {"??", BC_UNKNOWN, 0xFFFF},
+    {"pixl",        BC_PIXL,      0},           // "hh"
+    {"hw" "pixl",     BC_PIXL,      2},         // "hh"
+    {"sw" "pixl",     BC_PIXL,      1},         // "hh"
+
+    {"??", BC_UNKNOWN, FLAG_EOT}, //Flags end of table
 };
 
 const int8_t const DEF_DELIMS[]   = " \x0d",
@@ -56,7 +57,7 @@ bcmdspec_t* token_cmdspec(const int8_t* const input)
     //TODO:Filter odd chars (whitespace)???
     bcmdspec_t *bcs;
 
-    for (bcs = bcmd_table ; (bcs->flags != 0xFFFF) ; bcs++) {
+    for (bcs = bcmd_table ; (bcs->flags != FLAG_EOT) ; bcs++) {
         if (strcmp150(input, bcs->token) == 0) break;
     }
     return bcs;
@@ -67,7 +68,7 @@ void bufw_cmdspec( void )
     bcmdspec_t *bcs;
 
     bufw_newline();
-    for (bcs = bcmd_table ; (bcs->flags != 0xFFFF) ; bcs++) {
+    for (bcs = bcmd_table ; (bcs->flags != FLAG_EOT) ; bcs++) {
         uwrite_int8s(bcs->token); uwrite_int8(' ');
     }
     bufw_newline();

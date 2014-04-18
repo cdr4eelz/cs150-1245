@@ -126,12 +126,12 @@ module ml505top_xtra
   wire         line_x1_valid;
   wire         line_y1_valid;
   wire         line_trigger;
-  wire fb0; //Was this before cpu_gp_frame??? or something else???
+  wire fb0; //Was this before gp_frame??? or something else???
 */
-   wire frame_interrupt;
-   wire [31:0] cpu_gp_code;
-   wire [31:0] cpu_gp_frame;
-   wire        cpu_gp_valid;
+   wire pf_irq;
+   wire [31:0] gp_code;
+   wire [31:0] gp_frame;
+   wire        gp_valid;
 
   Memory150 #(.SIM_ONLY(1'b0)) mem_arch(
       .cpu_clk_g(cpu_clk_g),
@@ -172,10 +172,10 @@ module ml505top_xtra
       .video      (video      ),
       .video_ready(video_ready),
       .video_valid(video_valid),
-      .cpu_gp_code(cpu_gp_code),
-      .cpu_gp_frame(cpu_gp_frame),
-      .cpu_gp_valid(cpu_gp_valid),
-      .frame_interrupt(frame_interrupt)
+      .gp_code(gp_code),
+      .gp_frame(gp_frame),
+      .gp_valid(gp_valid),
+      .pf_irq(pf_irq)
     );
 
 // CP4+
@@ -225,10 +225,10 @@ module ml505top_xtra
     .stall(any_stall),
 
 // CP4+
-    .gp_code(cpu_gp_code),
-    .gp_frame(cpu_gp_frame),
-    .gp_valid(cpu_gp_valid),
-    .frame_interrupt(frame_interrupt)
+    .gp_code(gp_code),
+    .gp_frame(gp_frame),
+    .gp_valid(gp_valid),
+    .pf_irq(pf_irq)
 );
 
 

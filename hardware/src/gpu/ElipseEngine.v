@@ -1,7 +1,6 @@
 
 module ElipseEngine #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600
 )(
     input           clk, rst,
 

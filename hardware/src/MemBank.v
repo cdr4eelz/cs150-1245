@@ -24,24 +24,16 @@ module MemBank #(
     output  FPGA_SERIAL_TX,
 
 // Memory Caches:
-    output [ 31:0]  dcache_addr,
-    output [ 31:0]  icache_addr,
-    output [  3:0]  dcache_we,
-    output [  3:0]  icache_we,
-    output          dcache_re,
-    output          icache_re,
-    output [ 31:0]  dcache_din,
-    output [ 31:0]  icache_din,
-    input  [ 31:0]  dcache_dout,
-    input  [ 31:0]  icache_dout,
+    output [ 31:0]  dcache_addr,  icache_addr,
+    output [  3:0]  dcache_we,    icache_we,
+    output          dcache_re,    icache_re,
+    output [ 31:0]  dcache_din,   icache_din,
+    input  [ 31:0]  dcache_dout,  icache_dout,
 
-// Graphics:
-    input  [ 31:0]  graphics_status,
-    output          pf_valid,
-    output [ 31:0]  pf_frame,
-    output          gp_valid,
-    output [ 31:0]  gp_frame,
-    output [ 31:0]  gp_code
+// GPU control:
+    input  [ 15:0]  pf_status,  gp_status,
+    output          pf_valid,   gp_valid,
+    output [ 31:0]  pf_frame,   gp_frame,gp_code
 );
 
 //TODO: Ideally generate "isRead/isWrite" signals WHILE generating _WriteMask
@@ -95,6 +87,7 @@ module MemBank #(
         end
     end
 
+
     wire [31: 0] INST_ISR, INST_BR, INST_IC, INST_IB;
     reg  [31: 0] MUX_IMEM;
     always @(*) begin:_MUX_IMEM_ //Drive instruction from appropriate memory component
@@ -124,7 +117,7 @@ module MemBank #(
     assign DMEM_DATA = MUX_DMEM;
 
 
-    // MEMORY/MMIO ELEMENTS (straddle MW & F stages & interface outside CPU)
+    // MEMORY/MMIO ELEMENTS
 
     //NOTE: DRAM rollsover at 0x0200_0000 but not imposing limit in CPU (just top nibble)
     assign dcache_addr = (stall) ? P_dcache_addr : {4'h0, DMEM_ADDR[27:0]},
@@ -154,7 +147,7 @@ module MemBank #(
       /*.enb(1'b1)*/ .doutb(INST_ISR) //No use for hoti_ISR_
     ) /* synthesis syn_noprune=1 */;
 
-    bios_mem brom_bios
+    bios_mem bram_bios
     ( .clka(clk), .ena(!stall && _hot_BR),
         .addra(DMEM_ADDR[13:2]),
         .douta(RData_BR),//OUT-32
@@ -188,14 +181,14 @@ module MemBank #(
     ( .clk(clk), .rst(rst), .stall(stall),
         .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
         .addra(DMEM_ADDR[13:2]),
-        .DOUTA(RData_IO),//OUT-32
+        .douta(RData_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
-        //Mapped RVA devices
-        .RVa_RX(UARX),          .RVa_TX(UATX),
-        //PixelFeeder & GraphicsController
-        .graphics_status(graphics_status),
-        .PF_VALID(pf_valid), .PF_FRAME(pf_frame),
-        .GP_VALID(gp_valid), .GP_FRAME(gp_frame), .GP_CODE(gp_code)
+    //RVAs
+        .RVa_RX(UARX), .RVa_TX(UATX),
+    //GPU control
+        .pf_status(pf_status),  .gp_status(gp_status),
+        .pf_valid(pf_valid),    .gp_valid(gp_valid),
+        .pf_frame(pf_frame),    .gp_frame(gp_frame),.gp_code(gp_code)
     ) /* synthesis syn_noprune=1 */;
 
     UARTRVA #(.ClockFreq(CPU_FREQ)) uartrva

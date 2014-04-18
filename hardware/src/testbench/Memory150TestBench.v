@@ -63,7 +63,7 @@ module Memory150TestBench;
     reg         video_ready;
     wire        video_valid;
     wire [23:0] video;
-    wire        frame_interrupt;
+    wire        pf_irq;
     wire [31:0] gp_code;
     wire [31:0] gp_frame;
     wire        gp_valid;
@@ -113,10 +113,10 @@ module Memory150TestBench;
         .video          (video      ),
         .video_ready    (video_ready),
         .video_valid    (video_valid),
-        .frame_interrupt(frame_interrupt),
-        .cpu_gp_code    (gp_code),
-        .cpu_gp_frame   (gp_frame),
-        .cpu_gp_valid   (gp_valid)
+        .pf_irq(pf_irq),
+        .gp_code    (gp_code),
+        .gp_frame   (gp_frame),
+        .gp_valid   (gp_valid)
     );
 
     mt4htf3264hy ddr2(

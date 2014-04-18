@@ -7,13 +7,6 @@ module EchoTestbench;
     reg Clock, Reset; wire Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
 
-    reg   [7:0] DataIn;
-    reg         DataInValid;
-    wire        DataInReady;
-    wire  [7:0] DataOut;
-    wire        DataOutValid;
-    reg         DataOutReady;
-
     parameter HalfCycle = 10; //TODO: Change to 5 & use PLL
     parameter Cycle = 2*HalfCycle;
     parameter CPU_FREQ = 50_000_000;
@@ -68,7 +61,8 @@ module EchoTestbench;
 // CP2+
         .dcache_dout(32'b0), .icache_dout(32'b0),
 // CP4+
-        .frame_interrupt(1'b0), .graphics_status(0), .gp_interrupt(1'b0)
+        .pf_status(16'b0),  .gf_status({2'b10,6'b0,4'b0,4'b1111}),
+        .pf_irq(1'b0),      .gp_irq(1'b0)
     );
 /*
     // A shadow CPU using a gated clock
@@ -79,21 +73,25 @@ module EchoTestbench;
 // CP2+
         .dcache_dout(32'b0), .icache_dout(32'b0),
 // CP4+
-        .frame_interrupt(1'b0)
+        .pf_status(16'b0),  .gf_status({2'b10,6'b0,4'b0,4'b1111}),
+        .pf_irq(1'b0),      .gp_irq(1'b0)
     );
 */
 
+    reg   [7:0] DataIn;
+    reg         DataInValid;
+    wire        DataInReady;
+    wire  [7:0] DataOut;
+    wire        DataOutValid;
+    reg         DataOutReady;
+
     UART #( .ClockFreq(CPU_FREQ) ) uart
     ( .Clock(Clock), .Reset(Reset),
-        .DataIn(          DataIn),
-        .DataInValid(     DataInValid),
-        .DataInReady(     DataInReady),
-        .DataOut(         DataOut),
-        .DataOutValid(    DataOutValid),
-        .DataOutReady(    DataOutReady),
-        .SIn(             FPGA_SERIAL_TX),
-//      .SIn(             (1) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx),
-        .SOut(            FPGA_SERIAL_RX)
+//      .SIn( (1) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx ),
+        .SIn(FPGA_SERIAL_TX), .DataOut(DataOut),
+        .DataOutReady(DataOutReady), .DataOutValid(DataOutValid),
+        .DataInReady (DataInReady ), .DataInValid (DataInValid ),
+        .DataIn(DataIn), .SOut(FPGA_SERIAL_RX)
     );
 
 integer countIN = 0, maxchars = 45;

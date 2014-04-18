@@ -3,12 +3,13 @@
 
 #include "types.h"
 
+#define FLAG_EOT (0xFFFF)
+
 typedef enum bcmd_e {
     BC_FILE, BC_JAL, BC_LOAD, BC_STORE,
-    BC_DUMP, BC_COPY, BC_HELP, BC_BLANK,
-    BC_GSTAT, BC_GCODE, BC_FRAME,
-    BC_COLOR, BC_FILL, BC_LINE, BC_PIXL, BC_ELIP,
-    BC_CIRC,
+    BC_DUMP, BC_COPY, BC_BLANK, BC_HELP,
+    BC_GSTAT, BC_GCODE, BC_FRAME, BC_BACK, BC_CLIP,
+    BC_COLOR, BC_FILL, BC_LINE, BC_ELIP, BC_PIXL,
     BC_UNKNOWN
 } bcmd_t;
 
@@ -18,13 +19,13 @@ typedef struct bcmdspec_s {
     uint16_t      flags;
 } const bcmdspec_t;
 
-extern bcmdspec_t const cmd_table[];
-extern const int8_t const DEF_DELIMS[], ERRS_ALIGN[];
-
 typedef enum radixize_e {
     RZ_HEX32, RZ_HEX16, RZ_HEX8,
     RZ_DEC32, RZ_DEC16, RZ_DEC8
 } radixize_t;
+
+extern bcmdspec_t const cmd_table[];
+extern const int8_t const DEF_DELIMS[], ERRS_ALIGN[];
 
 int8_t* read_n(int8_t* bufptr, uint32_t numBytesBeforeNull);
 int8_t* read_token(int8_t* bufptr, uint32_t buflen,

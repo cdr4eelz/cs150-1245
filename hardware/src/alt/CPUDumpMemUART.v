@@ -30,7 +30,7 @@ module CPUDumpMemUART #(
     output [31:0] gp_code,
     output [31:0] gp_frame,
     output gp_valid,
-    input frame_interrupt
+    input pf_irq
 );
 
     wire [13: 0]    ADDR, ADDR_NEXT;

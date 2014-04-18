@@ -5,41 +5,33 @@ module MemMIPS150 #(
     parameter COLT45_SCOPE=0, COLT45_BRK=0, COLT45_SCRATCH=0, COLT45_PC=0,
                 COLT45_REGREAD=0, COLT45_MEMWRITE=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
-    input   clk,
-    input   rst,
+    input   clk, rst, stall,
+
 // Serial (UART):
     input   FPGA_SERIAL_RX,
     output  FPGA_SERIAL_TX,
+
 // Memory Caches:
-    output [ 31:0]  dcache_addr,
-    output [ 31:0]  icache_addr,
-    output [  3:0]  dcache_we,
-    output [  3:0]  icache_we,
-    output          dcache_re,
-    output          icache_re,
-    output [ 31:0]  dcache_din,
-    output [ 31:0]  icache_din,
-    input  [ 31:0]  dcache_dout,
-    input  [ 31:0]  icache_dout,
-    input           stall,
-// Graphics:
-    input  [ 31:0]  graphics_status,
-    output          pf_valid,
-    output [ 31:0]  pf_frame,
-    input           frame_interrupt,
-    output          gp_valid,
-    output [ 31:0]  gp_frame,
-    output [ 31:0]  gp_code,
-    input           gp_interrupt
+    output [ 31:0]  dcache_addr,    icache_addr,
+    output [  3:0]  dcache_we,      icache_we,
+    output          dcache_re,      icache_re,
+    output [ 31:0]  dcache_din,     icache_din,
+    input  [ 31:0]  dcache_dout,    icache_dout,
+
+// GPU control:
+    input  [ 15:0]  pf_status,  gp_status,
+    output          pf_valid,   gp_valid,
+    output [ 31:0]  pf_frame,   gp_frame,gp_code,
+    input           pf_irq,     gp_irq
 );
 
-// Memory/IO "busses" (snagged from MIPS150)
+// Memory/IO "buses" (snagged from MIPS150)
     wire  [31: 0] IMEM_ADDR, DMEM_ADDR;
     wire  [31: 0] IMEM_DATA, DMEM_DATA;
+    wire          MemToRegDX_, MemWriteDX_, PCinBIOSDX_;
     wire  [31: 0] _WDataMasked;
     wire  [ 3: 0] _WriteMask;
-    wire  MemToRegDX_, MemWriteDX_, PCinBIOSDX_;
-    wire  uart0_irq, uart1_irq;
+    wire          uart0_irq, uart1_irq;
 
     // Memory Bank & Memory Mapped I/O
     MemBank #(
@@ -51,9 +43,10 @@ module MemMIPS150 #(
     // Memory/IO <==> MIPS150
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
-        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
         .PCinBIOSDX_(PCinBIOSDX_),
+        ._WDataMasked(_WDataMasked),
+        ._WriteMask(_WriteMask),
     // Interrupts
         .uart0_irq(uart0_irq),
         .uart1_irq(uart1_irq),
@@ -61,23 +54,15 @@ module MemMIPS150 #(
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
     // Memory Caches:
-        .dcache_addr (dcache_addr),
-        .icache_addr (icache_addr),
-        .dcache_we   (dcache_we  ),
-        .icache_we   (icache_we  ),
-        .dcache_re   (dcache_re  ),
-        .icache_re   (icache_re  ),
-        .dcache_din  (dcache_din ),
-        .icache_din  (icache_din ),
-        .dcache_dout (dcache_dout),
-        .icache_dout (icache_dout),
-    // Graphics:
-        .graphics_status(graphics_status),
-        .pf_valid       (pf_valid),
-        .pf_frame       (pf_frame),
-        .gp_valid       (gp_valid),
-        .gp_frame       (gp_frame),
-        .gp_code        (gp_code)
+        .dcache_addr (dcache_addr),   .icache_addr (icache_addr),
+        .dcache_we   (dcache_we  ),   .icache_we   (icache_we  ),
+        .dcache_re   (dcache_re  ),   .icache_re   (icache_re  ),
+        .dcache_din  (dcache_din ),   .icache_din  (icache_din ),
+        .dcache_dout (dcache_dout),   .icache_dout (icache_dout),
+    // GPU control:
+        .pf_status(pf_status),  .gp_status(gp_status),
+        .pf_valid(pf_valid),    .gp_valid(gp_valid),
+        .pf_frame(pf_frame),    .gp_frame(gp_frame),.gp_code(gp_code)
     );
 
     // MIPS 150 CPU
@@ -93,12 +78,12 @@ module MemMIPS150 #(
     // Memory/IO <==> MemBank
         .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
-        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
         .PCinBIOSDX_(PCinBIOSDX_),
+        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
     // Interrupts
-        .frame_interrupt(frame_interrupt),
-        .gp_interrupt(gp_interrupt),
+        .pf_irq(pf_irq),
+        .gp_irq(gp_irq),
         .uart0_irq(uart0_irq),
         .uart1_irq(uart1_irq)
     );

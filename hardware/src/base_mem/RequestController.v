@@ -31,104 +31,104 @@ module RequestController(
     input           rst,
 
     // inputs from the DDR2 FIFOs:
-    input               af_full,
+    input               caf_full,
     input               wdf_full,
     input               rdf_valid,
     // output to the DDR2 FIFOs:
-    output              rdf_rd_en,
-    output reg [  2:0]  af_cmd_din,
-    output reg [ 30:0]  af_addr_din,
-    output reg          af_wr_en,
-    output reg [127:0]  wdf_din,
-    output reg [ 15:0]  wdf_mask_din,
-    output reg          wdf_wr_en,
+    output reg          caf_wren,
+    output reg [  2:0]  caf_gcmd_data,
+    output reg [ 30:0]  caf_addr,
+    output reg          wdf_wren,
+    output reg [ 15:0]  wdf_mask,
+    output reg [127:0]  wdf_data,
+    output              rdf_rden,
 
-    // inputs from the instruction cache:
-    input           i_rdf_rd_en,
-    input [  2:0]   i_af_cmd_din,
-    input [ 30:0]   i_af_addr_din,
-    input           i_af_wr_en,
-    input [127:0]   i_wdf_din,
-    input [ 15:0]   i_wdf_mask_din,
-    input           i_wdf_wr_en,
-    input           i_stall,
-    // inputs from the data cache:
-    input           d_rdf_rd_en,
-    input [  2:0]   d_af_cmd_din,
-    input [ 30:0]   d_af_addr_din,
-    input           d_af_wr_en,
-    input [127:0]   d_wdf_din,
-    input [ 15:0]   d_wdf_mask_din,
-    input           d_wdf_wr_en,
-    input           d_stall,
-    // inputs from the line drawing engine:
-    //   Note: the line drawing engine only needs to write,
-    //         thus, it accesses on a subset of the fifo signals
-    input [ 30:0]   line_af_addr_din,
-    input           line_af_wr_en,
-    input [127:0]   line_wdf_din,
-    input [ 15:0]   line_wdf_mask_din,
-    input           line_wdf_wr_en,
-    // inputs from the cache bypass module:
-    //   write-only path
-    input [ 30:0]   bypass_af_addr_din,
-    input           bypass_af_wr_en,
-    input [127:0]   bypass_wdf_din,
-    input [ 15:0]   bypass_wdf_mask_din,
-    input           bypass_wdf_wr_en,
-    // inputs from the color filler:
-    //   similarly only needs to write
-    input [ 30:0]   filler_af_addr_din,
-    input           filler_af_wr_en,
-    input [127:0]   filler_wdf_din,
-    input [ 15:0]   filler_wdf_mask_din,
-    input           filler_wdf_wr_en,
-    // inputs from the graphics command processor:
-    //   read only
-    input           cmd_rdf_rd_en,
-    input           cmd_af_wr_en,
-    input [ 30:0]   cmd_af_addr_din,
-    // inputs from the module responsibile for keeping the
-    //   pixel fifo full, designated with 'pixel'. This only allows
-    //   read access.
-    input           pixel_rdf_rd_en,
-    input           pixel_af_wr_en,
-    input [ 30:0]   pixel_af_addr_din,
+    // Instruction-cache inputs (Read-Write-Stall):
+    input           inst_caf_wren,
+    input [  2:0]   inst_caf_data,
+    input [ 30:0]   inst_caf_addr,
+    input           inst_wdf_wren,
+    input [ 15:0]   inst_wdf_mask,
+    input [127:0]   inst_wdf_data,
+    input           inst_rdf_rden,
+    input           inst_stall,
+    // Data-cache inputs (Read-Write-Stall):
+    input           data_caf_wren,
+    input [  2:0]   data_caf_data,
+    input [ 30:0]   data_caf_addr,
+    input           data_wdf_wren,
+    input [ 15:0]   data_wdf_mask,
+    input [127:0]   data_wdf_data,
+    input           data_rdf_rden,
+    input           data_stall,
+    // GraphicsProcessor inputs (Read-only):
+    //   Note: Read-only uses a small subset of fifo signals
+    input           gcmd_caf_wren,
+    input [ 30:0]   gcmd_caf_addr,
+    input           gcmd_rdf_rden,
+    // PixelFeeder inputs (Read-only):
+    input           pixf_caf_wren,
+    input [ 30:0]   pixf_caf_addr,
+    input           pixf_rdf_rden,
+    // FrameFiller inputs (Read-only):
+    //   Note: For Write-only, use a subset of fifo signals
+    input           fill_caf_wren,
+    input [ 30:0]   fill_caf_addr,
+    input           fill_wdf_wren,
+    input [ 15:0]   fill_wdf_mask,
+    input [127:0]   fill_wdf_data,
+    // LineEngine inputs (Write-only):
+    input           line_caf_wren,
+    input [ 30:0]   line_caf_addr,
+    input           line_wdf_wren,
+    input [ 15:0]   line_wdf_mask,
+    input [127:0]   line_wdf_data,
+    // Bypass-the-cache inputs (Write-only):
+    input           bpas_caf_wren,
+    input [ 30:0]   bpas_caf_addr,
+    input           bpas_wdf_wren,
+    input [ 15:0]   bpas_wdf_mask,
+    input [127:0]   bpas_wdf_data,
 
-    // output to the instruction cache:
-    output          i_rdf_valid,
-    output          i_af_full,
-    output          i_wdf_full,
-    // output to the data cache:
-    output          d_rdf_valid,
-    output          d_af_full,
-    output          d_wdf_full,
-    // outputs to the line drawing engine:
-    output          line_af_full,
+    // Instruction-cache outputs:
+    output          inst_caf_full,
+    output          inst_wdf_full,
+    output          inst_rdf_valid,
+    // Data-cache outputs:
+    output          data_caf_full,
+    output          data_wdf_full,
+    output          data_rdf_valid,
+    // GraphicsProcessor outputs:
+    output          gcmd_caf_full,
+    output          gcmd_rdf_valid,
+    // PixelFeeder outputs:
+    output          pixf_caf_full,
+    output          pixf_rdf_valid,
+    // FrameFiller outputs:
+    output          fill_caf_full,
+    output          fill_wdf_full,
+    // LineEngine outputs:
+    output          line_caf_full,
     output          line_wdf_full,
-    // outputs to the cache bypass module:
-    output          bypass_af_full,
-    output          bypass_wdf_full,
-    // outputs to the color filler:
-    output          filler_af_full,
-    output          filler_wdf_full,
-    // outputs to the fifo-filling module:
-    output          pixel_rdf_valid,
-    output          pixel_af_full,
-    // outputs to graphics command processor:
-    output          cmd_rdf_valid,
-    output          cmd_af_full
+    // Bypass-the-cache outputs:
+    output          bpas_caf_full,
+    output          bpas_wdf_full
 );
 
 
-    localparam NO_ACCESS        = 3'b000;
-    localparam D_ACCESS         = 3'b001;
-    localparam I_ACCESS         = 3'b010;
-    localparam FILLER_ACCESS    = 3'b011;
-    localparam LINE_ACCESS      = 3'b100;
-    localparam PIXEL_ACCESS     = 3'b101;
-    localparam BYPASS_ACCESS    = 3'b110;
-    localparam CMD_ACCESS       = 3'b111;
+    localparam NULL_ACCESS  = 3'b000;
+    localparam DATA_ACCESS  = 3'b001;
+    localparam INST_ACCESS  = 3'b010;
+    localparam FILL_ACCESS  = 3'b011;
+    localparam LINE_ACCESS  = 3'b100;
+    localparam PIXF_ACCESS  = 3'b101;
+    localparam BPAS_ACCESS  = 3'b110;
+    localparam GCMD_ACCESS  = 3'b111;
+
+    // To facilitate the switch to asserting wr_en's even when fifos are full,
+    //   we have to AND the full signals so data and cmds are written together.
+    wire ff_full;
+    assign ff_full = (caf_full || wdf_full);
 
     // New approach: icache and dcache don't stream reads. Keep
     //   a count of each read and then remember the number for
@@ -136,93 +136,77 @@ module RequestController(
     //   so that they are larger than max fifo size.
 
     reg  [ 2:0] fifo_access;
-    reg  [10:0] icache_req_num;
-    reg  [ 1:0] icache_req_valid;
-    reg  [10:0] dcache_req_num;
-    reg  [ 1:0] dcache_req_valid;
-    reg  [10:0] cmd_req_num;
-    reg  [ 1:0] cmd_req_valid;
+    reg  [10:0] inst_req_num,   data_req_num,   gcmd_req_num;
+    reg  [ 1:0] inst_req_valid, data_req_valid, gcmd_req_valid;
     reg  [10:0] issued_reads;
     reg  [11:0] serviced_reads; // extra bit b/c 2 chunks - use [11:1] to cmpare.
-    wire fetch_issued;
 
-    assign fetch_issued = af_wr_en && af_cmd_din == 3'b001 && !af_full && !wdf_full;
+    wire fetch_issued;
+    assign fetch_issued = caf_wren && (caf_gcmd_data == 3'b001) && !ff_full;
 
     always @(posedge clk) begin
         if(rst)
-            issued_reads <= 11'b0;
+            issued_reads   <= 11'b0;
         else if(fetch_issued)
-            issued_reads <= issued_reads + 11'b1;
-        else
-            issued_reads <= issued_reads;
+            issued_reads   <= issued_reads + 11'b1;
 
         if(rst)
             serviced_reads <= 12'b0;
         else if(rdf_valid)
             serviced_reads <= serviced_reads + 1;
-        else
-            serviced_reads <= serviced_reads;
 
         if(rst) begin
-            icache_req_num <= 10'b0;
-            icache_req_valid <= 2'b0;
-        end else if(fifo_access == I_ACCESS && fetch_issued) begin
-            icache_req_num <= issued_reads;
-            icache_req_valid <= 2'b10;
-        end else if(icache_req_num == serviced_reads[11:1] && icache_req_valid != 2'b00 && rdf_valid) begin
-            icache_req_num <= icache_req_num;
-            icache_req_valid <= icache_req_valid - 1;
-        end else begin
-            icache_req_num <= icache_req_num;
-            icache_req_valid <= icache_req_valid;
+            inst_req_num   <= 10'b0;
+            inst_req_valid <= 2'b0;
+        end else if(fifo_access == INST_ACCESS && fetch_issued) begin
+            inst_req_num   <= issued_reads;
+            inst_req_valid <= 2'b10;
+        end else if(inst_req_num == serviced_reads[11:1] && inst_req_valid != 2'b0 && rdf_valid) begin
+            inst_req_num   <= inst_req_num;
+            inst_req_valid <= inst_req_valid - 1;
         end
 
         if(rst) begin
-            dcache_req_num <= 10'b0;
-            dcache_req_valid <= 2'b0;
-        end else if(fifo_access == D_ACCESS && fetch_issued) begin
-            dcache_req_num <= issued_reads;
-            dcache_req_valid <= 2'b10;
-        end else if(dcache_req_num == serviced_reads[11:1] && dcache_req_valid != 2'b0 && rdf_valid) begin
-            dcache_req_num <= dcache_req_num;
-            dcache_req_valid <= dcache_req_valid - 1;
-        end else begin
-            dcache_req_num <= dcache_req_num;
-            dcache_req_valid <= dcache_req_valid;
+            data_req_num   <= 10'b0;
+            data_req_valid <= 2'b0;
+        end else if(fifo_access == DATA_ACCESS && fetch_issued) begin
+            data_req_num   <= issued_reads;
+            data_req_valid <= 2'b10;
+        end else if(data_req_num == serviced_reads[11:1] && data_req_valid != 2'b0 && rdf_valid) begin
+            data_req_num   <= data_req_num;
+            data_req_valid <= data_req_valid - 1;
         end
 
         if(rst) begin
-            cmd_req_num <= 10'b0;
-            cmd_req_valid <= 2'b0;
-        end else if(fifo_access == CMD_ACCESS && fetch_issued) begin
-            cmd_req_num <= issued_reads;
-            cmd_req_valid <= 2'b10;
-        end else if(cmd_req_num == serviced_reads[11:1] && cmd_req_valid != 2'b0 && rdf_valid) begin
-            cmd_req_num <= cmd_req_num;
-            cmd_req_valid <= cmd_req_valid - 1;
-        end else begin
-            cmd_req_num <= cmd_req_num;
-            cmd_req_valid <= cmd_req_valid;
+            gcmd_req_num   <= 10'b0;
+            gcmd_req_valid <= 2'b0;
+        end else if(fifo_access == GCMD_ACCESS && fetch_issued) begin
+            gcmd_req_num   <= issued_reads;
+            gcmd_req_valid <= 2'b10;
+        end else if(gcmd_req_num == serviced_reads[11:1] && gcmd_req_valid != 2'b0 && rdf_valid) begin
+            gcmd_req_num   <= gcmd_req_num;
+            gcmd_req_valid <= gcmd_req_valid - 1;
         end
     end
 
 
     // this can go straight through, only logic req'd is for directing the data
-    wire i_read, d_read, cmd_read;
-    assign i_read   = icache_req_valid != 2'b00 && icache_req_num == serviced_reads[11:1];
-    assign d_read   = dcache_req_valid != 2'b00 && dcache_req_num == serviced_reads[11:1];
-    assign cmd_read = cmd_req_valid    != 2'b00 && cmd_req_num    == serviced_reads[11:1];
+    wire inst_read, data_read, gcmd_read;
+    assign inst_read = |inst_req_valid && (inst_req_num == serviced_reads[11:1]);
+    assign data_read = |data_req_valid && (data_req_num == serviced_reads[11:1]);
+    assign gcmd_read = |gcmd_req_valid && (gcmd_req_num == serviced_reads[11:1]);
 
-    assign rdf_rd_en = i_read ? i_rdf_rd_en :
-                       d_read ? d_rdf_rd_en :
-                       cmd_read ? cmd_rdf_rd_en:
-                       pixel_rdf_rd_en;
+    assign rdf_rden = inst_read ? inst_rdf_rden :
+                       data_read ? data_rdf_rden :
+                       gcmd_read ? gcmd_rdf_rden :
+                                   pixf_rdf_rden;
 
     // directing the data is now straightforward: we give it to current_reader
-    assign i_rdf_valid   =   i_read ? rdf_valid : 1'b0;
-    assign d_rdf_valid   =   d_read ? rdf_valid : 1'b0;
-    assign cmd_rdf_valid = cmd_read ? rdf_valid : 1'b0;
-    assign pixel_rdf_valid = (i_read || d_read || cmd_read) ? 1'b0 : rdf_valid;
+    assign inst_rdf_valid = (inst_read) ? rdf_valid : 1'b0;
+    assign data_rdf_valid = (data_read) ? rdf_valid : 1'b0;
+    assign gcmd_rdf_valid = (gcmd_read) ? rdf_valid : 1'b0;
+    assign pixf_rdf_valid = (inst_read || data_read || gcmd_read)
+                              ? 1'b0 : rdf_valid;
 
 
     //**************************************************************************
@@ -230,144 +214,140 @@ module RequestController(
     // full signals to send to the various access paths.
     //************************************************************************
 
-    // The "reserved" signals are used to prevent the higher-priority paths
-    // from interrupting the filler or line engine (which run async) during
-    // writes.
+    // The "reserved" signals prevent higher-priority paths from interrupting
+    //    a write "wdf-pair" already in-progress (guards the second wdf write).
+    //    Reads are "guarded" implicitly by the request numbering scheme.
 
-    reg filler_reserved, line_reserved, bypass_reserved;
+    reg  fill_reserved, line_reserved, bpas_reserved;
     wire reserved;
-    assign reserved = filler_reserved || line_reserved || bypass_reserved;
 
     always @(posedge clk) begin
         if(rst)
-            filler_reserved <= 1'b0;
-        else if(fifo_access == FILLER_ACCESS && !wdf_full && !af_full)
-            filler_reserved <= filler_reserved + 1'b1;
+            fill_reserved <= 1'b0;
+        else if(fifo_access == FILL_ACCESS && !ff_full)
+            fill_reserved <= !fill_reserved;
 
         if(rst)
             line_reserved <= 1'b0;
-        else if(fifo_access == LINE_ACCESS && !wdf_full && !af_full)
-            line_reserved <= line_reserved + 1'b1;
+        else if(fifo_access == LINE_ACCESS && !ff_full)
+            line_reserved <= !line_reserved;
 
         if(rst)
-            bypass_reserved <= 1'b0;
-        else if(fifo_access == BYPASS_ACCESS && !wdf_full && !af_full)
-            bypass_reserved <= bypass_reserved + 1'b1; //1'b0;
+            bpas_reserved <= 1'b0;
+        else if(fifo_access == BPAS_ACCESS && !ff_full)
+            bpas_reserved <= !bpas_reserved;
     end
 
+    assign reserved = |{fill_reserved,line_reserved,bpas_reserved};
+
     always @(*) begin
-       // Access is given in the order of icache, dcache, pixel feeder, color filler
-       // line engine.
-        if((i_af_wr_en || i_wdf_wr_en) && !reserved) begin
-            fifo_access  = I_ACCESS;
-            //icache -> fifo signals:
-            af_cmd_din   = i_af_cmd_din;
-            af_addr_din  = i_af_addr_din;
-            af_wr_en     = i_af_wr_en && (!wdf_full &&  !af_full);
-            wdf_din      = i_wdf_din;
-            wdf_mask_din = i_wdf_mask_din;
-            wdf_wr_en    = i_wdf_wr_en && (!wdf_full && !af_full);
+        // Access is given in the order of:
+        //   inst, data, gcmd, pixl, fill, line, bpas.
+        if     ((inst_caf_wren || inst_wdf_wren) && !reserved) begin
+            fifo_access  = INST_ACCESS;
+            // read-write path for icache -> fifo signals:
+            caf_gcmd_data   = inst_caf_data;
+            caf_addr  = inst_caf_addr;
+            caf_wren     = inst_caf_wren  && !ff_full;
+            wdf_data      = inst_wdf_data;
+            wdf_mask = inst_wdf_mask;
+            wdf_wren    = inst_wdf_wren && !ff_full;
         end
-        else if((d_af_wr_en || d_wdf_wr_en) && !reserved) begin
-            fifo_access  = D_ACCESS;
-            //dcache -> fifo signals:
-            af_cmd_din   = d_af_cmd_din;
-            af_addr_din  = d_af_addr_din;
-            af_wr_en     = d_af_wr_en && (!wdf_full && !af_full);
-            wdf_din      = d_wdf_din;
-            wdf_mask_din = d_wdf_mask_din;
-            wdf_wr_en    = d_wdf_wr_en && (!wdf_full && !af_full);
+        else if((data_caf_wren || data_wdf_wren) && !reserved) begin
+            fifo_access  = DATA_ACCESS;
+            // read-write path for dcache -> fifo signals:
+            caf_gcmd_data   = data_caf_data;
+            caf_addr  = data_caf_addr;
+            caf_wren     = data_caf_wren  && !ff_full;
+            wdf_data      = data_wdf_data;
+            wdf_mask = data_wdf_mask;
+            wdf_wren    = data_wdf_wren && !ff_full;
         end
 
-        else if((cmd_af_wr_en) && !reserved) begin
-            fifo_access  = CMD_ACCESS;
+        else if((gcmd_caf_wren) && !reserved) begin
+            fifo_access  = GCMD_ACCESS;
             // read-only path for GraphicsController:
-            af_cmd_din   = 3'b001;
-            af_addr_din  = cmd_af_addr_din;
-            af_wr_en     = cmd_af_wr_en && !af_full && !wdf_full;
-            wdf_din      = 128'bx; // doesn't matter
-            wdf_mask_din = 16'hFFFF; // not writing
-            wdf_wr_en    = 1'b0; //not writing
+            caf_gcmd_data   = 3'b001;
+            caf_addr  = gcmd_caf_addr;
+            caf_wren     = gcmd_caf_wren &&  !ff_full;
+            wdf_data      = 128'bx; // doesn't matter
+            wdf_mask = 16'hFFFF; // not writing
+            wdf_wren    = 1'b0; //not writing
         end
-        else if(pixel_af_wr_en && !reserved) begin
-            fifo_access  = PIXEL_ACCESS;
+        else if(pixf_caf_wren && !reserved) begin
+            fifo_access  = PIXF_ACCESS;
             // read-only path for PixelFeeder:
-            af_cmd_din   = 3'b001;
-            af_addr_din  = pixel_af_addr_din;
-            af_wr_en     = pixel_af_wr_en && !af_full && !wdf_full;
-            wdf_din      = 128'bx; // doesn't matter
-            wdf_mask_din = 16'hFFFF; // not writing
-            wdf_wr_en    = 1'b0; //not writing
+            caf_gcmd_data   = 3'b001;
+            caf_addr  = pixf_caf_addr;
+            caf_wren     = pixf_caf_wren &&  !ff_full;
+            wdf_data      = 128'bx; // doesn't matter
+            wdf_mask = 16'hFFFF; // not writing
+            wdf_wren    = 1'b0; //not writing
         end
 
-        else if((filler_af_wr_en || filler_wdf_wr_en) && (!reserved || filler_reserved)) begin
-            fifo_access  = FILLER_ACCESS;
+        else if((fill_caf_wren || fill_wdf_wren) && (!reserved || fill_reserved)) begin
+            fifo_access  = FILL_ACCESS;
             // write-only path for FrameFiller:
-            af_cmd_din   = 3'b000;
-            af_addr_din  = filler_af_addr_din;
-            af_wr_en     = filler_af_wr_en && !wdf_full && !af_full;
-            wdf_din      = filler_wdf_din;
-            wdf_mask_din = filler_wdf_mask_din;
-            wdf_wr_en    = filler_wdf_wr_en && !wdf_full && !af_full;
+            caf_gcmd_data   = 3'b000;
+            caf_addr  = fill_caf_addr;
+            caf_wren     = fill_caf_wren  && !ff_full;
+            wdf_data      = fill_wdf_data;
+            wdf_mask = fill_wdf_mask;
+            wdf_wren    = fill_wdf_wren && !ff_full;
         end
-        else if((line_af_wr_en || line_wdf_wr_en) && (!reserved || line_reserved)) begin
+        else if((line_caf_wren || line_wdf_wren) && (!reserved || line_reserved)) begin
             fifo_access  = LINE_ACCESS;
             // write-only path for LineEngine:
-            af_cmd_din   = 3'b000;
-            af_addr_din  = line_af_addr_din;
-            af_wr_en     = line_af_wr_en && !wdf_full && !af_full;
-            wdf_din      = line_wdf_din;
-            wdf_mask_din = line_wdf_mask_din;
-            wdf_wr_en    = line_wdf_wr_en && !wdf_full && !af_full;
+            caf_gcmd_data   = 3'b000;
+            caf_addr  = line_caf_addr;
+            caf_wren     = line_caf_wren  && !ff_full;
+            wdf_data      = line_wdf_data;
+            wdf_mask = line_wdf_mask;
+            wdf_wren    = line_wdf_wren && !ff_full;
         end
-        else if((bypass_af_wr_en || bypass_wdf_wr_en) && (!reserved || bypass_reserved)) begin
-            fifo_access  = BYPASS_ACCESS;
+        else if((bpas_caf_wren || bpas_wdf_wren) && (!reserved || bpas_reserved)) begin
+            fifo_access  = BPAS_ACCESS;
             // write-only path for cache-bypass:
-            af_cmd_din   = 3'b000;
-            af_addr_din  = bypass_af_addr_din;
-            af_wr_en     = bypass_af_wr_en && !wdf_full && !af_full;
-            wdf_din      = bypass_wdf_din;
-            wdf_mask_din = bypass_wdf_mask_din;
-            wdf_wr_en    = bypass_wdf_wr_en && !wdf_full && !af_full;
+            caf_gcmd_data   = 3'b000;
+            caf_addr  = bpas_caf_addr;
+            caf_wren     = bpas_caf_wren  && !ff_full;
+            wdf_data      = bpas_wdf_data;
+            wdf_mask = bpas_wdf_mask;
+            wdf_wren    = bpas_wdf_wren && !ff_full;
         end
 
         else begin
-            fifo_access  = NO_ACCESS;
+            fifo_access  = NULL_ACCESS;
             // in the default case, both need to see the actual fifo full
             //   signals, otherwise the cache will never attempt to write. for
             //   the other signals, we don't care, so just choose icache.
-            af_cmd_din   = i_af_cmd_din;
-            af_addr_din  = i_af_addr_din;
-            af_wr_en     = 1'b0;
-            wdf_din      = i_wdf_din;
-            wdf_mask_din = i_wdf_mask_din;
-            wdf_wr_en    = 1'b0;
+            caf_gcmd_data   = inst_caf_data;
+            caf_addr  = inst_caf_addr;
+            caf_wren     = 1'b0;
+            wdf_data      = inst_wdf_data;
+            wdf_mask = inst_wdf_mask;
+            wdf_wren    = 1'b0;
         end
     end
 
 
-    // To facilitate the switch to asserting wr_en's even when fifos are full,
-    // we have to and the full signals so data and cmds are written together.
+    // Finally, based on the cache accessing, the fifo signals need to be set:
+    //    (checking against fifo_access implicitly checks reserved)
 
-    // finally, based on the cache accessing, the fifo signals need to be set:
-    assign i_af_full = fifo_access == I_ACCESS ?  af_full || wdf_full : 1'b1;
-    assign i_wdf_full = fifo_access == I_ACCESS ? wdf_full || af_full : 1'b1;
-
-    // checking against fifo_access implicitly checks reserved
-    assign d_af_full  = fifo_access == D_ACCESS ?  af_full || wdf_full : 1'b1;
-    assign d_wdf_full = fifo_access == D_ACCESS ? wdf_full || af_full : 1'b1;
-
-    assign filler_af_full  = fifo_access == FILLER_ACCESS  ? af_full || wdf_full : 1'b1;
-    assign filler_wdf_full = fifo_access == FILLER_ACCESS  ? wdf_full || af_full : 1'b1;
-
-    assign line_af_full  = fifo_access == LINE_ACCESS  ? af_full || wdf_full : 1'b1;
-    assign line_wdf_full = fifo_access == LINE_ACCESS  ? wdf_full || af_full : 1'b1;
-
-    assign bypass_af_full  = fifo_access == BYPASS_ACCESS  ? af_full || wdf_full : 1'b1;
-    assign bypass_wdf_full = fifo_access == BYPASS_ACCESS  ? wdf_full || af_full : 1'b1;
-
-    assign pixel_af_full  = fifo_access == PIXEL_ACCESS  ? af_full || wdf_full : 1'b1;
-
-    assign cmd_af_full  = fifo_access == CMD_ACCESS  ? af_full || wdf_full : 1'b1;
+    //Read-Write
+    assign inst_caf_full  = (fifo_access == INST_ACCESS) ? ff_full : 1'b1;
+    assign inst_wdf_full = (fifo_access == INST_ACCESS) ? ff_full : 1'b1;
+    assign data_caf_full  = (fifo_access == DATA_ACCESS) ? ff_full : 1'b1;
+    assign data_wdf_full = (fifo_access == DATA_ACCESS) ? ff_full : 1'b1;
+    //Read-only
+    assign gcmd_caf_full  = (fifo_access == GCMD_ACCESS) ? ff_full : 1'b1;
+    assign pixf_caf_full  = (fifo_access == PIXF_ACCESS) ? ff_full : 1'b1;
+    //Write-only
+    assign fill_caf_full  = (fifo_access == FILL_ACCESS) ? ff_full : 1'b1;
+    assign fill_wdf_full = (fifo_access == FILL_ACCESS) ? ff_full : 1'b1;
+    assign line_caf_full  = (fifo_access == LINE_ACCESS) ? ff_full : 1'b1;
+    assign line_wdf_full = (fifo_access == LINE_ACCESS) ? ff_full : 1'b1;
+    assign bpas_caf_full  = (fifo_access == BPAS_ACCESS) ? ff_full : 1'b1;
+    assign bpas_wdf_full = (fifo_access == BPAS_ACCESS) ? ff_full : 1'b1;
 
 endmodule

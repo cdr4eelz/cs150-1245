@@ -104,7 +104,7 @@ void swline(
         uint32_t const errorB = error + negB;
         uint16_t x = ((spin) ? b : a);
         uint16_t y = ((spin) ? a : b);
-        swpixel(fp,color, x,y);
+        swpixl(fp,color, x,y);
         //JOIN:iter-1
         //FORK:iter-2
         a     = nextA;
@@ -114,7 +114,7 @@ void swline(
     }
 }
 
-void swpixel(
+void swpixl(
     gframe_pv const fp, uint32_t const color,
     uint16_t const x, uint16_t const y)
 {
@@ -122,7 +122,7 @@ void swpixel(
 //  printf("%4d %4d\n", x,y);
 }
 
-void swcircle(
+void swcirc(
     gframe_pv const fp, uint32_t const color,
     uint16_t const xc, uint16_t const yc,
     uint16_t const r)
@@ -133,7 +133,7 @@ void swcircle(
     d   = 1 - r;            //scale2x: 0.5*(1-r)
     dE  = 2 + 1;            //scale2x: 1.5
     dSE = -(r<<1) + 4 + 1;  //scale2x: -r + 2.5
-    swpixel_8way(fp,color, xc,yc, x,y);
+    swpixl_8way(fp,color, xc,yc, x,y);
     while (y > x) {
         if (d < 0) {
             d += dE;
@@ -147,11 +147,11 @@ void swcircle(
             ++x;
             --y;
         }
-        swpixel_8way(fp,color, xc,yc, x,y);
+        swpixl_8way(fp,color, xc,yc, x,y);
     }
 }
 
-void swelipse(
+void swelip(
     gframe_pv const fp, uint32_t const color,
     uint16_t const xc, uint16_t const yc,
     uint16_t const a, uint16_t const b)
@@ -162,23 +162,22 @@ void swelipse(
 
     //Helper values to pre-compute multiplied values then adjust with addition
     uint32_t AAy    = mul32(AA,y);
-    uint32_t BBx    = mul32(BB,x);
-    uint32_t BB2xp3 = (mul32(BB,x)<<1) + (BB<<1) + BB;
-    uint32_t AA2y   = (mul32(AA,y)<<1);
+    uint32_t BBx    = 0; //(x==0): mul32(BB,x);
+    uint32_t BB2xp3 = /*(mul32(BB,x)<<1) +*/ (BB<<1) + BB; //(x==0)
+    //uint32_t AA2y   = (AAy<<1); //(mul32(AA,y)<<1);
 
-    int32_t dd; //dd
+    int32_t stopper = (AA>>1)+BB;
+    int32_t dd      = BB - mul32(AA,b) + (AA>>2);
 
-    dd = BB - mul32(AA,b) + (AA>>2);
-    swpixel_4way(fp,color, xc,yc, x,y);
-
-    while ( (AAy-(AA>>1)) > (BBx+BB) ) {
+    swpixl_4way(fp,color, xc,yc, x,y);
+    while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
         if (dd >= 0) {
-            dd += (AA<<1) - AA2y; //mul32(AA,y<<1);
-            y--; AAy -= AA; AA2y -= (AA<<1);
+            dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
+            y--; AAy -= AA; //AA2y -= (AA<<1);
         }
         dd += BB2xp3; //mul32(BB,(x<<1)+3);
         x++; BBx += BB; BB2xp3 += (BB<<1);
-        swpixel_4way(fp,color, xc,yc, x,y);
+        swpixl_4way(fp,color, xc,yc, x,y);
     }
 //return;
 //printf("\\\\\\\n");
@@ -190,14 +189,14 @@ void swelipse(
             dd += BB2xp2; //mul32(BB,(x<<1)+2);
             x++; BB2xp2 += (BB<<1);
         }
-        dd += (AA<<1)+AA - AA2y; //mul32(AA,y<<1);
-        y--; AA2y -= (AA<<1);
-        swpixel_4way(fp,color, xc,yc, x,y);
+        dd += (AA<<1)+AA - (AAy<<1); //mul32(AA,y<<1);
+        y--; AAy -= AA; //AA2y -= (AA<<1);
+        swpixl_4way(fp,color, xc,yc, x,y);
     }
 }
 
 
-void swcircle_old(
+void swcirc_old(
     gframe_pv const fp, uint32_t const color,
     uint16_t const xc, uint16_t const yc,
     uint16_t const r)
@@ -205,7 +204,7 @@ void swcircle_old(
     int32_t d = 1-r;
     uint16_t x = 0, y = r;
 
-    swpixel_8way(fp,color, xc,yc, x,y);
+    swpixl_8way(fp,color, xc,yc, x,y);
     while(y > x) {
         if(d < 0) {
             d += ((x<<1) + 3); //(x<<1)==(2*x)
@@ -215,12 +214,12 @@ void swcircle_old(
             ++x;
             --y;
         }
-        swpixel_8way(fp,color, xc,yc, x,y);
+        swpixl_8way(fp,color, xc,yc, x,y);
     }
 }
 
 
-void swpixel_4way(
+void swpixl_4way(
     gframe_pv const fp, uint32_t const color,
     uint16_t const xc, uint16_t const yc,
     uint16_t const ox, uint16_t const oy)
@@ -232,7 +231,7 @@ void swpixel_4way(
     *PIX_PTR(fp, xc + ox, yc + oy) = color;
 }
 
-void swpixel_8way(
+void swpixl_8way(
     gframe_pv const fp, uint32_t const color,
     uint16_t const xc, uint16_t const yc,
     uint16_t const ox, uint16_t const oy)
@@ -248,7 +247,7 @@ void swpixel_8way(
     *PIX_PTR(fp, xc + ox, yc - oy) = color;
     *PIX_PTR(fp, xc - ox, yc + oy) = color;
     *PIX_PTR(fp, xc + ox, yc + oy) = color;
-    if (ox != oy) { //If always (x==y), call swpixel_4way!
+    if (ox != oy) { //If always (x==y), call swpixl_4way!
         *PIX_PTR(fp, xc - oy, yc - ox) = color;
         *PIX_PTR(fp, xc + oy, yc - ox) = color;
         *PIX_PTR(fp, xc - oy, yc + ox) = color;

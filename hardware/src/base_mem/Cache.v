@@ -6,24 +6,24 @@
 //    clk: clock signal, same as CPU
 //    rst: system reset signal
 //    address: 32-bit memory address
-//    din: 32-bit block of data
-//    we: 4-bit write mask
-//    re: read enable (should be high only when we = 4'b0)
+//    din    : 32-bit block of data
+//    we     : 4-bit write mask
+//    re     : read enable (should be high only when we = 4'b0)
+//    caf_full : control signal for the address/cmd fifo
+//    wdf_full : control signal for write data fifo
 //    rdf_valid: control signal from DDR2 read data fifo
-//    rdf_dout: 128 bits of data from DDR2 (2x per read command)
-//    af_full: control signal for the address/cmd fifo
-//    wdf_full: control signal for write data fifo
+//    rdf_data : 128 bits of data from DDR2 (2x per read command)
 //
 // Outputs:
 //    stall: indicates the CPU should stall
 //    dout: 32-bit result after a read
-//    rdf_rd_en: read enable for the DDR2 read data fifo
-//    af_cmd_din: 3-bit DDR2 command fifo input
-//    af_addr_din: 31-bit DDR2 address input
-//    af_wr_en: write enable for address, command fifos
-//    wdf_din: 128-bit data input (should use 2x per write command)
-//    wdf_mask_din: 16-bit write mask
-//    wdf_wr_en: write enable signal for write data and mask fifo
+//    caf_wren: write enable for address, command fifos
+//    caf_cmd : 3-bit DDR2 command fifo input
+//    caf_addr: 31-bit DDR2 address input
+//    wdf_data : 128-bit data input (should use 2x per write command)
+//    wdf_mask: 16-bit write mask
+//    wdf_wren: write enable signal for write data and mask fifo
+//    rdf_rden: read enable for the DDR2 read data fifo
 //
 //----------------------------------------------------------------------------
 `include "cache.vh"
@@ -37,20 +37,21 @@ module Cache #(
     input [31:0]    din,
     input [3:0]     we,
     input           re,
-    input           rdf_valid,
-    input [127:0]   rdf_dout,
-    input           af_full,
+    //DDR-FIFO inputs:
+    input           caf_full,
     input           wdf_full,
+    input           rdf_valid,
+    input [127:0]   rdf_data,
 
     output          stall,
     output [31:0]   dout,
-    output          rdf_rd_en,
-    output [2:0]    af_cmd_din,
-    output [30:0]   af_addr_din,
-    output          af_wr_en,
-    output [127:0]  wdf_din,
-    output [15:0]   wdf_mask_din,
-    output          wdf_wr_en,
+    output          rdf_rden,
+    output [2:0]    caf_cmd,
+    output [30:0]   caf_addr,
+    output          caf_wren,
+    output [127:0]  wdf_data,
+    output [15:0]   wdf_mask,
+    output          wdf_wren,
 
     // Needed for set-associative cache
     output          tag_hit,
@@ -176,12 +177,12 @@ module Cache #(
         end
 
         if(cs == READ1)
-            first_read <= rdf_dout;
+            first_read <= rdf_data;
 
         if(cs == IDLE)
             active_data_line <= data_line_out;
         else if(ns == CWRITEB)
-            active_data_line <= {first_read, rdf_dout};
+            active_data_line <= {first_read, rdf_data};
     end
 
     // State transition logic:
@@ -194,9 +195,9 @@ module Cache #(
                 else if(read_miss)
                     ns = FETCH;
             end
-            WRITE1: ns = (!wdf_full && !af_full) ? WRITE2 : WRITE1;
+            WRITE1: ns = (!wdf_full && !caf_full) ? WRITE2 : WRITE1;
             WRITE2: ns = (!wdf_full) ? IDLE : WRITE2;
-            FETCH: ns = (!af_full) ? READ1 : FETCH;
+            FETCH: ns = (!caf_full) ? READ1 : FETCH;
             READ1: ns = rdf_valid ? READ2 : READ1;
             READ2: ns = rdf_valid ? CWRITEB : READ2;
             CWRITEB: ns = IDLE;
@@ -205,25 +206,25 @@ module Cache #(
     end
 
     // FIFO output assignments:
-    assign stall = (ns != IDLE);
-    assign rdf_rd_en = (cs == READ1 || cs == READ2);
-    assign af_wr_en = (cs == WRITE1 || cs == FETCH);
-    assign af_cmd_din = (cs == WRITE1) ? 3'b000 : 3'b001;
-    assign wdf_wr_en = cs == WRITE1 || cs == WRITE2;
+    assign stall     = (ns != IDLE);
+    assign caf_cmd    = (cs == WRITE1) ? 3'b000 : 3'b001;
+    assign caf_wren  = (cs == WRITE1) || (cs == FETCH );
+    assign wdf_wren = (cs == WRITE1) || (cs == WRITE2);
+    assign rdf_rden = (cs == READ1 ) || (cs == READ2 );
 
-    assign af_addr_din = {6'b0, addr_hold[`IDX_ADDR_DRAM], 2'b0};
-    assign wdf_din = {4{din_hold}};
+    assign caf_addr = {6'b0, addr_hold[`IDX_ADDR_DRAM], 2'b0};
+    assign wdf_data = {4{din_hold}};
     // active low, so we have to flip the bits
-    assign wdf_mask_din = (cs == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
+    assign wdf_mask = (cs == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
 
-    // CPU output assignments
-    // the data out is either from cache line out or active cache line if there is a read
+    // CPU output assignments:
+    //   data out is either from cache line out or active cache line if there is a read
     assign data = (cs == IDLE) ? data_line_out[255:0] : active_data_line[255:0];
-    assign dout = data >> {offset_hold, 5'b0};
+    assign dout = (data >> {offset_hold, 5'b0});
 
     // If we're writing back data from DDR2, use the registered 128-bits
     // (first_read) and the current 128 bits from the read data FIFO
-    assign data_line_in = (ns == CWRITEB) ? {first_read, rdf_dout} : {8{din_hold}};
+    assign data_line_in = (ns == CWRITEB) ? {first_read, rdf_data} : {8{din_hold}};
     assign tag_line_in = {1'b0, 1'b1, tag_hold};
 
 endmodule

@@ -1,7 +1,7 @@
 
 module FrameFiller #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600, SCANLINERUNNER=0,
-    parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
+    parameter SCANLINERUNNER=0
 )(
     input           clk, rst,
 
@@ -12,13 +12,13 @@ module FrameFiller #(
     input  [ 31:0]  FF_frame,   //Frame-base (modulo 0x0040_0000)
 
 //DDR FIFOs (write-only): [if !SCANLINERUNNER]
-    input           af_full,
+    input           caf_full,
     input           wdf_full,
-    output          af_wr_en,
-    output [ 30:0]  af_addr_din,
-    output          wdf_wr_en,
-    output [ 15:0]  wdf_mask_din,
-    output [127:0]  wdf_din,
+    output          caf_wren,
+    output [ 30:0]  caf_addr,
+    output          wdf_wren,
+    output [ 15:0]  wdf_mask,
+    output [127:0]  wdf_data,
 
 //SLR control (write-only): [if SCANLINERUNNER]
     input           SLR_ready,
@@ -53,9 +53,8 @@ module FrameFiller #(
     reg  [ 1:0] ns, cs = S_DEAD;
     reg  [31:0] color_r;
     reg  [ 5:0] framebits;
-    //TODO:Teach offsets/edges for rectangle boundaries later...
-    wire [ 9:0] rL = 0, rR = (SCREEN_WIDTH  - 1);
-    wire [ 9:0] rT = 0, rB = (SCREEN_HEIGHT - 1);
+    localparam [ 9:0] rL = 0, rR = (SCREEN_WIDTH  - 1),
+                      rT = 0, rB = (SCREEN_HEIGHT - 1);
 
     wire T_DONE_FULL, T_DONE_LINE, T_DONE_PIX4;
     wire T_START = (FF_ready && FF_valid);
@@ -110,11 +109,11 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
             T_DONE_LINE = slr_advance,
             T_DONE_FULL = slr_advance && lastY;
 
-    assign af_wr_en       = 1'b0,
-            af_addr_din   = 31'bx,
-            wdf_wr_en     = 1'b0,
-            wdf_din       = 128'bx,
-            wdf_mask_din  = 16'bx;
+    assign caf_wren       = 1'b0,
+            caf_addr   = 31'bx,
+            wdf_wren     = 1'b0,
+            wdf_data       = 128'bx,
+            wdf_mask  = 16'bx;
 
 end else begin:_NO_SLR_
 
@@ -126,18 +125,18 @@ end else begin:_NO_SLR_
             SLR_col_start   = 10'bx,
             SLR_col_finish  = 10'bx;
 
-    wire mem_advance = (!af_full && !wdf_full && wdf_wr_en);
+    wire mem_advance = (!caf_full && !wdf_full && wdf_wren);
 
     assign T_DONE_PIX4 = mem_advance,
             T_DONE_LINE = mem_advance && lastX,
             T_DONE_FULL = mem_advance && lastX && lastY;
 
     wire [31:0] head_addr = {4'h1, framebits, y[9:0], x[9:0], 2'b00}; //"Byte" address
-    assign af_wr_en       = ((cs == S_RUN) && !x[2]), //Skip address on odds's
-            af_addr_din   = {6'd0, head_addr[27:3]},  //Turn into 31-bit "DoubleWord" or DDR-address
-            wdf_wr_en     = (cs == S_RUN),            //Data & mask on odd & even
-            wdf_din       = {4{color_r}},             //Replicate same color on all 4 pixels of both writes
-            wdf_mask_din  = {4{4'b0000}};             //Write all bytes on every write
+    assign caf_wren       = ((cs == S_RUN) && !x[2]), //Skip address on odds's
+            caf_addr   = {6'd0, head_addr[27:3]},  //Turn into 31-bit "DoubleWord" or DDR-address
+            wdf_wren     = (cs == S_RUN),            //Data & mask on odd & even
+            wdf_data       = {4{color_r}},             //Replicate same color on all 4 pixels of both writes
+            wdf_mask  = {4{4'b0000}};             //Write all bytes on every write
 
 end endgenerate
 

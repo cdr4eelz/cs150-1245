@@ -1,3 +1,4 @@
+
 `include "cpuglobal.vh"
 
 module MemMapIO #(
@@ -5,18 +6,22 @@ module MemMapIO #(
     parameter COLT45_SHAKE=1, COLT45_POLLS=0
 )(
     input clk, rst, stall,
+
 // DAS BUS:
-    input           ena,    //ena is like "memory" style "enable port a"
-    input  [11: 0]  addra,  //Address for read or write (use zero if worried about side effects)
-    input  [ 3: 0]  wea,    //Write enable & byte mask together (ena must also be active for write)
-    input  [31: 0]  dina,   //Data in grabbed at clock edge if enabled
+    input         ena,    //ena is like "memory" style "enable port a"
+    input  [11:0] addra,  //Address for read or write (use zero if worried about side effects)
+    input  [ 3:0] wea,    //Write enable & byte mask together (ena must also be active for write)
+    input  [31:0] dina,   //Data in grabbed at clock edge if enabled
     output reg [31:0] DOUTA,//DATA read (behaves like synchronous memory with registered output)
+
 // DOS SHAKES POR FAVOR:
     inout `BUS_SHAKE_type(8) RVa_RX, RVa_TX,
-// PixelFeeder & GraphicsProcessor control:
-    input  [31: 0] graphics_status,
-    output [31: 0] PF_FRAME, GP_FRAME, GP_CODE,
-    output PF_VALID, GP_VALID
+
+// GPU control:
+    input           gp_ready,
+    output          pf_fvalid,  gp_fvalid,  gp_cvalid,
+    output [ 31:0]  pf_frame,   gp_frame,   gp_code,
+    input  [ 15:0]  pf_status,  gp_status
 );
 
 //                  Table 2: I/O Memory Map
@@ -104,24 +109,29 @@ parameter [5:0]             //   DATA-ENCODING/DESC
     end
 
 // PixelFeeder & GraphicsController
-    reg  [31: 0] graphics_status_r = 0;
-    reg  [31: 0] reg_gpframe; //Stash this internally, others USED TO just "pass through"
-    reg  [31: 0] reg_pfframe, reg_gpcode; //...but now stash others too (optional to losen timing)
-    reg          reg_pfvalid, reg_gpvalid; //...and delay valid pulses by 1-cycle also!
+    reg  [31: 0] pf_frame_r,  gp_frame_r,  gp_code_r;
+    reg          pf_fvalid_r, gp_fvalid_r, gp_cvalid_r;
+    reg  [31: 0] gpu_status_r = 0; //Stash these internally for isolation (trade latency)
     always @(posedge clk) begin:_REG_GPU_
-        //NOTE:Avoid unnecessary resets here
-        graphics_status_r <= graphics_status; //1-cycle latency (don't check too quick after trigger)!
-        if (isWrite && HOT_ADDR[H_PFFrame]) reg_pfframe <= dina;
-        reg_pfvalid <= (isWrite && HOT_ADDR[H_PFFrame]);
-        if (isWrite && HOT_ADDR[H_GPFrame]) reg_gpframe <= dina;
-        if (isWrite && HOT_ADDR[H_GPCode])  reg_gpcode  <= dina;
-        reg_gpvalid <= (isWrite && HOT_ADDR[H_GPCode]);
+        if (isWrite && HOT_ADDR[H_PFFrame]) begin
+            pf_frame_r <= dina;
+            pf_fvalid_r <= 1'b1;
+        end else pf_fvalid_r <= 1'b0;
+        if (isWrite && HOT_ADDR[H_GPFrame]) begin
+            gp_frame_r <= dina;
+            gp_fvalid_r <= 1'b1;
+        end else gp_fvalid_r <= 1'b0;
+        if (isWrite && HOT_ADDR[H_GPCode])  begin
+          gp_code_r  <= dina;
+          gp_cvalid_r <= 1'b1;
+        end else gp_cvalid_r <= 1'b0;
+
+        //  1-cycle latency (don't check too quick after trigger)!
+        gpu_status_r <= { pf_status, gp_status };
     end
-    assign PF_FRAME = reg_pfframe; //(BADNESS && !PF_VALID) ? BAD_WORD : dina;
-    assign PF_VALID = reg_pfvalid; //(isWrite && HOT_ADDR[H_PFFrame]);
-    assign GP_FRAME = reg_gpframe; //(BADNESS && !GP_VALID) ? BAD_WORD : reg_gpframe;
-    assign GP_CODE  = reg_gpcode;  //(BADNESS && !GP_VALID) ? BAD_WORD : dina;
-    assign GP_VALID = reg_gpvalid; //(isWrite && HOT_ADDR[H_GPCode]);
+    assign pf_frame = pf_frame_r, pf_fvalid  = pf_fvalid_r;
+    assign gp_frame = gp_frame_r, gp_fvalid = gp_fvalid_r;
+    assign gp_code  = gp_code_r,  gp_cvalid = gp_cvalid_r;
 
 
 // Reading operations
@@ -135,7 +145,7 @@ parameter [5:0]             //   DATA-ENCODING/DESC
             A_CntCycle  : MUX_DOUTA = CNT_Cycle[31:0];
             A_CntInst   : MUX_DOUTA = CNT_Inst[31:0];
             //A_ResetCnt,A_PFFrame,A_GPFrame,A_GPCode
-            A_GPUStatus : MUX_DOUTA = graphics_status_r;
+            A_GPUStatus : MUX_DOUTA = gpu_status_r;
             default: MUX_DOUTA = (BADNESS) ? BAD_WORD : 32'dx;
         endcase
     end

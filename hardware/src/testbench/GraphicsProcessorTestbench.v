@@ -5,9 +5,9 @@ module GraphicsProcessorTestbench;
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;
     localparam Cycle = 2*HalfCycle;
-    reg  Clock, rst;
-    initial Clock = 0;
-    always #(HalfCycle) Clock= ~Clock;
+    reg  cpu_clk_g, rst_cpu_bus;
+    initial cpu_clk_g = 0;
+    always #(HalfCycle) cpu_clk_g = ~cpu_clk_g;
 
     wire        GP_ready;
     reg         GP_valid;
@@ -15,15 +15,15 @@ module GraphicsProcessorTestbench;
     reg  [31:0] GP_frame;
     wire        GP_fault;
     wire [ 5:0] GP_procframe;
-    wire        GP_interrupt;
+    wire        GP_irq;
 //  wire bsel;
 
-    reg         af_full;
-    wire        af_wr_en;
-    wire [30:0] af_addr_din;
-    wire        rdf_rd_en;
+    reg         caf_full;
+    wire        caf_wren;
+    wire [30:0] caf_addr;
+    wire        rdf_rden;
     reg         rdf_valid;
-    reg [127:0] rdf_dout;
+    reg [127:0] rdf_data;
 //  wire        ready;
 
     reg         FF_ready;
@@ -56,24 +56,23 @@ module GraphicsProcessorTestbench;
     GraphicsProcessor #(
         .LITTLEWORDIAN(1)
     ) DUT(
-        .clk(Clock),
-        .rst(rst),
-//      .bsel(bsel), ???What was this to be???
+        .clk(cpu_clk_g),
+        .rst(rst_cpu_bus),
     //GraphicsProcessor control signals
         .GP_ready(GP_ready),
         .GP_valid(GP_valid),
         .GP_frame(GP_frame),
         .GP_code(GP_code),
         .GP_procframe(GP_procframe),
-        .GP_interrupt(GP_interrupt),
+        .GP_irq(GP_irq),
         .GP_fault(GP_fault),
     //DDR FIFOs
         .rdf_valid(rdf_valid),
-        .af_full(af_full),
-        .rdf_dout(rdf_dout),
-        .rdf_rd_en(rdf_rd_en),
-        .af_wr_en(af_wr_en),
-        .af_addr_din(af_addr_din),
+        .caf_full(caf_full),
+        .rdf_data(rdf_data),
+        .rdf_rden(rdf_rden),
+        .caf_wren(caf_wren),
+        .caf_addr(caf_addr),
     //FrameFiller control signals
         .FF_ready(FF_ready),
         .FF_valid(FF_valid),
@@ -126,17 +125,17 @@ reg ELOG_errors = 0;
 
     initial begin
         #(Cycle);
-        @(posedge Clock);
+        @(posedge cpu_clk_g);
         {GP_valid, GP_code, GP_frame} = 0;
-        rst = 1'b1;
+        rst_cpu_bus = 1'b1;
         #(10*Cycle);
-        rst = 1'b0;
+        rst_cpu_bus = 1'b0;
         #(Cycle);
 
         $display("GraphicsProcessor: Fake memory & engines...");
         execGP( 32'h0000_4000, 1 );
 
-        @(posedge Clock);
+        @(posedge cpu_clk_g);
         while (!ENGINES_ready) #(Cycle); // GP should have waited already
         $display("GraphicsProcessor: Done.");
         ELOG_TALLY;
@@ -147,7 +146,7 @@ reg ELOG_errors = 0;
         input [31:0] codebase;
         input [31:0] framebase;
     begin
-        @(negedge Clock);
+        @(negedge cpu_clk_g);
         $display("gp-TB: Wait...");
         while (!GP_ready) #(Cycle); // wait for GP_ready
         GP_code = codebase;
@@ -158,9 +157,9 @@ reg ELOG_errors = 0;
         GP_valid = 1'b0;
         GP_code = 32'bz;
         $monitor("gp-TB: procframe==%h  interrupt==%b  fault==%b",
-                 GP_procframe, GP_interrupt, GP_fault);
+                 GP_procframe, GP_irq, GP_fault);
         while (!GP_ready) begin
-//            if (wdf_wr_en && wdf_mask_din != 16'hFFFF) begin
+//            if (wdf_wren && wdf_mask != 16'hFFFF) begin
 //                $display("gp-TB: ...", x, y);
 //            end
             #(Cycle);
@@ -207,33 +206,33 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
     integer mem_offset;
     always @(*) begin
         mem_ns = mem_cs;  //Default: Hold prior state
-        af_full = 1'b1;   //Default: Pretend full like RequestController
+        caf_full = 1'b1;   //Default: Pretend full like RequestController
         rdf_valid = 1'b0; //Default: Read value invalid
-        rdf_dout = 128'bz;//Default: Obvious bad value
+        rdf_data = 128'bz;//Default: Obvious bad value
         case (mem_cs)
             MS_IDLE: begin
-                af_full = 1'b0;
-                if (af_wr_en) mem_ns = MS_OFFER1; //NOTE:IGNORES af_addr_din!
+                caf_full = 1'b0;
+                if (caf_wren) mem_ns = MS_OFFER1; //NOTE:IGNORES caf_addr!
             end
             MS_OFFER1, MS_OFFER2: begin
                 rdf_valid = 1'b1; //First 128-bits from SAMPLE below
-                rdf_dout[127:0] = GPCODE[mem_offset +: 128];
-                if (rdf_rd_en) mem_ns = (mem_cs==MS_OFFER1) ? MS_OFFER2 : MS_IDLE;
+                rdf_data[127:0] = GPCODE[mem_offset +: 128];
+                if (rdf_rden) mem_ns = (mem_cs==MS_OFFER1) ? MS_OFFER2 : MS_IDLE;
             end
             default: mem_ns = MS_DEAD;
         endcase
     end
-    always @(posedge Clock) begin
-        if (rst) mem_cs <= MS_IDLE;
+    always @(posedge cpu_clk_g) begin
+        if (rst_cpu_bus) mem_cs <= MS_IDLE;
         else mem_cs <= mem_ns;
 
-        if (!af_full && af_wr_en) begin
-            mem_offset <= ((af_addr_din * 64) % 1024);
-            $strobe("gp-MEM: addr=%h offset=%0d", af_addr_din, mem_offset);
+        if (!caf_full && caf_wren) begin
+            mem_offset <= ((caf_addr * 64) % 1024);
+            $strobe("gp-MEM: addr=%h offset=%0d", caf_addr, mem_offset);
         end
-        if (rdf_valid && rdf_rd_en) begin
-            $display("gp-MEM: data=%h %h %h %h", rdf_dout[127:96],
-                rdf_dout[95:64], rdf_dout[63:32], rdf_dout[31:0]);
+        if (rdf_valid && rdf_rden) begin
+            $display("gp-MEM: data=%h %h %h %h", rdf_data[127:96],
+                rdf_data[95:64], rdf_data[63:32], rdf_data[31:0]);
             mem_offset <= mem_offset + 128;
         end
     end
@@ -244,8 +243,8 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
     integer LE__frame, LE__color, LE__x0, LE__y0, LE__x1, LE__y1;
     integer EL__frame, EL__color, EL__x0, EL__y0, EL__x1, EL__y1;
     assign ENGINES_ready = (FF_ready && LE_ready && EL_ready);
-    always @(posedge Clock) begin
-        if (rst) begin
+    always @(posedge cpu_clk_g) begin
+        if (rst_cpu_bus) begin
             {FF_ready, FF__countdown} <= 0;
             {LE_ready, LE__countdown} <= 0;
             {EL_ready, EL__countdown} <= 0;

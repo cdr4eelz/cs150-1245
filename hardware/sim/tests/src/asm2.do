@@ -1,4 +1,4 @@
-start ASMTestbench
+start EchoTestbench
 file copy -force ../sw/asmtest/test2.data.mif dmem_blk_ram.mif
 file copy -force ../sw/asmtest/test2.mif      imem_blk_ram.mif
 file copy -force ../sw/asmtest/test2.mif      bios_mem.mif

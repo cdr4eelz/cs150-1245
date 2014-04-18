@@ -46,7 +46,7 @@ module CPUDumpMemMapTestbench;
 // CP2+
         .dcache_dout(32'b0), .icache_dout(32'b0),
 // CP4+
-        .frame_interrupt(1'b0)
+        .pf_irq(1'b0)
     );
 
     UART #(

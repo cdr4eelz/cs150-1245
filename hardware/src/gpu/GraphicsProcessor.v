@@ -3,11 +3,11 @@
   FrameFiller -- One graphics command:
     1. Write fill-color & automatically trigger
   LineEngine -- Three graphics commands:
-    1. Write start-point (* IGNORING trigger on start-point)
-    2. Write end-point (* ALWAYS trigger on end-point)
-    3. Write line-color
-     *(IGNORING: If trigger bit set in command, also fire on start or end point)
-  Enhancements:
+    1. Write line-color
+    2. Write start-point (* IGNORING trigger on start-point)
+    3. Write end-point (* ALWAYS trigger on end-point)
+       *(IGNORING: If trigger bit mentioned in an old spec)
+  Potential Enhancements:
     1. Chain a series of points into optionally triggering lines.
     2. Apply "clip" region such that FrameFiller becomes RectangleFiller.
     3. Text? Other shapes? Filled shapes (mathematically bound)?
@@ -18,31 +18,29 @@
 `include "gpcommands.vh"
 
 //TODO:Preview code chunks for CC_STOP (not just zero data), and stop fetching ASAP
-//TODO:Fault response?
 
 module GraphicsProcessor #(
-    parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
-//TODO: Implement LITTLEWORDIAN
+    parameter LITTLEWORDIAN=1
 )(
     input clk,
     input rst,
 
+//DDR FIFOs (read-only for GP cmd):
+    output          caf_wren,
+    output  [ 30:0] caf_addr,
+    input           caf_full,
+    output          rdf_rden,
+    input           rdf_valid,
+    input   [127:0] rdf_data,
+
 //GraphicsProcessor interface:
     output          GP_ready,
     input           GP_valid,
-    input   [ 31:0] GP_code,
     input   [ 31:0] GP_frame,
-    output reg      GP_fault,
+    input   [ 31:0] GP_code,
+    output          GP_fault,
     output  [  5:0] GP_procframe,
-    output          GP_interrupt,
-
-//DDR FIFOs (read-only for GP cmd):
-    output          af_wr_en,
-    output  [ 30:0] af_addr_din,
-    input           af_full,
-    output          rdf_rd_en,
-    input           rdf_valid,
-    input   [127:0] rdf_dout,
+    output          GP_irq, //TODO:Delay by 1-cycle
 
 //FrameFiller interface:
     input           FF_ready,
@@ -86,9 +84,9 @@ module GraphicsProcessor #(
 
 //Three semi-independent machines coordinating with each other:
 //    MASTER: Master state of GPCODE chunk processing.
-//    SUB: Sub-states for sub/multi-CMD instructions like with points.
-//          (Note LINE takes 3xINST and each point fed in 2-cycles)
-//    FIFO: Fetch 256-bit chunks from memory & present 32-bit INST stream.
+//    SUB   : Sub-states for sub/multi-CMD instructions like with points.
+//            (Note LINE takes 3xINST and each point fed in 2-cycles)
+//    CHUNK : Simple "DDRStage" grabs 256-bit chunks for 32-bit word access.
 //Chose for GP, FF, LE, etc. to EACH capture own copy of frame upon trigger.
 
 //Master-States:
@@ -117,10 +115,10 @@ module GraphicsProcessor #(
     reg  [ 2:0] code_index; //Offset of 32-bit CODE within 256-bit chunk
 
     wire ENGINES_ready, chunk_valid;
-    wire INST_valid    = (chunk_valid && (cs_M==MS_PROC)); //TODO:"Reset" on !MS_PROC???
+    wire INST_valid    = (chunk_valid && (cs_M==MS_PROC));
     wire CMD_advance   = (INST_valid && ENGINES_ready);
-    wire chunk_reset   = (rst_r || (cs_M==MS_IDLE)); //Reset chunk on IDLE to let pending read clear
     wire chunk_advance = (!chunk_valid || (&code_index && CMD_advance));
+    wire chunk_reset   = (rst_r || (cs_M==MS_IDLE)); //Reset chunk on IDLE to let pending read clear
     wire [255:0] chunk_data;
 
 
@@ -142,19 +140,18 @@ module GraphicsProcessor #(
 
 //Triggers for state transitions & Mealy outputs (usually 1-cycle duration)
     //   T_DEAD   = INITIAL upon FPGA config
-    wire T_RESET  = (rst_r); //TODO:OR with T_STOPS to piggyback on sync-reset???
-    wire T_READY  = (!rst_r && !rdf_rd_en); //Not ready until pending read clears
+    wire T_RESET  = (rst_r);
+    wire T_READY  = (!rst_r && !rdf_rden); //Not ready until pending read clears
     wire T_START  = (GP_ready && GP_valid); //MASTER-State alone for ready/valid enable
     wire T_STOPS  = (hot_GOP_val && hot_GOP[`GOP_STOP]); //Sub-State triggers T_STOPS
 
-    reg  [5:0] procframe_r;
-    always @(posedge clk) begin
-        procframe_r <= `FRAME_BITS(GP_frame); //Pass NEXT value through, 1-cycle later!
-    end
+    reg  [5:0]  procframe_r;
+    reg         fault_r;
 
     assign GP_ready     = (cs_M==MS_IDLE);
     assign GP_procframe = procframe_r;
-    assign GP_interrupt = T_STOPS; //TODO:Ensure clean for most of 1-cycle
+    assign GP_irq = T_STOPS; //TODO:Ensure clean for most of 1-cycle
+    assign GP_fault     = fault_r;
 
     always @(*) begin
         hot_GOP_cal = (1 << `GOP_STOP);
@@ -170,8 +167,10 @@ module GraphicsProcessor #(
         endcase
     end
     always @(posedge clk) begin
-        if (T_RESET || T_START) GP_fault <= 1'b0;
-        else if (hot_GOP_val && hot_GOP_err) GP_fault <= 1'b1;
+        procframe_r <= `FRAME_BITS(GP_frame); //Pass NEXT value through, 1-cycle later!
+
+        if (T_RESET || T_START) fault_r <= 1'b0;
+        else if (hot_GOP_val && hot_GOP_err) fault_r <= 1'b1;
 
         if (hot_GOP_val) hot_GOP_reg <= hot_GOP_cal;
     end
@@ -223,26 +222,26 @@ module GraphicsProcessor #(
             framebits <= `FRAME_BITS(GP_frame); //Either addr style
         end else begin
             if (INST_advance) code_index <= (code_index + 1); //"index" -=> 32-bit word within chunk
-            if (chunk_advance) code_chunk <= (code_chunk + 1); //"chunk" -=> 2 x 128-bit
+            if (caf_wren && !caf_full) code_chunk <= (code_chunk + 1); //"chunk" -=> 2 x 128-bit
         end
     end
 
 
 
 //FETCH GPCode chunks & present as 32-bit INSTruction stream
-    assign af_addr_din  = {6'd0, code_chunk, 2'b00}; //Chunk addr (64-bit "resolution")
-    assign af_wr_en     = (cs_M==MS_PROC) && !rdf_rd_en && chunk_advance;
-    //NOTE:Don't base af_wr_en on af_full when using RequestController!!!
+    assign caf_addr  = {6'd0, code_chunk, 2'b00}; //Chunk addr (64-bit "resolution")
+    assign caf_wren     = (cs_M==MS_PROC) && !rdf_rden && chunk_advance;
+    //NOTE:Don't base caf_wren on caf_full when using RequestController!!!
 
     DDRStage #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) ddr_stage (
-        .clk(clk), .rst(chunk_reset), //MS_RSET waits for !af_rdf_rd_en
-        .af_wr_en(af_wr_en), //Ignored if rdf_rd_en; resets chunk_valid regardless of af_full
-        .af_full(af_full),  //Advances if (!af_full && af_wr_en)
-        .rdf_rd_en(rdf_rd_en),
+        .clk(clk), .rst(chunk_reset), //MS_RSET waits for !caf_rdf_rden
+        .caf_wren(caf_wren), //Ignored if rdf_rden; resets chunk_valid regardless of caf_full
+        .caf_full(caf_full),  //Advances if (!caf_full && caf_wren)
+        .rdf_rden(rdf_rden),
         .rdf_valid(rdf_valid),
-        .rdf_dout(rdf_dout),
+        .rdf_data(rdf_data),
         .chunk_valid(chunk_valid),
         .chunk_data(chunk_data)
     );
@@ -283,18 +282,20 @@ module GraphicsProcessor #(
 
 //synthesis translate_off
     always @(posedge clk) if (!rst_r) begin
-        if (af_wr_en)
+        if (caf_wren)
             $display("stage-F: addr=%h full=%b",
-                     af_addr_din, af_full
+                     caf_addr, caf_full
             );
-        if (rdf_rd_en)
+        if (rdf_rden)
             $display("stage-W: valid=%b data=%h.%h.%h.%h",
-                     rdf_valid, rdf_dout[127:96], rdf_dout[95:64],
-                     rdf_dout[63:32], rdf_dout[31:0]
+                     rdf_valid,
+                     rdf_data[127:96], rdf_data[95:64],
+                     rdf_data[63:32], rdf_data[31:0]
             );
         if (INST_advance)
             $display("stage-R: %h gop=%h  valid=%b advance=%b index=%0d",
-                     INST, INST_gop, INST_valid, INST_advance, code_index);
+                     INST, INST_gop, INST_valid, INST_advance, code_index
+            );
     end
 //synthesis translate_on
 

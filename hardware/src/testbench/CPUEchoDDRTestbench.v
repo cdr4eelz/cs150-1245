@@ -43,7 +43,7 @@ module CPUEchoDDRTestbench;
     wire        video_ready;
     wire        video_valid;
     wire [23:0] video;
-    wire        frame_interrupt;
+    wire        pf_irq;
     wire [31:0] gp_code;
     wire [31:0] gp_frame;
     wire        gp_valid;
@@ -103,10 +103,10 @@ module CPUEchoDDRTestbench;
         .video          (video      ),
         .video_ready    (video_ready),
         .video_valid    (video_valid),
-        .frame_interrupt(frame_interrupt),
-        .cpu_gp_code    (gp_code),
-        .cpu_gp_frame   (gp_frame),
-        .cpu_gp_valid   (gp_valid)
+        .pf_irq(pf_irq),
+        .gp_code    (gp_code),
+        .gp_frame   (gp_frame),
+        .gp_valid   (gp_valid)
     );
 
     mt4htf3264hy ddr2(
@@ -159,7 +159,7 @@ module CPUEchoDDRTestbench;
         .dcache_dout(dcache_dout),
         .icache_dout(icache_dout),
         .stall      (stall      ),
-        .frame_interrupt(frame_interrupt),
+        .pf_irq(pf_irq),
         .gp_code        (gp_code        ),
         .gp_frame       (gp_frame       ),
         .gp_valid       (gp_valid       )

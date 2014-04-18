@@ -115,8 +115,8 @@ int main( void )
                 bufw_hex32u( stat.u32 );
                 uwrite_int8s(" PF#"); bufw_hex8u( stat.f.pf_feedframe );
                 uwrite_int8('-');
-                uwrite_int8( (stat.f.pf_active)  ? 'V' : 'v');
-                uwrite_int8( (stat.f.pf_fault)   ? '*' : ' ');
+                uwrite_int8( (stat.f.pf_dormant)   ? 'D' : 'd');
+                uwrite_int8( (stat.f.pf_fault)     ? '*' : ' ');
                 uwrite_int8s(" GF#"); bufw_hex8u( stat.f.gp_procframe );
                 uwrite_int8('-');
                 uwrite_int8( (stat.f.elipse_ready) ? 'E' : 'e');
@@ -137,12 +137,27 @@ int main( void )
 
             case BC_FRAME: {
                 gframe_pv frame = tok_addr(&stash_address);
-                if (flags & 0x04) PF_FRAME = frame;         //Test hw frame# conversion
+                if (flags & 0x04) PF_FRAME = frame; //Test hw frame# conversion
                 frame = FRAME_PTR(frame); //Software converted frame#
                 if (flags & 0x02) GP_FRAME = frame;
                 if (flags & 0x01) sw_frame = frame;
             } break;
 
+            case BC_BACK: {
+                color_t color = (color_t)tok_hex32u();
+                hwback(color);
+            } break;
+
+            case BC_CLIP: {
+                uint32_t parms = tok_hex32u();
+                uint16_t L  = tok_dec16u();
+                uint16_t T  = tok_dec16u();
+                uint16_t R  = tok_dec16u();
+                uint16_t B  = tok_dec16u();
+                hwclip(parms, L,T, R,B);
+            } break;
+
+        //HW/SW common commands:
             case BC_COLOR: {
                 color_t color = (color_t)tok_hex32u();
                 if (flags & 0x02) hw_color = color;
@@ -155,38 +170,31 @@ int main( void )
             } break;
 
             case BC_LINE: {
-                uint16_t x0           = tok_dec16u();
-                uint16_t y0           = tok_dec16u();
-                uint16_t x1           = tok_dec16u();
-                uint16_t y1           = tok_dec16u();
+                uint16_t x0 = tok_dec16u();
+                uint16_t y0 = tok_dec16u();
+                uint16_t x1 = tok_dec16u();
+                uint16_t y1 = tok_dec16u();
                 if (gflag & 0x02) hwline(hw_color, x0,y0, x1,y1);
                 if (gflag & 0x01) swline(sw_frame, sw_color, x0,y0, x1,y1);
             } break;
 
             case BC_PIXL: {
-                uint16_t x            = tok_dec16u();
-                uint16_t y            = tok_dec16u();
+                uint16_t x  = tok_dec16u();
+                uint16_t y  = tok_dec16u();
                 if (gflag & 0x02) hwline(hw_color, x,y, x,y);
-                if (gflag & 0x01) swpixel(sw_frame, sw_color, x,y);
+                if (gflag & 0x01) swpixl(sw_frame, sw_color, x,y);
             } break;
 
             case BC_ELIP: {
-                uint16_t xc           = tok_dec16u();
-                uint16_t yc           = tok_dec16u();
-                uint16_t ox           = tok_dec16u();
-                uint16_t oy           = tok_dec16u();
-                if (gflag & 0x02) hwelipse(hw_color, xc,yc, ox,oy);
-                if (gflag & 0x01) swelipse(sw_frame, sw_color, xc,yc, ox,oy);
+                uint16_t xc = tok_dec16u();
+                uint16_t yc = tok_dec16u();
+                uint16_t a  = tok_dec16u();
+                uint16_t b  = tok_dec16u();
+                if (gflag & 0x02) hwelip(hw_color, xc,yc, a,b);
+                if (gflag & 0x01) swelip(sw_frame, sw_color, xc,yc, a,b);
             } break;
 
-            case BC_CIRC: {
-                uint16_t xc           = tok_dec16u();
-                uint16_t yc           = tok_dec16u();
-                uint16_t rr           = tok_dec16u();
-                if (gflag & 0x02) hwelipse(hw_color, xc,yc, rr,rr);
-                if (gflag & 0x01) swcircle(sw_frame, sw_color, xc,yc, rr);
-            } break;
-
+        //Misc. commands:
             BC_UNKNOWN: {
                 uwrite_int8('?');
             }

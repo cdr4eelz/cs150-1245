@@ -4,6 +4,7 @@
 <!--advised that users do not directly edit the contents of this file.                               -->
 <!--                                                                                                 -->
 <filters xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation='filter.xsd'>
+<filter task="xst" file="Xst" num="741" type="info"><arg index="1">25</arg><arg index="2">u_ddr2_infrastructure/rst90_sync_r_24</arg><arg index="3">25</arg><arg index="4">12</arg><arg index="5">32</arg></filter>
 <filter task="xst" file="Xst" num="653" type="warning"><arg index="1">sram_data_in</arg><arg index="2">000000000000000000000000000000000000</arg></filter>
 <filter task="xst" file="Xst" num="646" type="warning"><arg index="1">cpu_addr&lt;31:28&gt;</arg></filter>
 <filter task="map" file="Pack" num="1716" type="info"></filter>
@@ -15,6 +16,7 @@
 <filter task="par" file="Par" num="288" type="warning"></filter>
 <filter task="xst" file="Xst" num="2117" type="info"><arg index="1">CurrentState</arg><arg index="2">342</arg><arg index="3">INIT</arg><arg index="4">CurrentState</arg><arg index="5">signal_encoding</arg><arg index="6">user</arg><arg index="7">safe_implementation</arg><arg index="8">yes</arg></filter>
 <filter task="map" file="Pack" num="1720" type="info"></filter>
+<filter task="xst" file="Xst" num="741" type="info"><arg index="1">25</arg><arg index="2">u_ddr2_infrastructure/rst200_sync_r_24</arg><arg index="3">25</arg><arg index="4">12</arg><arg index="5">32</arg></filter>
 <filter task="xst" file="Xst" num="1710" type="warning"></filter>
 <filter task="ngdbuild" file="NgdBuild" num="470" type="warning"><arg index="1" match_type="wildcard">bidirect</arg><arg index="2" match_type="wildcard">SRAM_D[*]</arg></filter>
 <filter task="xst" file="Xst" num="1799" type="info"><arg index="1">10001</arg><arg index="2">init_state_r</arg></filter>
@@ -31,8 +33,9 @@
 <filter task="xst" file="Xst" num="1895" type="warning"></filter>
 <filter task="ngdbuild" file="ConstraintSystem" num="178" type="info"></filter>
 <filter task="trce" file="Timing" num="3412" type="info"></filter>
-<filter task="xst" file="Xst" num="646" type="warning"><arg index="1">lastX</arg></filter>
+<filter task="xst" file="Xst" num="741" type="info"><arg index="1">12</arg><arg index="2">u_ddr2_infrastructure/rstdiv0_sync_r_11</arg><arg index="3">12</arg><arg index="4">6</arg><arg index="5">32</arg></filter>
 <filter task="xst" file="Xst" num="1872" type="warning"><arg index="1">x</arg></filter>
+<filter task="xst" file="Xst" num="646" type="warning"><arg index="1">lastX</arg></filter>
 <filter task="xst" file="Xst" num="2385" type="info"><arg index="1">Mmult__COND_37</arg><arg index="2">1</arg></filter>
 <filter task="xst" file="Xst" num="741" type="info"><arg index="1">25</arg><arg index="2">mem_arch/ddr2/u_ddr2_infrastructure/rst200_sync_r_24</arg><arg index="3">25</arg><arg index="4">12</arg><arg index="5">32</arg></filter>
 <filter task="xst" file="Xst" num="1433" type="info"><arg index="1">calib_rden_dly</arg></filter>

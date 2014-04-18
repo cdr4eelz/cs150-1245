@@ -12,22 +12,23 @@
 //----------------------------------------------------------------------
 
 module Memory150 #(
-    parameter SCANLINERUNNER=1,
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
     parameter LITTLEWORDIAN=1, //Order of 32-bit words in each 256-bit DDR block (not byte order)
     parameter SIM_ONLY = 1'b0
 )(
 // Clocks & Resets:
     input           cpu_clk_g,
     input           dvi_clk_g,
-    input           clk200_g,
     input           clk0_g,
     input           clkdiv0_g,
     input           clk90_g,
+    input           clk200_g,
     input           locked,
     input           rst_cpu_mem,
     output          init_done,
     input           rst_cpu_bus,
     input           rst_dvi_bus,
+
 // DDR2 Interface:
     output  [12:0]  DDR2_A,
     output  [ 1:0]  DDR2_BA,
@@ -43,6 +44,7 @@ module Memory150 #(
     output          DDR2_ODT,
     output          DDR2_RAS_B,
     output          DDR2_WE_B,
+
 // Cache <=> CPU Interface:
     input   [31:0]  dcache_addr,
     input   [31:0]  icache_addr,
@@ -54,595 +56,420 @@ module Memory150 #(
     input   [31:0]  icache_din,
     output  [31:0]  dcache_dout,
     output  [31:0]  icache_dout,
-    output          dcache_stall,
-    output          icache_stall,
     output          stall,
+    output          d_stall,
+    output          i_stall,
+
 // DVI Interface:
     input           video_ready,
     output          video_valid,
-    output  [23:0]  video,
-// Graphics <=> CPU Interface:
-    output  [31:0]  graphics_status,
-    input           cpu_pf_valid,
-    input   [31:0]  cpu_pf_frame,
-    output          frame_interrupt,
-    input           cpu_gp_valid,
-    input   [31:0]  cpu_gp_frame,
-    input   [31:0]  cpu_gp_code,
-    output          gp_interrupt
+    output  [31:0]  video, //[23:0]
+
+// PixelFeeder <=> CPU Interface:
+    output  [15:0]  pf_status,
+    input           pf_valid,
+    input   [31:0]  pf_frame,
+    output          pf_irq,
+
+// GPU/GraphicsProcessor <=> CPU Interface:
+    output  [15:0]  gp_status,
+    input           gp_valid,
+    input   [31:0]  gp_frame, gp_code,
+    output          gp_irq
 );
 
-    // DDR2 & FIFO interface wires:
-    wire         ddr2_clock_tb, rst_tb;
+    // DDR2 (MIG) interface:
+    wire         ddr2_clock_tb;
+    wire         ddr2_rst_tb;
+    wire         ddr2_caf_afull, ddr2_caf_rden;
+    wire         ddr2_wdf_afull, ddr2_wdf_rden;
+    wire         ddr2_wdf_valid;
+    wire [143:0] ddr2_wdf_maskdata;
+    wire         ddr2_rdf_wren, rd_data_valid;
+    wire [127:0] ddr2_rd_data;
+//  wire         ddr2_caf_empty;
+//  wire         ddr2_wdf_empty;
+    wire         ddr2_caf_valid;
+    wire [ 33:0] ddr2_caf_data;
 
-    wire         af_afull;
-    wire         af_full;
-    wire         af_empty;
-    wire         af_valid;
-    wire [ 33:0] af_dout;
-    wire         wdf_valid;
-    wire [143:0] wdf_dout;
+    // FIFO interface:
+    wire         fifo_caf_full;
+    wire         fifo_caf_wren;
+    wire [  2:0] fifo_caf_cmd;
+    wire [ 30:0] fifo_caf_addr;
 
-    wire [ 15:0] wdf_mask_din;
-    wire [127:0] wdf_din;
-    wire         wdf_wr_en;
-    wire         wdf_full;
-    wire         wdf_afull;
-    wire         wdf_rd_en;
+    wire         fifo_wdf_full;
+    wire         fifo_wdf_wren;
+    wire [ 15:0] fifo_wdf_mask;
+    wire [127:0] fifo_wdf_data;
 
-    wire         rdf_dout_valid;
-    wire         rdf_rd_en;
-    wire         ddr_rd_valid;
-    wire [127:0] rdf_dout;
-    wire [127:0] ddr2_rd_dout;
+    wire         fifo_rdf_valid;
+    wire         fifo_rdf_rden;
+    wire [127:0] fall_rdf_data; //Shared by all
 
-    wire [  2:0] af_cmd_din;
-    wire [ 30:0] af_addr_din;
-    wire         af_wr_en;
-    wire         af_rd_en;
 
     // Cache <=> RequestController wires:
-    wire         i_rdf_valid,    d_rdf_valid;
-    wire         i_af_full,      d_af_full;
-    wire         i_wdf_full,     d_wdf_full;
-    wire         i_rdf_rd_en,    d_rdf_rd_en;
-    wire [  2:0] i_af_cmd_din,   d_af_cmd_din;
-    wire [ 30:0] i_af_addr_din,  d_af_addr_din;
-    wire         i_af_wr_en,     d_af_wr_en;
-    wire [127:0] i_wdf_din,      d_wdf_din;
-    wire [ 15:0] i_wdf_mask_din, d_wdf_mask_din;
-    wire         i_wdf_wr_en,    d_wdf_wr_en;
-    wire         i_stall,        d_stall;
+    wire         inst_caf_full,   data_caf_full;
+    wire         inst_caf_wren,   data_caf_wren;
+    wire [  2:0] inst_caf_cmd,   data_caf_cmd;
+    wire [ 30:0] inst_caf_addr,   data_caf_addr;
+    wire         inst_wdf_full,   data_wdf_full;
+    wire         inst_wdf_wren,   data_wdf_wren;
+    wire [ 15:0] inst_wdf_mask,   data_wdf_mask;
+    wire [127:0] inst_wdf_data,   data_wdf_data;
+    wire         inst_rdf_valid,  data_rdf_valid;
+    wire         inst_rdf_rden,   data_rdf_rden;
+
+    // Read-Only <=> RequestController wires
+    //          GraphicsProcessor,  PixelFeeder
+    wire         gcmd_rdf_rden;
+    wire         gcmd_caf_wren;
+    wire [ 30:0] gcmd_caf_addr;
+    wire         gcmd_rdf_valid;
+    wire         gcmd_caf_full;
 
     // PixelFeeder <=> RequestController wires:
-    wire         pixel_rdf_rd_en;
-    wire         pixel_af_wr_en;
-    wire [ 30:0] pixel_af_addr_din;
-    wire         pixel_af_full;
-    wire         pixel_rdf_valid;
+    wire         pixf_rdf_rden;
+    wire         pixf_caf_wren;
+    wire [ 30:0] pixf_caf_addr;
+    wire         pixf_caf_full;
+    wire         pixf_rdf_valid;
 
     // FrameFiller <=> RequestController wires:
-    wire         filler_af_full;
-    wire         filler_wdf_full;
-    wire [127:0] filler_wdf_din;
-    wire         filler_wdf_wr_en;
-    wire [ 30:0] filler_af_addr_din;
-    wire         filler_af_wr_en;
-    wire [ 15:0] filler_wdf_mask_din;
+    wire         fill_caf_full;
+    wire         fill_wdf_full;
+    wire [127:0] fill_wdf_data;
+    wire         fill_wdf_wren;
+    wire [ 30:0] fill_caf_addr;
+    wire         fill_caf_wren;
+    wire [ 15:0] fill_wdf_mask;
 
     // LineEngine <=> RequestController wires:
-    wire         line_af_full;
+    wire         line_caf_full;
     wire         line_wdf_full;
-    wire [127:0] line_wdf_din;
-    wire         line_wdf_wr_en;
-    wire [ 30:0] line_af_addr_din;
-    wire         line_af_wr_en;
-    wire [ 15:0] line_wdf_mask_din;
+    wire [127:0] line_wdf_data;
+    wire         line_wdf_wren;
+    wire [ 30:0] line_caf_addr;
+    wire         line_caf_wren;
+    wire [ 15:0] line_wdf_mask;
 
     // Bypass/ScanLineRunner <=> RequestController wires: (extension!)
-    wire         bypass_af_full;
-    wire         bypass_wdf_full;
-    wire [127:0] bypass_wdf_din;
-    wire         bypass_wdf_wr_en;
-    wire [ 30:0] bypass_af_addr_din;
-    wire         bypass_af_wr_en;
-    wire [ 15:0] bypass_wdf_mask_din;
+    wire         bpas_caf_full;
+    wire         bpas_wdf_full;
+    wire [127:0] bpas_wdf_data;
+    wire         bpas_wdf_wren;
+    wire [ 30:0] bpas_caf_addr;
+    wire         bpas_caf_wren;
+    wire [ 15:0] bpas_wdf_mask;
 
-    // Graphics Command Processor <=> RequestController wires:
-    wire         cmd_rdf_rd_en;
-    wire         cmd_af_wr_en;
-    wire [ 30:0] cmd_af_addr_din;
-    wire         cmd_rdf_valid;
-    wire         cmd_af_full;
 
-    // Graphics Command Processor <=> Frame Filler wires:
-    wire [ 31:0] filler_color;
-    wire         filler_ready;
-    wire         filler_valid;
-    wire [ 31:0] filler_frame;
-
-    // Graphics Command Processor <=> Line Engine wires:
-    wire         line_ready;
-    wire [ 31:0] line_color;
-    wire [  9:0] line_point;
-    wire         line_color_valid;
-    wire         line_x0_valid;
-    wire         line_y0_valid;
-    wire         line_x1_valid;
-    wire         line_y1_valid;
-    wire         line_trigger;
-    wire [ 31:0] line_frame;
-
-    // Graphics Command Processor <=> Elipse Engine wires:
-    wire         elip_ready;
-    wire [ 31:0] elip_color;
-    wire [  9:0] elip_point;
-    wire         elip_color_valid;
-    wire         elip_xc_valid;
-    wire         elip_yc_valid;
-    wire         elip_a_valid;
-    wire         elip_b_valid;
-    wire         elip_trigger;
-    wire [ 31:0] elip_frame;
-
-// Extra feedback status from graphics controllers
-    wire [  5:0] pf_feedframe, gp_procframe;
-    wire         pf_active, pf_fault, gp_fault, gp_ready;
-
-    assign graphics_status = {
-        2'b00, pf_feedframe[5:0],
-        8'b0000_0000, //Maybe for overlay stuff later
-        2'b00, gp_procframe[5:0], //TODO:Count video_xyz activity, not snapshot
-        pf_active, pf_fault, gp_fault, 1'b0,
-            elip_ready, line_ready, filler_ready, gp_ready
-    };
-
-wire DBG_MEM150 = 0; //Watch out for signals from other clock domains!!! (Use separate scope)
-/*{
-    d_stall, d_wdf_full, d_af_full, d_rdf_valid,
-        1'b0, d_wdf_wr_en, d_af_wr_en, d_rdf_rd_en,
-    i_stall, i_wdf_full, i_af_full, i_rdf_valid,
-        1'b0, i_wdf_wr_en, i_af_wr_en, i_rdf_rd_en,
-    stall, wdf_full, af_full, rdf_dout_valid,
-        1'b0, wdf_wr_en, af_wr_en, rdf_rd_en,
-    filler_valid, (filler_af_full || filler_wdf_full), filler_af_wr_en, filler_wdf_wr_en,
-        line_trigger, (line_af_full || line_wdf_full), line_af_wr_en, line_wdf_wr_en
+wire DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!!!
+    d_stall, data_wdf_full, data_caf_full, data_rdf_valid,
+        1'b0, data_wdf_wren, data_caf_wren, data_rdf_rden,
+    i_stall, inst_wdf_full, inst_caf_full, inst_rdf_valid,
+        1'b0, inst_wdf_wren, inst_caf_wren, inst_rdf_rden,
+    stall, fifo_wdf_full, fifo_caf_full, fifo_rdf_valid,
+        1'b0, fifo_wdf_wren, fifo_caf_wren, fifo_rdf_rden,
+    1'b0, (fill_caf_full || fill_wdf_full), fill_caf_wren, fill_wdf_wren,
+        1'b0, (line_caf_full || line_wdf_full), line_caf_wren, line_wdf_wren
 };
-*/
 
+//TODO:Try BURST_LEN(8) and/or 266MHz
+//TODO:Let MIG generate its own clocks (ideally from differential reference)
    // DDR2 module:
     mig_v3_61 #(
         .SIM_ONLY(SIM_ONLY),
         .CAS_LAT(3), //CAS 3 matches 200MHz (like -53E), CAS 4 matches 266MHz (like -667)
-        .BURST_LEN(4), //TODO: Try 8
+        .BURST_LEN(4),
         .APPDATA_WIDTH(128),
         .CLK_PERIOD(5000), //5000ns==200MHz (3750ns==266MHz, challenging for SpeedGrade-1)
         .RST_ACT_LOW(0) // was 1: flipped this to avoid double inversion
-    ) ddr2(
-        .clk200(clk200_g),
-        .clk0(clk0_g),
-        .clk90(clk90_g),
+    ) ddr2 (
+        .clk0   (clk0_g),
+        .clk90  (clk90_g),
         .clkdiv0(clkdiv0_g),
-        .locked(locked),
-        .sys_rst_n(rst_cpu_mem), //~rst_cpu_mem
+        .clk200 (clk200_g),
+        .locked (locked),
+        .sys_rst_n(rst_cpu_mem), //was ~rst_cpu_mem (see RST_ACT_LOW parameter)
         .phy_init_done(init_done),
-        .clk0_tb(ddr2_clock_tb),
-        .rst0_tb(rst_tb),
 
-        .ddr2_dq(DDR2_D),
-        .ddr2_a(DDR2_A),
-        .ddr2_ba(DDR2_BA),
+        .clk0_tb(ddr2_clock_tb),
+        .rst0_tb(ddr2_rst_tb),
+
+        .ddr2_dq   (DDR2_D),
+        .ddr2_a    (DDR2_A),
+        .ddr2_ba   (DDR2_BA),
         .ddr2_ras_n(DDR2_RAS_B),
         .ddr2_cas_n(DDR2_CAS_B),
-        .ddr2_we_n(DDR2_WE_B),
-        .ddr2_cs_n(DDR2_CS_B),
-        .ddr2_odt(DDR2_ODT),
-        .ddr2_cke(DDR2_CKE),
-        .ddr2_dm(DDR2_DM),
-        .ddr2_dqs(DDR2_DQS_P),
+        .ddr2_we_n (DDR2_WE_B),
+        .ddr2_cs_n (DDR2_CS_B),
+        .ddr2_odt  (DDR2_ODT),
+        .ddr2_cke  (DDR2_CKE),
+        .ddr2_dm   (DDR2_DM),
+        .ddr2_dqs  (DDR2_DQS_P),
         .ddr2_dqs_n(DDR2_DQS_N),
-        .ddr2_ck(DDR2_CLK_P),
-        .ddr2_ck_n(DDR2_CLK_N),
+        .ddr2_ck   (DDR2_CLK_P),
+        .ddr2_ck_n (DDR2_CLK_N),
 
-        .app_wdf_afull(wdf_afull),
-        .app_af_afull(af_afull),
-        .rd_data_valid(ddr_rd_valid),
-        .app_wdf_wren(wdf_valid),
-        .app_af_wren(af_valid),
-        .app_af_addr(af_dout[30:0]),
-        .app_af_cmd(af_dout[33:31]),
-        .rd_data_fifo_out(ddr2_rd_dout),
-        .app_wdf_data(wdf_dout[127:0]),
-        .app_wdf_mask_data(wdf_dout[143:128])
-    );
+        .app_af_afull(ddr2_af_afull),
+        .app_af_wren (ddr2_af_wren), //BUG:UNUSED or NAMES BAD or mixed up!
+        .app_af_cmd  (ddr2_af_cmd), assign ddr2_af_cmd = ddr2_af_data[33:31]
+        .app_af_addr (ddr2_af_addr), assign ddr2_af_addr = ddr2_af_data[30:0]
+        .app_wdf_afull    (ddr2_wdf_afull),
+        .app_wdf_wren     (ddr2_wdf_wren), assign ddr2_wdf_wren = ddr2_wdf_valid
+        .app_wdf_mask_data(ddr2_wdf_mask_data), assign app_wdf_mask_data = ddr2_wdf_maskdata[143:128]
+        .app_wdf_data     (ddr2_wdf_data), assign app_wdf_data = ddr2_wdf_maskdata[127:0]
+        .rd_data_fifo_out(ddr2_rd_data),
+        .rd_data_valid   (ddr2_rd_valid)
+    ) /* synthesis syn_noprune=1 */;
+
+    //TODO:Assign all these
+    assign ddr2_caf_rden = !ddr2_caf_afull;
+    assign ddr2_wdf_rden = !ddr2_wdf_afull;
+    assign rd_data_valid = ddr2_rdf_wren;
 
 
     // Clock-crossing FIFOs:
-    assign af_rd_en = !af_afull;
-    assign wdf_rd_en = !wdf_afull;
 
-    //address and cmd fifo:
-    mig_af ddr2_addr_fifo(
-        .valid(af_valid),
-        .rd_en(af_rd_en),
-        .empty(af_empty),
-        .wr_en(af_wr_en),
-        .full(af_full),
-        .wr_clk(cpu_clk_g),
+    //Cmd/Address Fifo (RCON => DDR2):
+    mig_caf ddr2_cadr_fifo (
         .rst(rst_cpu_bus),
-        .rd_clk(ddr2_clock_tb),
-        .dout(af_dout),
-        .din({af_cmd_din, af_addr_din})
-    );
-
-    //write data and mask fifo:
-    mig_wdf ddr2_write_fifo(
-        .valid(wdf_valid),
-        .rd_en(wdf_rd_en),
-        .wr_en(wdf_wr_en),
-        .full(wdf_full),
-        .empty(),
+        // FIFO-WR: RCON/CPU clock-domain
         .wr_clk(cpu_clk_g),
-        .rst(rst_cpu_bus),
+        .full  (fifo_caf_full),
+        .wr_en (fifo_caf_wren),
+        .din   ( {fifo_caf_cmd, fifo_caf_addr} ),
+        // FIFO-RD: DDR2 clock-domain
         .rd_clk(ddr2_clock_tb),
-        .dout(wdf_dout),
-        .din({wdf_mask_din, wdf_din})
-    );
+        .empty (/*ddr2_caf_empty*/),
+        .rd_en (ddr2_caf_rden),
+        .valid (ddr2_caf_valid),
+        .dout  (ddr2_caf_data)
+    ) /* synthesis syn_noprune=1 */;
 
-    // read data out fifo:
-    mig_rdf  ddr2_read_fifo(
-        .valid(rdf_dout_valid),
-        .rd_en(rdf_rd_en),
-        .wr_en(ddr_rd_valid),
-        .full(),
-        .empty(),
+    //Write-mask/Data Fifo (RCON => DDR2):
+    mig_wdf ddr2_mdat_fifo (
+        .rst(rst_cpu_bus),
+        // FIFO-WR: RCON/CPU clock-domain
+        .wr_clk(cpu_clk_g),
+        .full  (fifo_wdf_full),
+        .wr_en (fifo_wdf_wren),
+        .din   ( {fifo_wdf_mask, fifo_wdf_data} ),
+        // FIFO-RD: DDR2 clock-domain
+        .rd_clk(ddr2_clock_tb),
+        .empty (/*ddr2_wdf_empty*/),
+        .rd_en (ddr2_wdf_rden),
+        .valid (ddr2_wdf_valid),
+        .dout  (ddr2_wdf_maskdata)
+    ) /* synthesis syn_noprune=1 */;
+
+    //Read Data Fifo (DDR2 => RCON):
+    mig_rdf  ddr2_read_fifo (
+        .rst(rst_cpu_bus),
+        // FIFO-WR: DDR2 clock-domain
         .wr_clk(ddr2_clock_tb),
-        .rst(rst_cpu_bus),
+        .full  (),
+        .wr_en (),
+        .din   (ddr2_rd_data),
+        // FIFO-RD: RCON/CPU clock-domain
         .rd_clk(cpu_clk_g),
-        .dout(rdf_dout),
-        .din(ddr2_rd_dout)
-    );
+        .empty (),
+        .rd_en (fifo_rdf_rden),
+        .valid (xxx),
+        .dout  (fall_rdf_data)
+    ) /* synthesis syn_noprune=1 */;
 
     // The RequestController gives each cache the illusion of having
-    // exclusive DDR2 Access:
+    //   exclusive DDR2 Access:
     RequestController req_con(
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
-        .af_full(af_full),
-        .wdf_full(wdf_full),
-        .rdf_valid(rdf_dout_valid),
-        .i_rdf_rd_en(i_rdf_rd_en),
-        .i_af_cmd_din(i_af_cmd_din),
-        .i_af_addr_din(i_af_addr_din),
-        .i_af_wr_en(i_af_wr_en),
-        .i_wdf_din(i_wdf_din),
-        .i_wdf_mask_din(i_wdf_mask_din),
-        .i_wdf_wr_en(i_wdf_wr_en),
-        .i_stall(i_stall),
-        .d_rdf_rd_en(d_rdf_rd_en),
-        .d_af_cmd_din(d_af_cmd_din),
-        .d_af_addr_din(d_af_addr_din),
-        .d_af_wr_en(d_af_wr_en),
-        .d_wdf_din(d_wdf_din),
-        .d_wdf_mask_din(d_wdf_mask_din),
-        .d_wdf_wr_en(d_wdf_wr_en),
-        .d_stall(d_stall),
-        .rdf_rd_en(rdf_rd_en),
-        .af_cmd_din(af_cmd_din),
-        .af_addr_din(af_addr_din),
-        .af_wr_en(af_wr_en),
-        .wdf_din(wdf_din),
-        .wdf_mask_din(wdf_mask_din),
-        .wdf_wr_en(wdf_wr_en),
-        .i_rdf_valid(i_rdf_valid),
-        .i_af_full(i_af_full),
-        .i_wdf_full(i_wdf_full),
-        .d_rdf_valid(d_rdf_valid),
-        .d_af_full(d_af_full),
-        .d_wdf_full(d_wdf_full),
 
-        // new inputs for cp4-5:
-        .line_af_addr_din(line_af_addr_din),
-        .line_af_wr_en(line_af_wr_en),
-        .line_wdf_din(line_wdf_din),
-        .line_wdf_mask_din(line_wdf_mask_din),
-        .line_wdf_wr_en(line_wdf_wr_en),
-        .bypass_af_addr_din(bypass_af_addr_din), //NOTE:Extended to allow bypass input
-        .bypass_af_wr_en(bypass_af_wr_en),
-        .bypass_wdf_din(bypass_wdf_din),
-        .bypass_wdf_mask_din(bypass_wdf_mask_din),
-        .bypass_wdf_wr_en(bypass_wdf_wr_en),
-        .filler_af_addr_din(filler_af_addr_din),
-        .filler_af_wr_en(filler_af_wr_en),
-        .filler_wdf_wr_en(filler_wdf_wr_en),
-        .filler_wdf_mask_din(filler_wdf_mask_din),
-        .filler_wdf_din(filler_wdf_din),
-        .pixel_rdf_rd_en(pixel_rdf_rd_en),
-        .pixel_af_wr_en(pixel_af_wr_en),
-        .pixel_af_addr_din(pixel_af_addr_din),
-        // new outputs for cp4-5:
-        .line_af_full(line_af_full),
+        // FIFO inputs:
+        .caf_full  (fifo_caf_full),
+        .wdf_full (fifo_wdf_full),
+        .rdf_valid(fifo_rdf_valid),
+        // FIFO outputs:
+        .caf_cmd  (fifo_caf_cmd),
+        .caf_addr (fifo_caf_addr),
+        .caf_wren (fifo_caf_wren),
+        .wdf_data(fifo_wdf_data),
+        .wdf_mask(fifo_wdf_mask),
+        .wdf_wren(fifo_wdf_wren),
+        .rdf_rden (fifo_rdf_rden),
+
+        // Data-Cache inputs:             // Inst-Cache inputs:
+        .data_caf_full(data_caf_full),    .inst_caf_full(inst_caf_full),
+        .data_wdf_full(data_wdf_full),    .inst_wdf_full(inst_wdf_full),
+        .data_rdf_valid(data_rdf_valid),   .inst_rdf_valid(inst_rdf_valid),
+        // Data-Cache outputs:            // Inst-Cache outputs:
+        .data_caf_cmd(data_caf_cmd),     .inst_caf_cmd(inst_caf_cmd),
+        .data_caf_addr(data_caf_addr),    .inst_caf_addr(inst_caf_addr),
+        .data_caf_wren(data_caf_wren),    .inst_caf_wren(inst_caf_wren),
+        .data_wdf_data(data_wdf_data),    .inst_wdf_data(inst_wdf_data),
+        .data_wdf_mask(data_wdf_mask),    .inst_wdf_mask(inst_wdf_mask),
+        .data_wdf_wren(data_wdf_wren),    .inst_wdf_wren(inst_wdf_wren),
+        .data_rdf_rden(data_rdf_rden),    .inst_rdf_rden(inst_rdf_rden),
+        .d_stall(d_stall),                .i_stall(i_stall),
+
+// New for cp4-5:
+        // PixelFeeder inputs:
+        .pixf_caf_wren(pixf_caf_wren),
+        .pixf_caf_addr(pixf_caf_addr),
+        .pixf_rdf_rden(pixf_rdf_rden),
+        // PixelFeeder outputs:
+        .pixf_caf_full(pixf_caf_full),
+        .pixf_rdf_valid(pixf_rdf_valid),
+
+        // GraphicsProcessor inputs:
+        .gcmd_caf_wren(gcmd_caf_wren),
+        .gcmd_caf_addr(gcmd_caf_addr),
+        .gcmd_rdf_rden(gcmd_rdf_rden),
+        // GraphicsProcessor outputs:
+        .gcmd_caf_full  (gcmd_caf_full),
+        .gcmd_rdf_valid(gcmd_rdf_valid),
+
+        // FrameFiller inputs:
+        .fill_caf_addr(fill_caf_addr),
+        .fill_caf_wren(fill_caf_wren),
+        .fill_wdf_wren(fill_wdf_wren),
+        .fill_wdf_mask(fill_wdf_mask),
+        .fill_wdf_data(fill_wdf_data),
+        // FrameFiller outputs:
+        .fill_caf_full(fill_caf_full),
+        .fill_wdf_full(fill_wdf_full),
+
+        // LineEngine inputs:
+        .line_caf_addr(line_caf_addr),
+        .line_caf_wren(line_caf_wren),
+        .line_wdf_data(line_wdf_data),
+        .line_wdf_mask(line_wdf_mask),
+        .line_wdf_wren(line_wdf_wren),
+        // LineEngine outputs:
+        .line_caf_full(line_caf_full),
         .line_wdf_full(line_wdf_full),
-        .bypass_af_full(bypass_af_full), //NOTE:Extended to allow bypass output
-        .bypass_wdf_full(bypass_wdf_full),
-        .filler_af_full(filler_af_full),
-        .filler_wdf_full(filler_wdf_full),
-        .pixel_rdf_valid(pixel_rdf_valid),
-        .pixel_af_full(pixel_af_full),
 
-        // new inputs for graphics command processor:
-        .cmd_rdf_rd_en(cmd_rdf_rd_en),
-        .cmd_af_wr_en(cmd_af_wr_en),
-        .cmd_af_addr_din(cmd_af_addr_din),
-        // new outputs for graphics command processor:
-        .cmd_rdf_valid(cmd_rdf_valid),
-        .cmd_af_full(cmd_af_full)
-    );
+        // Bypass/SLR inputs: //NOTE:XTRA:Extended to allow bypass input
+        .bpas_caf_addr(bpas_caf_addr),
+        .bpas_caf_wren(bpas_caf_wren),
+        .bpas_wdf_data(bpas_wdf_data),
+        .bpas_wdf_mask(bpas_wdf_mask),
+        .bpas_wdf_wren(bpas_wdf_wren),
+        // Bypass/SLR outputs:
+        .bpas_caf_full(bpas_caf_full),
+        .bpas_wdf_full(bpas_wdf_full)
+    ) /* synthesis syn_noprune=1 */;
 
     // The instruction cache:
     Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) icache(
+    ) icache (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
         .addr(icache_addr),
         .din(icache_din),
         .we(icache_we),
         .re(icache_re),
-        .rdf_valid(i_rdf_valid),
-        .rdf_dout(rdf_dout),
-        .af_full(i_af_full),
-        .wdf_full(i_wdf_full),
+        .rdf_valid(inst_rdf_valid),
+        .rdf_data(fall_rdf_data),
+        .caf_full(inst_caf_full),
+        .wdf_full(inst_wdf_full),
         .stall(i_stall),
         .dout(icache_dout),
-        .rdf_rd_en(i_rdf_rd_en),
-        .af_cmd_din(i_af_cmd_din),
-        .af_addr_din(i_af_addr_din),
-        .af_wr_en(i_af_wr_en),
-        .wdf_din(i_wdf_din),
-        .wdf_mask_din(i_wdf_mask_din),
-        .wdf_wr_en(i_wdf_wr_en)
-    );
+        .rdf_rden(inst_rdf_rden),
+        .caf_cmd(inst_caf_cmd),
+        .caf_addr(inst_caf_addr),
+        .caf_wren(inst_caf_wren),
+        .wdf_data(inst_wdf_data),
+        .wdf_mask(inst_wdf_mask),
+        .wdf_wren(inst_wdf_wren)
+    ) /* synthesis syn_noprune=1 */;
 
     // Data cache:
     Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) dcache(
+    ) dcache (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
         .addr(dcache_addr),
         .din(dcache_din),
         .we(dcache_we),
         .re(dcache_re),
-        .rdf_valid(d_rdf_valid),
-        .rdf_dout(rdf_dout),
-        .af_full(d_af_full),
-        .wdf_full(d_wdf_full),
+        .rdf_valid(data_rdf_valid),
+        .rdf_data(fall_rdf_data),
+        .caf_full(data_caf_full),
+        .wdf_full(data_wdf_full),
         .stall(d_stall),
         .dout(dcache_dout),
-        .rdf_rd_en(d_rdf_rd_en),
-        .af_cmd_din(d_af_cmd_din),
-        .af_addr_din(d_af_addr_din),
-        .af_wr_en(d_af_wr_en),
-        .wdf_din(d_wdf_din),
-        .wdf_mask_din(d_wdf_mask_din),
-        .wdf_wr_en(d_wdf_wr_en)
-    );
+        .rdf_rden(data_rdf_rden),
+        .caf_cmd(data_caf_cmd),
+        .caf_addr(data_caf_addr),
+        .caf_wren(data_caf_wren),
+        .wdf_data(data_wdf_data),
+        .wdf_mask(data_wdf_mask),
+        .wdf_wren(data_wdf_wren)
+    ) /* synthesis syn_noprune=1 */;
 
-     // assignments
     assign stall = d_stall || i_stall;
-    assign dcache_stall = d_stall;
-    assign icache_stall = i_stall;
+
 
     // For feeding pixels to the DVI module:
     PixelFeeder #(
+        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) pixelfeed(
+    ) pf (
         .cpu_clk_g(cpu_clk_g),
         .cpu_rst_g(rst_cpu_bus),
         .dvi_clk_g(dvi_clk_g),
         .dvi_rst_g(rst_dvi_bus),
     //DDR FIFOs (read-only):
-        .rdf_valid(pixel_rdf_valid),
-        .af_full(pixel_af_full),
-        .rdf_dout(rdf_dout),
-        .rdf_rd_en(pixel_rdf_rd_en),
-        .af_wr_en(pixel_af_wr_en),
-        .af_addr_din(pixel_af_addr_din),
+        .caf_full(pixf_caf_full),
+        .caf_wren(pixf_caf_wren),
+        .caf_addr(pixf_caf_addr),
+        .rdf_valid(pixf_rdf_valid),
+        .rdf_rden(pixf_rdf_rden),
+        .rdf_data(fall_rdf_data),
     // DVI driver:
-        .video(video),
-        .video_valid(video_valid),
         .video_ready(video_ready),
+        .video_valid(video_valid),
+        .video      (video),
     // FRAME control <=> CPU:
-        .PF_frame(cpu_pf_frame),
-        .PF_valid(cpu_pf_valid),
-        .PF_active(pf_active),
-        .PF_fault(pf_fault),
-        .PF_feedframe(pf_feedframe),
-        .PF_interrupt(frame_interrupt)
-    );
+        .pf_status(pf_status),
+        .pf_frame (pf_frame),
+        .pf_valid (pf_valid),
+        .pf_irq   (pf_irq)
+    ) /* synthesis syn_noprune=1 */;
 
     //For CP5:
-    GraphicsProcessor #(
+    //GPU holds GraphicsProcessor, ScanLineRunner,
+    //  & engines (FrameFiller, LineEngine, ElipseEngine)
+    GPU #(
+        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) graphicsprocessor(
+    ) gpu (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
-    //DDR FIFOs (read-only):
-        .rdf_valid(cmd_rdf_valid),
-        .af_full(cmd_af_full),
-        .rdf_dout(rdf_dout),
-        .rdf_rd_en(cmd_rdf_rd_en),
-        .af_wr_en(cmd_af_wr_en),
-        .af_addr_din(cmd_af_addr_din),
-    //FrameFiller interface:
-        .FF_ready(filler_ready),
-        .FF_valid(filler_valid),
-        .FF_color(filler_color),
-        .FF_frame(filler_frame),
-    //LineEngine interface:
-        .LE_ready(line_ready),
-        .LE_color_valid(line_color_valid),
-        .LE_color      (line_color),
-        .LE_x0_valid(line_x0_valid),
-        .LE_y0_valid(line_y0_valid),
-        .LE_x1_valid(line_x1_valid),
-        .LE_y1_valid(line_y1_valid),
-        .LE_point   (line_point),
-        .LE_trigger(line_trigger),
-        .LE_frame  (line_frame),
-    //ElipseEngine interface:
-        .EL_ready(elip_ready),
-        .EL_color_valid(elip_color_valid),
-        .EL_color      (elip_color),
-        .EL_xc_valid(elip_xc_valid),
-        .EL_yc_valid(elip_yc_valid),
-        .EL_a_valid (elip_a_valid),
-        .EL_b_valid (elip_b_valid),
-        .EL_point   (elip_point),
-        .EL_trigger(elip_trigger),
-        .EL_frame  (elip_frame),
-    //CPU interface:
-        .GP_ready(gp_ready),
-        .GP_valid(cpu_gp_valid),
-        .GP_frame(cpu_gp_frame),
-        .GP_code (cpu_gp_code),
-        .GP_fault(gp_fault),
-        .GP_procframe(gp_procframe),
-        .GP_interrupt(gp_interrupt)
-    );
+    //GraphicsProcessor interface:
+        .gp_status(gp_status),
+        .gp_valid (gp_valid),
+        .gp_frame (gp_frame),
+        .gp_code  (gp_code),
+        .gp_irq   (gp_irq),
+    //DDR FIFOs (read-only for GraphicsProcessor):
+        .gcmd_caf_wren(gcmd_caf_wren),
+        .gcmd_caf_addr(gcmd_caf_addr),
+        .gcmd_caf_full(gcmd_caf_full),
+        .gcmd_rdf_rden(gcmd_rdf_rden),
+        .gcmd_rdf_valid(gcmd_rdf_valid),
+        .gcmd_rdf_data(fall_rdf_data),
+    //DDR FIFOs (write-only for ScanLineRunner):
+        .slr_caf_full(bpas_caf_full),
+        .slr_wdf_full(bpas_wdf_full),
+        .slr_caf_wren(bpas_caf_wren),
+        .slr_caf_addr(bpas_caf_addr),
+        .slr_wdf_wren(bpas_wdf_wren),
+        .slr_wdf_data(bpas_wdf_data),
+        .slr_wdf_mask(bpas_wdf_mask)
+    ) /* synthesis syn_noprune=1 */;
 
-    localparam SLR_FF       = 0,
-                SLR_LE      = 1,
-                SLR_EL      = 2;
-    localparam  SLR__CNT = 3;
-
-    wire [(SLR__CNT)-1:0] SLRs_ready;
-    wire [(SLR__CNT)-1:0] SLRs_valid;
-    wire [(SLR__CNT*32)-1:0] SLRs_frame;
-    wire [(SLR__CNT*32)-1:0] SLRs_color_edge;
-    wire [(SLR__CNT*32)-1:0] SLRs_color_fill;
-    wire [(SLR__CNT*10)-1:0] SLRs_row;
-    wire [(SLR__CNT*10)-1:0] SLRs_col_start;
-    wire [(SLR__CNT*10)-1:0] SLRs_col_finish;
-
-    ScanLineRunner #(
-        .LITTLEWORDIAN(LITTLEWORDIAN),
-        .SLR_COUNT(SLR__CNT)
-    ) scanlinerunner (
-        .clk(cpu_clk_g),
-        .rst(rst_cpu_bus),
-    //DDR FIFOs (write-only):
-        .af_full (bypass_af_full),
-        .wdf_full(bypass_wdf_full),
-        .af_wr_en   (bypass_af_wr_en),
-        .af_addr_din(bypass_af_addr_din),
-        .wdf_wr_en   (bypass_wdf_wr_en),
-        .wdf_din     (bypass_wdf_din),
-        .wdf_mask_din(bypass_wdf_mask_din),
-    //SLR interface:
-        .SLRs_ready(SLRs_ready),
-        .SLRs_valid     (SLRs_valid),
-        .SLRs_frame     (SLRs_frame),
-        .SLRs_color_fill(SLRs_color_fill),
-        .SLRs_color_edge(SLRs_color_edge),
-        .SLRs_row       (SLRs_row),
-        .SLRs_col_start (SLRs_col_start),
-        .SLRs_col_finish(SLRs_col_finish)
-    );
-
-
-    FrameFiller #(
-        .SCANLINERUNNER(SCANLINERUNNER),
-        .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) framefill (
-        .clk(cpu_clk_g),
-        .rst(rst_cpu_bus),
-    //Fill control <=> CPU:
-        .FF_ready(filler_ready),
-        .FF_valid (filler_valid),
-        .FF_color (filler_color),
-        .FF_frame (filler_frame),
-    //DDR FIFOs (write-only):
-        .af_full (filler_af_full),
-        .wdf_full(filler_wdf_full),
-        .af_wr_en   (filler_af_wr_en),
-        .af_addr_din(filler_af_addr_din),
-        .wdf_wr_en   (filler_wdf_wr_en),
-        .wdf_din     (filler_wdf_din),
-        .wdf_mask_din(filler_wdf_mask_din),
-    //SLR interface (write-only):
-        .SLR_ready(SLRs_ready           [SLR_FF]                    ),
-        .SLR_valid(SLRs_valid           [SLR_FF]                    ),
-        .SLR_frame     (SLRs_frame     [(SLR_FF*32)+31:(SLR_FF*32)] ),
-        .SLR_color_fill(SLRs_color_fill[(SLR_FF*32)+31:(SLR_FF*32)] ),
-        .SLR_color_edge(SLRs_color_edge[(SLR_FF*32)+31:(SLR_FF*32)] ),
-        .SLR_row       (SLRs_row       [(SLR_FF*10)+ 9:(SLR_FF*10)] ),
-        .SLR_col_start (SLRs_col_start [(SLR_FF*10)+ 9:(SLR_FF*10)] ),
-        .SLR_col_finish(SLRs_col_finish[(SLR_FF*10)+ 9:(SLR_FF*10)] )
-    );
-
-    // For CP5:
-    LineEngine #(
-        .SCANLINERUNNER(SCANLINERUNNER),
-        .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) le (
-        .clk(cpu_clk_g),
-        .rst(rst_cpu_bus),
-    //Line control <=> CPU:
-        .LE_ready(line_ready),
-        .LE_color_valid(line_color_valid),
-        .LE_color      (line_color),
-        .LE_x0_valid(line_x0_valid),
-        .LE_y0_valid(line_y0_valid),
-        .LE_x1_valid(line_x1_valid),
-        .LE_y1_valid(line_y1_valid),
-        .LE_point   (line_point),
-        .LE_trigger(line_trigger),
-        .LE_frame  (line_frame),
-    //DDR FIFOs (write-only):
-        .af_full (line_af_full),
-        .wdf_full(line_wdf_full),
-        .af_wr_en   (line_af_wr_en),
-        .af_addr_din(line_af_addr_din),
-        .wdf_wr_en   (line_wdf_wr_en),
-        .wdf_din     (line_wdf_din),
-        .wdf_mask_din(line_wdf_mask_din),
-    //SLR interface (write-only):
-        .SLR_ready(SLRs_ready           [SLR_LE]                    ),
-        .SLR_valid(SLRs_valid           [SLR_LE]                    ),
-        .SLR_frame     (SLRs_frame     [(SLR_LE*32)+31:(SLR_LE*32)] ),
-        .SLR_color_fill(SLRs_color_fill[(SLR_LE*32)+31:(SLR_LE*32)] ),
-        .SLR_color_edge(SLRs_color_edge[(SLR_LE*32)+31:(SLR_LE*32)] ),
-        .SLR_row       (SLRs_row       [(SLR_LE*10)+ 9:(SLR_LE*10)] ),
-        .SLR_col_start (SLRs_col_start [(SLR_LE*10)+ 9:(SLR_LE*10)] ),
-        .SLR_col_finish(SLRs_col_finish[(SLR_LE*10)+ 9:(SLR_LE*10)] )
-    );
-
-    ElipseEngine #(
-        .LITTLEWORDIAN(LITTLEWORDIAN)
-    ) el (
-        .clk(cpu_clk_g),
-        .rst(rst_cpu_bus),
-    //Elipse control <=> CPU:
-        .EL_ready(elip_ready),
-        .EL_color_valid(elip_color_valid),
-        .EL_color      (elip_color),
-        .EL_xc_valid(elip_xc_valid),
-        .EL_yc_valid(elip_yc_valid),
-        .EL_a_valid (elip_a_valid),
-        .EL_b_valid (elip_b_valid),
-        .EL_point   (elip_point),
-        .EL_trigger(elip_trigger),
-        .EL_frame  (elip_frame),
-    //SLR interface (write-only):
-        .SLR_ready(SLRs_ready           [SLR_EL]                    ),
-        .SLR_valid(SLRs_valid           [SLR_EL]                    ),
-        .SLR_frame     (SLRs_frame     [(SLR_EL*32)+31:(SLR_EL*32)] ),
-        .SLR_color_fill(SLRs_color_fill[(SLR_EL*32)+31:(SLR_EL*32)] ),
-        .SLR_color_edge(SLRs_color_edge[(SLR_EL*32)+31:(SLR_EL*32)] ),
-        .SLR_row       (SLRs_row       [(SLR_EL*10)+ 9:(SLR_EL*10)] ),
-        .SLR_col_start (SLRs_col_start [(SLR_EL*10)+ 9:(SLR_EL*10)] ),
-        .SLR_col_finish(SLRs_col_finish[(SLR_EL*10)+ 9:(SLR_EL*10)] )
-    );
 endmodule
