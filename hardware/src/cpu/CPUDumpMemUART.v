@@ -2,11 +2,12 @@
 
 module CPUDumpMemUART #(
     parameter DD=`COLT45_DD,
-    parameter ClockFreq=50_000_000,
+    parameter CPU_FREQ=50_000_000,
     parameter COLT45_STEPMAX=9
 )(
     input clk,
     input rst,
+    input stall,
 
     // Serial
     input FPGA_SERIAL_RX,
@@ -14,23 +15,18 @@ module CPUDumpMemUART #(
 
 // CP2+
     // Memory system connections
-    output [31:0] dcache_addr,
-    output [31:0] icache_addr,
-    output [3:0] dcache_we,
-    output [3:0] icache_we,
-    output dcache_re,
-    output icache_re,
-    output [31:0] dcache_din,
-    output [31:0] icache_din,
-    input [31:0] dcache_dout,
-    input [31:0] icache_dout,
-    input stall,
+    output [ 31:0] dcache_addr, icache_addr,
+    output [  3:0] dcache_we,   icache_we,
+    output         dcache_re,   icache_re,
+    output [ 31:0] dcache_din,  icache_din,
+    input  [ 31:0] dcache_dout, icache_dout,
 
 // CP4+
-    output [31:0] gp_code,
-    output [31:0] gp_frame,
-    output gp_valid,
-    input pf_irq
+    output          pf_vframe,    gp_vcode, gp_vframe,
+    output [ 31:0]  pf_wframe,    gp_wcode, gp_wframe,
+    input  [ 31:0]                gp_rcode,
+    input  [ 15:0]  pf_status,              gp_status,
+    input           irq_pf_frame, irq_gp_done
 );
 
     wire [13: 0]    ADDR, ADDR_NEXT;
@@ -66,7 +62,7 @@ module CPUDumpMemUART #(
 
     // Key components indirectly wired elsewhere
 
-    bios_mem brom_bios
+    bios_mem bram_bios
     ( .clka(clk),   .addra(ADDR_W),
         .ena( ~stall),      .douta(OUT_BRa),
       /*.wea(4'b0000),      .dina(32'b0),*/
@@ -88,7 +84,7 @@ module CPUDumpMemUART #(
       /*.enb(1'b1),*/       .doutb(OUT_IB)
     );
 
-    UART #(.ClockFreq(ClockFreq)) uart
+    UART #(.ClockFreq(CPU_FREQ)) uart
     (   .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
         // Transmitter  (handshakes go both in/out)

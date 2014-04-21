@@ -1,4 +1,5 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
+`include "../tuntap.vh"
 
 module MemBank #(
     parameter CPU_FREQ = 50_000_000,
@@ -17,7 +18,7 @@ module MemBank #(
     input  [ 3: 0]  _WriteMask,
 
 // Interrupts:
-    output uart0_irq, uart1_irq,
+    output irq_uart0, irq_uart1,
 
 // Serial (UART):
     input   FPGA_SERIAL_RX,
@@ -31,9 +32,10 @@ module MemBank #(
     input  [ 31:0]  dcache_dout,  icache_dout,
 
 // GPU control:
-    input  [ 15:0]  pf_status,  gp_status,
-    output          pf_valid,   gp_valid,
-    output [ 31:0]  pf_frame,   gp_frame,gp_code
+    output          pf_vframe,  gp_vcode, gp_vframe,
+    output [ 31:0]  pf_wframe,  gp_wcode, gp_wframe,
+    input  [ 31:0]              gp_rcode,
+    input  [ 15:0]  pf_status,            gp_status
 );
 
 //TODO: Ideally generate "isRead/isWrite" signals WHILE generating _WriteMask
@@ -176,8 +178,8 @@ module MemBank #(
       /*.enb(1'b1)*/ .doutb(INST_IB) //No use for hoti_IB_
     ) /* synthesis syn_noprune=1 */;
 
-    `BUS_SHAKE_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
-    MemMapIO memmap_io
+    `BUS_RVA_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
+    MemMapIO memmap
     ( .clk(clk), .rst(rst), .stall(stall),
         .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
         .addra(DMEM_ADDR[13:2]),
@@ -186,15 +188,16 @@ module MemBank #(
     //RVAs
         .RVa_RX(UARX), .RVa_TX(UATX),
     //GPU control
-        .pf_status(pf_status),  .gp_status(gp_status),
-        .pf_valid(pf_valid),    .gp_valid(gp_valid),
-        .pf_frame(pf_frame),    .gp_frame(gp_frame),.gp_code(gp_code)
+                                .gp_rcode(gp_rcode),
+        .pf_status(pf_status),                       .gp_status(gp_status),
+        .pf_vframe(pf_vframe),  .gp_vcode(gp_vcode), .gp_vframe(gp_vframe),
+        .pf_wframe(pf_wframe),  .gp_wcode(gp_wcode), .gp_wframe(gp_wframe)
     ) /* synthesis syn_noprune=1 */;
 
     UARTRVA #(.ClockFreq(CPU_FREQ)) uartrva
     ( .Clock(clk), .Reset(rst),
-        .SIn(FPGA_SERIAL_RX),  .UARX(UARX),   .IRQ_RX(uart0_irq), //Receiver
-        .UATX(UATX),  .SOut(FPGA_SERIAL_TX),  .IRQ_TX(uart1_irq) //Transmitter
+        .SIn(FPGA_SERIAL_RX),  .UARX(UARX),   .IRQ_RX(irq_uart0), //Receiver
+        .UATX(UATX),  .SOut(FPGA_SERIAL_TX),  .IRQ_TX(irq_uart1) //Transmitter
     ) /* synthesis syn_noprune=1 */;
 
 

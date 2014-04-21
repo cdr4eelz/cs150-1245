@@ -7,35 +7,35 @@ module GPU #(
     input rst,
 
 //GraphicsProcessor interface:
-    input           GP_valid,
-    input   [ 31:0] GP_frame,
-    input   [ 31:0] GP_code,
-    output  [ 15:0] GP_status,
-    output          GP_irq,
+    input           gp_vcode, gp_vframe,
+    input   [ 31:0] gp_wcode, gp_wframe,
+    output  [ 31:0] gp_rcode,
+    output  [ 15:0]           gp_status,
+    output          irq_gp_done,
 
 //DDR-FIFOs (Read-only for GraphicsProcessor):
-    output          gcmd_caf_wren,
-    output  [ 30:0] gcmd_caf_addr,
-    input           gcmd_caf_full,
+    input           gcmd_raf_full,
+    output          gcmd_raf_wren,
+    output  [ 30:0] gcmd_raf_addr,
     output          gcmd_rdf_rden,
-    input           gcmd_rdf_valid,
+    input           gcmd_rdf_wren,
     input   [127:0] gcmd_rdf_data,
 
 //DDR-FIFOs (Write-only for ScanLineRunner):
-    input           slr_caf_full,
+    input           slr_waf_full,
+    output          slr_waf_wren,
+    output  [ 30:0] slr_waf_addr,
     input           slr_wdf_full,
-    output          slr_caf_wren,
-    output  [ 30:0] slr_caf_addr,
     output          slr_wdf_wren,
-    output  [127:0] slr_wdf_data,
-    output  [ 15:0] slr_wdf_mask
+    output  [ 15:0] slr_wdf_mask,
+    output  [127:0] slr_wdf_data
 );
 
     // GraphicsProcessor <=> FrameFiller:
-    wire [ 31:0] filler_color;
-    wire         filler_ready;
-    wire         filler_valid;
-    wire [ 31:0] filler_frame;
+    wire [ 31:0] fill_color;
+    wire         fill_ready;
+    wire         fill_valid;
+    wire [ 31:0] fill_frame;
 
     // GraphicsProcessor <=> LineEngine:
     wire         line_ready;
@@ -61,31 +61,50 @@ module GPU #(
     wire         elip_trigger;
     wire [ 31:0] elip_frame;
 
-    wire         gp_fault, gp_ready;
-    wire [  5:0] gp_procframe;
-    assign GP_status = {
-        gp_fault, 1'b0, gp_procframe[5:0],
-        4'b0000, elip_ready, line_ready, filler_ready, gp_ready
+//GP status & interrupt generation => CPU
+    wire [  5:0] gp_rframe;
+    wire         gp_ready, gp_fault;
+    reg  was_ready, gp_done_1shot_1cycle_sync_posedge;
+
+    always @(posedge clk) begin
+        if (rst) begin
+            was_ready <= 1'b1;
+            gp_done_1shot_1cycle_sync_posedge <= 1'b0;
+        end else begin
+            was_ready <= gp_ready;
+            gp_done_1shot_1cycle_sync_posedge <= (gp_ready && !was_ready);
+        end
+    end
+
+    assign gp_status = {
+        gp_fault, 1'b0, gp_rframe[5:0],
+        4'b0000, elip_ready, line_ready, fill_ready, gp_ready
     };
+    assign irq_gp_done = gp_done_1shot_1cycle_sync_posedge;
+
 
     GraphicsProcessor #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) gp (
         .clk(clk),
         .rst(rst),
-    //DDR FIFOs (read-only):
-        .rdf_valid(gcmd_rdf_valid),
-        .caf_full(gcmd_caf_full),
-        .rdf_data(gcmd_rdf_data),
+    //CPU/GPU <=> GP:
+        .GP_vframe(gp_vframe),  .GP_vcode(gp_vcode),
+        .GP_wframe(gp_wframe),  .GP_wcode(gp_wcode),
+        .GP_rframe(gp_rframe),  .GP_rcode(gp_rcode),
+        .GP_ready(gp_ready),
+        .GP_fault(gp_fault),
+    //DDR-FIFOs <=> GP (read-only):
+        .raf_full(gcmd_raf_full),
+        .raf_wren(gcmd_raf_wren),
+        .raf_addr(gcmd_raf_addr),
         .rdf_rden(gcmd_rdf_rden),
-        .caf_wren(gcmd_caf_wren),
-        .caf_addr(gcmd_caf_addr),
-    //FrameFiller interface:
-        .FF_ready(filler_ready),
-        .FF_valid(filler_valid),
-        .FF_color(filler_color),
-        .FF_frame(filler_frame),
-    //LineEngine interface:
+        .rdf_wren(gcmd_rdf_wren),
+        .rdf_data(gcmd_rdf_data),
+    //FrameFiller <=> GP:
+        .FF_ready(fill_ready), .FF_valid(fill_valid),
+        .FF_color(fill_color), .FF_frame(fill_frame),
+    //LineEngine <=> GP:
         .LE_ready(line_ready),
         .LE_color_valid(line_color_valid),
         .LE_color      (line_color),
@@ -96,7 +115,7 @@ module GPU #(
         .LE_point   (line_point),
         .LE_trigger(line_trigger),
         .LE_frame  (line_frame),
-    //ElipseEngine interface:
+    //ElipseEngine <=> GP:
         .EL_ready(elip_ready),
         .EL_color_valid(elip_color_valid),
         .EL_color      (elip_color),
@@ -106,15 +125,7 @@ module GPU #(
         .EL_b_valid (elip_b_valid),
         .EL_point   (elip_point),
         .EL_trigger(elip_trigger),
-        .EL_frame  (elip_frame),
-    //CPU interface:
-        .GP_ready(gp_ready),
-        .GP_valid(GP_valid),
-        .GP_frame(GP_frame),
-        .GP_code (GP_code),
-        .GP_fault(gp_fault),
-        .GP_procframe(gp_procframe),
-        .GP_irq(GP_irq)
+        .EL_frame  (elip_frame)
     ) /* synthesis syn_noprune=1 */;
 
     localparam SLR_FF       = 0,
@@ -139,13 +150,13 @@ module GPU #(
         .clk(clk),
         .rst(rst),
     //DDR FIFOs (write-only):
-        .caf_full (slr_caf_full),
+        .caf_full(slr_waf_full),
+        .caf_wren(slr_waf_wren),
+        .caf_addr(slr_waf_addr),
         .wdf_full(slr_wdf_full),
-        .caf_wren   (slr_caf_wren),
-        .caf_addr(slr_caf_addr),
-        .wdf_wren   (slr_wdf_wren),
-        .wdf_data     (slr_wdf_data),
+        .wdf_wren(slr_wdf_wren),
         .wdf_mask(slr_wdf_mask),
+        .wdf_data(slr_wdf_data),
     //SLR interface:
         .SLRs_ready(SLRs_ready),
         .SLRs_valid     (SLRs_valid),
@@ -165,15 +176,15 @@ module GPU #(
         .clk(clk),
         .rst(rst),
     //Fill control <=> CPU:
-        .FF_ready(filler_ready),
-        .FF_valid (filler_valid),
-        .FF_color (filler_color),
-        .FF_frame (filler_frame),
+        .FF_ready(fill_ready),
+        .FF_valid (fill_valid),
+        .FF_color (fill_color),
+        .FF_frame (fill_frame),
     //DDR FIFOs (write-only):
-        .caf_full (1'b1), .wdf_full(1'b1),
-        .caf_wren    (), .wdf_wren   (),
-        .caf_addr (), .wdf_mask(),
-        .wdf_data     (),
+        .caf_full(1'b1), .wdf_full(1'b1),
+        .caf_wren    (), .wdf_wren    (),
+        .caf_addr    (), .wdf_mask    (),
+        .wdf_data(),
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_FF]                    ),
         .SLR_valid(SLRs_valid           [SLR_FF]                    ),
@@ -204,10 +215,10 @@ module GPU #(
         .LE_trigger(line_trigger),
         .LE_frame  (line_frame),
     //DDR FIFOs (write-only):
-        .caf_full (1'b1), .wdf_full(1'b1),
-        .caf_wren    (), .wdf_wren   (),
-        .caf_addr (), .wdf_mask(),
-        .wdf_data     (),
+        .caf_full(1'b1), .wdf_full(1'b1),
+        .caf_wren    (), .wdf_wren    (),
+        .caf_addr    (), .wdf_mask    (),
+        .wdf_data(),
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_LE]                    ),
         .SLR_valid(SLRs_valid           [SLR_LE]                    ),
@@ -253,7 +264,7 @@ module GPU #(
     always @(posedge clk) begin:_WATCH_SLR_
         integer idx;
         for (idx = 0; idx < SLR__CNT; idx = idx+1) begin
-            if (SLRs_ready[idx] && SLRs_valid[idx] && WATCH_SLR) begin
+            if (WATCH_SLR && SLRs_ready[idx] && SLRs_valid[idx]) begin
                 $display("%d SLR[%0d] ready=%b row=%0d s=%0d f=%0d",
                          $time, idx, SLRs_ready[idx],
                          SLRs_row       [(idx*10)+ 9 -: 10],

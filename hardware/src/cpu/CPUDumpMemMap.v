@@ -1,12 +1,12 @@
 `include "../cpuglobal.vh"
+`include "../tuntap.vh"
 
 module CPUDumpMemMap #(
     parameter DD=`COLT45_DD,
-    parameter ClockFreq=50_000_000,
+    parameter CPU_FREQ=50_000_000,
     parameter COLT45_STEPMAX=0
 )(
-    input clk,
-    input rst,
+    input clk, rst, stall,
 
     // Serial
     input FPGA_SERIAL_RX,
@@ -14,23 +14,18 @@ module CPUDumpMemMap #(
 
 // CP2+
     // Memory system connections
-    output [31:0] dcache_addr,
-    output [31:0] icache_addr,
-    output [3:0] dcache_we,
-    output [3:0] icache_we,
-    output dcache_re,
-    output icache_re,
-    output [31:0] dcache_din,
-    output [31:0] icache_din,
-    input [31:0] dcache_dout,
-    input [31:0] icache_dout,
-    input stall,
+    output [ 31:0] dcache_addr, icache_addr,
+    output [  3:0] dcache_we,   icache_we,
+    output         dcache_re,   icache_re,
+    output [ 31:0] dcache_din,  icache_din,
+    input  [ 31:0] dcache_dout, icache_dout,
 
 // CP4+
-    output [31:0] gp_code,
-    output [31:0] gp_frame,
-    output gp_valid,
-    input pf_irq
+    output          pf_vframe,    gp_vcode, gp_vframe,
+    output [ 31:0]  pf_wframe,    gp_wcode, gp_wframe,
+    input  [ 31:0]                gp_rcode,
+    input  [ 15:0]  pf_status,              gp_status,
+    input           irq_pf_frame, irq_gp_done
 );
 
     wire [13: 0]    ADDR, ADDR_NEXT;
@@ -68,7 +63,7 @@ module CPUDumpMemMap #(
 
     // Key components indirectly wired elsewhere
 
-    bios_mem brom_bios
+    bios_mem bram_bios
     ( .clka(clk), .addra(ADDR_W),
         .ena( ~stall), .douta(OUT_BRa),
       /*.wea(4'b0000), .dina(32'b0),*/
@@ -90,25 +85,29 @@ module CPUDumpMemMap #(
       /*.enb(1'b1),*/ .doutb(OUT_IB)
     );
 
-    `BUS_SHAKE_type(8)  UATX, UARX;
+    `BUS_RVA_type(8)  UATX, UARX;
     wire IRQ_TX, IRQ_RX;
     MemMapIO memmap_io
-    ( .clk(clk), .rst(rst),
+    ( .clk(clk), .rst(rst), .stall(stall),
         .ena(~stall),
         .addra( (STATE === 2) ? 12'h002 : 12'h000 ),
         .wea  ( {3'b000, (STATE === 2)} ),
         .dina ( {24'b0, TX_Data} ),
-        .DOUTA( IOSTATUS ),
-        .RVa_TX (UATX),         .RVa_RX(UARX),
-        .RVa_TX_IRQ(IRQ_TX),    .RVa_RX_IRQ(IRQ_RX)
-    );
+        .douta( IOSTATUS ),
+    //RVAs
+        .RVa_RX(UARX), .RVa_TX(UATX),
+    //GPU control
+                                .gp_rcode(gp_rcode),
+        .pf_status(pf_status),                       .gp_status(gp_status),
+        .pf_vframe(pf_vframe),  .gp_vcode(gp_vcode), .gp_vframe(gp_vframe),
+        .pf_wframe(pf_wframe),  .gp_wcode(gp_wcode), .gp_wframe(gp_wframe)
+    ) /* synthesis syn_noprune=1 */;
 
-    UARTRVA #(
-        .ClockFreq(ClockFreq)
-    ) uart ( .Clock(clk), .Reset(rst),
-        .SIn(FPGA_SERIAL_RX), .UARX(UARX), //Receiver
-        .UATX(UATX), .SOut(FPGA_SERIAL_TX) //Transmitter
-    );
+    UARTRVA #(.ClockFreq(CPU_FREQ)) uartrva
+    ( .Clock(clk), .Reset(rst),
+        .SIn(FPGA_SERIAL_RX),  .UARX(UARX),   .IRQ_RX(IRQ_RX), //Receiver
+        .UATX(UATX),  .SOut(FPGA_SERIAL_TX),  .IRQ_TX(IRQ_TX) //Transmitter
+    ) /* synthesis syn_noprune=1 */;
 
 
 // synthesis translate_off
@@ -116,7 +115,7 @@ module CPUDumpMemMap #(
     always@(posedge IRQ_TX or posedge IRQ_RX or negedge IRQ_TX or negedge IRQ_RX) begin
         $display("IRQ0=%b IRQ1=%b", IRQ_TX, IRQ_RX);
     end
-        
+
 
 generate if (COLT45_STEPMAX > 0) begin:_STEPS_
     integer DBG_CNT = 0;

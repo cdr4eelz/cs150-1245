@@ -5,10 +5,10 @@ module DDRStage #(
     input           clk, rst,
 
 //DDR FIFOs (read-only):
-    input           caf_wren, //Ignored if rdf_rden
-    input           caf_full,
+    input           raf_full,
+    input           raf_wren, //Ignored if rdf_rden (meaning busy with pending read)
     output reg      rdf_rden,  //"Caller" waits until !rdf_rden before next use
-    input           rdf_valid,  //From memory RequestController
+    input           rdf_wren,  //From memory RequestController
     input   [127:0] rdf_data,   //  (likewise)
 
 //DDR chunk (256-bits)
@@ -30,7 +30,7 @@ module DDRStage #(
             halfvalid <= 1'b0;
         end else begin
             if (rdf_rden) begin
-                if (rdf_valid) begin
+                if (rdf_wren) begin
                     if (halfvalid ^ LITTLEWORDIAN) begin
                         chunk_data[127:  0] <= data;
                     end else begin
@@ -40,8 +40,8 @@ module DDRStage #(
                     chunk_valid <= halfvalid;
                     halfvalid <= 1'b1;
                 end
-            end else if (caf_wren) begin
-                rdf_rden <= !caf_full;
+            end else if (raf_wren) begin
+                rdf_rden <= !raf_full;
                 chunk_valid <= 1'b0;
                 halfvalid <= 1'b0;
                 chunk_data <= 256'b0;

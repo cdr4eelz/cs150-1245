@@ -1,4 +1,4 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 module StageDX(
 //NOTE:Currently just asynchronous "control" logic!

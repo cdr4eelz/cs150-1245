@@ -1,4 +1,5 @@
 `include "../cpuglobal.vh"
+`include "../tuntap.vh"
 
 /*
     UARTRVA patches a pair of RVA SHAKE busses through UART() for io serial lines
@@ -8,9 +9,9 @@ module UARTRVA #(
 )(
     input   Clock, Reset,
     input   SIn,
-    inout   `BUS_SHAKE_type(8) UARX,
+    inout   `BUS_RVA_type(8) UARX,
     output  IRQ_RX, IRQ_TX,
-    inout   `BUS_SHAKE_type(8) UATX,
+    inout   `BUS_RVA_type(8) UATX,
     output  SOut
 );
     //Individual RVA lines related to each serial line
@@ -48,14 +49,14 @@ module UARTRVA #(
     );
 
     //Tunnel individual signals => incoming RVA receiver SHAKE bus
-    BUS_SHAKE_tun #(.InWidth(8)) TUN_SHAKE_Rx
+    BUS_RVA_tun #(.InWidth(8)) TUN_RVA_Rx
     ( ._BUS_(UARX),
         .DataReady(Rx_Ready),
         .DataValid(Rx_Valid), .Data(Rx_Data)
     );
 
     //Tap outgoing RVA transmitter SHAKE bus => individual signals
-    BUS_SHAKE_tap #(.InWidth(8)) TAP_SHAKE_Tx
+    BUS_RVA_tap #(.InWidth(8)) TAP_RVA_Tx
     ( ._BUS_(UATX),
         .DataValid(Tx_Valid), .Data(Tx_Data),
         .DataReady(Tx_Ready)

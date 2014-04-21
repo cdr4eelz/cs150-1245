@@ -1,5 +1,5 @@
-
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
+`include "../tuntap.vh"
 
 module MemMapIO #(
     parameter BADNESS=0, BAD_WORD=32'hFED1C007, BAD_BYTE=8'h11,
@@ -12,16 +12,16 @@ module MemMapIO #(
     input  [11:0] addra,  //Address for read or write (use zero if worried about side effects)
     input  [ 3:0] wea,    //Write enable & byte mask together (ena must also be active for write)
     input  [31:0] dina,   //Data in grabbed at clock edge if enabled
-    output reg [31:0] DOUTA,//DATA read (behaves like synchronous memory with registered output)
+    output reg [31:0] douta,//DATA read (behaves like synchronous memory with registered output)
 
 // DOS SHAKES POR FAVOR:
-    inout `BUS_SHAKE_type(8) RVa_RX, RVa_TX,
+    inout `BUS_RVA_type(8) RVa_RX, RVa_TX,
 
 // GPU control:
-    input           gp_ready,
-    output          pf_fvalid,  gp_fvalid,  gp_cvalid,
-    output [ 31:0]  pf_frame,   gp_frame,   gp_code,
-    input  [ 15:0]  pf_status,  gp_status
+    output          pf_vframe,  gp_vcode,  gp_vframe,
+    output [ 31:0]  pf_wframe,  gp_wcode,  gp_wframe,
+    input  [ 31:0]              gp_rcode,
+    input  [ 15:0]  pf_status,             gp_status
 );
 
 //                  Table 2: I/O Memory Map
@@ -109,29 +109,30 @@ parameter [5:0]             //   DATA-ENCODING/DESC
     end
 
 // PixelFeeder & GraphicsController
-    reg  [31: 0] pf_frame_r,  gp_frame_r,  gp_code_r;
-    reg          pf_fvalid_r, gp_fvalid_r, gp_cvalid_r;
-    reg  [31: 0] gpu_status_r = 0; //Stash these internally for isolation (trade latency)
+    reg          pf_vframe_r, gp_vframe_r, gp_vcode_r;
+    reg  [31: 0] pf_wframe_r, gp_wframe_r, gp_wcode_r;
+    reg  [31: 0] gpu_status_r;
+    //Stash these internally for isolation (trade latency)
     always @(posedge clk) begin:_REG_GPU_
         if (isWrite && HOT_ADDR[H_PFFrame]) begin
-            pf_frame_r <= dina;
-            pf_fvalid_r <= 1'b1;
-        end else pf_fvalid_r <= 1'b0;
+            pf_wframe_r <= dina;
+            pf_vframe_r <= 1'b1;
+        end else pf_vframe_r <= 1'b0;
         if (isWrite && HOT_ADDR[H_GPFrame]) begin
-            gp_frame_r <= dina;
-            gp_fvalid_r <= 1'b1;
-        end else gp_fvalid_r <= 1'b0;
+            gp_wframe_r <= dina;
+            gp_vframe_r <= 1'b1;
+        end else gp_vframe_r <= 1'b0;
         if (isWrite && HOT_ADDR[H_GPCode])  begin
-          gp_code_r  <= dina;
-          gp_cvalid_r <= 1'b1;
-        end else gp_cvalid_r <= 1'b0;
+          gp_wcode_r  <= dina;
+          gp_vcode_r <= 1'b1;
+        end else gp_vcode_r <= 1'b0;
 
         //  1-cycle latency (don't check too quick after trigger)!
         gpu_status_r <= { pf_status, gp_status };
     end
-    assign pf_frame = pf_frame_r, pf_fvalid  = pf_fvalid_r;
-    assign gp_frame = gp_frame_r, gp_fvalid = gp_fvalid_r;
-    assign gp_code  = gp_code_r,  gp_cvalid = gp_cvalid_r;
+    assign pf_wframe = pf_wframe_r, pf_vframe = pf_vframe_r;
+    assign gp_wframe = gp_wframe_r, gp_vframe = gp_vframe_r;
+    assign gp_wcode  = gp_wcode_r,  gp_vcode  = gp_vcode_r;
 
 
 // Reading operations
@@ -151,17 +152,17 @@ parameter [5:0]             //   DATA-ENCODING/DESC
     end
     always @(posedge clk) begin:_REG_DOUTA_
         //NOTE:Avoiding unnecessary resets -- if (rst) DOUTA <= 0; else
-        if (isRead) DOUTA <= MUX_DOUTA;
+        if (isRead) douta <= MUX_DOUTA;
     end
 
 
-    BUS_SHAKE_tap #(.InWidth(8)) TAP_SHAKE_Rx
+    BUS_RVA_tap #(.InWidth(8)) TAP_RVA_Rx
     ( ._BUS_(RVa_RX), //Incoming
         .DataReady(Rx_Ready),
         .DataValid(Rx_Valid), .Data(Rx_Data)
     );
 
-    BUS_SHAKE_tun #(.InWidth(8)) TUN_SHAKE_Tx
+    BUS_RVA_tun #(.InWidth(8)) TUN_RVA_Tx
     ( ._BUS_(RVa_TX), //Outgoing
         .DataValid(Tx_Valid), .Data(Tx_Data),
         .DataReady(Tx_Ready)

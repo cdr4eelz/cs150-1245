@@ -3,7 +3,7 @@
 //  Module: ALUTestVectorTestbench
 //  Desc:   Alternative 32-bit ALU testbench for the MIPS150 Processor
 //  Feel free to edit this testbench to add additional functionality
-//  
+//
 //  Note that this testbench only tests correct operation of the ALU,
 //  it doesn't check that you're mux-ing the correct values into the inputs
 //  of the ALU. 
@@ -70,23 +70,22 @@ module ALUTestVectorTestbench;
     // opcode, 6 for funct
 
     integer i; // integer used for looping in non-generate statement
-	always @(posedge Clock) begin
-		// aaaaaaaabbbbbbbbccccccccddddddddAAAAAAAABBBBBBBBCCCCCCCCDDDDDDDDaaaaaaaabbbbbbbbccccccccddddddddXXXXXXyyyyyy
-		#1; { opcode, funct, A, B, REFout } = testvector[i];
-		#1; checkOutput(opcode,funct);
-		i = i + 1;
-	end
+    always @(posedge Clock) begin
+        // aaaaaaaabbbbbbbbccccccccddddddddAAAAAAAABBBBBBBBCCCCCCCCDDDDDDDDaaaaaaaabbbbbbbbccccccccddddddddXXXXXXyyyyyy
+        #1; { opcode, funct, A, B, REFout } = testvector[i];
+        #1; checkOutput(opcode,funct);
+        i = i + 1;
+    end
 
     initial 
     begin
-	$readmemb("testvectors.input", testvector);
-	i = 0;
-	
-	// Wait "concurrently" until all tests tested a fail will call $finish() for us.
-	while (i < testcases) #20;
-	
-        $display("\n\nALL TESTS PASSED!");
-        $finish();
-    end
+        $readmemb("testvectors.input", testvector);
+        i = 0;
+
+        // Wait "concurrently" until all tests tested a fail will call $finish() for us.
+        while (i < testcases) #20;
+            $display("\n\nALL TESTS PASSED!");
+            $finish();
+        end
 
 endmodule

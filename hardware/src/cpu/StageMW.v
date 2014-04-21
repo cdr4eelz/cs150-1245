@@ -1,4 +1,4 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 /*          Fetch/Read/Write table (blended with old Partition Table)
         ADDR[31:28] TYPE    DEVICE      ACCESS              NOTES

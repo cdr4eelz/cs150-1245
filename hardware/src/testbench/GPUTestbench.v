@@ -16,32 +16,34 @@ module GPUTestbench;
     initial cpu_clk_g = 0;
     always #(HalfCycle) cpu_clk_g = ~cpu_clk_g;
 
+    reg          gp_vcode;
+    wire         gp_vframe = gp_vcode; //TODO:Test separate gp_vframe
+    reg  [ 31:0] gp_wcode, gp_wframe;
+    wire [ 31:0] gp_rcode;
     wire [ 15:0] gp_status;
     wire           gp_fault      = gp_status[15];
-    wire [  5:0]   gp_procframe  = gp_status[13:8];
+    wire [  5:0]   gp_rframe     = gp_status[13:8];
     wire           ENGINES_ready = &gp_status[3:1];
     wire           gp_ready      = gp_status[0];
-    wire         gp_irq;
-    reg          gp_valid;
-    reg  [ 31:0] gp_code;
-    reg  [ 31:0] gp_frame;
+    wire         irq_gp_done;
 
     // Graphics Command Processor <=> RequestController wires:
+    reg          gcmd_raf_full;
+    wire         gcmd_raf_wren;
+    wire [ 30:0] gcmd_raf_addr;
     wire         gcmd_rdf_rden;
-    wire         gcmd_caf_wren;
-    wire [ 30:0] gcmd_caf_addr;
-    reg          gcmd_rdf_valid;
-    reg          gcmd_caf_full;
+    reg          gcmd_rdf_wren;
     reg  [127:0] rdf_data;
 
     // Bypass/ScanLineRunner <=> RequestController wires:
-    reg          bpas_caf_full;
+    reg          bpas_waf_full;
+    wire         bpas_waf_wren;
+    wire [ 30:0] bpas_waf_addr;
     reg          bpas_wdf_full;
-    wire [127:0] bpas_wdf_data;
     wire         bpas_wdf_wren;
-    wire [ 30:0] bpas_caf_addr;
-    wire         bpas_caf_wren;
     wire [ 15:0] bpas_wdf_mask;
+    wire [127:0] bpas_wdf_data;
+    wire [127:0] bpas_wdf_mdat = {bpas_wdf_mask,bpas_wdf_data};
 
     reg [0:1023] DDR2MEM;
 
@@ -85,23 +87,23 @@ wire [0:1023] GPCODE_SAMPLE3 = { //Ascending bit order
 };
 
 //Fake memory write monitoring
-    integer CNT_af=0, CNT_wdf=0;
+    integer CNT_waf=0, CNT_wdf=0;
     always @(posedge cpu_clk_g) begin
         //TODO:Optionally monitor these like LineEngineTestbench
-        if (bpas_caf_wren  && !bpas_caf_full ) CNT_af  = CNT_af+1;
+        if (bpas_waf_wren && !bpas_waf_full) CNT_waf = CNT_waf+1;
         if (bpas_wdf_wren && !bpas_wdf_full) CNT_wdf = CNT_wdf+1;
     end
     initial begin
-        bpas_caf_full = 1'b0; //TODO:Test backpressure on these
+        bpas_waf_full = 1'b0; //TODO:Test backpressure on these
         bpas_wdf_full = 1'b0;
     end
     task CNT_RESET;
     begin
-        CNT_af=0; CNT_wdf=0;
+        CNT_waf=0; CNT_wdf=0;
     end endtask
     task CNT_SHOW;
     begin
-        $display("\n\nCNT: af=%0d wdf=%0d", CNT_af, CNT_wdf);
+        $display("\n\nCNT: waf=%0d wdf=%0d", CNT_waf, CNT_wdf);
     end endtask
 
 
@@ -109,7 +111,7 @@ wire [0:1023] GPCODE_SAMPLE3 = { //Ascending bit order
         $display("GPU: Fake memory, real SLR/Engines...\n\n");
         #(Cycle);
         @(posedge cpu_clk_g);
-        {gp_valid, gp_code, gp_frame} = 0;
+        {gp_vcode, gp_wcode, gp_wframe} = 0;
         rst_cpu_bus = 1'b1;
         #(10*Cycle);
         rst_cpu_bus = 1'b0;
@@ -138,15 +140,15 @@ wire [0:1023] GPCODE_SAMPLE3 = { //Ascending bit order
         @(negedge cpu_clk_g);
         $display("gpu-TB: Wait & negedge align...");
         while (!gp_ready) #(Cycle); // wait for gp_ready
-        gp_code = codebase;
-        gp_frame = framebase;
-        gp_valid = 1'b1;
-        $strobe("gpu-TB: code=%h  frame=%h", gp_code, gp_frame);
+        gp_wcode = codebase;
+        gp_wframe = framebase;
+        gp_vcode = 1'b1;
+        $strobe("gpu-TB: code=%h  frame=%h", gp_wcode, gp_wframe);
         #(Cycle);
-        gp_valid = 1'b0;
-        gp_code = 32'bz;
+        gp_vcode = 1'b0;
+        gp_wcode = 32'bz;
         $monitor("gpu-TB: procframe==%h  interrupt==%b  fault==%b",
-                 gp_procframe, gp_irq, gp_fault);
+                 gp_rframe, irq_gp_done, gp_fault);
         while (!gp_ready) begin
 //            if (wdf_wren && wdf_mask != 16'hFFFF) begin
 //                $display("gpu-TB: ...", x, y);
@@ -168,26 +170,25 @@ wire [0:1023] GPCODE_SAMPLE3 = { //Ascending bit order
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
     //GraphicsProcessor interface:
-        .GP_status(gp_status), //GP_ready,
-        .GP_valid(gp_valid),
-        .GP_code(gp_code),
-        .GP_frame(gp_frame),
-        .GP_irq(gp_irq),
+        .gp_vcode(gp_vcode), .gp_vframe(gp_vframe),
+        .gp_wcode(gp_wcode), .gp_wframe(gp_wframe),
+        .gp_rcode(gp_rcode), .gp_status(gp_status),
+        .irq_gp_done(irq_gp_done),
     //DDR FIFOs (read-only for GraphicsProcessor):
-        .gcmd_caf_wren(gcmd_caf_wren),
-        .gcmd_caf_addr(gcmd_caf_addr),
-        .gcmd_caf_full(gcmd_caf_full),
+        .gcmd_raf_full(gcmd_raf_full),
+        .gcmd_raf_wren(gcmd_raf_wren),
+        .gcmd_raf_addr(gcmd_raf_addr),
         .gcmd_rdf_rden(gcmd_rdf_rden),
-        .gcmd_rdf_valid(gcmd_rdf_valid),
+        .gcmd_rdf_wren(gcmd_rdf_wren),
         .gcmd_rdf_data(rdf_data),
     //DDR FIFOs (write-only for ScanLineRunner):
-        .slr_caf_full(bpas_caf_full),
+        .slr_waf_full(bpas_waf_full),
+        .slr_waf_wren(bpas_waf_wren),
+        .slr_waf_addr(bpas_waf_addr),
         .slr_wdf_full(bpas_wdf_full),
-        .slr_caf_wren(bpas_caf_wren),
-        .slr_caf_addr(bpas_caf_addr),
         .slr_wdf_wren(bpas_wdf_wren),
-        .slr_wdf_data(bpas_wdf_data),
-        .slr_wdf_mask(bpas_wdf_mask)
+        .slr_wdf_mask(bpas_wdf_mask),
+        .slr_wdf_data(bpas_wdf_data)
     ) /* synthesis syn_noprune=1 */;
 
 
@@ -197,16 +198,16 @@ wire [0:1023] GPCODE_SAMPLE3 = { //Ascending bit order
     integer mem_offset;
     always @(*) begin
         mem_ns = mem_cs;  //Default: Hold prior state
-        gcmd_caf_full = 1'b1;   //Default: Pretend full like RequestController
-        gcmd_rdf_valid = 1'b0; //Default: Read value invalid
+        gcmd_raf_full = 1'b1; //Default: Pretend full like RequestController
+        gcmd_rdf_wren = 1'b0; //Default: Read value invalid
         rdf_data = 128'bz;//Default: Obvious bad value
         case (mem_cs)
             MS_IDLE: begin
-                gcmd_caf_full = 1'b0;
-                if (gcmd_caf_wren) mem_ns = MS_OFFER1; //NOTE:IGNORES gcmd_caf_addr!
+                gcmd_raf_full = 1'b0;
+                if (gcmd_raf_wren) mem_ns = MS_OFFER1; //NOTE:IGNORES gcmd_raf_addr!
             end
             MS_OFFER1, MS_OFFER2: begin
-                gcmd_rdf_valid = 1'b1; //First 128-bits from SAMPLE below
+                gcmd_rdf_wren = 1'b1; //First/Second 128-bits from SAMPLE
                 rdf_data[127:0] = DDR2MEM[mem_offset +: 128];
                 if (gcmd_rdf_rden) mem_ns = (mem_cs==MS_OFFER1) ? MS_OFFER2 : MS_IDLE;
             end
@@ -217,17 +218,17 @@ wire [0:1023] GPCODE_SAMPLE3 = { //Ascending bit order
         if (rst_cpu_bus) mem_cs <= MS_IDLE;
         else mem_cs <= mem_ns;
 
-        if (gcmd_caf_wren) begin
+        if (gcmd_raf_wren) begin
             //Use blocking assignment (simulation only)!
-            if (!gcmd_caf_full) mem_offset = ((gcmd_caf_addr * 64) % 1024);
+            if (!gcmd_raf_full) mem_offset = ((gcmd_raf_addr * 64) % 1024);
             $display("MEM-F: full=%b addr=%h offset=%0d",
-                     gcmd_caf_full, gcmd_caf_addr, mem_offset
+                     gcmd_raf_full, gcmd_raf_addr, mem_offset
             );
         end
-        if (gcmd_rdf_rden) begin
-            if (gcmd_rdf_valid) mem_offset = mem_offset + 128;
-            $display("MEM-R: valid=%b offset=%h offer=%b data=%h.%h.%h.%h",
-                gcmd_rdf_valid, mem_offset, (mem_cs==MS_OFFER2),
+        if (gcmd_rdf_wren || gcmd_rdf_rden) begin
+            if (gcmd_rdf_wren && gcmd_rdf_rden) mem_offset = mem_offset + 128;
+            $display("MEM-R: wren=%b rden=%b offset=%h offer=%b data=%h.%h.%h.%h",
+                gcmd_rdf_wren, gcmd_rdf_rden, mem_offset, (mem_cs==MS_OFFER2),
                 rdf_data[127:96], rdf_data[95:64],
                 rdf_data[63:32], rdf_data[31:0]
             );

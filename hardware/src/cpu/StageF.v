@@ -1,4 +1,4 @@
-`include "cpuglobal.vh"
+`include "../cpuglobal.vh"
 
 //TODO: Check for misalignment (PC-FAULT) or just formally eliminate lower 2 bits
 //TODO: Detect a halt, a.k.a. a jump-to-self loop (great for software simulation termination)
@@ -6,9 +6,8 @@
 //TODO: Watch for undesired circumstances such as missing delay-slots or back-to-back ISR
 
 module StageF #(
-    parameter PCWIDTH=32, INSTWIDTH=32, COUNTERWIDTH=32,
-    parameter BOOTPC=32'h4000_0000, //NOTE: h6000_0000 for SCRATCH_IMEM
-                ISRPC=32'hC000_0180
+    parameter PC_BOOT=32'h4000_0000, PC_ISR=32'hC000_0180,
+    parameter PCWIDTH=32, INSTWIDTH=32, COUNTERWIDTH=32
 )(
     input clk, rst, stall,
 
@@ -44,7 +43,7 @@ module StageF #(
     always @(*) begin:_MUX_PCNEXT_
         //Encourage "flater" MUX style, despite obvious priority logic
         casex ({rst,stall,_DoBranch})
-            3'b1xx: MUX_PCNEXT = BOOTPC; //Normal boot
+            3'b1xx: MUX_PCNEXT = PC_BOOT; //Normal boot
             3'b01x: MUX_PCNEXT = REG_PC; //Stall
             3'b001: MUX_PCNEXT = _PCBranch; //Branch
             3'b000: MUX_PCNEXT = PC4; //Next instruction
@@ -59,7 +58,7 @@ module StageF #(
 
     assign PC_ = REG_PC, PCNEXT_ = REG_PCNEXT;
     assign INST_ = IMEM_Data;
-    assign IMEM_ADDR = (_DoISR) ? ISRPC : MUX_PCNEXT; //Fetch & advance to ISRPC
+    assign IMEM_ADDR = (_DoISR) ? PC_ISR : MUX_PCNEXT; //Fetch & advance to PC_ISR
 
 
     always @(posedge clk) begin:_REG_WAS_

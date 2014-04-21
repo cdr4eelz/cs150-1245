@@ -1,31 +1,32 @@
 INST "mem_arch/ddr2"              AREA_GROUP = "pb_ddr2";
-INST "mem_arch/"                  AREA_GROUP = "pb_reqcon";
-INST "mem_arch/req_con"           AREA_GROUP = "pb_reqcon";
-#INST "mem_arch/ddr2_cadr_fifo"    AREA_GROUP = "pb_reqcon";
-#INST "mem_arch/ddr2_read_fifo"    AREA_GROUP = "pb_reqcon";
-#INST "mem_arch/ddr2_mdat_fifo"    AREA_GROUP = "pb_reqcon";
+INST "mem_arch/"                  AREA_GROUP = "pb_rcon";
+INST "mem_arch/rcon"              AREA_GROUP = "pb_rcon";
+#INST "mem_arch/ddr2_cadr_fifo"    AREA_GROUP = "pb_rcon";
+#INST "mem_arch/ddr2_read_fifo"    AREA_GROUP = "pb_rcon";
+#INST "mem_arch/ddr2_mdat_fifo"    AREA_GROUP = "pb_rcon";
 INST "mem_arch/ddr2_cadr_fifo"    AREA_GROUP = "pb_fo_caf";
 INST "mem_arch/ddr2_read_fifo"    AREA_GROUP = "pb_fo_rdf";
-INST "mem_arch/ddr2_mdat_fifo"    AREA_GROUP = "pb_fo_wrf";
+INST "mem_arch/ddr2_mdat_fifo"    AREA_GROUP = "pb_fo_wdf";
 
 INST "mem_arch/dcache"            AREA_GROUP = "pb_cached";
 INST "mem_arch/icache"            AREA_GROUP = "pb_cachei";
 #INST "mem_arch/dcache"            AREA_GROUP = "pb_cpu";
 #INST "mem_arch/icache"            AREA_GROUP = "pb_cpu";
 
-INST "cpu"                        AREA_GROUP = "pb_cpu";
-#INST "cpu/regfile"                AREA_GROUP = "pb_regfile";
+INST "CPU/"                       AREA_GROUP = "pb_cpu";
+INST "CPU/cpu"                    AREA_GROUP = "pb_cpu";
+#INST "CPU/cpu/regfile"            AREA_GROUP = "pb_regfile";
 
-#INST "mem_bank/"                  AREA_GROUP = "pb_cpu";
-#INST "mem_bank/memmap_io"         AREA_GROUP = "pb_cpu";
-#INST "mem_bank/uartrva"           AREA_GROUP = "pb_cpu";
-INST "mem_bank/"                  AREA_GROUP = "pb_memmap";
-INST "mem_bank/memmap_io"         AREA_GROUP = "pb_memmap";
-INST "mem_bank/uartrva"           AREA_GROUP = "pb_memmap";
-INST "mem_bank/bram_dmem"         AREA_GROUP = "pb_br_dmem";
-INST "mem_bank/bram_imem"         AREA_GROUP = "pb_br_imem";
-INST "mem_bank/bram_bios"         AREA_GROUP = "pb_br_bios";
-INST "mem_bank/bram_isr"          AREA_GROUP = "pb_br_isr";
+#INST "CPU/membank/"               AREA_GROUP = "pb_cpu";
+#INST "CPU/membank/memmap"         AREA_GROUP = "pb_cpu";
+#INST "CPU/membank/uartrva"        AREA_GROUP = "pb_cpu";
+INST "CPU/membank/"               AREA_GROUP = "pb_memmap";
+INST "CPU/membank/memmap"         AREA_GROUP = "pb_memmap";
+INST "CPU/membank/uartrva"        AREA_GROUP = "pb_memmap";
+INST "CPU/membank/bram_dmem"      AREA_GROUP = "pb_br_dmem";
+INST "CPU/membank/bram_imem"      AREA_GROUP = "pb_br_imem";
+INST "CPU/membank/bram_bios"      AREA_GROUP = "pb_br_bios";
+INST "CPU/membank/bram_isr"       AREA_GROUP = "pb_br_isr";
 
 INST "mem_arch/gpu/"              AREA_GROUP = "pb_gpu";
 INST "mem_arch/gpu/gp"            AREA_GROUP = "pb_gp";

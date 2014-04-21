@@ -1,3 +1,6 @@
+//TODO:GP kill current work & start new GP_CODE
+//TODO:Read-back GP_CODE address...chunk-address
+
 /*
 *** Command procesor module handles logic for parsing graphics commands ***
   FrameFiller -- One graphics command:
@@ -26,21 +29,20 @@ module GraphicsProcessor #(
     input rst,
 
 //DDR FIFOs (read-only for GP cmd):
-    output          caf_wren,
-    output  [ 30:0] caf_addr,
-    input           caf_full,
+    input           raf_full,
+    output          raf_wren,
+    output  [ 30:0] raf_addr,
     output          rdf_rden,
-    input           rdf_valid,
+    input           rdf_wren,
     input   [127:0] rdf_data,
 
 //GraphicsProcessor interface:
+    input           GP_vcode, GP_vframe,
+    input   [ 31:0] GP_wcode, GP_wframe,
+    output  [ 31:0] GP_rcode,
+    output  [  5:0]           GP_rframe,
     output          GP_ready,
-    input           GP_valid,
-    input   [ 31:0] GP_frame,
-    input   [ 31:0] GP_code,
     output          GP_fault,
-    output  [  5:0] GP_procframe,
-    output          GP_irq, //TODO:Delay by 1-cycle
 
 //FrameFiller interface:
     input           FF_ready,
@@ -110,9 +112,11 @@ module GraphicsProcessor #(
     reg  [ 1:0] ns_M, cs_M = MS_DEAD; //Master-State
     reg  [ 2:0] ns_S, cs_S = SS_TOP;  //Sub-State
     //TODO:One/Zero-hot MS_ & SS_ also
-    reg  [ 5:0] framebits;  //Insist on aligning with multiples of 0x0040_0000
-    reg  [22:0] code_chunk; //256-bit chunk # within 256MB range of DDR (8 x 32-bit words each)
-    reg  [ 2:0] code_index; //Offset of 32-bit CODE within 256-bit chunk
+    reg  [ 5: 0] frame_bits;  //Insist on aligning with multiples of 0x0040_0000
+    reg  [31:28] code_hinib;
+    reg  [27: 5] code_chunk; //256-bit chunk # within 256MB range of DDR (8 x 32-bit words each)
+    reg  [ 4: 2] code_index; //Offset of 32-bit CODE within 256-bit chunk
+    reg          fault_r;
 
     wire ENGINES_ready, chunk_valid;
     wire INST_valid    = (chunk_valid && (cs_M==MS_PROC));
@@ -120,6 +124,11 @@ module GraphicsProcessor #(
     wire chunk_advance = (!chunk_valid || (&code_index && CMD_advance));
     wire chunk_reset   = (rst_r || (cs_M==MS_IDLE)); //Reset chunk on IDLE to let pending read clear
     wire [255:0] chunk_data;
+
+    assign GP_ready = (cs_M==MS_IDLE);
+    assign GP_fault = fault_r;
+    assign GP_rframe = frame_bits;
+    assign GP_rcode = {code_hinib, code_chunk, code_index, 2'b0}; //4+23+3+2=32-bit
 
 
 //INSTruction RAW decode (includes invalid/inactive signals)
@@ -142,16 +151,8 @@ module GraphicsProcessor #(
     //   T_DEAD   = INITIAL upon FPGA config
     wire T_RESET  = (rst_r);
     wire T_READY  = (!rst_r && !rdf_rden); //Not ready until pending read clears
-    wire T_START  = (GP_ready && GP_valid); //MASTER-State alone for ready/valid enable
+    wire T_START  = (GP_ready && GP_vcode); //MASTER-State alone for ready/valid enable
     wire T_STOPS  = (hot_GOP_val && hot_GOP[`GOP_STOP]); //Sub-State triggers T_STOPS
-
-    reg  [5:0]  procframe_r;
-    reg         fault_r;
-
-    assign GP_ready     = (cs_M==MS_IDLE);
-    assign GP_procframe = procframe_r;
-    assign GP_irq = T_STOPS; //TODO:Ensure clean for most of 1-cycle
-    assign GP_fault     = fault_r;
 
     always @(*) begin
         hot_GOP_cal = (1 << `GOP_STOP);
@@ -167,8 +168,6 @@ module GraphicsProcessor #(
         endcase
     end
     always @(posedge clk) begin
-        procframe_r <= `FRAME_BITS(GP_frame); //Pass NEXT value through, 1-cycle later!
-
         if (T_RESET || T_START) fault_r <= 1'b0;
         else if (hot_GOP_val && hot_GOP_err) fault_r <= 1'b1;
 
@@ -178,7 +177,7 @@ module GraphicsProcessor #(
 
 
 //Sub-State machine & Mealy outputs: CMD_advance, INST_advance
-    wire INST_advance = (CMD_advance && !cs_S[0]); //EVENs: SS_TOP||SS_Y0||SS_YY
+    wire INST_advance = (CMD_advance && !cs_S[0]); //NOTE:FRAGILE! (EVENs: SS_TOP||SS_Y0||SS_YY)
     wire INST_dopoints = (INST_gop==`GOP_LINE) || (INST_gop==`GOP_ELIP);
     always @(*) begin
         ns_S = cs_S; //Hold current state until valid
@@ -215,32 +214,31 @@ module GraphicsProcessor #(
         else cs_M <= ns_M;
 
         if (T_START) begin //Capture incoming values
-            //            GP-code[31:28] -- Ignore hi-nibble (hopefully specified D-Cache from CPU's POV)
-            code_chunk <= GP_code[27:5]; //Take enough to address a 256-bit-chunk in DDR
-            code_index <= GP_code[ 4:2]; //Take 3-bits for 32-bit word offset within chunk
-            //            GP_code[ 1:0] -- Ignore lo 2-bits (would specify byte within a word)
-            framebits <= `FRAME_BITS(GP_frame); //Either addr style
+            code_hinib <= GP_wcode[31:28]; //Usually hi-nibble for D-Cache but grab for GP_proccode
+            code_chunk <= GP_wcode[27: 5]; //Take enough to address a 256-bit-chunk in DDR
+            code_index <= GP_wcode[ 4: 2]; //Take 3-bits for 32-bit word offset within chunk
+            //            GP_wcode[ 1: 0]; -- Ignore lo 2-bits (would specify byte within a word)
+            frame_bits <= `FRAME_BITS(GP_wframe); //Either frame addr or frame# allowed
         end else begin
-            if (INST_advance) code_index <= (code_index + 1); //"index" -=> 32-bit word within chunk
-            if (caf_wren && !caf_full) code_chunk <= (code_chunk + 1); //"chunk" -=> 2 x 128-bit
+            if (INST_advance) code_index <= (code_index + 3'd1); //"index" -=> 32-bit word within chunk
+            if (raf_wren && !raf_full) code_chunk <= (code_chunk + 23'd1); //"chunk" -=> 2 x 128-bit
         end
     end
 
 
-
 //FETCH GPCode chunks & present as 32-bit INSTruction stream
-    assign caf_addr  = {6'd0, code_chunk, 2'b00}; //Chunk addr (64-bit "resolution")
-    assign caf_wren     = (cs_M==MS_PROC) && !rdf_rden && chunk_advance;
-    //NOTE:Don't base caf_wren on caf_full when using RequestController!!!
+    assign raf_addr  = {6'd0, code_chunk, 2'b00}; //Chunk addr in 64-bit "resolution"
+    assign raf_wren  = (cs_M==MS_PROC) && !rdf_rden && chunk_advance;
+    //NOTE:Don't base raf_wren on !raf_full when using RequestController!!!
 
     DDRStage #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) ddr_stage (
-        .clk(clk), .rst(chunk_reset), //MS_RSET waits for !caf_rdf_rden
-        .caf_wren(caf_wren), //Ignored if rdf_rden; resets chunk_valid regardless of caf_full
-        .caf_full(caf_full),  //Advances if (!caf_full && caf_wren)
+        .clk(clk), .rst(chunk_reset), //MS_RSET waits until !rdf_rden
+        .raf_full(raf_full),  //Advances if (!raf_full && raf_wren)
+        .raf_wren(raf_wren), //Ignored if rdf_rden; resets chunk_valid regardless of raf_full
         .rdf_rden(rdf_rden),
-        .rdf_valid(rdf_valid),
+        .rdf_wren(rdf_wren),
         .rdf_data(rdf_data),
         .chunk_valid(chunk_valid),
         .chunk_data(chunk_data)
@@ -251,7 +249,7 @@ module GraphicsProcessor #(
     wire engine_x = cs_S[0]; //ODDs: SS_X0||SS_XX
     wire [ 9:0] engine_point = (engine_x) ? INST_pointX : INST_pointY;
     wire [31:0] engine_color = INST_color;
-    wire [31:0] engine_frame = {4'h1,framebits,22'd0};
+    wire [31:0] engine_frame = {4'h1,frame_bits,22'd0};
 
     assign FF_valid   = (hot_GOP_val && hot_GOP[`GOP_FILL]);
     assign FF_color   = engine_color,
@@ -282,19 +280,20 @@ module GraphicsProcessor #(
 
 //synthesis translate_off
     always @(posedge clk) if (!rst_r) begin
-        if (caf_wren)
+        if (raf_wren)
             $display("stage-F: addr=%h full=%b",
-                     caf_addr, caf_full
+                     raf_addr, raf_full
             );
-        if (rdf_rden)
-            $display("stage-W: valid=%b data=%h.%h.%h.%h",
-                     rdf_valid,
+        if (rdf_wren || rdf_rden)
+            $display("stage-W: wren=%b rden=%b data=%h.%h.%h.%h",
+                     rdf_wren, rdf_rden,
                      rdf_data[127:96], rdf_data[95:64],
                      rdf_data[63:32], rdf_data[31:0]
             );
         if (INST_advance)
-            $display("stage-R: %h gop=%h  valid=%b advance=%b index=%0d",
-                     INST, INST_gop, INST_valid, INST_advance, code_index
+            $display("stage-R: %h gop=%h  valid=%b advance=%b chunk=%h index=%h",
+                     INST, INST_gop, INST_valid, INST_advance,
+                     code_chunk, code_index
             );
     end
 //synthesis translate_on

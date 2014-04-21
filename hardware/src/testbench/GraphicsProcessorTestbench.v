@@ -9,22 +9,18 @@ module GraphicsProcessorTestbench;
     initial cpu_clk_g = 0;
     always #(HalfCycle) cpu_clk_g = ~cpu_clk_g;
 
-    wire        GP_ready;
-    reg         GP_valid;
-    reg  [31:0] GP_code;
-    reg  [31:0] GP_frame;
-    wire        GP_fault;
-    wire [ 5:0] GP_procframe;
-    wire        GP_irq;
-//  wire bsel;
+    wire        GP_ready, GP_fault;
+    reg         GP_vcode;
+    reg  [31:0] GP_wcode, GP_wframe;
+    wire [31:0] GP_rcode;
+    wire [ 5:0] GP_rframe;
 
-    reg         caf_full;
-    wire        caf_wren;
-    wire [30:0] caf_addr;
+    reg         raf_full;
+    wire        raf_wren;
+    wire [30:0] raf_addr;
     wire        rdf_rden;
-    reg         rdf_valid;
+    reg         rdf_wren;
     reg [127:0] rdf_data;
-//  wire        ready;
 
     reg         FF_ready;
     wire        FF_valid;
@@ -59,20 +55,17 @@ module GraphicsProcessorTestbench;
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
     //GraphicsProcessor control signals
-        .GP_ready(GP_ready),
-        .GP_valid(GP_valid),
-        .GP_frame(GP_frame),
-        .GP_code(GP_code),
-        .GP_procframe(GP_procframe),
-        .GP_irq(GP_irq),
-        .GP_fault(GP_fault),
+        .GP_ready(GP_ready), .GP_fault(GP_fault),
+        .GP_vcode(GP_vcode), .GP_vframe(GP_vcode),
+        .GP_wcode(GP_wcode), .GP_wframe(GP_wframe),
+        .GP_rcode(GP_rcode), .GP_rframe(GP_rframe),
     //DDR FIFOs
-        .rdf_valid(rdf_valid),
-        .caf_full(caf_full),
+        .rdf_wren(rdf_wren),
+        .raf_full(raf_full),
         .rdf_data(rdf_data),
         .rdf_rden(rdf_rden),
-        .caf_wren(caf_wren),
-        .caf_addr(caf_addr),
+        .raf_wren(raf_wren),
+        .raf_addr(raf_addr),
     //FrameFiller control signals
         .FF_ready(FF_ready),
         .FF_valid(FF_valid),
@@ -126,7 +119,7 @@ reg ELOG_errors = 0;
     initial begin
         #(Cycle);
         @(posedge cpu_clk_g);
-        {GP_valid, GP_code, GP_frame} = 0;
+        {GP_vcode, GP_wcode, GP_wframe} = 0;
         rst_cpu_bus = 1'b1;
         #(10*Cycle);
         rst_cpu_bus = 1'b0;
@@ -149,15 +142,15 @@ reg ELOG_errors = 0;
         @(negedge cpu_clk_g);
         $display("gp-TB: Wait...");
         while (!GP_ready) #(Cycle); // wait for GP_ready
-        GP_code = codebase;
-        GP_frame = framebase;
-        GP_valid = 1'b1;
-        $strobe("gp-TB: code=%h  frame=%h", GP_code, GP_frame);
+        GP_wcode = codebase;
+        GP_wframe = framebase;
+        GP_vcode = 1'b1;
+        $strobe("gp-TB: code=%h  frame=%h", GP_wcode, GP_wframe);
         #(Cycle);
-        GP_valid = 1'b0;
-        GP_code = 32'bz;
-        $monitor("gp-TB: procframe==%h  interrupt==%b  fault==%b",
-                 GP_procframe, GP_irq, GP_fault);
+        GP_vcode = 1'b0;
+        GP_wcode = 32'bz;
+        $monitor("gp-TB: procframe==%h  rcode=%h  fault==%b",
+                 GP_rframe, GP_rcode, GP_fault);
         while (!GP_ready) begin
 //            if (wdf_wren && wdf_mask != 16'hFFFF) begin
 //                $display("gp-TB: ...", x, y);
@@ -206,16 +199,16 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
     integer mem_offset;
     always @(*) begin
         mem_ns = mem_cs;  //Default: Hold prior state
-        caf_full = 1'b1;   //Default: Pretend full like RequestController
-        rdf_valid = 1'b0; //Default: Read value invalid
+        raf_full = 1'b1;   //Default: Pretend full like RequestController
+        rdf_wren = 1'b0; //Default: Read value invalid
         rdf_data = 128'bz;//Default: Obvious bad value
         case (mem_cs)
             MS_IDLE: begin
-                caf_full = 1'b0;
-                if (caf_wren) mem_ns = MS_OFFER1; //NOTE:IGNORES caf_addr!
+                raf_full = 1'b0;
+                if (raf_wren) mem_ns = MS_OFFER1; //NOTE:IGNORES raf_addr!
             end
             MS_OFFER1, MS_OFFER2: begin
-                rdf_valid = 1'b1; //First 128-bits from SAMPLE below
+                rdf_wren = 1'b1; //First 128-bits from SAMPLE below
                 rdf_data[127:0] = GPCODE[mem_offset +: 128];
                 if (rdf_rden) mem_ns = (mem_cs==MS_OFFER1) ? MS_OFFER2 : MS_IDLE;
             end
@@ -226,11 +219,11 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
         if (rst_cpu_bus) mem_cs <= MS_IDLE;
         else mem_cs <= mem_ns;
 
-        if (!caf_full && caf_wren) begin
-            mem_offset <= ((caf_addr * 64) % 1024);
-            $strobe("gp-MEM: addr=%h offset=%0d", caf_addr, mem_offset);
+        if (!raf_full && raf_wren) begin
+            mem_offset <= ((raf_addr * 64) % 1024);
+            $strobe("gp-MEM: addr=%h offset=%0d", raf_addr, mem_offset);
         end
-        if (rdf_valid && rdf_rden) begin
+        if (rdf_wren && rdf_rden) begin
             $display("gp-MEM: data=%h %h %h %h", rdf_data[127:96],
                 rdf_data[95:64], rdf_data[63:32], rdf_data[31:0]);
             mem_offset <= mem_offset + 128;

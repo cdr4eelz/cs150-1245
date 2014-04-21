@@ -8,8 +8,11 @@ add wave EchoTestbenchCaches/mem_arch/*
 add wave EchoTestbenchCaches/mem_arch/dcache/*
 add wave EchoTestbenchCaches/mem_arch/icache/*
 add wave EchoTestbenchCaches/DUT/*
-add wave EchoTestbenchCaches/DUT/regfile/*
-add wave EchoTestbenchCaches/DUT/s_F/*
-add wave EchoTestbenchCaches/DUT/s_DX/*
-add wave EchoTestbenchCaches/DUT/s_MW/*
+add wave EchoTestbenchCaches/DUT/membank/*
+#add wave EchoTestbenchCaches/DUT/membank/memmap/*
+#add wave EchoTestbenchCaches/DUT/cpu/cop0/*
+add wave EchoTestbenchCaches/DUT/cpu/regfile/*
+add wave EchoTestbenchCaches/DUT/cpu/s_F/*
+add wave EchoTestbenchCaches/DUT/cpu/s_DX/*
+add wave EchoTestbenchCaches/DUT/cpu/s_MW/*
 run 10000us

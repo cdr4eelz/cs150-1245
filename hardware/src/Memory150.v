@@ -29,7 +29,7 @@ module Memory150 #(
     input           rst_cpu_bus,
     input           rst_dvi_bus,
 
-// DDR2 Interface:
+// DDR2 Pads:
     output  [12:0]  DDR2_A,
     output  [ 1:0]  DDR2_BA,
     output          DDR2_CAS_B,
@@ -45,7 +45,7 @@ module Memory150 #(
     output          DDR2_RAS_B,
     output          DDR2_WE_B,
 
-// Cache <=> CPU Interface:
+// Cache <=> CPU:
     input   [31:0]  dcache_addr,
     input   [31:0]  icache_addr,
     input   [ 3:0]  dcache_we,
@@ -60,129 +60,127 @@ module Memory150 #(
     output          d_stall,
     output          i_stall,
 
-// DVI Interface:
+// PixelFeeder <=> DVI Controller:
     input           video_ready,
     output          video_valid,
-    output  [31:0]  video, //[23:0]
+    output  [31: 0] video, //[23:0]
 
-// PixelFeeder <=> CPU Interface:
-    output  [15:0]  pf_status,
-    input           pf_valid,
-    input   [31:0]  pf_frame,
-    output          pf_irq,
-
-// GPU/GraphicsProcessor <=> CPU Interface:
-    output  [15:0]  gp_status,
-    input           gp_valid,
-    input   [31:0]  gp_frame, gp_code,
-    output          gp_irq
+// GPU <=> CPU:
+    input           pf_vframe,    gp_vcode, gp_vframe,
+    input   [31: 0] pf_wframe,    gp_wcode, gp_wframe,
+    output  [31: 0]               gp_rcode,
+    output  [15: 0] pf_status,              gp_status,
+    output          irq_pf_frame, irq_gp_done
 );
 
-    // DDR2 (MIG) interface:
+// DDR2 (MIG) <=> Clock-Crossing FIFOs (clk0_g domain):
     wire         ddr2_clock_tb;
     wire         ddr2_rst_tb;
-    wire         ddr2_caf_afull, ddr2_caf_rden;
-    wire         ddr2_wdf_afull, ddr2_wdf_rden;
-    wire         ddr2_wdf_valid;
-    wire [143:0] ddr2_wdf_maskdata;
-    wire         ddr2_rdf_wren, rd_data_valid;
-    wire [127:0] ddr2_rd_data;
-//  wire         ddr2_caf_empty;
-//  wire         ddr2_wdf_empty;
-    wire         ddr2_caf_valid;
-    wire [ 33:0] ddr2_caf_data;
+//  wire         ddr2_caf_empty; //FIFO: <Unused>
+    wire         ddr2_caf_full; //DDR2: "!ready"
+    wire         ddr2_caf_wren; //FIFO: "valid"
+    wire [ 33:0] ddr2_caf_cadr; //FIFO: {cmd,addr}
+//  wire         ddr2_wdf_empty; //FIFO: <Unused>
+    wire         ddr2_wdf_full; //DDR2: "!ready"
+    wire         ddr2_wdf_wren; //FIFO: "valid"
+    wire [143:0] ddr2_wdf_mdat; //FIFO: {mask,data}
+//  wire         ddr2_rdf_full; //FIFO: N/A (always-ready)
+    wire         ddr2_rdf_wren; //DDR2: "valid"
+    wire [127:0] ddr2_rdf_data; //DDR2: data
 
-    // FIFO interface:
-    wire         fifo_caf_full;
-    wire         fifo_caf_wren;
-    wire [  2:0] fifo_caf_cmd;
-    wire [ 30:0] fifo_caf_addr;
+// FIFOs <=> MASTER/RequestController (cpu_clk_g domain):
+    wire         fifo_caf_full; //FIFO: "!ready"
+    wire         fifo_caf_wren; //RCON: "valid"
+    wire [ 33:0] fifo_caf_cadr; //RCON: {cmd,addr}
+    wire         fifo_wdf_full; //FIFO: "!ready"
+    wire         fifo_wdf_wren; //RCON: "valid"
+    wire [143:0] fifo_wdf_mdat; //RCON: {mask,data}
+//  wire         fifo_rdf_empty; //FIFO: <Unused>
+    wire         fifo_rdf_rden; //RCON: "ready"
+    wire         fifo_rdf_wren; //FIFO: "valid"
+    wire [127:0] ALLR_rdf_data; //FIFO: data to ALL-Readers
 
-    wire         fifo_wdf_full;
-    wire         fifo_wdf_wren;
-    wire [ 15:0] fifo_wdf_mask;
-    wire [127:0] fifo_wdf_data;
+// RequestController <=> Read-Write channels
 
-    wire         fifo_rdf_valid;
-    wire         fifo_rdf_rden;
-    wire [127:0] fall_rdf_data; //Shared by all
-
-
-    // Cache <=> RequestController wires:
+    //Caches <=> RequestController :
     wire         inst_caf_full,   data_caf_full;
     wire         inst_caf_wren,   data_caf_wren;
-    wire [  2:0] inst_caf_cmd,   data_caf_cmd;
-    wire [ 30:0] inst_caf_addr,   data_caf_addr;
+    wire [ 33:0] inst_caf_cadr,   data_caf_cadr;
     wire         inst_wdf_full,   data_wdf_full;
     wire         inst_wdf_wren,   data_wdf_wren;
-    wire [ 15:0] inst_wdf_mask,   data_wdf_mask;
-    wire [127:0] inst_wdf_data,   data_wdf_data;
-    wire         inst_rdf_valid,  data_rdf_valid;
+    wire [143:0] inst_wdf_mdat,   data_wdf_mdat;
     wire         inst_rdf_rden,   data_rdf_rden;
+    wire         inst_rdf_wren,   data_rdf_wren;
 
-    // Read-Only <=> RequestController wires
-    //          GraphicsProcessor,  PixelFeeder
+// RequestController <=> Read-only channels
+
+    //GraphicsProcessor <=> RequestController:
+    wire         gcmd_raf_full;
+    wire         gcmd_raf_wren;
+    wire [ 30:0] gcmd_raf_addr;
     wire         gcmd_rdf_rden;
-    wire         gcmd_caf_wren;
-    wire [ 30:0] gcmd_caf_addr;
-    wire         gcmd_rdf_valid;
-    wire         gcmd_caf_full;
+    wire         gcmd_rdf_wren;
 
-    // PixelFeeder <=> RequestController wires:
+    //PixelFeeder <=> RequestController:
+    wire         pixf_raf_full;
+    wire         pixf_raf_wren;
+    wire [ 30:0] pixf_raf_addr;
     wire         pixf_rdf_rden;
-    wire         pixf_caf_wren;
-    wire [ 30:0] pixf_caf_addr;
-    wire         pixf_caf_full;
-    wire         pixf_rdf_valid;
+    wire         pixf_rdf_wren;
 
-    // FrameFiller <=> RequestController wires:
-    wire         fill_caf_full;
+// RequestController <=> Write-only channels
+
+    //FrameFiller <=> RequestController:
+    wire         fill_waf_full;
+    wire         fill_waf_wren;
+    wire [ 30:0] fill_waf_addr;
     wire         fill_wdf_full;
-    wire [127:0] fill_wdf_data;
     wire         fill_wdf_wren;
-    wire [ 30:0] fill_caf_addr;
-    wire         fill_caf_wren;
     wire [ 15:0] fill_wdf_mask;
+    wire [127:0] fill_wdf_data;
+    wire [143:0] fill_wdf_mdat = {fill_wdf_mask,fill_wdf_data};
 
-    // LineEngine <=> RequestController wires:
-    wire         line_caf_full;
+    //LineEngine <=> RequestController:
+    wire         line_waf_full;
+    wire         line_waf_wren;
+    wire [ 30:0] line_waf_addr;
     wire         line_wdf_full;
-    wire [127:0] line_wdf_data;
     wire         line_wdf_wren;
-    wire [ 30:0] line_caf_addr;
-    wire         line_caf_wren;
     wire [ 15:0] line_wdf_mask;
+    wire [127:0] line_wdf_data;
+    wire [143:0] line_wdf_mdat = {line_wdf_mask,line_wdf_data};
 
-    // Bypass/ScanLineRunner <=> RequestController wires: (extension!)
-    wire         bpas_caf_full;
+    //Bypass/ScanLineRunner <=> RequestController:
+    wire         bpas_waf_full;
+    wire         bpas_waf_wren;
+    wire [ 30:0] bpas_waf_addr;
     wire         bpas_wdf_full;
-    wire [127:0] bpas_wdf_data;
     wire         bpas_wdf_wren;
-    wire [ 30:0] bpas_caf_addr;
-    wire         bpas_caf_wren;
     wire [ 15:0] bpas_wdf_mask;
-
+    wire [127:0] bpas_wdf_data;
+    wire [143:0] bpas_wdf_mdat = {bpas_wdf_mask,bpas_wdf_data};
 
 wire DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!!!
-    d_stall, data_wdf_full, data_caf_full, data_rdf_valid,
+    d_stall, data_wdf_full, data_caf_full, data_rdf_wren,
         1'b0, data_wdf_wren, data_caf_wren, data_rdf_rden,
-    i_stall, inst_wdf_full, inst_caf_full, inst_rdf_valid,
-        1'b0, inst_wdf_wren, inst_caf_wren, inst_rdf_rden,
-    stall, fifo_wdf_full, fifo_caf_full, fifo_rdf_valid,
+    i_stall, inst_wdf_full, inst_caf_full, inst_rdf_wren,
+        1'b0, inst_wdf_wren, inst_caf_wren, inst_rdf_rden
+/*    stall, fifo_wdf_full, fifo_caf_full, fifo_rdf_wren,
         1'b0, fifo_wdf_wren, fifo_caf_wren, fifo_rdf_rden,
     1'b0, (fill_caf_full || fill_wdf_full), fill_caf_wren, fill_wdf_wren,
         1'b0, (line_caf_full || line_wdf_full), line_caf_wren, line_wdf_wren
-};
+*/ };
 
-//TODO:Try BURST_LEN(8) and/or 266MHz
-//TODO:Let MIG generate its own clocks (ideally from differential reference)
-   // DDR2 module:
+
+    // DDR2 (MIG) module:
     mig_v3_61 #(
         .SIM_ONLY(SIM_ONLY),
         .CAS_LAT(3), //CAS 3 matches 200MHz (like -53E), CAS 4 matches 266MHz (like -667)
         .BURST_LEN(4),
-        .APPDATA_WIDTH(128),
+//TODO:Try BURST_LEN(8) and/or 266MHz
+//TODO:Let MIG generate its own clocks (ideally from differential reference)
         .CLK_PERIOD(5000), //5000ns==200MHz (3750ns==266MHz, challenging for SpeedGrade-1)
+        .APPDATA_WIDTH(128),
         .RST_ACT_LOW(0) // was 1: flipped this to avoid double inversion
     ) ddr2 (
         .clk0   (clk0_g),
@@ -211,153 +209,135 @@ wire DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!
         .ddr2_ck   (DDR2_CLK_P),
         .ddr2_ck_n (DDR2_CLK_N),
 
-        .app_af_afull(ddr2_af_afull),
-        .app_af_wren (ddr2_af_wren), //BUG:UNUSED or NAMES BAD or mixed up!
-        .app_af_cmd  (ddr2_af_cmd), assign ddr2_af_cmd = ddr2_af_data[33:31]
-        .app_af_addr (ddr2_af_addr), assign ddr2_af_addr = ddr2_af_data[30:0]
-        .app_wdf_afull    (ddr2_wdf_afull),
-        .app_wdf_wren     (ddr2_wdf_wren), assign ddr2_wdf_wren = ddr2_wdf_valid
-        .app_wdf_mask_data(ddr2_wdf_mask_data), assign app_wdf_mask_data = ddr2_wdf_maskdata[143:128]
-        .app_wdf_data     (ddr2_wdf_data), assign app_wdf_data = ddr2_wdf_maskdata[127:0]
-        .rd_data_fifo_out(ddr2_rd_data),
-        .rd_data_valid   (ddr2_rd_valid)
+        .app_af_afull     (ddr2_caf_full),          //DDR2 =>  FIFO: "!ready"
+        .app_af_wren      (ddr2_caf_wren),          //DDR2  <= FIFO: "valid"
+        .app_af_cmd       (ddr2_caf_cadr[33:31]),   //DDR2  <= FIFO: command
+        .app_af_addr      (ddr2_caf_cadr[30:0]),    //DDR2  <= FIFO: address
+
+        .app_wdf_afull    (ddr2_wdf_full),          //DDR2 =>  FIFO: "!ready"
+        .app_wdf_wren     (ddr2_wdf_wren),          //DDR2  <= FIFO: "valid"
+        .app_wdf_mask_data(ddr2_wdf_mdat[143:128]), //DDR2  <= FIFO: mask
+        .app_wdf_data     (ddr2_wdf_mdat[127:  0]), //DDR2  <= FIFO: data
+
+                                                    //DDR2  <= FIFO: always-ready
+        .rd_data_valid    (ddr2_rdf_wren),          //DDR2 =>  FIFO: "valid"
+        .rd_data_fifo_out (ddr2_rdf_data)           //DDR2 =>  FIFO: data
     ) /* synthesis syn_noprune=1 */;
 
-    //TODO:Assign all these
-    assign ddr2_caf_rden = !ddr2_caf_afull;
-    assign ddr2_wdf_rden = !ddr2_wdf_afull;
-    assign rd_data_valid = ddr2_rdf_wren;
 
+// Clock-crossing FIFOs ([cpu_clk_g] <=> FIFOs <=> [clk0_g]):
 
-    // Clock-crossing FIFOs:
-
-    //Cmd/Address Fifo (RCON => DDR2):
+    //{Command,Address} Fifo (RCON => FIFO => DDR2):
     mig_caf ddr2_cadr_fifo (
         .rst(rst_cpu_bus),
-        // FIFO-WR: RCON/CPU clock-domain
+        // FIFO-WR: RCON clock-domain
         .wr_clk(cpu_clk_g),
-        .full  (fifo_caf_full),
-        .wr_en (fifo_caf_wren),
-        .din   ( {fifo_caf_cmd, fifo_caf_addr} ),
+        .full  (fifo_caf_full),     //FIFO =>  RCON: "!ready"
+        .wr_en (fifo_caf_wren),     //FIFO  <= RCON: "valid"
+        .din   (fifo_caf_cadr),     //FIFO  <= RCON: {cmd,addr}
         // FIFO-RD: DDR2 clock-domain
         .rd_clk(ddr2_clock_tb),
-        .empty (/*ddr2_caf_empty*/),
-        .rd_en (ddr2_caf_rden),
-        .valid (ddr2_caf_valid),
-        .dout  (ddr2_caf_data)
+        .empty (/*ddr2_caf_empty*/), //<Unused>
+        .rd_en (!ddr2_caf_full),    //FIFO  <= DDR2: "ready"
+        .valid (ddr2_caf_wren),     //FIFO =>  DDR2: "valid"
+        .dout  (ddr2_caf_cadr)      //FIFO =>  DDR2: {cmd,addr}
     ) /* synthesis syn_noprune=1 */;
 
-    //Write-mask/Data Fifo (RCON => DDR2):
+    //Write-mask/Data Fifo (RCON => FIFO => DDR2):
     mig_wdf ddr2_mdat_fifo (
         .rst(rst_cpu_bus),
-        // FIFO-WR: RCON/CPU clock-domain
+        // FIFO-WR: RCON clock-domain
         .wr_clk(cpu_clk_g),
-        .full  (fifo_wdf_full),
-        .wr_en (fifo_wdf_wren),
-        .din   ( {fifo_wdf_mask, fifo_wdf_data} ),
+        .full  (fifo_wdf_full),     //FIFO =>  RCON: "!ready"
+        .wr_en (fifo_wdf_wren),     //FIFO  <= RCON: "valid"
+        .din   (fifo_wdf_mdat),     //FIFO  <= RCON: {mask,data}
         // FIFO-RD: DDR2 clock-domain
         .rd_clk(ddr2_clock_tb),
-        .empty (/*ddr2_wdf_empty*/),
-        .rd_en (ddr2_wdf_rden),
-        .valid (ddr2_wdf_valid),
-        .dout  (ddr2_wdf_maskdata)
+        .empty (/*ddr2_wdf_empty*/), //<Unused>
+        .rd_en (!ddr2_wdf_full),    //FIFO  <= DDR2: "ready"
+        .valid (ddr2_wdf_wren),     //FIFO =>  DDR2: "valid"
+        .dout  (ddr2_wdf_mdat)      //FIFO =>  DDR2: {mask,data}
     ) /* synthesis syn_noprune=1 */;
 
-    //Read Data Fifo (DDR2 => RCON):
+    //Read Data Fifo (DDR2 => FIFO => RCON):
     mig_rdf  ddr2_read_fifo (
         .rst(rst_cpu_bus),
         // FIFO-WR: DDR2 clock-domain
         .wr_clk(ddr2_clock_tb),
-        .full  (),
-        .wr_en (),
-        .din   (ddr2_rd_data),
-        // FIFO-RD: RCON/CPU clock-domain
+        .full  (/*ddr2_rdf_full*/), //FIFO =>  DDR2: N/A (always ready)
+        .wr_en (ddr2_rdf_wren),     //FIFO  <= DDR2: "ready"
+        .din   (ddr2_rdf_data),     //FIFO  <= DDR2: data
+        // FIFO-RD: RCON clock-domain
         .rd_clk(cpu_clk_g),
-        .empty (),
-        .rd_en (fifo_rdf_rden),
-        .valid (xxx),
-        .dout  (fall_rdf_data)
+        .empty (/*fifo_rdf_empty*/), //<Unused>
+        .rd_en (fifo_rdf_rden),     //FIFO  <= RCON: "ready"
+        .valid (fifo_rdf_wren),     //FIFO =>  RCON: "valid"
+        .dout  (ALLR_rdf_data)      //FIFO => ALL-Readers (direct)
     ) /* synthesis syn_noprune=1 */;
+
 
     // The RequestController gives each cache the illusion of having
     //   exclusive DDR2 Access:
-    RequestController req_con(
+    RequestController rcon (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
-
-        // FIFO inputs:
-        .caf_full  (fifo_caf_full),
-        .wdf_full (fifo_wdf_full),
-        .rdf_valid(fifo_rdf_valid),
-        // FIFO outputs:
-        .caf_cmd  (fifo_caf_cmd),
-        .caf_addr (fifo_caf_addr),
-        .caf_wren (fifo_caf_wren),
-        .wdf_data(fifo_wdf_data),
-        .wdf_mask(fifo_wdf_mask),
-        .wdf_wren(fifo_wdf_wren),
-        .rdf_rden (fifo_rdf_rden),
-
-        // Data-Cache inputs:             // Inst-Cache inputs:
-        .data_caf_full(data_caf_full),    .inst_caf_full(inst_caf_full),
-        .data_wdf_full(data_wdf_full),    .inst_wdf_full(inst_wdf_full),
-        .data_rdf_valid(data_rdf_valid),   .inst_rdf_valid(inst_rdf_valid),
-        // Data-Cache outputs:            // Inst-Cache outputs:
-        .data_caf_cmd(data_caf_cmd),     .inst_caf_cmd(inst_caf_cmd),
-        .data_caf_addr(data_caf_addr),    .inst_caf_addr(inst_caf_addr),
-        .data_caf_wren(data_caf_wren),    .inst_caf_wren(inst_caf_wren),
-        .data_wdf_data(data_wdf_data),    .inst_wdf_data(inst_wdf_data),
-        .data_wdf_mask(data_wdf_mask),    .inst_wdf_mask(inst_wdf_mask),
-        .data_wdf_wren(data_wdf_wren),    .inst_wdf_wren(inst_wdf_wren),
-        .data_rdf_rden(data_rdf_rden),    .inst_rdf_rden(inst_rdf_rden),
-        .d_stall(d_stall),                .i_stall(i_stall),
-
+    // Master/RequestController interface:
+        .caf_full(fifo_caf_full), //RCON  <= FIFO: "!ready"
+        .caf_wren(fifo_caf_wren), //RCON =>  FIFO: "valid"
+        .caf_cadr(fifo_caf_cadr), //RCON =>  FIFO: {cmd,addr}
+        .wdf_full(fifo_wdf_full), //RCON  <= FIFO: "!ready"
+        .wdf_wren(fifo_wdf_wren), //RCON =>  FIFO: "valid"
+        .wdf_mdat(fifo_wdf_mdat), //RCON =>  FIFO: {mask,data}
+        .rdf_rden(fifo_rdf_rden), //RCON =>  FIFO: "ready" (ignored?)
+        .rdf_wren(fifo_rdf_wren), //RCON  <= FIFO: "valid"
+    // Read/Write/Stall interfaces:
+        //Data-Cache interface:         //Inst-Cache interface:
+        .data_caf_full(data_caf_full),  .inst_caf_full(inst_caf_full), //OUT
+        .data_caf_wren(data_caf_wren),  .inst_caf_wren(inst_caf_wren),
+        .data_caf_cadr(data_caf_cadr),  .inst_caf_cadr(inst_caf_cadr),
+        .data_wdf_full(data_wdf_full),  .inst_wdf_full(inst_wdf_full), //OUT
+        .data_wdf_wren(data_wdf_wren),  .inst_wdf_wren(inst_wdf_wren),
+        .data_wdf_mdat(data_wdf_mdat),  .inst_wdf_mdat(inst_wdf_mdat),
+        .data_rdf_rden(data_rdf_rden),  .inst_rdf_rden(inst_rdf_rden),
+        .data_rdf_wren(data_rdf_wren),  .inst_rdf_wren(inst_rdf_wren), //OUT
+        .data_stall(d_stall),           .inst_stall(i_stall),
 // New for cp4-5:
-        // PixelFeeder inputs:
-        .pixf_caf_wren(pixf_caf_wren),
-        .pixf_caf_addr(pixf_caf_addr),
-        .pixf_rdf_rden(pixf_rdf_rden),
-        // PixelFeeder outputs:
-        .pixf_caf_full(pixf_caf_full),
-        .pixf_rdf_valid(pixf_rdf_valid),
-
-        // GraphicsProcessor inputs:
-        .gcmd_caf_wren(gcmd_caf_wren),
-        .gcmd_caf_addr(gcmd_caf_addr),
+    //Read-only interfaces:
+        //GraphicsProcessor inputs:
+        .gcmd_raf_full(gcmd_raf_full), //OUT
+        .gcmd_raf_wren(gcmd_raf_wren),
+        .gcmd_raf_addr(gcmd_raf_addr),
         .gcmd_rdf_rden(gcmd_rdf_rden),
-        // GraphicsProcessor outputs:
-        .gcmd_caf_full  (gcmd_caf_full),
-        .gcmd_rdf_valid(gcmd_rdf_valid),
-
-        // FrameFiller inputs:
-        .fill_caf_addr(fill_caf_addr),
-        .fill_caf_wren(fill_caf_wren),
+        .gcmd_rdf_wren(gcmd_rdf_wren), //OUT
+        //PixelFeeder interface:
+        .pixf_raf_full(pixf_raf_full), //OUT
+        .pixf_raf_wren(pixf_raf_wren),
+        .pixf_raf_addr(pixf_raf_addr),
+        .pixf_rdf_rden(pixf_rdf_rden),
+        .pixf_rdf_wren(pixf_rdf_wren), //OUT
+    //Write-only interfaces:
+        //FrameFiller interface:
+        .fill_waf_full(fill_waf_full), //OUT
+        .fill_waf_wren(fill_waf_wren),
+        .fill_waf_addr(fill_waf_addr),
+        .fill_wdf_full(fill_wdf_full), //OUT
         .fill_wdf_wren(fill_wdf_wren),
-        .fill_wdf_mask(fill_wdf_mask),
-        .fill_wdf_data(fill_wdf_data),
-        // FrameFiller outputs:
-        .fill_caf_full(fill_caf_full),
-        .fill_wdf_full(fill_wdf_full),
-
-        // LineEngine inputs:
-        .line_caf_addr(line_caf_addr),
-        .line_caf_wren(line_caf_wren),
-        .line_wdf_data(line_wdf_data),
-        .line_wdf_mask(line_wdf_mask),
+        .fill_wdf_mdat(fill_wdf_mdat),
+        //LineEngine interface:
+        .line_waf_full(line_waf_full), //OUT
+        .line_waf_wren(line_waf_wren),
+        .line_waf_addr(line_waf_addr),
+        .line_wdf_full(line_wdf_full), //OUT
         .line_wdf_wren(line_wdf_wren),
-        // LineEngine outputs:
-        .line_caf_full(line_caf_full),
-        .line_wdf_full(line_wdf_full),
-
-        // Bypass/SLR inputs: //NOTE:XTRA:Extended to allow bypass input
-        .bpas_caf_addr(bpas_caf_addr),
-        .bpas_caf_wren(bpas_caf_wren),
-        .bpas_wdf_data(bpas_wdf_data),
-        .bpas_wdf_mask(bpas_wdf_mask),
+        .line_wdf_mdat(line_wdf_mdat),
+//NOTE:XTRA:Re-enabled bypass write-only channel
+        //Bypass/SLR interface:
+        .bpas_waf_full(bpas_waf_full), //OUT
+        .bpas_waf_wren(bpas_waf_wren),
+        .bpas_waf_addr(bpas_waf_addr),
+        .bpas_wdf_full(bpas_wdf_full), //OUT
         .bpas_wdf_wren(bpas_wdf_wren),
-        // Bypass/SLR outputs:
-        .bpas_caf_full(bpas_caf_full),
-        .bpas_wdf_full(bpas_wdf_full)
+        .bpas_wdf_mdat(bpas_wdf_mdat)
     ) /* synthesis syn_noprune=1 */;
 
     // The instruction cache:
@@ -366,23 +346,27 @@ wire DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!
     ) icache (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
+        // <= Cache Client (CPU)
         .addr(icache_addr),
-        .din(icache_din),
-        .we(icache_we),
-        .re(icache_re),
-        .rdf_valid(inst_rdf_valid),
-        .rdf_data(fall_rdf_data),
+        .din (icache_din),
+        .we  (icache_we),
+        .re  (icache_re),
+        // <= RequestController
         .caf_full(inst_caf_full),
         .wdf_full(inst_wdf_full),
+        .rdf_wren(inst_rdf_wren),
+        .rdf_data(ALLR_rdf_data),
+        // => Cache Client (CPU)
         .stall(i_stall),
-        .dout(icache_dout),
+        .dout (icache_dout),
+        // => RequestController
         .rdf_rden(inst_rdf_rden),
-        .caf_cmd(inst_caf_cmd),
-        .caf_addr(inst_caf_addr),
+        .caf_cadr(inst_caf_cadr),
         .caf_wren(inst_caf_wren),
-        .wdf_data(inst_wdf_data),
-        .wdf_mask(inst_wdf_mask),
-        .wdf_wren(inst_wdf_wren)
+        .wdf_mdat(inst_wdf_mdat),
+        .wdf_wren(inst_wdf_wren),
+        //Unused in this project
+        .tag_hit(), .tag_valid(), .state()
     ) /* synthesis syn_noprune=1 */;
 
     // Data cache:
@@ -391,23 +375,27 @@ wire DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!
     ) dcache (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
+        // <= Cache Client (CPU)
         .addr(dcache_addr),
-        .din(dcache_din),
-        .we(dcache_we),
-        .re(dcache_re),
-        .rdf_valid(data_rdf_valid),
-        .rdf_data(fall_rdf_data),
+        .din (dcache_din),
+        .we  (dcache_we),
+        .re  (dcache_re),
+        // <= RequestController
         .caf_full(data_caf_full),
         .wdf_full(data_wdf_full),
+        .rdf_wren(data_rdf_wren),
+        .rdf_data(ALLR_rdf_data),
+        // => Cache Client (CPU)
         .stall(d_stall),
-        .dout(dcache_dout),
+        .dout (dcache_dout),
+        // => RequestController
         .rdf_rden(data_rdf_rden),
-        .caf_cmd(data_caf_cmd),
-        .caf_addr(data_caf_addr),
+        .caf_cadr(data_caf_cadr),
         .caf_wren(data_caf_wren),
-        .wdf_data(data_wdf_data),
-        .wdf_mask(data_wdf_mask),
-        .wdf_wren(data_wdf_wren)
+        .wdf_mdat(data_wdf_mdat),
+        .wdf_wren(data_wdf_wren),
+        //Unused in this project
+        .tag_hit(), .tag_valid(), .state()
     ) /* synthesis syn_noprune=1 */;
 
     assign stall = d_stall || i_stall;
@@ -423,24 +411,24 @@ wire DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!
         .dvi_clk_g(dvi_clk_g),
         .dvi_rst_g(rst_dvi_bus),
     //DDR FIFOs (read-only):
-        .caf_full(pixf_caf_full),
-        .caf_wren(pixf_caf_wren),
-        .caf_addr(pixf_caf_addr),
-        .rdf_valid(pixf_rdf_valid),
+        .raf_full(pixf_raf_full),
+        .raf_wren(pixf_raf_wren),
+        .raf_addr(pixf_raf_addr),
+        .rdf_wren(pixf_rdf_wren),
         .rdf_rden(pixf_rdf_rden),
-        .rdf_data(fall_rdf_data),
+        .rdf_data(ALLR_rdf_data),
     // DVI driver:
         .video_ready(video_ready),
         .video_valid(video_valid),
         .video      (video),
     // FRAME control <=> CPU:
+        .pf_vframe(pf_vframe),
+        .pf_wframe(pf_wframe),
         .pf_status(pf_status),
-        .pf_frame (pf_frame),
-        .pf_valid (pf_valid),
-        .pf_irq   (pf_irq)
+        .irq_frame(irq_pf_frame)
     ) /* synthesis syn_noprune=1 */;
 
-    //For CP5:
+//For CP5:
     //GPU holds GraphicsProcessor, ScanLineRunner,
     //  & engines (FrameFiller, LineEngine, ElipseEngine)
     GPU #(
@@ -450,26 +438,25 @@ wire DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
     //GraphicsProcessor interface:
-        .gp_status(gp_status),
-        .gp_valid (gp_valid),
-        .gp_frame (gp_frame),
-        .gp_code  (gp_code),
-        .gp_irq   (gp_irq),
+        .gp_vcode(gp_vcode), .gp_vframe(gp_vframe),
+        .gp_wcode(gp_wcode), .gp_wframe(gp_wframe),
+        .gp_rcode(gp_rcode), .gp_status(gp_status),
+        .irq_gp_done(irq_gp_done),
     //DDR FIFOs (read-only for GraphicsProcessor):
-        .gcmd_caf_wren(gcmd_caf_wren),
-        .gcmd_caf_addr(gcmd_caf_addr),
-        .gcmd_caf_full(gcmd_caf_full),
+        .gcmd_raf_full(gcmd_raf_full),
+        .gcmd_raf_wren(gcmd_raf_wren),
+        .gcmd_raf_addr(gcmd_raf_addr),
         .gcmd_rdf_rden(gcmd_rdf_rden),
-        .gcmd_rdf_valid(gcmd_rdf_valid),
-        .gcmd_rdf_data(fall_rdf_data),
+        .gcmd_rdf_wren(gcmd_rdf_wren),
+        .gcmd_rdf_data(ALLR_rdf_data),
     //DDR FIFOs (write-only for ScanLineRunner):
-        .slr_caf_full(bpas_caf_full),
+        .slr_waf_full(bpas_waf_full),
+        .slr_waf_wren(bpas_waf_wren),
+        .slr_waf_addr(bpas_waf_addr),
         .slr_wdf_full(bpas_wdf_full),
-        .slr_caf_wren(bpas_caf_wren),
-        .slr_caf_addr(bpas_caf_addr),
         .slr_wdf_wren(bpas_wdf_wren),
-        .slr_wdf_data(bpas_wdf_data),
-        .slr_wdf_mask(bpas_wdf_mask)
+        .slr_wdf_mask(bpas_wdf_mask),
+        .slr_wdf_data(bpas_wdf_data)
     ) /* synthesis syn_noprune=1 */;
 
 endmodule

@@ -1,10 +1,8 @@
-`include "../cpuglobal.vh"
 
 /*
 **  Abstraction of inter-stage register'd or latch'd value at pipeline stage borders
 */
 module PipelineBorder #(
-    parameter DD=`COLT45_DD,
     parameter Mode=0 /*0-3=(Reg,LatchieMUX,PassReset,PassThru)*/, 
     parameter Width=0, ResetValue={Width{1'b0}}
 )(

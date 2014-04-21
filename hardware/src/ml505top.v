@@ -7,8 +7,8 @@ module ml505top #(
     input         FPGA_CPU_RESET_B,
 
     // SERIAL (UART)
-    input         FPGA_SERIAL1_RX,
-    output        FPGA_SERIAL1_TX,
+    input         FPGA_SERIAL_RX,
+    output        FPGA_SERIAL_TX,
 
     // GPIO (SWitches & LEDs)
     input   [7:0] GPIO_DIP,
@@ -86,16 +86,15 @@ module ml505top #(
     wire        dcache_re,      icache_re;
     wire [31:0] dcache_din,     icache_din;
     wire [31:0] dcache_dout,    icache_dout;
-//  wire        stall_cache;
-    wire        stall_dcache,   stall_icache;
+    wire        stall_dcache,   stall_icache; //stall_cache;
     wire        video_ready, video_valid;
-    wire [23:0] video;
-//  wire        fb0; ???Was this "framebuffer0" like pf_frame???
-    wire        gp_ready;
-    wire [31:0] pf_frame,   gp_frame,   gp_code;
-    wire        pf_fvalid,  gp_fvalid,  gp_cvalid;
-    wire        pf_irq,     gp_irq;
-    wire [15:0] pf_status,  gp_status;
+    wire [31:0] video;//[23:0]
+//  wire        fb0; ???Was this "framebuffer0" like pf_wframe???
+    wire        pf_vframe,  gp_vcode, gp_vframe;
+    wire [31:0] pf_wframe,  gp_wcode, gp_wframe;
+    wire [31:0]             gp_rcode;
+    wire [15:0] pf_status,            gp_status;
+    wire        irq_pf_frame, irq_gp_done;
 
     Memory150 #(
         .SIM_ONLY(1'b0)
@@ -109,7 +108,7 @@ module ml505top #(
         .clk90_g    (clk90_g),
         .locked     (pll_lock),
         .init_done  (init_done),
-        .rst_cpu_mem(rst_cpu_mem_g), //rst_cpu_mem),
+        .rst_cpu_mem(rst_cpu_mem_g),
         .rst_cpu_bus(rst_cpu_bus_g),
         .rst_dvi_bus(rst_dvi_bus_g),
     // DDR2 pads:
@@ -136,70 +135,38 @@ module ml505top #(
         .stall  (/*stall_cache*/),
         .d_stall(stall_dcache),    .i_stall(stall_icache),
     // PixelFeeder <=> DVI driver:
-        .video_ready    (video_ready    ),
-        .video_valid    (video_valid    ),
-        .video          (video          ),
+        .video_ready    (video_ready),
+        .video_valid    (video_valid),
+        .video          (video      ),
     // GPU <=> CPU interface:
-        .gp_ready (pf_ready ),
-        .pf_fvalid(pf_fvalid),  .gp_fvalid(gp_fvalid),  .gp_cvalid(gp_cvalid),
-        .pf_frame (pf_frame ),  .gp_frame (gp_frame ),  .gp_code  (gp_code  ),
-        .pf_irq   (pf_irq   ),  .gp_irq   (gp_irq   ),
-        .pf_status(pf_status),  .gp_status(gp_status)
+        .pf_vframe(pf_vframe),  .gp_vcode(gp_vcode), .gp_vframe(gp_vframe),
+        .pf_wframe(pf_wframe),  .gp_wcode(gp_wcode), .gp_wframe(gp_wframe),
+                                .gp_rcode(gp_rcode),
+        .pf_status(pf_status),                       .gp_status(gp_status),
+        .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done)
     );
 
-
-// MemoryBank/IO "busses" (snagged from MIPS150)
-    wire  [31: 0] IMEM_ADDR, DMEM_ADDR;
-    wire  [31: 0] IMEM_DATA, DMEM_DATA;
-    wire  [31: 0] _WDataMasked;
-    wire  [ 3: 0] _WriteMask;
-    wire  MemToRegDX_, MemWriteDX_, PCinBIOSDX_;
-    wire  uart0_irq, uart1_irq;
-
-    // Memory Bank & Memory Mapped I/O
-    MemBank #( .CPU_FREQ(CPU_FREQ) )
-    mem_bank (
-        .clk(cpu_clk_g), .rst(rst_cpu_cpu_g), .stall(stall_top),
-    // Memory/IO <==> MIPS150
-        .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
-        .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
-        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
-        .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_),
-    // Interrupts
-        .uart0_irq(uart0_irq),
-        .uart1_irq(uart1_irq),
-    // Serial (UART):
-        .FPGA_SERIAL_RX(FPGA_SERIAL1_RX),
-        .FPGA_SERIAL_TX(FPGA_SERIAL1_TX),
-    // Memory Caches:
-        .dcache_addr (dcache_addr), .icache_addr (icache_addr),
-        .dcache_we   (dcache_we  ), .icache_we   (icache_we  ),
-        .dcache_re   (dcache_re  ), .icache_re   (icache_re  ),
-        .dcache_din  (dcache_din ), .icache_din  (icache_din ),
-        .dcache_dout (dcache_dout), .icache_dout (icache_dout),
-    // GPU:
-        .gp_ready (gp_ready),
-        .PF_FVALID(pf_fvalid),  .GP_FVALID(gp_fvalid),  .GP_CVALID(gp_cvalid),
-        .PF_FRAME (pf_frame),   .GP_FRAME (gp_frame),   .GP_CODE  (gp_code),
-        .pf_status(pf_status),  .gp_status(gp_status)
-    );
 
     // MIPS 150 CPU
     MIPS150 #(
-    ) cpu (
+        .CPU_FREQ(CPU_FREQ),
+        .PC_BOOT(32'h4000_0000)
+    ) CPU (
         .clk(cpu_clk_g), .rst(rst_cpu_cpu_g), .stall(stall_top),
-    // Memory/IO <==> MemBank
-        .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
-        .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
-        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
-        .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_),
-    // Interrupts
-        .pf_irq(pf_irq),
-        .gp_irq(gp_irq),
-        .uart0_irq(uart0_irq),
-        .uart1_irq(uart1_irq)
+    // Serial (UART):
+        .FPGA_SERIAL_RX(FPGA_SERIAL_RX), .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+    // Memory Caches:
+        .dcache_addr(dcache_addr),  .icache_addr(icache_addr),
+        .dcache_we  (dcache_we  ),  .icache_we  (icache_we  ),
+        .dcache_re  (dcache_re  ),  .icache_re  (icache_re  ),
+        .dcache_din (dcache_din ),  .icache_din (icache_din ),
+        .dcache_dout(dcache_dout),  .icache_dout(icache_dout),
+    // GPU:
+        .pf_vframe(pf_vframe),        .gp_vcode(gp_vcode), .gp_vframe(gp_vframe),
+        .pf_wframe(pf_wframe),        .gp_wcode(gp_wcode), .gp_wframe(gp_wframe),
+                                      .gp_rcode(gp_rcode),
+        .pf_status(pf_status),                             .gp_status(gp_status),
+        .irq_pf_frame(irq_pf_frame),  .irq_gp_done(irq_gp_done)
     );
 
 
@@ -221,7 +188,7 @@ module ml505top #(
         .DVI_XCLK_N(DVI_XCLK_N), .DVI_XCLK_P(DVI_XCLK_P),           //Differential clock
         .I2C_SCL_DVI(IIC_SCL_VIDEO), .I2C_SDA_DVI(IIC_SDA_VIDEO),    //Configuration IIC
         .VideoReady(video_ready), .VideoValid(video_valid), //Ready/Valid interface...
-        .Video(video) // ... for 24-bit pixel RGB feed
+        .Video(video[23:0]) // ... for 24-bit pixel RGB feed
     );
 
 

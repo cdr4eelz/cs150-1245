@@ -9,7 +9,10 @@ module EchoTestbenchHybrid;
     parameter CPU_FREQ  = 50_000_000; //CPU-clock
     parameter HalfCycle = 5; //USER-clock 100MHz (half-period)
 
-`include "echobase.vh"
+`include "base_clock.vh"
+`include "base_mem.vh"
+`include "base_echo.vh"
+`include "base_mips.vh"
 
     // Test log variables
     integer countIN;
@@ -22,23 +25,7 @@ initial begin
     DataOutReady = 0;
     countIN = 0;
 
-
-    {rst_pll, rst_dvi_bus, rst_cpu_bus, rst_cpu_mem, rst_cpu_cpu} = 5'b11111;
-    repeat (2) @( posedge user_clk_g ) ;
-    rst_pll = 0;
-    wait ( pll_lock ) ; // wait for pll to lock
-    repeat (10) @( posedge cpu_clk_g ) ; // reset for 10 cc
-    rst_cpu_mem = 0;
-    wait ( init_done ) ; // wait for ddr init done
-    repeat (2) @( posedge cpu_clk_g ) ;
-    @( negedge cpu_clk_g ) ;
-    fork
-        @( posedge cpu_clk_g ) rst_cpu_bus = 0;
-        @( posedge dvi_clk_g ) rst_dvi_bus = 0;
-    join
-    repeat (2) @( posedge cpu_clk_g ) ;
-    {rst_pll, rst_dvi_bus, rst_cpu_bus, rst_cpu_mem, rst_cpu_cpu} = 0;
-    repeat (30) @( posedge cpu_clk_g ) ;
+BaseClockReset();
 
 
     // Wait until transmit is ready

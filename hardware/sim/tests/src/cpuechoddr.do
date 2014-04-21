@@ -8,4 +8,6 @@ add wave CPUEchoDDRTestbench/mem_arch/*
 add wave CPUEchoDDRTestbench/mem_arch/dcache/*
 add wave CPUEchoDDRTestbench/mem_arch/icache/*
 add wave CPUEchoDDRTestbench/DUT/*
+add wave EchoTestbenchHybrid/DUT/membank/*
+add wave CPUEchoDDRTestbench/DUT/cpu/*
 run 10000us

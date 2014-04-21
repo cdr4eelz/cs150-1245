@@ -54,15 +54,22 @@ module EchoTestbench;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    MemMIPS150 #(.CPU_FREQ(CPU_FREQ)) DUT
+    MIPS150 #(.CPU_FREQ(CPU_FREQ)) DUT
     (   .clk(Clock), .rst(Reset), .stall( (1) ? Stall : 1'b0 ),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
 // CP2+
+        .dcache_addr(),      .icache_addr(),
+        .dcache_we  (),      .icache_we  (),
+        .dcache_re  (),      .icache_re  (),
+        .dcache_din (),      .icache_din (),
         .dcache_dout(32'b0), .icache_dout(32'b0),
 // CP4+
-        .pf_status(16'b0),  .gf_status({2'b10,6'b0,4'b0,4'b1111}),
-        .pf_irq(1'b0),      .gp_irq(1'b0)
+        .pf_vframe(),        .gp_vcode(), .gp_vframe(),
+        .pf_wframe(),        .gp_wcode(), .gp_wframe(),
+                             .gp_rcode(),
+        .pf_status(16'b0),   .gp_status({2'b10,6'b0,4'b0,4'b1111}),
+        .irq_pf_frame(1'b0), .irq_gp_done(1'b0)
     );
 /*
     // A shadow CPU using a gated clock
@@ -71,10 +78,17 @@ module EchoTestbench;
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(xFPGA_SERIAL_TXx),
 // CP2+
+        .dcache_addr(),      .icache_addr(),
+        .dcache_we  (),      .icache_we  (),
+        .dcache_re  (),      .icache_re  (),
+        .dcache_din (),      .icache_din (),
         .dcache_dout(32'b0), .icache_dout(32'b0),
 // CP4+
-        .pf_status(16'b0),  .gf_status({2'b10,6'b0,4'b0,4'b1111}),
-        .pf_irq(1'b0),      .gp_irq(1'b0)
+        .pf_vframe(),        .gp_vcode(), .gp_vframe(),
+        .pf_wframe(),        .gp_wcode(), .gp_wframe(),
+                             .gp_rcode(),
+        .pf_status(16'b0),   .gp_status({2'b10,6'b0,4'b0,4'b1111}),
+        .irq_pf_frame(1'b0), .irq_gp_done(1'b0)
     );
 */
 

@@ -1,5 +1,5 @@
 //----------------------------------------------------------------------
-// Module: CacheTestTasks.vh
+// Module: cachetesttasks.vh
 // Authors: Dan Yeager, James Parker, Daiwei Li
 // Modular cache testing procedures. 
 // See Memory150TestBench.v for usage.
@@ -17,6 +17,29 @@
   `define LINEENG   2'h2
   `define DIRDRAW   2'h3
 `endif
+
+reg         O_icache_re,    O_dcache_re;
+reg [  3:0] O_icache_we,    O_dcache_we;
+reg [ 31:0] O_icache_din,   O_dcache_din;
+reg [ 31:0] O_icache_addr,  O_dcache_addr;
+assign icache_re   = O_icache_re,   dcache_re   = O_dcache_re;
+assign icache_we   = O_icache_we,   dcache_we   = O_dcache_we;
+assign icache_din  = O_icache_din,  dcache_din  = O_dcache_din;
+assign icache_addr = O_icache_addr, dcache_addr = O_dcache_addr;
+assign video_ready = 1'b0;
+
+task CacheResetInputs;
+begin
+    O_icache_re  = 0;
+    O_dcache_re  = 0;
+    O_icache_we  = 4'b0;
+    O_dcache_we  = 4'b0;
+    O_dcache_din = 32'b0;
+    O_icache_din = 32'b0;
+    O_dcache_addr= 32'h00000000;
+    O_icache_addr= 32'b0;
+end
+endtask
 
 task DualCacheIreadDwrite;
   input [31:0] task_addrD;
@@ -115,15 +138,15 @@ begin
   if (cache_select === `DCACHE) begin
     writeNumD = writeNumD + 1; // debugging info
     $display("TB: d-Write #%0d start at %t", writeNumD, $time);
-    dcache_addr = task_addr;
-    dcache_din = task_cache_din;
-    dcache_we = task_cache_we;
+    O_dcache_addr = task_addr;
+    O_dcache_din = task_cache_din;
+    O_dcache_we = task_cache_we;
   end else if (cache_select === `ICACHE) begin
     writeNumI = writeNumI + 1; // debugging info
     $display("TB: i-Write #%0d start at %t", writeNumI, $time);
-    icache_addr = task_addr;
-    icache_din = task_cache_din;
-    icache_we = task_cache_we;
+    O_icache_addr = task_addr;
+    O_icache_din = task_cache_din;
+    O_icache_we = task_cache_we;
   end else if (cache_select === `LINEENG) begin
     writeNumLine = writeNumLine + 1; // debugging info
     $display("TB: line-Write #%0d start at %t", writeNumLine, $time);
@@ -155,14 +178,14 @@ begin
     StrRW = "d";
     readNumD = readNumD + 1; // debugging info
     TempReadWriteNum = readNumD;
-    dcache_addr = task_addr;
-    dcache_re = 1'b1;
+    O_dcache_addr = task_addr;
+    O_dcache_re = 1'b1;
   end else if (cache_select === `ICACHE) begin
     StrRW = "i";
     readNumI = readNumI + 1; // debugging info
     TempReadWriteNum = readNumI;
-    icache_addr = task_addr;
-    icache_re = 1'b1;
+    O_icache_addr = task_addr;
+    O_icache_re = 1'b1;
   end else begin
     StrRW = "";
     $display("TB: ERROR !!!! you can only read from I/D cache");
@@ -177,10 +200,10 @@ task ClockInRequest;
 begin
   @( posedge cpu_clk_g ) ;
   // start fresh after clocking in re/we requests:
-  icache_re = 1'b0;
-  dcache_re = 1'b0;
-  icache_we = 4'b0;
-  dcache_we = 4'b0;
+  O_icache_re = 1'b0;
+  O_dcache_re = 1'b0;
+  O_icache_we = 4'b0;
+  O_dcache_we = 4'b0;
   @( negedge cpu_clk_g ) ; // wait for stall
 // TODO ** disable we for pixel and line
   //_we = 4'b0;

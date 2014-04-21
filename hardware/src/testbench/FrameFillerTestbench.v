@@ -51,8 +51,7 @@ module FrameFillerTestbench;
     assign y = caf_addr[18:9];
 
     FrameFiller #(
-        .SCANLINERUNNER(0),
-        .LITTLEWORDIAN(1)
+        .SCANLINERUNNER(0)
     ) DUT (
         .clk(Clock),
         .rst(rst),
