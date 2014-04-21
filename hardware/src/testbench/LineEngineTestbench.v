@@ -7,6 +7,7 @@
 `timescale 1ns / 100ps
 
 module LineEngineTestbench;
+    parameter SCANLINERUNNER = 1, LITTLEWORDIAN = 1;
 
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;
@@ -25,43 +26,15 @@ module LineEngineTestbench;
     reg  [  9:0]    LE_point;
     reg             LE_trigger; // Trigger signal - line engine should start drawing
     reg  [ 31:0]    LE_frame;   // Frame base (clipped to multiple of 0x0040_0000)
-    // FIFO connections
-    reg             caf_full;
-    reg             wdf_full;
-//  wire [  2:0]    caf_gcmd_data;
-    wire [ 30:0]    caf_addr;
-    wire            caf_wren;
-    wire [127:0]    wdf_data;
-    wire [ 15:0]    wdf_mask;
-    wire            wdf_wren;
-
-
-    wire [  9:0]    x, y; //, xdiff, ydiff;
-    reg  [  2:0]    mask;
-//  assign caf_gcmd_data = 3'b000; //WRITE
-
-    always@(*) begin
-        if(caf_wren) begin
-            if(wdf_mask[15:12] == 4'h0) mask = 3'h0;
-            else if(wdf_mask[11:8] == 4'h0) mask = 3'h1;
-            else if(wdf_mask[7:4] == 4'h0) mask = 3'h2;
-            else if(wdf_mask[3:0] == 4'h0) mask = 3'h3;
-            else mask = 3'h0;
-        end else begin
-            if(wdf_mask[15:12] == 4'h0) mask = 3'h4;
-            else if(wdf_mask[11:8] == 4'h0) mask = 3'h5;
-            else if(wdf_mask[7:4] == 4'h0) mask = 3'h6;
-            else if(wdf_mask[3:0] == 4'h0) mask = 3'h7;
-            else mask = 3'h0;
-        end
-    end
-
-    assign x = {caf_addr[8:2], mask};
-    assign y = caf_addr[18:9];
+    
+    localparam SLR_LE       = 0;
+    localparam  SLR__CNT = 1;
+    localparam WATCH_NAME = "line";
+    `include "util_gwatch.vh"
 
     LineEngine #(
-        .SCANLINERUNNER(0),
-        .LITTLEWORDIAN(1)
+        .SCANLINERUNNER(SCANLINERUNNER),
+        .LITTLEWORDIAN(LITTLEWORDIAN)
     ) DUT (
         .clk(Clock),
         .rst(rst),
@@ -83,9 +56,14 @@ module LineEngineTestbench;
         .LE_trigger(LE_trigger),
         .LE_frame(LE_frame),
     //SLR interface (write-only):
-        .SLR_frame(), .SLR_color_fill(), .SLR_color_edge(),
-        .SLR_ready(1'b0), .SLR_valid(),
-        .SLR_row(), .SLR_col_start(), .SLR_col_finish()
+        .SLR_ready(SLRs_ready           [SLR_LE]                    ),
+        .SLR_valid(SLRs_valid           [SLR_LE]                    ),
+        .SLR_frame     (SLRs_frame     [(SLR_LE*32)+31:(SLR_LE*32)] ),
+        .SLR_color_fill(SLRs_color_fill[(SLR_LE*32)+31:(SLR_LE*32)] ),
+        .SLR_color_edge(SLRs_color_edge[(SLR_LE*32)+31:(SLR_LE*32)] ),
+        .SLR_row       (SLRs_row       [(SLR_LE*10)+ 9:(SLR_LE*10)] ),
+        .SLR_col_start (SLRs_col_start [(SLR_LE*10)+ 9:(SLR_LE*10)] ),
+        .SLR_col_finish(SLRs_col_finish[(SLR_LE*10)+ 9:(SLR_LE*10)] )
     );
 
     initial begin
@@ -103,12 +81,17 @@ module LineEngineTestbench;
         rst = 1'b0;
         #(Cycle);
 //      $monitor("R:%b T:%b (%0d,%0d) W:%b.%b", LE_ready, LE_trigger, x,y, caf_wren,wdf_wren);
+$display("LineEngine: Fake memory/SLR...");
         drawLine(   2,   4,    10,   6,  32'h11_7F_00_00);
         drawLine(   0,   0,  1023, 767,  32'h22_7F_00_00);
         drawLine(1000, 700,     0,   0,  32'h33_7F_00_00);
         drawLine( 500, 700,     0,   0,  32'h44_7F_00_00);
         drawLine(   0,   0,   400, 652,  32'h55_7F_00_00);
         drawLine( 200, 200,   100, 500,  32'h66_7F_00_FF);
+
+        #(10*Cycle);
+$display("LineEngine: Done.");
+        $finish();
     end
 
     task drawLine;
@@ -119,42 +102,42 @@ module LineEngineTestbench;
         input [31:0] color;
     begin
         $display("le-TB: Wait...");
-        @(negedge Clock);
+        #1;
+        @(posedge Clock);
         while (!LE_ready) #(Cycle); // wait for LE_ready
+        @(posedge Clock); #1;
         LE_color = color;
         LE_color_valid = 1'b1;
-        #(Cycle);
+        @(posedge Clock); #1;
         LE_color_valid = 1'b0;
         LE_color = 32'bz;
         LE_point = x0;
         LE_x0_valid = 1'b1;
-        #(Cycle);
+        @(posedge Clock); #1;
         LE_x0_valid = 1'b0;
         LE_point = y0;
         LE_y0_valid = 1'b1;
-        #(Cycle);
+        @(posedge Clock); #1;
         LE_y0_valid = 1'b0;
         LE_x1_valid = 1'b1;
         LE_point = x1;
-        #(Cycle);
+        @(posedge Clock); #1;
         LE_x1_valid = 1'b0;
         LE_y1_valid = 1'b1;
         LE_point = y1;
         LE_frame = 32'h1040_0000;
         LE_trigger  = 1'b1;
-        $strobe("le-TB: TRIG (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h frame=%h",
+        @(posedge Clock); #1;
+        $display("le-TB: TRIG (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h frame=%h",
                 x0,y0, x1,y1, x0,y0, x1,y1, color, LE_frame);
-        #(Cycle);
         LE_point = 32'bz;
         LE_frame = 32'bz;
         LE_y1_valid = 1'b0;
         LE_trigger  = 1'b0;
-        #(Cycle);
+        @(posedge Clock);
         while (!LE_ready) begin
-            if (wdf_wren && wdf_mask != 16'hFFFF) begin
-                $display("%4d %4d", x, y);
-            end
-            #(Cycle);
+            #1;
+            @(posedge Clock);
         end
         $display("le-TB: Done. (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h",
                  x0,y0, x1,y1, x0,y0, x1,y1, color);

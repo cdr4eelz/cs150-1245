@@ -4,7 +4,7 @@
 
 module GPUTestbench;
 
-`include "tbutils.vh"
+`include "util_elog.vh"
 
     parameter LITTLEWORDIAN = 1, WATCH_SLR = 1;
     parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600;

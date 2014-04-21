@@ -6,6 +6,7 @@
 `timescale 1ns / 1ps
 
 module FrameFillerTestbench;
+    parameter SCANLINERUNNER = 1, LITTLEWORDIAN = 0;
 
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;
@@ -18,43 +19,23 @@ module FrameFillerTestbench;
     reg             FF_valid; // Trigger signal - fill engine should start drawing
     reg  [ 31:0]    FF_color; // 8-bits zeros then 8-bit each for RGB
     reg  [ 31:0]    FF_frame; // Frame base (clipped to multiple of 0x0040_0000)
-    // FIFO connections
-    reg             caf_full;
-    wire            caf_wren;
-    wire [ 30:0]    caf_addr;
-    reg             wdf_full;
-    wire            wdf_wren;
-    wire [ 15:0]    wdf_mask;
-    wire [127:0]    wdf_data;
 
-
-    wire [  9:0]    x, y;
-    reg  [  2:0]    mask;
-
-    always@(*) begin
-        if(caf_wren) begin
-            if(wdf_mask[15:12] == 4'h0) mask = 3'h0;
-            else if(wdf_mask[11:8] == 4'h0) mask = 3'h1;
-            else if(wdf_mask[7:4] == 4'h0) mask = 3'h2;
-            else if(wdf_mask[3:0] == 4'h0) mask = 3'h3;
-            else mask = 3'h0;
-        end else begin
-            if(wdf_mask[15:12] == 4'h0) mask = 3'h4;
-            else if(wdf_mask[11:8] == 4'h0) mask = 3'h5;
-            else if(wdf_mask[7:4] == 4'h0) mask = 3'h6;
-            else if(wdf_mask[3:0] == 4'h0) mask = 3'h7;
-            else mask = 3'h0;
-        end
-    end
-
-    assign x = {caf_addr[8:2], mask};
-    assign y = caf_addr[18:9];
+    localparam SLR_FF       = 0;
+    localparam  SLR__CNT = 1;
+    localparam WATCH_NAME = "fill";
+    `include "util_gwatch.vh"
 
     FrameFiller #(
-        .SCANLINERUNNER(0)
+        .SCANLINERUNNER(SCANLINERUNNER)
     ) DUT (
         .clk(Clock),
         .rst(rst),
+    //Fill control <=> CPU:
+        .FF_ready(FF_ready),
+        .FF_valid(FF_valid),
+        .FF_color(FF_color),
+        .FF_frame(FF_frame),
+    //DDR FIFOs (write-only):
         .caf_full(caf_full),
         .caf_wren(caf_wren),
         .caf_addr(caf_addr),
@@ -62,14 +43,15 @@ module FrameFillerTestbench;
         .wdf_wren(wdf_wren),
         .wdf_data(wdf_data),
         .wdf_mask(wdf_mask),
-        .FF_ready(FF_ready),
-        .FF_valid(FF_valid),
-        .FF_color(FF_color),
-        .FF_frame(FF_frame),
     //SLR interface (write-only):
-        .SLR_frame(), .SLR_color_fill(), .SLR_color_edge(),
-        .SLR_ready(1'b0), .SLR_valid(),
-        .SLR_row(), .SLR_col_start(), .SLR_col_finish()
+        .SLR_ready(SLRs_ready           [SLR_FF]                    ),
+        .SLR_valid(SLRs_valid           [SLR_FF]                    ),
+        .SLR_frame     (SLRs_frame     [(SLR_FF*32)+31:(SLR_FF*32)] ),
+        .SLR_color_fill(SLRs_color_fill[(SLR_FF*32)+31:(SLR_FF*32)] ),
+        .SLR_color_edge(SLRs_color_edge[(SLR_FF*32)+31:(SLR_FF*32)] ),
+        .SLR_row       (SLRs_row       [(SLR_FF*10)+ 9:(SLR_FF*10)] ),
+        .SLR_col_start (SLRs_col_start [(SLR_FF*10)+ 9:(SLR_FF*10)] ),
+        .SLR_col_finish(SLRs_col_finish[(SLR_FF*10)+ 9:(SLR_FF*10)] )
     );
 
     initial begin
@@ -84,7 +66,7 @@ module FrameFillerTestbench;
         caf_full = 1'b0;
         wdf_full = 1'b0;
 
-$display("FrameFiller: Fake memory...");
+$display("FrameFiller: Fake memory/SLR...");
         fillFrame( 32'h00_7F2211, 32'h1040_0000 );
 
         #(10*Cycle);
@@ -99,20 +81,20 @@ $display("FrameFiller: Done.");
         @(posedge Clock);
 $display("fill-TB: Wait...");
         while (!FF_ready) #(Cycle); // wait for FF_ready
+        #1;
         FF_color = color;
         FF_frame = framebase;
         FF_valid = 1'b1;
 $display("fill-TB: color=%h  frame=%h", FF_color, FF_frame);
         @(posedge Clock);
+        #1;
         FF_valid = 1'b0;
         FF_color = 32'bz;
         FF_frame = 32'bz;
-        #(Cycle);
+        @(posedge Clock);
         while (!FF_ready) begin
-            if (wdf_wren && wdf_mask != 16'hFFFF) begin
-$display("fill-TB: %4d %4d", x, y);
-            end
-            #(Cycle);
+            #1;
+            @(posedge Clock);
         end
 $display("fill-TB: Done.");
     end endtask

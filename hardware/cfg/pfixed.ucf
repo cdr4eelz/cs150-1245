@@ -2,7 +2,7 @@ INST "mem_arch/dcache/cache_data/U0/xst_blk_mem_generator/gnativebmg.native_blk_
 INST "mem_arch/dcache/cache_data/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_noinit.ram/SDP.WIDE_PRIM36.noeccerr.SDP" LOC = RAMB36_X0Y15;
 INST "mem_arch/dcache/cache_data/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_noinit.ram/SDP.WIDE_PRIM36.noeccerr.SDP" LOC = RAMB36_X1Y13;
 INST "mem_arch/dcache/cache_data/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_noinit.ram/SDP.WIDE_PRIM36.noeccerr.SDP" LOC = RAMB36_X0Y13;
-INST "mem_arch/dcache/cache_tag/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_noinit.ram/SDP.WIDE_PRIM18.TDP" BEL = UPPER;
+INST "mem_arch/dcache/cache_tag/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_noinit.ram/SDP.WIDE_PRIM18.TDP" BEL = LOWER;
 INST "mem_arch/dcache/cache_tag/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_noinit.ram/SDP.WIDE_PRIM18.TDP" LOC = RAMB36_X1Y14;
 INST "mem_arch/ddr2_cadr_fifo/BU2/U0/gbiv5.bi/v5_fifo.fblk/gextw[1].inst_extd/gonep.inst_prim/gfn72.sngfifo36" LOC = RAMB36_X1Y20;
 INST "mem_arch/ddr2_mdat_fifo/BU2/U0/gbiv5.bi/v5_fifo.fblk/gextw[1].inst_extd/gonep.inst_prim/gfn72.sngfifo36" LOC = RAMB36_X0Y17;
@@ -20,7 +20,7 @@ INST "mem_arch/icache/cache_data/U0/xst_blk_mem_generator/gnativebmg.native_blk_
 INST "mem_arch/icache/cache_data/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_noinit.ram/SDP.WIDE_PRIM36.noeccerr.SDP" LOC = RAMB36_X1Y9;
 INST "mem_arch/icache/cache_data/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_noinit.ram/SDP.WIDE_PRIM36.noeccerr.SDP" LOC = RAMB36_X0Y9;
 INST "mem_arch/icache/cache_data/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_noinit.ram/SDP.WIDE_PRIM36.noeccerr.SDP" LOC = RAMB36_X1Y8;
-INST "mem_arch/icache/cache_tag/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_noinit.ram/SDP.WIDE_PRIM18.TDP" BEL = LOWER;
+INST "mem_arch/icache/cache_tag/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_noinit.ram/SDP.WIDE_PRIM18.TDP" BEL = UPPER;
 INST "mem_arch/icache/cache_tag/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_noinit.ram/SDP.WIDE_PRIM18.TDP" LOC = RAMB36_X1Y14;
 INST "mem_arch/pf/pf_fifo/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_noinit.ram/SDP.SINGLE_PRIM18.SDP" LOC = RAMB36_X1Y22;
 INST "mem_arch/pf/pf_fifo/U0/xst_fifo_generator/gconvfifo.rf/grf.rf/gntv_or_sync_fifo.mem/gbm.gbmg.gbmga.ngecc.bmg/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_noinit.ram/SDP.SINGLE_PRIM36.TDP" LOC = RAMB36_X0Y22;
