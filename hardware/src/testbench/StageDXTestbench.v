@@ -11,28 +11,28 @@ module StageDXTestbench;
 
     //Ignoring control line outputs
     //Just focusing on datapath stuff
-    reg [31:0] PC_DX;
-    reg [31:0] INST_DX;
+    reg  [31:0] PC_DX;
+    reg  [31:0] INST_DX;
     wire [31:0] ALUOut;
     wire [31:0] RTValue;
     wire [31:0] JumpPC;
     wire        DoJump;
 
-    wire [ 4:0 ] DestReg;
-    wire [ 1:0 ] MemShift;
+    wire [ 4:0] DestReg;
+    wire [ 1:0] MemShift;
     wire MemSigned, MemToReg, MemWrite;
 
-    wire [ 4: 0] REG_ra1, REG_ra2;
-    wire [31: 0] #1 REG_rd1, REG_rd2;
+    wire [ 4:0] REG_ra1, REG_ra2;
+    wire [31:0] #1 REG_rd1, REG_rd2;
     assign REG_rd1 = REGFILE[REG_ra1], REG_rd2 = REGFILE[REG_ra2];
     StageDX DUT
     ( //.clk(1'bx), .rst(1'bx), .stall(1'bx),
-        .REG_R1_(REG_ra1),  .REG_D1_(REG_rd1),
-        .REG_R2_(REG_ra2),  .REG_D2_(REG_rd2),
-        .CopAddr(), .CopOut(32'd0), .CopInHot(),
+        .REG_R1_(REG_ra1),  .REG_D1_(REG_rd1),  .COP0_R_(),
+        .REG_R2_(REG_ra2),  .REG_D2_(REG_rd2),  .COP0_D_(32'd0),
         //Stage Inputs
         ._PC(PC_DX), ._INST(INST_DX),
         //Global control signals
+        .COPWrite_(),
         .DestReg_(DestReg),
         .MemShift_(MemShift), .MemSigned_(MemSigned),
         .MemToReg_(MemToReg), .MemWrite_(MemWrite),

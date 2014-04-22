@@ -2,7 +2,8 @@
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
     MIPS150 #(
-        .CPU_FREQ(CPU_FREQ)
+        .CPU_FREQ(CPU_FREQ),
+        .CPU_CORE(CPU_CORE)
     ) DUT (
         .clk(cpu_clk_g), .rst(rst_cpu_cpu), .stall(stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX), .FPGA_SERIAL_TX(FPGA_SERIAL_TX),

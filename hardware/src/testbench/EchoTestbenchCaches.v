@@ -6,7 +6,7 @@ module EchoTestbenchCaches;
     parameter LITTLEWORDIAN = 1;
     parameter CPU_FREQ  = 50_000_000; //CPU-clock
     parameter HalfCycle = 5; //USER-clock 100MHz (half-period)
-
+    parameter CPU_CORE = "";
 `include "base_clock.vh"
 `include "base_mem.vh"
 `include "base_echo.vh"

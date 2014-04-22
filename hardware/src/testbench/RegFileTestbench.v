@@ -15,13 +15,10 @@ module RegFileTestbench;
   //always #(Halfcycle) Clock = ~Clock;
 
   // Register and wires to test the RegFile
-  reg [4:0] ra1;
-  reg [4:0] ra2;
-  reg [4:0] wa;
-  reg we;
-  reg [31:0] wd;
-  wire [31:0] rd1;
-  wire [31:0] rd2;
+  reg  [31:0] wd;
+  reg         we;
+  reg  [ 4:0] ra1, ra2, wa;
+  wire [31:0] rd1, rd2;
 
   RegFile DUT(.clk(Clock),
               .we(we),

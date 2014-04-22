@@ -8,17 +8,28 @@ module CPUMIPS #(
 )(
     input   clk, rst, stall,
 
+// Regfile lines
+    output          REGFILE_we,
+    output [31: 0]  REGFILE_wd,
+    output [ 4: 0]  REGFILE_ra1, REGFILE_ra2, REGFILE_wa,
+    input  [31: 0]  REGFILE_rd1, REGFILE_rd2,
+
+// COP0 lines
+    output          COP0_we,
+    output [31: 0]  COP0_wd,
+    output [ 4: 0]  COP0_ra,
+    input  [31: 0]  COP0_rd,
+    output [31: 0]  intr_pc,
+    output          intr_handled,
+    input           intr_request,
+
 // Memory lines
     output [31: 0]  IMEM_ADDR, DMEM_ADDR,
     input  [31: 0]  IMEM_DATA, DMEM_DATA,
     output          MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
     output [31: 0]  _WDataMasked,
-    output [ 3: 0]  _WriteMask,
+    output [ 3: 0]  _WriteMask
 
-// Interrupts
-    input           irq_uart0, irq_uart1,
-    input           irq_pf_frame,
-    input           irq_gp_done
 );
 
 //BRK tap (in transition)
@@ -111,18 +122,8 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 //=============<<< PIPELINE-BORDER: F/DX |===============
 
     // REGFILE async-read via DX-stage but sync-write via M-stage WB
-    wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
-    wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
     assign REGFILE_wa = WBK_Reg_MW2DX_, REGFILE_wd = WBK_Val_MW2DX_;
-    wire REGFILE_we = !stall && (REGFILE_wa != 0); // Mute "we" if "wa"==0 for signal clarity */
-    RegFile regfile
-    ( .clk(clk),
-        // Write is synchronous
-        .we(REGFILE_we), .wa(REGFILE_wa), .wd(REGFILE_wd),
-        // Read is asynchronous & always enabled (even during stall...MUST hold ra1/2 steady)
-        .ra1(REGFILE_ra1), .rd1(REGFILE_rd1),
-        .ra2(REGFILE_ra2), .rd2(REGFILE_rd2)
-    );
+    assign REGFILE_we = !stall && (REGFILE_wa != 0); // Mute "we" if "wa"==0 for signal clarity */
     // FORWARDING calculation
     wire FWD_Allow = (REGFILE_wa != 0) ? WBK_CanFWD_MW2DX_ : 1'b0;
     wire FWD_1 = FWD_Allow && (REGFILE_wa == REGFILE_ra1);
@@ -130,38 +131,30 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [31: 0] #DD FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
     wire [31: 0] #DD FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 
-    // COPROCESSOR async-read via DX-stage (like REGFILE) but sync-write from REGFORWARD
-    wire [ 4: 0] CopAddr;
-    wire [31: 0] CopOut;
-    wire CopInHot;
-    COP0150 cop0 (
-        .Clock(clk), .Reset(rst), .Enable(1'b1), //NOTE:Individual activities adhere to stall
-        .DataAddress(CopAddr), //IN-5 (Cop Register to read/write)
-        .DataOut(CopOut), //OUT-32 (Injected into StageDX.RegWValue_)
-        .DataInEnable(!stall && CopInHot), //IN (mtc0)
-        .DataIn(FWD_rd2), //IN-32 (Always fed, only used if enabled)
-        .InterruptedPC(PCNEXT_F_), //IN-32 (PCNEXT_F_ was supersceeded by ISRPC)
-        .InterruptHandled(!stall && WAS_ISR), //IN (Acknowledge the ISR is happening)
-        .InterruptRequest(BRA_IRQPending_DX2F_), //OUT (Like a branch to fixed address)
-        .UART0Request(irq_uart0), .UART1Request(irq_uart1), //IN (edge detect "pulse")
-        .PixelFeederRequest(irq_pf_frame),
-        .GraphicsProcessorRequest(irq_gp_done)
-    );
-
     // Declare outputs of DX stage
     wire [31: 0] MemAddrDX_, RegWValueDX_, MemWValueDX_;
     wire [ 4: 0] DestRegDX_;
     wire [ 1: 0] MemShiftDX_;
+    wire         COPWriteDX_;
 //  wire         MemToRegDX_, MemWriteDX_;
+
+    // COPROCESSOR async-read via DX-stage (like REGFILE) but sync-write from REGFORWARD
+    assign COP0_we = !stall && COPWriteDX_;
+    assign COP0_wd = FWD_rd2;
+    assign intr_pc = PCNEXT_F_;
+    assign intr_handled = !stall && WAS_ISR;
+    assign BRA_IRQPending_DX2F_ = intr_request;
+
     StageDX s_DX
     ( //NOTE: Currently combinational: .clk(clk), .rst(rst), .stall(stall),
-        //Async regfile reads & COP access
+        //Async REGFILE/COP0 reads
         .REG_R1_(REGFILE_ra1),  .REG_D1_(FWD_rd1),
         .REG_R2_(REGFILE_ra2),  .REG_D2_(FWD_rd2),
-        .CopAddr(CopAddr), .CopOut(CopOut), .CopInHot(CopInHot),
+        .COP0_R_(COP0_ra),      .COP0_D_(COP0_rd),
         //Stage Inputs
         ._PC(PC_DX), ._INST(INST_DX),
         //Global control signals
+        .COPWrite_(COPWriteDX_), //COP0 write (mtc0), this cycle!
         .DestReg_(DestRegDX_),
         .MemShift_(MemShiftDX_), .MemSigned_( /*Unimplemented*/ ),
         .MemToReg_(MemToRegDX_), .MemWrite_(MemWriteDX_),
@@ -249,10 +242,10 @@ assign trace = {
     },
 
     IMEM_ADDR[31:0],    IMEM_DATA[31:0],    CNT_Stall[31:0],    PC_MW[31:0],
-    DMEM_ADDR[31:0],    DMEM_DATA[31:0],    CopOut[31:0],
+    DMEM_ADDR[31:0],    DMEM_DATA[31:0],    COP0_rd[31:0],
     {   8'd0, 8'd0,
-        DO_ISR,CopInHot,irq_uart0,irq_uart1, !INST_CouldBranch_F_,!stall,!WAS_Branch,!WAS_ISR,
-        3'd0, CopAddr[4:0]
+        DO_ISR,COPWriteDX_,2'b00, !INST_CouldBranch_F_,!stall,!WAS_Branch,!WAS_ISR,
+        3'd0, COP0_ra[4:0]
     },
 
     PC_F_[31:0],        INST_F_[31:0],      CNT_Cycle[31:0],    32'd0,

@@ -26,7 +26,7 @@ module MemMapIO #(
 
 //                  Table 2: I/O Memory Map
 //ADDR-12 ADDRESS-32      FUNCTION                      ACCESS
-parameter [5:0]             //   DATA-ENCODING/DESC
+localparam [5:0]            //   DATA-ENCODING/DESC
 //h000    32'h80000000    UART xmit cntl                Read
     A_D0TxReady     =6'h00, // {31'b0, DataInReady}
 //h001    32'h80000004    UART recv cntl                Read
@@ -51,11 +51,11 @@ parameter [5:0]             //   DATA-ENCODING/DESC
     A_GPUStatus     =6'h17; // See Memory150 for concatenated signals
 //
 //[Maps onto multiple addresses to reduce # of address lines checked]
-    parameter H_D0TxReady = 0,   H_D0RxValid = 1,   H_D0TxData  = 2,
-              H_D0RxData  = 3,   H_CntCycle  = 4,   H_CntInst   = 5,
-              H_ResetCnt  = 6,   H_PFFrame   = 7,   H_GPFrame   = 8,
-              H_GPCode    = 9,   H_GPUStatus =10;
-    parameter H__LAST = H_GPUStatus;
+    localparam H_D0TxReady = 0,   H_D0RxValid = 1,   H_D0TxData  = 2,
+               H_D0RxData  = 3,   H_CntCycle  = 4,   H_CntInst   = 5,
+               H_ResetCnt  = 6,   H_PFFrame   = 7,   H_GPFrame   = 8,
+               H_GPCode    = 9,   H_GPUStatus =10;
+    localparam H__LAST = H_GPUStatus;
 
     wire isWrite = (ena &&  |wea); // != 4'b0000
     wire isRead  = (ena && ~|wea); // == 4'b0000

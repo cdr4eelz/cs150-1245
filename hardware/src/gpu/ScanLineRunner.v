@@ -71,13 +71,13 @@ module ScanLineRunner #(
 
 
 //Drive active SLR to SLR-Master
-    wire        SLR_valid        = SLRs_valid     [ live_SLR ];
-    wire [31:0] SLR_frame        = SLRs_frame     [(live_SLR*32)+31 -: 32],
-                  SLR_color_fill = SLRs_color_fill[(live_SLR*32)+31 -: 32],
-                  SLR_color_edge = SLRs_color_edge[(live_SLR*32)+31 -: 32];
-    wire [ 9:0] SLR_row          = SLRs_row       [(live_SLR*10)+ 9 -: 10],
-                  SLR_col_start  = SLRs_col_start [(live_SLR*10)+ 9 -: 10],
-                  SLR_col_finish = SLRs_col_finish[(live_SLR*10)+ 9 -: 10];
+    wire        SLR_valid        = SLRs_valid       [ live_SLR ];
+    wire [31:0] SLR_frame        = SLRs_frame       >> (live_SLR*32),//[(live_SLR*32)+31 -: 32],
+                  SLR_color_fill = SLRs_color_fill  >> (live_SLR*32),//[(live_SLR*32)+31 -: 32],
+                  SLR_color_edge = SLRs_color_edge  >> (live_SLR*32);//[(live_SLR*32)+31 -: 32];
+    wire [ 9:0] SLR_row          = SLRs_row         >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
+                  SLR_col_start  = SLRs_col_start   >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
+                  SLR_col_finish = SLRs_col_finish  >> (live_SLR*10);//[(live_SLR*10)+ 9 -: 10];
 
 
 //SLR-Master: Drive DDR lines to write a "run" (series) of pixels

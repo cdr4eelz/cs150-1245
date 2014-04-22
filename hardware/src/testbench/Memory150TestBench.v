@@ -19,17 +19,16 @@
 `endif
 
 module Memory150TestBench;
-    parameter TB_DEBUG_OUT = 1;
-    parameter MAX_STALLS  = 50; // simple time-out
-    parameter HEARTBEAT = 1000; // 1 unit = 10ns (see $timeformat)
-
     parameter LITTLEWORDIAN = 0;
     parameter CPU_FREQ  = 50_000_000; //CPU-clock
     parameter HalfCycle = 5; //USER-clock 100MHz (half-period)
-
 `include "base_clock.vh"
 `include "base_mem.vh"
 `include "base_echo.vh"
+
+    parameter TB_DEBUG_OUT = 1;
+    parameter MAX_STALLS  = 50; // simple time-out
+    parameter HEARTBEAT = 1000; // 1 unit = 10ns (see $timeformat)
 
     // Test log variables
     integer numFails,     ccDelayCnt;

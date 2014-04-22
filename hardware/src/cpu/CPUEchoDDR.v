@@ -1,38 +1,20 @@
 module CPUEchoDDR #(
+    parameter CPU_FREQ = 50_000_000,
     parameter COLT45_SCOPE=0
 )(
-    input clk,
-    input rst,
+    input clk, rst, stall,
 
     // Serial
-    input FPGA_SERIAL_RX,
+    input  FPGA_SERIAL_RX,
     output FPGA_SERIAL_TX,
 
     // Memory system connections
-    output [31:0] dcache_addr,
-    output [31:0] icache_addr,
-    output [3:0] dcache_we,
-    output [3:0] icache_we,
-    output dcache_re,
-    output icache_re,
-    output [31:0] dcache_din,
-    output [31:0] icache_din,
-    input [31:0] dcache_dout,
-    input [31:0] icache_dout,
-    input stall,
-
-    output [31:0] gp_code,
-    output [31:0] gp_frame,
-    output gp_valid,
-    input pf_irq
+    output [31:0] dcache_addr,  icache_addr,
+    output [ 3:0] dcache_we,    icache_we,
+    output        dcache_re,    icache_re,
+    output [31:0] dcache_din,   icache_din,
+    input  [31:0] dcache_dout,  icache_dout
 );
-
-// Use this as the top-level module for your CPU. You
-// will likely want to break control and datapath out
-// into separate modules that you instantiate here.
-
-    assign gp_code=32'd0, gp_frame=32'd0;
-    assign gp_valid = 1'b0;
 
     localparam ST_bits = 4;
     localparam ST_INIT = 4'b0000;
@@ -147,7 +129,7 @@ module CPUEchoDDR #(
 
 
     UART #(
-        .ClockFreq(50_000_000),
+        .ClockFreq(CPU_FREQ),
         .BaudRate(115_200)
     ) uart ( .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .DataOut(DataOut),
@@ -155,47 +137,5 @@ module CPUEchoDDR #(
         .SOut(FPGA_SERIAL_TX), .DataIn(DataIn),
         .DataInValid(DataInValid), .DataInReady(DataInReady)
     );
-
-
-generate if (COLT45_SCOPE) begin:_SCOPE_
-
-wire [31:0] scoprime = {
-    DataOutReady,DataOutValid,2'b0,DataInReady,DataInValid,2'b0,
-    2'b0,read_i,write_i,3'b0,write_d,
-    icache_we,dcache_we,
-    7'b0000000, stall};
-
-wire [767:0] scoper = {
-// 3 segments of 8 values is 32 values (each 32-bit or 32-bit aligned)
-    // 0 \\             // 1 \\             // 2 \\             // 3 \\
-    cycles,             stalls,             {24'b0,state},      {24'b0,DataIn},
-    head,               tail,               datum,              scoprime,
-
-    icache_addr,        dcache_addr,        32'd0,              32'd0,
-    32'd0,              32'd0,              32'd0,              32'd0,
-
-    32'd0,              32'd0,              32'd0,              32'd0,
-    32'd0,              32'd0,              32'd0,              32'd0
-};
-
-    wire [36:0] CS_TRIG0 = {5'd0, scoprime};
-    wire [36:0] CS_TRIG1 = {5'd0, 24'd0, state};
-    wire [36:0] CS_TRIG2 = {5'd0, stalls};
-    wire [36:0] CS_TRIG3 = {5'd0, cycles};
-
-    wire [35: 0] cs_icon_scope;
-    cs_icon_1 CS_ICON (
-        .CONTROL0(cs_icon_scope) // INOUT BUS [35:0]
-    ) /* synthesis syn_noprune=1 */;
-
-    cs_ila_1024 CS_ILA ( .CONTROL(cs_icon_scope),
-        .CLK(clk),
-        .DATA( scoper ), // IN BUS [767:0]
-        .TRIG0( CS_TRIG0 ), // IN BUS [36:0]
-        .TRIG1( CS_TRIG1 ), // IN BUS [36:0]
-        .TRIG2( CS_TRIG2 ), // IN BUS [36:0]
-        .TRIG3( CS_TRIG3 )  // IN BUS [36:0]
-    ) /* synthesis syn_noprune=1 */;
-end endgenerate //COLT45_SCOPE
 
 endmodule

@@ -26,7 +26,6 @@ module SRAM #(
   output        SRAM_ADV_LD_L,
   output        SRAM_OE_L,
   inout  [35:0] SRAM_DATA,
-  inout  [ 3:0] SRAM_DATP,
   output [17:0] SRAM_ADDR,
   output [ 3:0] SRAM_BW_L
 );

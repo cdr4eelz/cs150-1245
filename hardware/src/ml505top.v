@@ -1,6 +1,6 @@
 module ml505top #(
     parameter CPU_FREQ = 50_000_000,
-    parameter COLT45_STALLDIP=1
+    parameter COLT45_STALLDIP = 1
 )(
     // Reference Clock (100MHz) & board reset
     input         USER_CLK,
@@ -150,17 +150,18 @@ module ml505top #(
     // MIPS 150 CPU
     MIPS150 #(
         .CPU_FREQ(CPU_FREQ),
-        .PC_BOOT(32'h4000_0000)
+        .PC_BOOT(32'h4000_0000),
+        .CPU_CORE("MIPS")
     ) CPU (
         .clk(cpu_clk_g), .rst(rst_cpu_cpu_g), .stall(stall_top),
     // Serial (UART):
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX), .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
     // Memory Caches:
-        .dcache_addr(dcache_addr),  .icache_addr(icache_addr),
-        .dcache_we  (dcache_we  ),  .icache_we  (icache_we  ),
-        .dcache_re  (dcache_re  ),  .icache_re  (icache_re  ),
-        .dcache_din (dcache_din ),  .icache_din (icache_din ),
-        .dcache_dout(dcache_dout),  .icache_dout(icache_dout),
+        .dcache_addr(dcache_addr),    .icache_addr(icache_addr),
+        .dcache_we  (dcache_we  ),    .icache_we  (icache_we  ),
+        .dcache_re  (dcache_re  ),    .icache_re  (icache_re  ),
+        .dcache_din (dcache_din ),    .icache_din (icache_din ),
+        .dcache_dout(dcache_dout),    .icache_dout(icache_dout),
     // GPU:
         .pf_vframe(pf_vframe),        .gp_vcode(gp_vcode), .gp_vframe(gp_vframe),
         .pf_wframe(pf_wframe),        .gp_wcode(gp_wcode), .gp_wframe(gp_wframe),
@@ -303,7 +304,8 @@ module ml505top #(
         .Reset(rst_cpu_bus_g),
         .Enable(1'b1),
         .In(GPIO_DIP[0]),
-        .Out(toggle_stall)
+        .Out(toggle_stall),
+        .Half()
     );
 
 //Old dip stall toggle from prior checkpoints
@@ -356,7 +358,7 @@ end endgenerate
       .SRAM_MODE    (SRAM_MODE),
       .SRAM_ADV_LD_L(SRAM_ADV_LD_B),
       .SRAM_OE_L    (SRAM_OE_B),
-      .SRAM_DATA    (SRAM_D),
+      .SRAM_DATA    (SRAM_D[35:0]), //Tack on Parity
       .SRAM_ADDR    (SRAM_A),
       .SRAM_BW_L    (SRAM_BW));
   `else

@@ -1,120 +1,90 @@
+
 module COP0150(
-    Clock,
-    Enable,
-    Reset,
+    input               clk, //Clock
+    input               ena, //Enable
+    input               rst, //Reset
 
-    DataAddress,
-    DataOut,
-    DataInEnable,
-    DataIn,
+    input               COP0_we, //DataInEnable
+    input       [31:0]  COP0_wd, //DataIn
+    input       [ 4:0]  COP0_ra, //DataAddress
+    output      [31:0]  COP0_rd, //DataOut
 
-    InterruptedPC,
-    InterruptHandled,
-    InterruptRequest,
+    input       [31:0]  intr_pc, //InterruptedPC
+    input               intr_handled, //InterruptHandled
+    output              intr_request, //InterruptRequest
 
-    UART0Request,
-    UART1Request,
-    PixelFeederRequest,
-    GraphicsProcessorRequest
+    input               irq_uart0, //UART0Request
+    input               irq_uart1, //UART1Request
+    input               irq_pf_frame, //PixelFeederRequest
+    input               irq_gp_done //GraphicsProcessorRequest
 );
 
-input                           Clock;
-input                           Enable;
-input                           Reset;
+    reg   [31:0]  dataout_r;
+    reg   [31:0]  epc;
+    reg   [31:0]  count, compare;
+    reg   [31:0]  status, cause;
 
-input       [4:0]               DataAddress;
-output      [31:0]              DataOut;
-input                           DataInEnable;
-input       [31:0]              DataIn;
+    wire          firetimer, firertc, ie;
+    wire  [5:0]   interrupts, im, ip, next_ip;
 
-input       [31:0]              InterruptedPC;
-input                           InterruptHandled;
-output                          InterruptRequest;
+    assign COP0_rd      = dataout_r;
+    assign intr_request = ie & |(im & ip);
 
-input                           UART0Request;
-input                           UART1Request;
-input                           PixelFeederRequest;
-input                           GraphicsProcessorRequest;
+    assign firetimer    = (count == compare);
+    assign firertc      = (count == 32'hFFFF_FFFF);
+    //assign interrupts = {firetimer, firertc, 2'b00, irq_uart1, irq_uart0};
+    assign interrupts   = {firetimer, firertc, irq_pf_frame, irq_gp_done,
+                            irq_uart1, irq_uart0};
 
+    assign ip           = cause[15:10];
+    assign im           = status[15:10];
+    assign ie           = status[0];
 
-wire                            firetimer;
-wire                            firertc;
-wire        [5:0]               interrupts;
+    assign next_ip      = ip | interrupts;
 
+    always@(*) begin
+        case(COP0_ra)
+            5'hE:       dataout_r <= epc;
+            5'h9:       dataout_r <= count;
+            5'hB:       dataout_r <= compare;
+            5'hC:       dataout_r <= status;
+            5'hD:       dataout_r <= cause;
+            default:    dataout_r <= 32'bx;
+        endcase
+    end
 
-reg         [31:0]              dataout_r;
-
-reg         [31:0]              epc;
-reg         [31:0]              count;
-reg         [31:0]              compare;
-reg         [31:0]              status;
-reg         [31:0]              cause;
-
-wire        [5:0]               ip;
-wire        [5:0]               im;
-wire                            ie;
-
-wire        [5:0]               next_ip;
-
-
-assign DataOut          = dataout_r;
-assign InterruptRequest = ie & |(im & ip);
-
-assign firetimer        = (count == compare);
-assign firertc          = (count == 32'hFFFF_FFFF);
-//assign interrupts     = {firetimer, firertc, 2'b00, UART1Request, UART0Request};
-assign interrupts       = {firetimer, firertc, PixelFeederRequest,
-                            GraphicsProcessorRequest, UART1Request, UART0Request};
-
-assign ip               = cause[15:10];
-assign im               = status[15:10];
-assign ie               = status[0];
-
-assign next_ip          = ip | interrupts;
-
-always@(*) begin
-    case(DataAddress)
-        5'hE:       dataout_r <= epc;
-        5'h9:       dataout_r <= count;
-        5'hB:       dataout_r <= compare;
-        5'hC:       dataout_r <= status;
-        5'hD:       dataout_r <= cause;
-        default:    dataout_r <= 32'bx;
-    endcase
-end
-
-always@(posedge Clock) begin
-    if(Enable) begin
-        if(Reset) begin
-            epc     <= 32'b0;
-            count   <= 32'b0;
-            compare <= 32'hFFFF;
-            status  <= 32'b0;
-            cause   <= 32'b0;
-        end else begin
-            if(DataInEnable) begin
-                epc     <= epc;
-                count   <= DataAddress == 5'h9 ? DataIn : count + 1;
-                compare <= DataAddress == 5'hB ? DataIn : compare;
-                status  <= DataAddress == 5'hC ? DataIn : status;
-                cause   <= DataAddress == 5'hD ? {DataIn[31:16], next_ip & DataIn[15:10], DataIn[9:0]}
-                         : DataAddress == 5'hB ? {cause[31:16], 1'b0, next_ip[4:0], cause[9:0]}
-                         :                       {cause[31:16], next_ip, cause[9:0]};
-            end else if(InterruptHandled) begin
-                epc     <= InterruptedPC;
-                count   <= count + 1;
-                compare <= compare;
-                status  <= {status[31:1], 1'b0};
-                cause   <= {cause[31:16], next_ip, cause[9:0]};
+    always@(posedge clk) begin
+        if(ena) begin
+            if(rst) begin
+                epc     <= 32'b0;
+                count   <= 32'b0;
+                compare <= 32'hFFFF;
+                status  <= 32'b0;
+                cause   <= 32'b0;
             end else begin
-                epc     <= epc;
-                count   <= count + 1;
-                compare <= compare;
-                status  <= status;
-                cause   <= {cause[31:16], next_ip, cause[9:0]};
+                if(COP0_we) begin
+                    epc     <= epc;
+                    count   <= (COP0_ra == 5'h9) ? COP0_wd : (count + 1);
+                    compare <= (COP0_ra == 5'hB) ? COP0_wd : compare;
+                    status  <= (COP0_ra == 5'hC) ? COP0_wd : status;
+                    cause   <= (COP0_ra == 5'hD) ? {COP0_wd[31:16], next_ip & COP0_wd[15:10], COP0_wd[9:0]}
+                             : (COP0_ra == 5'hB) ? {cause[31:16], 1'b0, next_ip[4:0], cause[9:0]}
+                             :                       {cause[31:16], next_ip, cause[9:0]};
+                end else if(intr_handled) begin
+                    epc     <= intr_pc;
+                    count   <= count + 1;
+                    compare <= compare;
+                    status  <= {status[31:1], 1'b0};
+                    cause   <= {cause[31:16], next_ip, cause[9:0]};
+                end else begin
+                    epc     <= epc;
+                    count   <= count + 1;
+                    compare <= compare;
+                    status  <= status;
+                    cause   <= {cause[31:16], next_ip, cause[9:0]};
+                end
             end
         end
     end
-end
 
 endmodule

@@ -5,15 +5,15 @@ module StageDX(
 //    input clk, rst, stall,
 
     // Asynchronous plugs to shared outer components
-    output [ 4: 0] REG_R1_, REG_R2_, CopAddr,
-    input  [31: 0] REG_D1_, REG_D2_, CopOut,
-    output         CopInHot,
+    output [ 4: 0] REG_R1_, REG_R2_, COP0_R_,
+    input  [31: 0] REG_D1_, REG_D2_, COP0_D_,
 
     // Prior stage inputs
     input  [31: 0] _PC,
     input  [31: 0] _INST,
 
     // Global control signals
+    output         COPWrite_,
     output [ 1: 0] MemShift_,
     output         MemToReg_, MemWrite_, MemSigned_,
 
@@ -42,7 +42,7 @@ module StageDX(
     // Asyncronous drive/read of outer register/coprocessor components
     assign  REG_R1_ = SRC1,     REG_R2_ = SRC2;
     wire [31: 0] R1 = REG_D1_,  R2      = REG_D2_; // Redeclare to clarify dependencies...
-    //NOTE:CopAddr & CopOut are also asynchronous drives
+    //NOTE:COP0_R_ & COP0_D_ are also asynchronous drives
 
     InstructionControl decodeControl(
         ._inst(_INST),
@@ -54,7 +54,7 @@ module StageDX(
         .ISigned(ISigned), .CmpOp(CmpOp), .Jump(Jump), .JR(JR), .Link(Link), .Branch(Branch),
         // Locally used special values
         .IMMED(IMMED), .NEARADDR(NEARADDR),
-        .SRC1(SRC1), .SRC2(SRC2), .COPWRITE(CopInHot), .COPADDR(CopAddr),
+        .SRC1(SRC1), .SRC2(SRC2), .COPWRITE(COPWrite_), .COPADDR(COP0_R_),
         .SHAMT(SHAMT), .COPREAD(COPREAD),
         // Specific to Instruction-Preview
         .Deviant()
@@ -101,6 +101,6 @@ module StageDX(
     assign MemAddr_     = ALUResult;
     assign MemWValue_   = R2;
     assign DestReg_     = (Branch && Link && !takeBranch) ? 5'd0 : DestReg; //Suppress WB on untaken BAL
-    assign RegWValue_   = (Link) ? LINKADDR : ( (COPREAD) ? CopOut : ALUResult );
+    assign RegWValue_   = (Link) ? LINKADDR : ( (COPREAD) ? COP0_D_ : ALUResult );
 
 endmodule
