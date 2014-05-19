@@ -2,7 +2,6 @@ KEYtag: BUG!/? STEP OPTImize TOOL CLeanUP ANALyze COOLcrossuse WANTtolearn
 
 BUG     ISR lockup
 
-STEP    LineEngine!!!!
 STEP    Fancy shape, overlay, composite, etc.
 STEP    Visually appealing demo (game, etc.)
 STEP    TEXT mode (simple block characters)
@@ -39,13 +38,19 @@ WANT    Try simple dual-processing arrangement
 ::EXTRAS::
     Memory patching with .bmm file tricks (also objcopy re-linking)
     SCRATCHPAD memory kept active
-    BIOS "cp", "dump"
+    BIOS "cp", "dump", graphics status, etc.
     PLOP for serial forwarding & other tricks
     BRKTAP for debug stepping & monitoring
     Research timing constraints, MIG details, uBlaze, etc.
       Techniques such as minimizing reset tree, TIG & DATAPATHONLY constraints, etc.
     Rebuilt custom GCC tools (without clang)
     Fancy multi-reset scheme including clock-domain syncronization
+    Little bit with RLOC to pack stuff in adjacent flops
+    ISE/PlanAhead pblocks, iterative process, interesting but mixed usefulness
+    Juggled modules into MEMIO, Memory, GPU, CPU, etc.
+    Used single "scanlinerunner" for drawing (eventually/optional).
+    Software draws fill-screen, dot, line, circle, elipse
+    Hardware draws fill-screen, line-dot, line, little-bit-of-elipse.
 
 ::TROUBLESHOOT STEPS (when sim/synth discrep)::
     * Reverted to sparse CP2 top & framework *
@@ -54,6 +59,7 @@ WANT    Try simple dual-processing arrangement
     * Attempted fresh MIG generation with ChipScope access *
     * Spot out-of-order assingments to temp variables in always@* blocks.
     * Locate all missing signals!!!
+*** (lint, warning filter, consistency in naming, etc.)
 
 ::LESSONS::
     Questionable tricks (short-term not worth long-term)
