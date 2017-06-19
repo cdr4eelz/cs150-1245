@@ -7,7 +7,7 @@ if [ "${1-x}" == "x" ]; then
 fi
 
 FILE=$1
-ADDRESS=${2-=30000000}
+ADDRESS=${2:-30000000}
 SIZE="0"
 LOGO="_coe_out.log"
 LOGI="_coe_in.log"

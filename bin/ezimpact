@@ -2,26 +2,28 @@
 
 if [ -z "$1" ]
 then
-    echo "usage: $0 <bitfile>"
+    echo "usage: $0 <bitfile> [<port>]"
     exit 1
 fi
 
+BITFILE=$(readlink --canonicalize-existing --no-newline "$1")
+IMPPORT=${2:-usb21} #or "auto"
+TMP_BATCH=$(readlink --canonicalize --no-newline "_impact_$$")
 
-TMP_BATCH="_impact_$$"
+echo "BIT:${BITFILE}"
+echo "PORT:${IMPPORT}"
+echo "BATCH:${TMP_BATCH}"
 
-echo "BIT:$1"
-echo "BATCH:$TMP_BATCH"
-
-tee $TMP_BATCH <<EOF
-setMode -bscan
-setCable -port auto
-identify
-assignFile -p 5 -file $1
-program -p 5
-quit
+tee "$TMP_BATCH" <<-EOF
+	setMode -bscan
+	setCable -port ${IMPPORT}
+	identify
+	assignFile -p 5 -file ${BITFILE}
+	program -p 5
+	quit
 EOF
 
 echo "----------"
 
-impact -batch $TMP_BATCH && rm -f $TMP_BATCH
+impact -batch "${TMP_BATCH}" && rm -f "${TMP_BATCH}"
 
