@@ -152,7 +152,7 @@ module	DVIInitial(//------------------------------------------------------------
                 DviAddr, 8'h36};
 
   localparam	DviData =			(ClockFreq < 65000000) ?
-							  {8'hC0, 8'h09, 8'h08, 8'h16, 8'h60} :
+							  {8'hC0, 8'h00, 8'h08, 8'h16, 8'h60} :
 								{8'hC0, 8'h09, 8'h06, 8'h26, 8'hA0} ;
 
   `define VGA_INIT
@@ -222,7 +222,7 @@ module	DVIInitial(//------------------------------------------------------------
 	FIFOInitial		#(			.Width(			8),
 								.Depth(			15),
 								.Value(			{{{I2CAddress,1'b0},8'h49, 8'hC0},
-												{{I2CAddress,1'b0}, 8'h21, 8'h09},
+												{{I2CAddress,1'b0}, 8'h21, 8'h00}, //Should be 8'h09 for VGA enabled along with digital
 												{{I2CAddress,1'b0}, 8'h33, 8'h06},	// TODO: Handle the under 65MHz case! (8'h08, 8'h16, 8'h60 for the last three registers)
 												{{I2CAddress,1'b0}, 8'h34, 8'h26},
 												{{I2CAddress,1'b0}, 8'h36, 8'hA0}}))
