@@ -7,7 +7,7 @@
 
 typedef enum bcmd_e {
     BC_FILE, BC_JAL, BC_LOAD, BC_STORE,
-    BC_DUMP, BC_COPY, BC_BLANK, BC_HELP,
+    BC_DUMP, BC_COPY, BC_BLANK, BC_HELP, BC_RESULT,
     BC_GSTAT, BC_GCODE, BC_FRAME, BC_BACK, BC_CLIP,
     BC_COLOR, BC_FILL, BC_LINE, BC_ELIP, BC_PIXL,
     BC_UNKNOWN
@@ -33,7 +33,7 @@ int8_t* read_token(int8_t* bufptr, uint32_t buflen,
 bcmdspec_t* token_cmdspec(const int8_t* bufptr);
 void bufw_cmdspec( void );
 
-void store(uint32_t *pDST, uint32_t numBytes);
+uint32_t store_xor(uint32_t *pDST, uint32_t numBytes);
 const uint32_t* dump_block(const uint32_t* pSRC, uint8_t numWords);
 uint32_t copy_xor(const uint32_t* pSRC, uint32_t numBytes,
                   uint32_t* pDST); //NULL to xor without copy

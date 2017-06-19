@@ -19,7 +19,8 @@ bcmdspec_t const bcmd_table[] = {
     {"dump",        BC_DUMP,      0},           // "aw"
     {"copy",        BC_COPY,      0},           // "aaw"
     {"",            BC_BLANK,     0},           // ""
-    {"cmds",        BC_HELP,      0},           // ""
+    {"help",        BC_HELP,      0},           // ""
+    {"result",      BC_RESULT,    0},           // ""
 
     {"gs",          BC_GSTAT,     0},           // ""
     {"gc",          BC_GCODE,     0},           // "w"
@@ -68,6 +69,7 @@ void bufw_cmdspec( void )
     bcmdspec_t *bcs;
 
     bufw_newline();
+    uwrite_int8s("HELP: ");
     for (bcs = bcmd_table ; (bcs->flags != FLAG_EOT) ; bcs++) {
         uwrite_int8s(bcs->token); uwrite_int8(' ');
     }
@@ -109,19 +111,23 @@ int8_t* read_token(int8_t* const bufptr, uint32_t const buflen,
     return bufptr;
 }
 
-void store(uint32_t* const pDST, uint32_t const numBytes)
+uint32_t store_xor(uint32_t* const pDST, uint32_t const numBytes)
 {
-    int8_t buffer[9];
+    int8_t buffer[12];
     volatile uint32_t *p = (void *)(((uint32_t)pDST) & 0xFFFFFFFC);
     uint32_t words = (numBytes >> 2);
+    uint32_t result = 0x00000000;
 
     if ((p != pDST) || (numBytes != (words << 2))) {
         uwrite_int8s(ERRS_ALIGN); //MUST word align!
 //      return;
     }
     while (words--) {
-        *p++ = ascii_hex_to_uint32(read_n(buffer, 8));
+        uint32_t val = ascii_hex_to_uint32(read_n(buffer, 8));
+        result ^= val;
+        *p++ = val;
     }
+    return result;
 }
 
 const uint32_t* dump_block(const uint32_t* const pSRC, uint8_t const numWords)
@@ -152,7 +158,7 @@ uint32_t copy_xor(const uint32_t* const pSRC, uint32_t const numBytes,
     volatile const uint32_t *s = (void *)(((uint32_t)pSRC) & 0xFFFFFFFC);
     volatile uint32_t *d = (void *)(((uint32_t)pDST) & 0xFFFFFFFC);
     uint32_t words = (numBytes >> 2);
-    uint32_t result = 0;
+    uint32_t result = 0x00000000;
 
     if ((s != pSRC) || (d != pDST) || (numBytes != (words << 2))) {
         uwrite_int8s(ERRS_ALIGN); //MUST word align!
@@ -171,7 +177,7 @@ void* tok_addr( void **stash_addr )
     void* addr = (void *)tok_hex32u();
     if (stash_addr) {
         if (addr == ((void*)0xFFFFFFFF)) {
-            addr = *stash_addr;
+            addr = *stash_addr; //Trick to re-enter last value???
         } else {
             *stash_addr = addr;
         }

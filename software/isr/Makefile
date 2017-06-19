@@ -55,4 +55,4 @@ clean:
 	rm -f *.elf *.bin *.mif *.coe *.v *.o *.ld *.dump *.list
 
 .PHONY: clean all elfs objs mifs coes vees dumps
-
+.PRECIOUS: %.ld

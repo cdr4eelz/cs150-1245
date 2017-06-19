@@ -83,7 +83,7 @@ int main(int argc, char**argv) {
     int8_t buffer[BUF_LEN];
     uint32_t result, time, instructions;
 
-if (0) {
+if (1) {
     uwrite_int8('=');
     uwrite_int8s("][= ");
 

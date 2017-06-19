@@ -123,7 +123,7 @@ void outc(const uint8_t c) {
 void outs(const int8_t *s) {
     int8_t c;
     while ((c = *s++) != '\0') {
-        outc((uint8_t) c);
+        outc2((uint8_t) c);
     }
 }
 
@@ -199,7 +199,7 @@ int main() {
                 break;
             case 'v': // volatile variable, addi
                 //timeit(lstate, &v100m, &pDATA->count, BUF, BUF_LEN);
-                outc('-');// uwrite_int8('.');
+                outc2('-');// uwrite_int8('.');
                 setSTATE(pDATA, 's');
                 break;
             case 'V': // volatile variable, plusone function call

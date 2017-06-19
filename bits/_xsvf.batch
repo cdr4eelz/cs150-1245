@@ -1,9 +1,9 @@
 setMode -bscan
-addDevice -p 1 -file "/opt/Xilinx/14.1/ISE_DS/ISE/virtex5/data/xc5vlx110t.bsd"
-addDevice -p 1 -file "/opt/Xilinx/14.1/ISE_DS/ISE/acecf/data/xccace.bsd"
-addDevice -p 1 -file "/opt/Xilinx/14.1/ISE_DS/ISE/xc9500xl/data/xc95144xl.bsd"
-addDevice -p 1 -file "/opt/Xilinx/14.1/ISE_DS/ISE/xcfp/data/xcf32p.bsd"
-addDevice -p 1 -file "/opt/Xilinx/14.1/ISE_DS/ISE/xcfp/data/xcf32p.bsd"
+addDevice -p 1 -file "/opt/Xilinx/14.6/ISE_DS/ISE/virtex5/data/xc5vlx110t.bsd"
+addDevice -p 1 -file "/opt/Xilinx/14.6/ISE_DS/ISE/acecf/data/xccace.bsd"
+addDevice -p 1 -file "/opt/Xilinx/14.6/ISE_DS/ISE/xc9500xl/data/xc95144xl.bsd"
+addDevice -p 1 -file "/opt/Xilinx/14.6/ISE_DS/ISE/xcfp/data/xcf32p.bsd"
+addDevice -p 1 -file "/opt/Xilinx/14.6/ISE_DS/ISE/xcfp/data/xcf32p.bsd"
 assignFile -p 5 -file "/home/cc/cs199/fa12/class/cs199-fu/team45/bits/ml505top.bit"
 setCable -port xsvf -file "/home/cc/cs199/fa12/class/cs199-fu/team45/bits/ml505top.xsvf"
 Program -p 5 
