@@ -1,9 +1,9 @@
 
 SUBS ?= $(shell find * -mindepth 1 -maxdepth 1 -name "Makefile" -printf '%h ')
 
-.PHONY: all clean $(SUBS)
+.PHONY: all core tidy clean $(SUBS)
 
-all clean: $(SUBS)
+all core tidy clean: $(SUBS)
 	@echo "DONE: $@ ($^)"
 
 $(SUBS):

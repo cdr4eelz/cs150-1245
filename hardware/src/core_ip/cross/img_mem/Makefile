@@ -11,14 +11,13 @@ IMG_FILE := $(IMG_NAME).jpg
 COE_FILE := $(IMG_NAME).coe
 COE_LINK := img_data.coe
 
-all: $(V_SRC)
+all: core
+core: $(V_SRC)
 link: src/$(COE_LINK)
 coe: src/$(COE_FILE)
 
 %.v: %.xco coregen.cgp src/$(COE_LINK)
 	coregen $(CG_FLAGS) -p coregen.cgp -b $*.xco
-	-rm -rf $*/* $*.xci $*.asy $*_*.tcl $*_*.txt $*.xise $*.gise *.cgc *.log tmp xlnx*
-	-rmdir $*
 
 src/$(COE_FILE): src/$(IMG_FILE) src/img_to_coe.py src/img_to_coe.m
 	cd src; \
@@ -26,6 +25,10 @@ src/$(COE_FILE): src/$(IMG_FILE) src/img_to_coe.py src/img_to_coe.m
 
 src/$(COE_LINK): src/$(COE_FILE)
 	cd src; rm -f $(COE_LINK); ln -s $(COE_FILE) $(COE_LINK)
+
+tidy: core
+	-echo 'rm -rf $*/* $*.xci $*.asy $*_*.tcl $*_*.txt $*.xise $*.gise *.cgc *.log tmp xlnx*'
+	-echo 'rmdir $*'
 
 clean:
 	find . ! -name '*.xco' -a ! -name 'Makefile' -a ! -name '*.cgp' -a ! -name '.gitignore' -a ! -name 'stash*' -a ! -name 'src' -a ! -name '*.jpg' -a ! -name '*.py' -a ! -name '*.m' -delete
