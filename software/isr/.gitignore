@@ -1,0 +1,2 @@
+# Because a few linker files are auto-generated:
+*.ld
