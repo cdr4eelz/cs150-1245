@@ -3,7 +3,7 @@
 import sys
 
 if len(sys.argv) != 4:
-    print('usage: %s <module-name> <bytes-wide> <addr-width>' % sys.argv[0])
+    print('usage: {} <module-name> <bytes-wide> <addr-width>'.format(sys.argv[0]))
     sys.exit(1)
 
 module_name = sys.argv[1]
@@ -14,59 +14,60 @@ addr_width = int(sys.argv[3])
 bit_width = byte_count*8
 depth = 2**addr_width
 
-print('module %s' % module_name)
+print('module {}'.format(module_name))
 print('(')
-print('    input         clka,')
-print('    input         ena,')
-print('    input  [%d:0] wea,'   % (byte_count-1))
-print('    input  [%d:0] addra,' % (addr_width-1))
-print('    input  [%d:0] dina,'  % (bit_width-1))
-print('    output [%d:0] douta'  % (bit_width-1))
+print('  input         clka,')
+print('  input         ena,')
+print('  input  [{:d}:0] wea,'.format(byte_count-1))
+print('  input  [{:d}:0] addra,'.format(addr_width-1))
+print('  input  [{:d}:0] dina,'.format(bit_width-1))
+print('  output [{:d}:0] douta'.format(bit_width-1))
 print(');\n')
 
-print('\nreg [%d:0] addra_r;\n' % (addr_width-1))
+print('  reg [{:d}:0] addra_r;'.format(addr_width-1))
 
 for i in range(byte_count):
-    print('reg [%d:0] byte%d[%d:0];' % (7, i, depth))
-    print('initial')
-    print('begin')
+    print('\n  reg [{:d}:0] byte{:d}[{:d}:0];'.format(7, i, depth))
+    print('  initial')
+    print('    begin')
     for j in range(depth):
-        print('byte%d[%d] = 8\'b0;' % (i, j))
-    print('end')
-    print('assign douta[%d:%d] = byte%d[addra_r];' % ((i+1)*8-1, i*8, i))
+        print('      byte{:d}[{:d}] = 8\'b0;'.format(i, j))
+    print('    end')
+    print('  assign douta[{:d}:{:d}] = byte{:d}[addra_r];'.format((i+1)*8-1, i*8, i))
 
-print('\nalways @(posedge clka)')
-print('begin\n')
+print('\n  always @(posedge clka)')
+print('  begin')
 
-print('if (ena)')
-print('begin')
-print('addra_r <= addra;')
-print('end')
+print('    if (ena)')
+print('    begin')
+print('      addra_r <= addra;')
+print('    end')
 
 for i in range(byte_count):
-    print('if (ena && wea[%d])' % i)
-    print('begin')
-    print('byte%d[addra] <= dina[%d:%d];' % (i, (i+1)*8-1, i*8))
-    print('end')
+    print('    if (ena && wea[{:d}])'.format(i))
+    print('    begin')
+    print('      byte{:d}[addra] <= dina[{:d}:{:d}];'.format(i, (i+1)*8-1, i*8))
+    print('    end')
 
-print('\nend\n')
+print('  end\n')
 
 for j in range(depth):
-    print('wire [%d:0] data%d;' % (bit_width-1, j))
-    print('assign data%d = {' % j,)
+    print('  wire [{:d}:0] data{:d};'.format(bit_width-1, j))
+    print('  assign data{:d} = {{'.format(j,)) #Escape "{" with "{{"
     for i in range(byte_count-1, 0, -1):
-        sys.stdout.write('byte%d[%d], ' % (i, j))
-    print('byte0[%d]};' % j)
+        sys.stdout.write('    byte{:d}[{:d}], '.format(i, j))
+    print('    byte0[{:d}] }};'.format(j)) #Escape "}" with "}}"
 
-print('always @(posedge clka)')
-print('begin')
-print('$display("%s");' % module_name)
-print('$display("ena=%b wea=%b addra=%x", ena, wea, addra);')
-print('$display("dina =%x", dina);')
-print('$display("douta=%x", douta);')
+print('\n  always @(posedge clka)')
+print('  begin')
+print('    $display("{}");'.format(module_name))
+print('    $display("ena=%b wea=%b addra=%x", ena, wea, addra);')
+print('    $display("dina =%x", dina);')
+print('    $display("douta=%x", douta);')
 for j in range(depth):
-    print('$display("%x:%%x", data%d);' % (j, j))
+    print('    $display("%x:%%x", data%d);' % (j, j))
 
-print('end')
+print('  end')
 
-print('endmodule')
+print('\nendmodule')
+

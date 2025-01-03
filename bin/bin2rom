@@ -14,7 +14,7 @@ else:
 
 data = sys.stdin.buffer.read()
 
-print('module %s(input clk, input rst, input [29:0] addr, output reg [31:0] inst);' % name)
+print('module {:s}(input clk, input rst, input [29:0] addr, output reg [31:0] inst);'.format(name))
 
 print('  reg [29:0] addr_r;')
 
@@ -31,7 +31,7 @@ print('    begin')
 print('      case(addr_r)')
 
 for i in range(0, len(data), 4):
-    print("        30'h%08x: inst = 32'h%08x;" % ((i+offset)//4, struct.unpack('>L', data[i:i+4])[0]))
+    print("        30'h{:08x}: inst = 32'h{:08x};".format((i+offset)//4, struct.unpack('>L', data[i:i+4])[0]))
 
 print("        default:      inst = 32'h00000000;")
 

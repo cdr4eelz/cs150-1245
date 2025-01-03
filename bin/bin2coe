@@ -8,6 +8,6 @@ print('memory_initialization_radix=16;')
 print('memory_initialization_vector=')
 
 for i in range(0, len(data), 4):
-    print('%08x' % struct.unpack('>L', data[i:i+4])[0])
+    print('{:08x}'.format(struct.unpack('>L', data[i:i+4])[0]))
 
 print(';')

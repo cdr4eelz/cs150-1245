@@ -8,7 +8,7 @@ print('li           $sp, 0x10008000')
 print('li           $t1, 0x30000000')
 
 for i in range(0, len(data), 4):
-    print('li           $t0, 0x%08x' % struct.unpack('>L', data[i:i+4])[0])
+    print('li           $t0, 0x{:08x}'.format( struct.unpack('>L', data[i:i+4])[0]) )
     print('sw           $t0, 0($t1)')
     print('addiu        $t1, $t1, 4')
 
