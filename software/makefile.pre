@@ -30,9 +30,10 @@ CLANG  ?= clang
 LLC    ?= llc
 
 M_ARCH ?= mips
-M_TRI  ?= $(M_ARCH)-unknown-elf
+M_TRI  ?= $(M_ARCH)-unknown-elf #The compiler is actually mips-linux-gnu
 M_DIR  ?=
-M_PRE  ?= $(M_DIR)$(M_ARCH)-
+#M_PRE  ?= $(M_DIR)$(M_ARCH)-
+M_PRE  ?= mips-linux-gnu-
 
 PGCC   ?= $(M_PRE)gcc
 PGAS   ?= $(M_PRE)as

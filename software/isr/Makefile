@@ -11,18 +11,20 @@ SCOES := $(SELFS:%.elf=%.coe)
 SVEES := $(SELFS:%.elf=%.v)
 DUMPS := $(SELFS:%.elf=%.dump)
 
+PRE ?= mips-linux-gnu
+
 default: mifs coes dumps
 
 all: objs elfs mifs coes vees dumps
 
 %.dump: %.elf
-	mips-objdump $(DUMPOPTS) $< > $@
+	$(PRE)-objdump $(DUMPOPTS) $< > $@
 
 %.ld: %.s
 	sed "s/##ASMNAME##/$$(basename $<)/" < ld.each > $@
 
 %.bin: %.elf
-	mips-objcopy --only-section=.text -O binary $< $@
+	$(PRE)-objcopy --only-section=.text -O binary $< $@
 
 %.mif: %.bin
 	bin2mif < $< > $@
@@ -34,10 +36,10 @@ all: objs elfs mifs coes vees dumps
 	bin2rom $(TARGET) 0 < $< > $@
 
 %.elf: %.ld %.s.o
-	mips-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $< $^ -o $@
+	$(PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $< $^ -o $@
 
 %.s.o: %.s
-	mips-as $(ASMOPTS) $< -o $<.o
+	$(PRE)-as $(ASMOPTS) $< -o $<.o
 
 elfs: $(SELFS)
 
