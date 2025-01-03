@@ -1,19 +1,19 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 import sys, struct
 
-data = sys.stdin.read()
+data = sys.stdin.buffer.read()
 if (len(data) == 0):
     sys.stderr.write("INFO: Empty bin2mif output.\n")
     exit(0)
 
-for i in xrange(0, len(data), 4):
+for i in range(0, len(data), 4):
     word = struct.unpack('>L', data[i:i+4])[0]
     binstr = []
-    for j in xrange(31, -1, -1):
+    for j in range(31, -1, -1):
         bit = (word >> j) & 1
         if bit:
             binstr.append('1')
         else:
             binstr.append('0')
-    print ''.join(binstr)
+    print(''.join(binstr))
