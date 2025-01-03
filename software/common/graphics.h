@@ -106,7 +106,12 @@ typedef volatile gframe_tp gframe_tv, *gframe_pv;
 #define FRAME_PTR(F)  ( std_frame((uint32_t)(F)) )
 
 __attribute__((always_inline)) inline
-gframe_pv std_frame(uint32_t const fn_or_fp);
+gframe_pv std_frame(uint32_t const fn_or_fp)
+{
+    uint32_t fp = (fn_or_fp & (FPMASK));
+    if (!fp) fp = (0x10000000 | ((fn_or_fp & (FNMASK)) << (FSHIFT)));
+    return (gframe_pv)fp;
+}
 
 
 // *** GP_GCODE COMMANDs: INST Fields, OpCodes, etc. ***
