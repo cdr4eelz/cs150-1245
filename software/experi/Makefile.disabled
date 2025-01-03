@@ -10,7 +10,8 @@ L_INC ?= ${HOME}/local/mips-unknown-linux/lib
 L_INK ?= c gcc
 L_OBJ ?=
 
-M_PRE ?= mips-
+M_PRE ?= mips-linux-gnu-
+##M_PRE ?= mips-
 M_GCC ?= -nostartfiles -march=mips1 -mabi=32
 M_AS ?= $(A_INC:%=-I%)
 M_CC ?= -std=gnu99 $(C_INC:%=-I%)
