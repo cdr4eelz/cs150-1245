@@ -1,0 +1,131 @@
+Pynq-Z2 is the explicit target. Compared to ancient XUP-kdkd board, it is a different world of technology, including Vivado vs ISE tools.
+
+NOTE: Pynq v1 is not very different from v2 ("-z2"), mostly to do with the audio chip it uses. However, this project focuses solely on Z2 version.
+
+Pynq-Z2 challenges:
+	HDMI: Approach is to get example code to function, then adapt it.
+		Use the backward compatibility with DVI signalling!
+		Use a Digilent code/hw library to generate TMDS (as in DVI).
+	DRAM: DDR access on Pynq is indirect via AXI bus for DMA
+		Start without DDR access, substituting small BlockRAM & CLUT
+		Use minimized raster graphics output (to HDMI) then add raster.
+		Migrate 
+		
+
+"Tutorial – DVI output using TMDS I/Os on a PYNQ-Z2 board"
+https://adaptivesupport.amd.com/s/article/932553?language=en_US
+
+SIDE NOTEs:
+	HDMI input options...
+		https://github.com/Digilent/vivado-library/blob/master/ip/dvi2rgb/docs/dvi2rgb.pdf
+		"Xilinx VDMA IP to load it from DDR"
+
+=====================================
+http://www.tinyvga.com/vga-timing/800x600@60Hz
+SVGA Signal 800 x 600 @ 60 Hz timing
+General timing
+Screen refresh rate	60 Hz
+Vertical refresh	37.878787878788 kHz
+Pixel freq.	40.0 MHz
+-------------------------------------
+Horizontal timing (line)
+Polarity of horizontal sync pulse is positive.
+Scanline part	Pixels
+Visible area	800
+Front porch	40			840
+Sync pulse	128			968
+Back porch	88			1056
+Whole line	1056
+-------------------------------------
+Vertical timing (frame)
+Polarity of vertical sync pulse is positive.
+Frame part	Lines
+Visible area	600
+Front porch	1			601
+Sync pulse	4			605
+Back porch	23			628
+Whole frame	628
+=====================================
+
+
+
+[ boards/Pynq-Z2/base/vivado/constraints/base.xdc  ### HDMI TX ]
+https://github.com/Xilinx/PYNQ/blob/master/boards/Pynq-Z2/base/vivado/constraints/base.xdc
+
+
+=== DDR / DMA ===
+[ Tutorial: PYNQ DMA (Part 1: Hardware design) ]
+https://discuss.pynq.io/t/tutorial-pynq-dma-part-1-hardware-design/3133
+
+[ Tutorial: PYNQ DMA (Part 2: Using the DMA from PYNQ) ]
+https://discuss.pynq.io/t/tutorial-pynq-dma-part-2-using-the-dma-from-pynq/3134
+
+[  ]
+https://discuss.pynq.io/t/accesing-ram-from-pl-only/6856
+
+[  ]
+https://discuss.pynq.io/t/imtegrating-custom-ip-with-dma/7069/3
+
+[ pynq.lib.dma Module ]
+https://pynq.readthedocs.io/en/v2.4/pynq_package/pynq.lib/pynq.lib.dma.html#pynq-lib-dma
+https://pynq.readthedocs.io/en/v2.4/pynq_libraries/dma.html#dma
+
+
+
+=== VIDEO ===
+[ Video Series 23: Generate a video output on Pynq-Z2 HDMI out ]
+https://adaptivesupport.amd.com/s/article/932553?language=en_US
+
+https://adaptivesupport.amd.com/s/article/862633?language=en_US
+
+https://adaptivesupport.amd.com/s/question/0D52E00006xR6koSAC/video-blog-series?language=en_US
+
+https://projectf.io/posts/verilog-sim-verilator-sdl/#verilator--sdl
+
+https://github.com/cathalmccabe/xup_fpga_vivado_flow
+
+[ Video Series 34: Getting started with the Video Frame Buffer IP (example application in Vitis) ]
+https://adaptivesupport.amd.com/s/article/1029060?language=en_US
+
+[ ip/rgb2dvi/docs/rgb2dvi.pdf ]
+https://github.com/Digilent/vivado-library/blob/master/ip/rgb2dvi/docs/rgb2dvi.pdf
+
+[ Pynq HDMI test pattern guide issues ]
+https://discuss.pynq.io/t/pynq-hdmi-test-pattern-guide-issues/5192
+
+[ HDMI Output Pynq Z2 PL ]
+https://www.reddit.com/r/FPGA/comments/zzelpp/hdmi_output_pynq_z2_pl/?rdt=50733
+
+[ True HDMI implementation with text mode ]
+https://github.com/hdl-util/hdmi
+
+[ PROJECT F: Lines and Triangles ]
+https://projectf.io/posts/lines-and-triangles/
+
+
+=== SIMULATION ===
+[ PROJECT F: Verilog Simulation with Verilator and SDL ]
+https://projectf.io/posts/verilog-sim-verilator-sdl/
+
+
+
+## HDMI TX
+set_property -dict {PACKAGE_PIN L17 IOSTANDARD TMDS_33} [get_ports hdmi_out_clk_n]
+set_property -dict {PACKAGE_PIN L16 IOSTANDARD TMDS_33} [get_ports hdmi_out_clk_p]
+set_property -dict {PACKAGE_PIN K18 IOSTANDARD TMDS_33} [get_ports {hdmi_out_data_n[0]}]
+set_property -dict {PACKAGE_PIN K17 IOSTANDARD TMDS_33} [get_ports {hdmi_out_data_p[0]}]
+set_property -dict {PACKAGE_PIN J19 IOSTANDARD TMDS_33} [get_ports {hdmi_out_data_n[1]}]
+set_property -dict {PACKAGE_PIN K19 IOSTANDARD TMDS_33} [get_ports {hdmi_out_data_p[1]}]
+set_property -dict {PACKAGE_PIN H18 IOSTANDARD TMDS_33} [get_ports {hdmi_out_data_n[2]}]
+set_property -dict {PACKAGE_PIN J18 IOSTANDARD TMDS_33} [get_ports {hdmi_out_data_p[2]}]
+set_property -dict {PACKAGE_PIN R19 IOSTANDARD LVCMOS33} [get_ports {hdmi_out_hpd[0]}]
+
+
+=== OTHER BOARDS ===
+[ Arty with VGA Pmod]
+https://forum.digilent.com/topic/9177-vga-pmod-tutorials/
+[ Basys 3 and Nexys Video as well as Arty ]
+https://timetoexplore.net/blog/arty-fpga-vga-verilog-01
+https://github.com/WillGreen/timetoexplore
+
+

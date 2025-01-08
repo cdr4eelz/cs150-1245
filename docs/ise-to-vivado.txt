@@ -1,0 +1,27 @@
+ise-to-vivado
+
+Every tool, script, and IP is different between ISE and Vivado. Makefiles can be used, but generally they share their role with TCL scripts.
+
+Migration will attempt this approach:
+	Branch "ISE-XUP" off "MASTER" to preserve the last shared state that uses ISE software & XUP hardware.
+	Temporary branch "VivadoPynq" forked
+	Replace various build steps with Vivado and potentially Verilator, etc.
+	Start with a working example (or modern cs151 template) then merge in old code.
+	
+	
+	
+
+=== Software ===
+	https://mipsym.github.io/mipsym/CrossCompile.html
+https://gcc.gnu.org/onlinedocs/gcc/MIPS-Options.html
+https://tzechienchu.typepad.com/embeddedandfpga/2019/02/pynq-hdmi-tpg-output.html
+https://discuss.pynq.io/t/pynq-hdmi-test-pattern-guide-issues/5192
+
+
+=== TOOLS ===
+https://adaptivesupport.amd.com/s/question/0D52E00006hpTLiSAM/ram-initialization-postbuild-in-vivado?language=en_US
+
+https://digilent.com/reference/vivado:library
+
+[ Vivado Tcl Build Script ]
+https://projectf.io/posts/vivado-tcl-build-script/
