@@ -23,28 +23,53 @@ SIDE NOTEs:
 =====================================
 http://www.tinyvga.com/vga-timing/800x600@60Hz
 SVGA Signal 800 x 600 @ 60 Hz timing
-General timing
-Screen refresh rate	60 Hz
-Vertical refresh	37.878787878788 kHz
-Pixel freq.	40.0 MHz
+Pixel freq.	40.0 MHz	TMDS freq.	400.000 MHz
 -------------------------------------
-Horizontal timing (line)
-Polarity of horizontal sync pulse is positive.
-Scanline part	Pixels
-Visible area	800
-Front porch	40			840
-Sync pulse	128			968
-Back porch	88			1056
-Whole line	1056
+Horizontal timing (LINE): hsync pulse is positive polarity.
+Scanline part	Pixels	(Start/Stop positions)
+Visible area	800		(800)
+Front porch	40			(840)
+Sync pulse	128			(968)
+Back porch	88			(1056)
+Whole line	1056	<<<<<<<<<<
 -------------------------------------
-Vertical timing (frame)
-Polarity of vertical sync pulse is positive.
-Frame part	Lines
-Visible area	600
-Front porch	1			601
-Sync pulse	4			605
-Back porch	23			628
-Whole frame	628
+Vertical timing (FRAME):  vsync pulse is positive polarity.
+Frame part	Lines	(	Start/Stop positions)
+Visible area	600		(600)
+Front porch	1			(601)
+Sync pulse	4			(605)
+Back porch	23			(628)
+Whole frame	628		<<<<<<<<<<
+=====================================
+=====================================
+https://projectf.io/posts/video-timings-vga-720p-1080p/
+  Name          800x600p60 (aspect 4:3)
+    Pixel Clock       40.000 MHz
+    TMDS Clock       400.000 MHz
+    Pixel Time          25.0 ns ±0.5%
+-------------------------------------
+  Horizontal Timings
+    Active Pixels        800    (800)
+    Front Porch           40    (840)
+    Sync Width           128    (968)
+    Back Porch            88    (1056)
+    Total Pixels        1056    <<<<<<
+    Sync Polarity        pos
+-------------------------------------
+  Vertical Timings
+    Active Lines         600	(600)
+    Front Porch            1    (601)
+    Sync Width             4    (605)
+    Back Porch            23    (628)
+    Total Lines          628    <<<<<
+    Sync Polarity        pos
+-------------------------------------
+  Active Pixels    480,000
+    Frame Memory (Kbits)
+     8-bit Memory      3,750
+    12-bit Memory      5,625
+    24-bit Memory     11,250
+    32-bit Memory     15,000
 =====================================
 
 
@@ -102,6 +127,10 @@ https://github.com/hdl-util/hdmi
 [ PROJECT F: Lines and Triangles ]
 https://projectf.io/posts/lines-and-triangles/
 
+[ Latency measurement system for HDMI display using ZYBO(FPGA) ]
+https://github.com/fumimaker/display_latency
+
+
 
 === SIMULATION ===
 [ PROJECT F: Verilog Simulation with Verilator and SDL ]
@@ -129,3 +158,7 @@ https://timetoexplore.net/blog/arty-fpga-vga-verilog-01
 https://github.com/WillGreen/timetoexplore
 
 
+=== MODERN UTILITIES ===
+
+[ AXI Basics 1 - Introduction to AXI ]
+https://adaptivesupport.amd.com/s/article/1053914?language=en_US

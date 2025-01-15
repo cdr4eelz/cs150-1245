@@ -25,3 +25,8 @@ https://digilent.com/reference/vivado:library
 
 [ Vivado Tcl Build Script ]
 https://projectf.io/posts/vivado-tcl-build-script/
+
+
+[ Create Custom AXI Cores Part 1: Straight to the Finish Line ]
+https://www.hackster.io/cospan/create-custom-axi-cores-part-1-straight-to-the-finish-line-a70e5e
+
