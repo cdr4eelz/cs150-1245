@@ -1,3 +1,29 @@
 Erik Rogers
 cs199-fu (was fa12:cs150-br)
-ejrogers@berkeley.edu
+ejrogers
+
+Old version build for ml505 XUP board, using Xilinx ISE software.
+Old version had an abundance of customizations & fluf which I
+  attempted to remove where easy to do so, going for minimal
+  working modern version.
+
+New version modernizes to use Pynq-Z2 and/or Arty A7 boards,
+  which implies porting to Vivado at the same time. Major board
+  differences are access to DRAM on the Pynq (indirect via AXI
+  for shared DMA, connected through the PS (ARM cpu of the Zynq).
+  The Arty A7 has DRAM/DDR straight to logic (PL), as there is
+  no Zynq CPU! However, the Pynq boards have DVI/HDMI output
+  port, and the Arty A7 needs addition of a PMOD (to VGA)!
+
+Berkeley cs151 skeletons (2019 & 2024) were used as the basis
+  of a modern-style "Makefile & Vivado TCL scripts" based build
+  flow. "IP" is utilized differently, such as capturing then
+  customizing the output of a clock-wizard. Use of a MIG for
+  DDR/DRAM access presents some challenges too (using TCL to
+  rebuild the "IP" or capturing the output of the IP.
+
+Before branch/forking, the "software" content was separately
+  updated to build successfully using an APT/deb install of
+  a GCC based MIPS cross compiler. The "/bin/<scripts>" were
+  also updated to Python 3.
+To jumpstart a modern version, 
