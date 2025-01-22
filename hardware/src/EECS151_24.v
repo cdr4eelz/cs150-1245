@@ -1,3 +1,5 @@
+// COPIED FROM 2024 PROJECT SKELETON
+
 /* Standard include file for EECS151.
 
  The "no flip-flop inference" policy.  Instead of using flip-flop and
@@ -27,7 +29,7 @@
 `timescale 1ns/1ns
 
 // Register of D-Type Flip-flops
-module REGISTER(q, d, clk);
+module REGISTER_24(q, d, clk);
   parameter N = 1;
   output reg [N-1:0] q;
   input [N-1:0]      d;
@@ -38,7 +40,7 @@ module REGISTER(q, d, clk);
 endmodule // REGISTER
 
 // Register with clock enable
-module REGISTER_CE(q, d, ce, clk);
+module REGISTER_CE_24(q, d, ce, clk);
   parameter N = 1;
   output reg [N-1:0] q;
   input [N-1:0]      d;
@@ -49,7 +51,7 @@ module REGISTER_CE(q, d, ce, clk);
 endmodule // REGISTER_CE
 
 // Register with reset value
-module REGISTER_R(q, d, rst, clk);
+module REGISTER_R_24(q, d, rst, clk);
   parameter N = 1;
   parameter INIT = {N{1'b0}};
   output reg [N-1:0] q;
@@ -63,7 +65,7 @@ endmodule // REGISTER_R
 
 // Register with reset and clock enable
 //  Reset works independently of clock enable
-module REGISTER_R_CE(q, d, rst, ce, clk);
+module REGISTER_R_CE_24(q, d, rst, ce, clk);
   parameter N = 1;
   parameter INIT = {N{1'b0}};
   output reg [N-1:0] q;
@@ -81,7 +83,7 @@ endmodule // REGISTER_R_CE
 */
 
 // Single-port ROM with asynchronous read
-module ASYNC_ROM(q, addr);
+module ASYNC_ROM_24(q, addr);
   parameter DWIDTH = 8;             // Data width
   parameter AWIDTH = 8;             // Address width
   parameter DEPTH  = (1 << AWIDTH); // Memory depth
@@ -114,7 +116,7 @@ module ASYNC_ROM(q, addr);
 endmodule // ASYNC_ROM
 
 // Single-port RAM with asynchronous read
-module ASYNC_RAM(q, d, addr, we, clk);
+module ASYNC_RAM_24(q, d, addr, we, clk);
   parameter DWIDTH = 8;             // Data width
   parameter AWIDTH = 8;             // Address width
   parameter DEPTH  = (1 << AWIDTH); // Memory depth
@@ -155,7 +157,7 @@ module ASYNC_RAM(q, d, addr, we, clk);
 endmodule // ASYNC_RAM
 
 // Single-port ROM with synchronous read
-module SYNC_ROM(q, addr, en, clk);
+module SYNC_ROM_24(q, addr, en, clk);
   parameter DWIDTH = 8;             // Data width
   parameter AWIDTH = 8;             // Address width
   parameter DEPTH  = (1 << AWIDTH); // Memory depth
@@ -197,7 +199,7 @@ module SYNC_ROM(q, addr, en, clk);
 endmodule // SYNC_ROM
 
 // Single-port RAM with synchronous read
-module SYNC_RAM(q, d, addr, we, en, clk);
+module SYNC_RAM_24(q, d, addr, we, en, clk);
   parameter DWIDTH = 8;           // Data width
   parameter AWIDTH = 8;           // Address width
   parameter DEPTH  = 1 << AWIDTH; // Memory depth
@@ -243,7 +245,7 @@ module SYNC_RAM(q, d, addr, we, en, clk);
 endmodule // SYNC_RAM
 
 // Dual-port ROM with synchronous read
-module SYNC_ROM_DP(q0, addr0, en0, q1, addr1, en1, clk);
+module SYNC_ROM_DP_24(q0, addr0, en0, q1, addr1, en1, clk);
   parameter DWIDTH = 8;             // Data width
   parameter AWIDTH = 8;             // Address width
   parameter DEPTH  = (1 << AWIDTH); // Memory depth
@@ -294,7 +296,7 @@ module SYNC_ROM_DP(q0, addr0, en0, q1, addr1, en1, clk);
 endmodule // SYNC_ROM_DP
 
 // Dual-port RAM with asynchronous read
-module ASYNC_RAM_DP(q0, d0, addr0, we0, q1, d1, addr1, we1, clk);
+module ASYNC_RAM_DP_24(q0, d0, addr0, we0, q1, d1, addr1, we1, clk);
   parameter DWIDTH = 8;             // Data width
   parameter AWIDTH = 8;             // Address width
   parameter DEPTH  = (1 << AWIDTH); // Memory depth
@@ -342,7 +344,7 @@ module ASYNC_RAM_DP(q0, d0, addr0, we0, q1, d1, addr1, we1, clk);
 endmodule // ASYNC_RAM_DP
 
 // Dual-port RAM with synchronous read
-module SYNC_RAM_DP(q0, d0, addr0, we0, en0, q1, d1, addr1, we1, en1, clk);
+module SYNC_RAM_DP_24(q0, d0, addr0, we0, en0, q1, d1, addr1, we1, en1, clk);
   parameter DWIDTH = 8;             // Data width
   parameter AWIDTH = 8;             // Address width
   parameter DEPTH  = (1 << AWIDTH); // Memory depth
@@ -399,7 +401,7 @@ module SYNC_RAM_DP(q0, d0, addr0, we0, en0, q1, d1, addr1, we1, en1, clk);
 endmodule // SYNC_RAM_DP
 
 // Single-port RAM with synchronous read with write byte-enable
-module SYNC_RAM_WBE(q, d, addr, en, wbe, clk);
+module SYNC_RAM_WBE_24(q, d, addr, en, wbe, clk);
   parameter DWIDTH = 8;             // Data width
   parameter AWIDTH = 8;             // Address width
   parameter DEPTH  = (1 << AWIDTH); // Memory depth
@@ -447,7 +449,7 @@ module SYNC_RAM_WBE(q, d, addr, en, wbe, clk);
 endmodule // SYNC_RAM_WBE
 
 // Dual-port RAM with synchronous read with write byte-enable
-module SYNC_RAM_DP_WBE(q0, d0, addr0, en0, wbe0, q1, d1, addr1, en1, wbe1, clk);
+module SYNC_RAM_DP_WBE_24(q0, d0, addr0, en0, wbe0, q1, d1, addr1, en1, wbe1, clk);
   parameter DWIDTH = 8;             // Data width
   parameter AWIDTH = 8;             // Address width
   parameter DEPTH  = (1 << AWIDTH); // Memory depth
@@ -516,7 +518,7 @@ module SYNC_RAM_DP_WBE(q0, d0, addr0, en0, wbe0, q1, d1, addr1, en1, wbe1, clk);
 endmodule // SYNC_RAM_DP_WBE
 
 // Multi-port RAM with two asynchronous-read ports, one synchronous-write port
-module ASYNC_RAM_1W2R(d0, addr0, we0, q1, addr1, q2, addr2, clk);
+module ASYNC_RAM_1W2R_24(d0, addr0, we0, q1, addr1, q2, addr2, clk);
   parameter DWIDTH = 8;  // Data width
   parameter AWIDTH = 8;  // Address width
   parameter DEPTH = (1 << AWIDTH); // Memory depth

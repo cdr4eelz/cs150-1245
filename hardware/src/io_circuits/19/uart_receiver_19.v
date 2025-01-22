@@ -1,4 +1,6 @@
-module uart_receiver #(
+// COPIED FROM 2019 PROJECT SKELETON
+
+module uart_receiver_19 #(
     parameter CLOCK_FREQ = 125_000_000,
     parameter BAUD_RATE = 115_200)
 (

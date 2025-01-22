@@ -1,7 +1,9 @@
+// COPIED FROM 2019 PROJECT SKELETON
+
 /*
     This is a wrapper module for the synchronizer -> debouncer -> edge detector signal chain for button inputs
 */
-module button_parser #(
+module button_parser_19 #(
     parameter width = 1,
     parameter sample_count_max = 25000,
     parameter pulse_count_max = 150
@@ -14,7 +16,7 @@ module button_parser #(
     wire [width-1:0] synchronized_signals;
     wire [width-1:0] debounced_signals;
 
-    synchronizer # (
+    synchronizer_19 # (
         .width(width)
     ) button_synchronizer (
         .clk(clk),
@@ -22,7 +24,7 @@ module button_parser #(
         .sync_signal(synchronized_signals)
     );
 
-    debouncer # (
+    debouncer_19 # (
         .width(width),
         .sample_count_max(sample_count_max),
         .pulse_count_max(pulse_count_max)
@@ -32,7 +34,7 @@ module button_parser #(
         .debounced_signal(debounced_signals)
     );
 
-    edge_detector # (
+    edge_detector_19 # (
         .width(width)
     ) button_edge_detector (
         .clk(clk),

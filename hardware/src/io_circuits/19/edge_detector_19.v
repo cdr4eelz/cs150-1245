@@ -1,4 +1,6 @@
-module edge_detector #(
+// COPIED FROM 2019 PROJECT SKELETON
+
+module edge_detector_19 #(
     parameter width = 1
 )(
     input clk,

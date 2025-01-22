@@ -1,3 +1,5 @@
+//COPIED FROM 2024 PROJECT SKELETON
+
 `timescale 1 ps / 1 ps
 
 `celldefine

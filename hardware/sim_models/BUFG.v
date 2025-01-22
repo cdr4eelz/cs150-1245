@@ -1,3 +1,5 @@
+// COPIED FROM 2024 PROJECT SKELETON
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Copyright (c) 1995/2018 Xilinx, Inc.
 //  All Right Reserved.
@@ -8,7 +10,7 @@
 // \   \   \/      Version     : 2018.3
 //  \   \          Description : Xilinx Unified Simulation Library Component
 //  /   /                        General Clock Buffer
-// /___/   /\      Filename    : BUFG.v
+// /___/   /\      Filename    : BUFG.v (or BUFG_24.v)
 // \   \  /  \
 //  \___\/\___\
 //
@@ -20,7 +22,7 @@
 //  End Revision:
 ///////////////////////////////////////////////////////////////////////////////
 
-`timescale 1 ps / 1 ps
+//`timescale 1 ps / 1 ps
 
 `celldefine
 

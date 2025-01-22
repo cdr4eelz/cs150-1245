@@ -1,4 +1,6 @@
-module bios_mem (
+`timescale 1ns/1ns
+
+module bios_mem_24 (
     input clk,
     input ena,
     input [11:0] addra,
@@ -20,10 +22,10 @@ module bios_mem (
         end
     end
 
-    `define STRINGIFY_BIOS(x) `"x/../software/bios151v3/bios151v3.hex`"
+    `define STRINGIFY_BIOS2(x) `"x/../software/bios151v3/bios151v3.hex`"
     `ifdef SYNTHESIS
         initial begin
-            $readmemh(`STRINGIFY_BIOS(`ABS_TOP), mem);
+            $readmemh(`STRINGIFY_BIOS2(`ABS_TOP), mem);
         end
     `endif
 endmodule

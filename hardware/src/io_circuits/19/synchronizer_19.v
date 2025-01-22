@@ -1,4 +1,6 @@
-module synchronizer #(parameter width = 1) (
+// COPIED FROM 2019 PROJECT SKELETON
+
+module synchronizer_19 #(parameter width = 1) (
     input [width-1:0] async_signal,
     input clk,
     output [width-1:0] sync_signal

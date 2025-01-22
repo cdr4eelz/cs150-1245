@@ -72,7 +72,8 @@ https://projectf.io/posts/video-timings-vga-720p-1080p/
     32-bit Memory     15,000
 =====================================
 
-
+[ Another list of 800x600 timings ]
+https://projectf.io/posts/video-timings-vga-720p-1080p/#svga-800x600-60-hz
 
 [ boards/Pynq-Z2/base/vivado/constraints/base.xdc  ### HDMI TX ]
 https://github.com/Xilinx/PYNQ/blob/master/boards/Pynq-Z2/base/vivado/constraints/base.xdc
@@ -162,3 +163,11 @@ https://github.com/WillGreen/timetoexplore
 
 [ AXI Basics 1 - Introduction to AXI ]
 https://adaptivesupport.amd.com/s/article/1053914?language=en_US
+
+
+=== BOARD/FPGA INVO ===
+  Arty A7-100:  xc7a100tcsg324-1L  xc7a100t-csg324/-1
+
+  Pynq-Z2:  xc7z020clg400-1  "tul.com.tw:pynq-z2:part0:1.0"
+    
+

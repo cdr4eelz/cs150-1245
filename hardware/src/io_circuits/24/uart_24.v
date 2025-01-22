@@ -1,7 +1,9 @@
-module uart #(
+// COPIED FROM 2024 PROJECT SKELETON
+
+module uart_24 #(
     parameter CLOCK_FREQ = 125_000_000,
-    parameter BAUD_RATE = 115_200)
-(
+    parameter BAUD_RATE = 115_200
+) (
     input clk,
     input reset,
 
@@ -24,7 +26,7 @@ module uart #(
         serial_in_reg <= reset ? 1'b1 : serial_in;
     end
 
-    uart_transmitter #(
+    uart_transmitter_24 #(
         .CLOCK_FREQ(CLOCK_FREQ),
         .BAUD_RATE(BAUD_RATE)
     ) uatransmit (
@@ -36,7 +38,7 @@ module uart #(
         .serial_out(serial_out_tx)
     );
 
-    uart_receiver #(
+    uart_receiver_24 #(
         .CLOCK_FREQ(CLOCK_FREQ),
         .BAUD_RATE(BAUD_RATE)
     ) uareceive (

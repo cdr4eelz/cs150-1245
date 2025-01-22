@@ -1,4 +1,6 @@
-module dmem (
+`timescale 1ns/1ns
+
+module dmem_24 (
   input clk,
   input en,
   input [3:0] we,

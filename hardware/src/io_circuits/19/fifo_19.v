@@ -1,4 +1,6 @@
-module fifo #(
+// COPIED FROM 2019 PROJECT SKELETON
+
+module fifo_19 #(
     parameter data_width = 8,
     parameter fifo_depth = 32,
     parameter addr_width = $clog2(fifo_depth)

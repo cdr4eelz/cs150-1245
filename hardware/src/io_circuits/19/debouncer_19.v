@@ -1,4 +1,6 @@
-module debouncer #(
+// COPIED FROM 2019 PROJECT SKELETON
+
+module debouncer_19 #(
     parameter width = 1,
     parameter sample_count_max = 25000,
     parameter pulse_count_max = 150,

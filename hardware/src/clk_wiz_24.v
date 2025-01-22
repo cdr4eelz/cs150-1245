@@ -1,3 +1,4 @@
+// COPIED FROM 2024 PROJECT SKELETON
 
 // file: design_1_clk_wiz_0_1.v
 // 
@@ -55,7 +56,7 @@
 
 // This file is generated from Xilinx Vivado IP Integrator
 // Some minor modifications are made to add clock parameters
-module clk_wiz #(
+module clk_wiz_24 #(
     parameter CLKIN1_PERIOD   = 8,
     parameter CLKFBOUT_MULT_F = 8,
     parameter DIVCLK_DIVIDE   = 1,

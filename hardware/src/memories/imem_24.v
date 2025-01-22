@@ -1,4 +1,6 @@
-module imem (
+`timescale 1ns/1ns
+
+module imem_24 (
   input clk,
   input ena,
   input [3:0] wea,

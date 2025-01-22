@@ -1,3 +1,5 @@
+// COPIED FROM 2024 PROJECT SKELETON
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Copyright (c) 1995/2017 Xilinx, Inc.
 //  All Right Reserved.
@@ -8,7 +10,7 @@
 // \   \   \/      Version     : 2017.4
 //  \   \          Description : Xilinx Unified Simulation Library Component
 //  /   /                        Advanced Phase-Locked Loop (PLL)
-// /___/   /\      Filename    : PLLE2_ADV.v
+// /___/   /\      Filename    : PLLE2_ADV.v (or PLLE2_ADV_24.v)
 // \   \  /  \
 //  \___\/\___\
 //

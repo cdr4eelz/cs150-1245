@@ -8,7 +8,8 @@ Migration will attempt this approach:
 	Replace various build steps with Vivado and potentially Verilator, etc.
 	Start with a working example (or modern cs151 template) then merge in old code.
 	
-	
+[ Migration ISE -> Vivado guide ]
+https://www.xilinx.com/support/documents/sw_manuals/xilinx2022_1/ug911-vivado-migration.pdf
 	
 
 === Software ===
@@ -64,3 +65,33 @@ $display("<format>", exp1, exp2, ...);  // formatted write to display
   ,, in the expression list inserts one space in the output
 ~                                                                                                                    
 ~                                       
+=== TIMING & OTHER CONSTRAINTS ===
+
+[ Replacing "TIG" from ISE constraints (Timing Ignore)... ]
+https://electronics.stackexchange.com/questions/181327/how-should-i-translate-old-tig-statement-from-ucf-to-new-vivado-xdc-files
+
+  
+
+=== GENERATING IP ===
+set_property  ip_repo_paths  /tools/Xilinx/Vivado/vivado-library [current_project]
+update_ip_catalog
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1700] Loaded user IP repository '/tools/Xilinx/Vivado/vivado-library'.
+create_bd_cell -type ip -vlnv xilinx.com:ip:fifo_generator:13.2 fifo_generator_0
+INFO: [xilinx.com:ip:fifo_generator:13.2-5968] /fifo_generator_0Executing the post_config_ip from bd
+set_property -dict [list \
+  CONFIG.Fifo_Implementation {Common_Clock_Builtin_FIFO} \
+  CONFIG.Input_Data_Width {16} \
+  CONFIG.Overflow_Flag {true} \
+  CONFIG.Underflow_Flag {false} \
+  CONFIG.Valid_Flag {true} \
+  CONFIG.Write_Acknowledge_Flag {false} \
+] [get_bd_cells fifo_generator_0]
+INFO: [xilinx.com:ip:fifo_generator:13.2-5968] /fifo_generator_0Executing the post_config_ip from bd
+
+
+=== MEMORY INITIALIZATION (Used to be .mif & .coe, now needs HEX)
+https://projectf.io/posts/initialize-memory-in-verilog/
+
+
+
