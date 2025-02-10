@@ -20,7 +20,7 @@ module echo_tb();
   wire serial_out;
   reg bp_enable = 1'b0;
 
-  cpu # (
+  cpu_24 # (
     .CPU_CLOCK_FREQ(CPU_CLOCK_FREQ),
     .RESET_PC(32'h1000_0000),
     .BAUD_RATE(BAUD_RATE)

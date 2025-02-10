@@ -1,0 +1,29 @@
+## Source me with sh/bash
+
+_VERS_="${1:-19}"
+if [ ${#_VERS_} -eq 2 ]; then
+    _VERS_="20${_VERS_}" #Prepend '20'
+fi
+
+restoreOPT=$( shopt -p nullglob )
+# echo "${restoreOPT}" >&2
+shopt -s nullglob #Avoid having unmatched globs in the results
+
+declare -a _AOPT_
+_AOPT_=( /{opt,tools}/Xilinx/Vivado/${_VERS_}*/settings64.sh )
+
+#echo "'${_VERS_}' MATCHES: ${#_AOPT_[@]}" >&2
+case "${#_AOPT_[@]}" in
+    0 ) echo "No matches found. Consider these installs (specify the year/version)" >&2
+        ls -d /{opt,tools}/Xilinx/Vivado/*/settings64.sh >&2
+        ;;
+    1 ) echo   "${_AOPT_[0]}" >&2
+        source "${_AOPT_[0]}"
+        which vivado
+        ;;
+    * ) echo "Multiple matches: ${_AOPT_[@]}" >&2
+        ;;
+esac
+
+eval "${restoreOPT}"
+# echo "${restoreOPT}" >&2 #Could use "exit()" callback function to be thorough

@@ -1,0 +1,78 @@
+ScratchPad regarding makefile & tcl scripts for commandline-only builds, including generated "IP" assets:
+
+
+Synthesis option for "OOC" generation:
+    ... -mode out_of_context
+    synth_design -incremental_mode {off,quick,default,aggressive} ...
+
+vivado -mode batch -source <your_script.tcl> -tclargs { -ip_name <IP_name> -out_of_context }
+    create_ip_run -verbose 
+
+    get_files -compile_order sources -used_in synthesis -of [get_files ip.xci]
+    
+https://docs.amd.com/r/2022.1-English/ug904-vivado-implementation/Running-Implementation-in-Non-Project-Mode
+
+
+
+
+create_project  [-part <arg>] [-force] [-in_memory] [-ip] [-rtl_kernel]
+                [-quiet] [-verbose] [<name>] [<dir>]
+
+create_project project_1 myproj -part xc7a100tcsg324-1 #Directory too
+
+create_project -in_memory -ip -verbose -part xc7a100tcsg324-1 temp_proj
+set_property BOARD_PART digilentinc.com:arty-a7-100:part0:1.1 [current_project]
+
+set_property DESIGN_MODE RTL [current_fileset]
+
+#generate_target {instantiation_template} [get_files ../ip/clk_wiz_0/clk_wiz_0.xci]
+generate_target all [get_files /home/ejr/f2019/makeooc/hardware/src/ip/clk_wiz_0/clk_wiz_0.xci]
+
+
+set_property GENERATE_SYNTH_CHECKPOINT 1 [get_files ./src/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0.xci]
+
+#read_xdc -mode out_of_context     # Import constraints as out_of_context. Values: default,
+
+
+synth_ip -verbose [get_ips clk_wiz_0]
+
+
+
+
+
+
+    54 get_ips clk_wiz_0
+    55 synth_ip -verbose [get_ips clk_wiz_0]
+    56 # generate_target all [get_files /home/ejr/f2019/makeooc/hardware/src/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0.xci]
+    57 # create_project -in_memory generateNetlistIP -part xc7a100tcsg324-1
+    58 # set_property BOARD_PART digilentinc.com:arty-a7-100:part0:1.1 [current_project]
+    59 # read_ip /home/ejr/f2019/makeooc/hardware/src/ip/clk_wiz_0/clk_wiz_0.xcix
+    60 # 
+    61 # synth_design -top clk_wiz_0 -part xc7a100tcsg324-1 -mode out_of_context
+    62 # rename_ref -prefix_all clk_wiz_0
+    63 # write_checkpoint /home/ejr/f2019/makeooc/hardware/.Xil/Vivado-34463-UBU24/clk_wiz_0/clk_wiz_0.dcp
+    64 # write_verilog -force -mode synth_stub /home/ejr/f2019/makeooc/hardware/.Xil/Vivado-34463-UBU24/clk_wiz_0/clk_wiz_0_stub.v
+    65 # write_vhdl -force -mode synth_stub /home/ejr/f2019/makeooc/hardware/.Xil/Vivado-34463-UBU24/clk_wiz_0/clk_wiz_0_stub.vhdl
+    66 # write_verilog -force -mode funcsim /home/ejr/f2019/makeooc/hardware/.Xil/Vivado-34463-UBU24/clk_wiz_0/clk_wiz_0_sim_netlist.v
+    67 # write_vhdl -force -mode funcsim /home/ejr/f2019/makeooc/hardware/.Xil/Vivado-34463-UBU24/clk_wiz_0/clk_wiz_0_sim_netlist.vhdl
+    68 # close_design
+    69 # close_project
+    70 generate_target all [get_files /home/ejr/f2019/makeooc/hardware/src/ip/clk_wiz_0/clk_wiz_0.xci]
+    71 generate_target all [get_files /home/ejr/f2019/makeooc/hardware/src/ip/clk_wiz_0/clk_wiz_0.xcix]
+    generate_target {instantiation_template synthesis} [get_ips] 
+
+
+
+synth_design -verilog_define SYNTHESIS -verilog_define ABS_TOP=/home/ejr/f2019/makeooc/hardware -top top_VGA -part xc7a100tcsg324-1 -include_dirs /home/ejr/f2019/makeooc/hardware/src/
+
+
+
+However,
+  in a non-project flow you must generate the necessary output products using
+  the synth_ip or generate_target commands. For more information on working
+  with IP refer to the Vivado Design Suite User Guide: Designing with IP
+  (UG896).
+
+
+#set_property GENERATE_SYNTH_CHECKPOINT 1 \
+#[get_files ...hardware/src/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0.xci]
