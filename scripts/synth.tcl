@@ -10,10 +10,10 @@ if {[string trim ${CONSTRAINTS}] ne ""} {
   read_xdc ${VERBOSE} ${CONSTRAINTS}
 }
 
-# Read user IP files/archives (SHOULD LOOP THROUGH EACH ONE???)
-if {[string trim ${IP_XPIX}] ne ""} {
-  read_ip ${VERBOSE} ${IP_XPIX}
-}
+## Read user IP files/archives (SHOULD LOOP THROUGH EACH ONE???)
+#if {[string trim ${IP_XPIX}] ne ""} {
+#    read_ip ${VERBOSE} ${IP_XPIX}
+#}
 
 
 synth_design -name "script_synth" -part ${FPGA_PART} -top ${TOP} \

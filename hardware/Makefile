@@ -14,7 +14,7 @@ CON_GEN                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen 
 CONSTRAINTS             += $(CON_SRC) $(CON_GEN)
 IP_XPI                  += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.xci"))
 ## IP_XPIX += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.xcix")) ## XPIX Only useable in Vivado
-TOP                     ?= top_VGA
+TOP                     ?= ArtyA7top
 VCS                     := vcs -full64
 VCS_OPTS                := -notice -PP -line +lint=all,noVCDE +v2k -timescale=1ns/10ps -debug -sverilog +define+ABS_TOP=$(ABS_TOP) +incdir+$(ABS_TOP)/src/riscv_core
 SIM_RTL                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/sim -type f -name "*.v"))
