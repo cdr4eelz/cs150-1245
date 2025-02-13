@@ -207,8 +207,7 @@ Memory (Kbits)          1,800                4,860
 DDR3L settings for the Arty A7:
 Memory type                           DDR3 SDRAM
 Max. clock period                     3000 ps (667 MT/s data rate)
-Memory part                         ? MT41K128M16JT-125 ?
-                                    * MT41K128M16XX-15E *
+Memory part                         * MT41K128M16XX-15E *
 Memory Voltage                      * 1.35 V *
 Data width                          * 16 *
 Data mask                             Enabled
@@ -244,7 +243,7 @@ mig.prj:
 
 -187E 533 MHz 13.125 ns
 -15E  667 MHz 13.500 ns
--125  800 MHz 13.750 ns
+-125  803,0490 MHz 13.750 ns
 -107  933 MHz 20.000 ns
 
 MT41K128M16XX-15E  667MHz 13.50ns

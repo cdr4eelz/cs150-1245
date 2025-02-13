@@ -1,4 +1,4 @@
-# 2019 version
+# based mostly on 2019 skeleton version
 
 SHELL                   := $(shell which bash) -o pipefail
 ABS_TOP                 := $(subst /cygdrive/c/,C:/,$(shell pwd))
