@@ -5,7 +5,8 @@
     UARTRVA patches a pair of RVA SHAKE busses through UART() for io serial lines
 */
 module UARTRVA #(
-    parameter ClockFreq=50_000_000, BaudRate=115_200
+    parameter CLOCK_FREQ = 50_000_000,
+    parameter BAUD_RATE  =    115_200
 )(
     input   Clock, Reset,
     input   SIn,
@@ -29,11 +30,10 @@ module UARTRVA #(
 
     //UART & submodules do the work
     UART #(
-        .ClockFreq(ClockFreq),
-        .BaudRate(BaudRate)
+        .CLOCK_FREQ(CLOCK_FREQ),
+        .BAUD_RATE(BAUD_RATE)
     ) uartrva (
-        .Clock(Clock),
-        .Reset(Reset),
+        .Clock(Clock),  .Reset(Reset),
 
         // Receiver     (handshakes go both in/out)
         .SIn(SIn),

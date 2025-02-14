@@ -1,6 +1,6 @@
-module CPUEcho #(
-    parameter CPU_FREQ = 50_000_000,
-    parameter BaudRate = 115_200
+module CPUEchoUART #(
+    parameter CPU_FREQ  = 50_000_000,
+    parameter BAUD_RATE =    115_200
 )(
     input clk, rst, stall,
 
@@ -17,8 +17,8 @@ module CPUEcho #(
     reg PendingTX;
 
     UART #(  // Note this module ties RX & TX lines to IO registers
-        .ClockFreq(CPU_FREQ),
-        .BaudRate(BaudRate)
+        .CLOCK_FREQ(CPU_FREQ),
+        .BAUD_RATE(BAUD_RATE)
     ) uart ( .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .DataOut(DataOut),
         .DataOutValid(DataOutValid), .DataOutReady(DataOutReady),

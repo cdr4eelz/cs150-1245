@@ -14,8 +14,8 @@ module UART(
   output        SOut
 );
 
-  parameter ClockFreq =                   50_000_000;
-  parameter BaudRate  =                   115_200;
+  parameter CLOCK_FREQ = 50_000_000;
+  parameter BAUD_RATE  =    115_200;
 
   wire      SOutInt, SInInt;
 
@@ -38,8 +38,8 @@ module UART(
 
 
 
-  UATransmit           #( .ClockFreq(     ClockFreq),
-                          .BaudRate(      BaudRate))
+  UATransmit           #( .CLOCK_FREQ(    CLOCK_FREQ),
+                          .BAUD_RATE(     BAUD_RATE))
               uatransmit( .Clock(         Clock),
                           .Reset(         Reset),
                           .DataIn(        DataIn),
@@ -47,8 +47,8 @@ module UART(
                           .DataInReady(   DataInReady),
                           .SOut(          SOutInt));
 
-  UAReceive            #( .ClockFreq(     ClockFreq),
-                          .BaudRate(      BaudRate))
+  UAReceive            #( .CLOCK_FREQ(    CLOCK_FREQ),
+                          .BAUD_RATE(     BAUD_RATE))
                uareceive( .Clock(         Clock),
                           .Reset(         Reset),
                           .DataOut(       DataOut),

@@ -1,5 +1,6 @@
 module CPUEchoDDR #(
-    parameter CPU_FREQ = 50_000_000,
+    parameter CPU_FREQ  = 50_000_000,
+    parameter BAUD_RATE =    115_200,
     parameter COLT45_SCOPE=0
 )(
     input clk, rst, stall,
@@ -129,8 +130,8 @@ module CPUEchoDDR #(
 
 
     UART #(
-        .ClockFreq(CPU_FREQ),
-        .BaudRate(115_200)
+        .CLOCK_FREQ(CPU_FREQ),
+        .BAUD_RATE(BAUD_RATE)
     ) uart ( .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .DataOut(DataOut),
         .DataOutValid(DataOutValid), .DataOutReady(DataOutReady),

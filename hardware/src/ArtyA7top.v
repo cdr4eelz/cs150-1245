@@ -1,6 +1,6 @@
 module ArtyA7top #(
-    parameter CPU_FREQ = 50_000_000, // LATER (used primarily for BAUD rate calc)
-    parameter BaudRate = 115_200
+    parameter CPU_FREQ  = 50_000_000, // LATER (used primarily for BAUD rate calc)
+    parameter BAUD_RATE =    115_200
 )(
     input CLK_100MHz,  // Board clock for Arty-A7
     //input CLK_125MHz,  // Board clock for PYNQ
@@ -52,9 +52,9 @@ module ArtyA7top #(
         assign LED[i] = SWITCH[0] && SWITCH[1] && BUTTON[i];
     end; endgenerate
 
-    CPUEcho #(
+    CPUEchoUART #(
         .CPU_FREQ(CPU_FREQ),
-        .BaudRate(BaudRate)
+        .BAUD_RATE(BAUD_RATE)
     )(
         .clk(clk_cpu), .rst(rst_cpu), .stall(1'b0),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
