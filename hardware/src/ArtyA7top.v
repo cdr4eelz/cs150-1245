@@ -1,7 +1,9 @@
 module ArtyA7top #(
-    parameter CPU_FREQ = 100_000_000 // LATER (used primarily for BAUD rate calc)
+    parameter CPU_FREQ = 50_000_000, // LATER (used primarily for BAUD rate calc)
+    parameter BaudRate = 115_200
 )(
-    input CLK_100MHz,
+    input CLK_100MHz,  // Board clock for Arty-A7
+    //input CLK_125MHz,  // Board clock for PYNQ
 
     // Basic GPIO
     input  [1:0] SWITCH,  // Only 2 of 4 switches, PYNQ has only 2
@@ -20,42 +22,54 @@ module ArtyA7top #(
     output [3:0] VGA_B    // PMOD VGA: 4-bit blue
 );
 
+    // BUFFER the board clock (switch between Arty-A7 vs PINQ)
+    wire clk_in_100MHz_g;  // clk_in_125MHz_G
+    IBUFG (.I(CLK_100MHz), .O(clk_in_100MHz_g));
+    //IBUFG (.I(CLK_125MHz), .O(clk_in_125MHz_g));
+
+    wire reset_top_clocks, locked_top_clocks;  // Participate in startup sequence
+    wire clk_mig_100MHz, clk_migref_200MHz, clk_pixel_40MHz, clk_cpu;
+    wire rst_cpu;
+    clk_wiz_0 top_clocks (  // Generate various clocks for components
+        // Clock in ports
+        .clk_in_100MHz(clk_in_100MHz_g),  // INPUT for Arty-A7 (from board)
+        // .clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board, ARM CPU)
+        // Clock out ports (NOTE: The clk_wiz buffers the outputs... BUFG)
+        .clk_mig_100MHz(clk_mig_100MHz),        // output MIG primary clk
+        .clk_migref_200MHz(clk_migref_200MHz),  // output REF clk for MIG
+        .clk_pixel_40MHz(clk_pixel_40MHz),      // output Pixel for VGA/DVI
+        .clk_cpu_50MHz(clk_cpu),                // output modest CPU speed
+        // Status and control signals
+        .reset(reset_top_clocks),  // input reset
+        .locked(locked_top_clocks)  // output locked
+    );
+    assign rst_cpu = 1'b0;
+    assign reset_top_clocks = 1'b0;
+
+    assign LED[0] = locked_top_clocks;
     genvar i; // Occupy GPIO elements if not used elsewhere...
-    generate for (i = 0; i < 4; i = i+1) begin // Used to skip i=0 for debug check above
+    generate for (i = 1; i < 4; i = i+1) begin // Used to skip i=0 for debug check above
         assign LED[i] = SWITCH[0] && SWITCH[1] && BUTTON[i];
     end; endgenerate
 
-
-    assign FPGA_SERIAL_TX = 1'b0;
+    CPUEcho #(
+        .CPU_FREQ(CPU_FREQ),
+        .BaudRate(BaudRate)
+    )(
+        .clk(clk_cpu), .rst(rst_cpu), .stall(1'b0),
+        .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
+        .FPGA_SERIAL_TX(FPGA_SERIAL_TX)
+    );
 
     //assign {VGA_HS_O,VGA_VS_O,VGA_R,VGA_G,VGA_B} = 14'd0; // No video yet
-    wire CLK_40Mhz;
     VGATestPattern vga_gen (
-        .PXL_CLK(CLK_40Mhz),
+        .PXL_CLK(clk_pixel_40MHz),
         .VGA_HS_O(VGA_HS_O),
         .VGA_VS_O(VGA_VS_O),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
         .VGA_B(VGA_B)
     );
-
-    clk_wiz_0 top_clock ( // Buffers are added by this clock model
-        .clk_in1(CLK_100MHz),  // input clk_in1
-        .clk_out1(CLK_40Mhz)   // output clk_out1
-    );
-
-
-/*
-UART #(
-    .ClockFreq(CPU_FREQ),
-    .BaudRate(115_200)
-) uart ( .Clock(clk), .Reset(rst),
-    .SIn(FPGA_SERIAL_RX), .DataOut(DataOut),
-    .DataOutValid(DataOutValid), .DataOutReady(DataOutReady),
-    .SOut(FPGA_SERIAL_TX), .DataIn(DataIn),
-    .DataInValid(DataInValid), .DataInReady(DataInReady)
-);
-*/
 
 endmodule
 

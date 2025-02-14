@@ -48,7 +48,7 @@ module VGATestPattern (
     localparam [11:0] BOX_X_INIT = 12'h010;
     localparam [11:0] BOX_Y_INIT = 12'h190; //--400
 
-    wire PXL_CLK; // signal PXL_CLK : std_logic;
+    //wire PXL_CLK; // signal PXL_CLK : std_logic;
     wire active;  // signal active  : std_logic;
 
     reg [11:0] h_cntr_reg = 0;   // signal h_cntr_reg : std_logic_vector(11 downto 0) := (others =>'0');
