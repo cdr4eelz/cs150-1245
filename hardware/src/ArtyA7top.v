@@ -4,8 +4,10 @@ module ArtyA7top #(
 )(
     input CLK_100MHz,  // Board clock for Arty-A7
     //input CLK_125MHz,  // Board clock for PYNQ
+    input CK_RST,  // "ChipKit Reset" (Active LOW)
+    // TODO: Debounce CK_RST and feed a simple reset module from it
 
-    // Basic GPIO
+    // Basic GPIO (Note that some IOs are ignored if not present on other board)
     input  [1:0] SWITCH,  // Only 2 of 4 switches, PYNQ has only 2
     input  [3:0] BUTTON,  // 4 pushbuttons
     output [3:0] LED,     // 4 on/off LEDs, not RBG LEDs
@@ -22,53 +24,70 @@ module ArtyA7top #(
     output [3:0] VGA_B    // PMOD VGA: 4-bit blue
 );
 
-    // BUFFER the board clock (switch between Arty-A7 vs PINQ)
-    wire clk_in_100MHz_g;  // clk_in_125MHz_G
-    IBUFG (.I(CLK_100MHz), .O(clk_in_100MHz_g));
+    // BUFFER the board clock (manually switch between Arty-A7 vs PYNQ)
+    wire clk_in_100MHz_g, clk_temp_1;  // Arty-A7 or PYNQ ARM-CPU clk-out
+    IBUF (.I(CLK_100MHz), .O(clk_temp_1));  // Vivado refuses IBUFG!
+    BUFG (.I(clk_temp_1), .O(clk_in_100MHz_g));  // Vivado refuses IBUFG!
+    //wire clk_in_125MHz_G;  // PYNQ board clock
     //IBUFG (.I(CLK_125MHz), .O(clk_in_125MHz_g));
 
-    wire reset_top_clocks, locked_top_clocks;  // Participate in startup sequence
+    reg reset_top_clocks = 1'b1;
+    wire locked_top_clocks;  // Participate in startup sequence
     wire clk_mig_100MHz, clk_migref_200MHz, clk_pixel_40MHz, clk_cpu;
-    wire rst_cpu;
     clk_wiz_0 top_clocks (  // Generate various clocks for components
         // Clock in ports
-        .clk_in_100MHz(clk_in_100MHz_g),  // INPUT for Arty-A7 (from board)
-        // .clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board, ARM CPU)
+        .clk_in_100MHz(clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
+        // .clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
         // Clock out ports (NOTE: The clk_wiz buffers the outputs... BUFG)
         .clk_mig_100MHz(clk_mig_100MHz),        // output MIG primary clk
         .clk_migref_200MHz(clk_migref_200MHz),  // output REF clk for MIG
         .clk_pixel_40MHz(clk_pixel_40MHz),      // output Pixel for VGA/DVI
         .clk_cpu_50MHz(clk_cpu),                // output modest CPU speed
         // Status and control signals
-        .reset(reset_top_clocks),  // input reset
-        .locked(locked_top_clocks)  // output locked
+        .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
+        .locked(locked_top_clocks)  // output locked (ACTIVE HIGH)
     );
-    assign rst_cpu = 1'b0;
-    assign reset_top_clocks = 1'b0;
+    //TODO: Create a decent "reset tree" to resume components in a good sequence
+    //NOTE: Reset logic must use board-clock "clk_in_100MHz_g"
+    always @(posedge clk_in_100MHz_g)  reset_top_clocks <= !CK_RST;
+    //assign reset_top_clocks = !CK_RST;  // Top CLocks are first to come out of reset
+    // Then some other support components come out of reset (like DRAM)
+    reg rst_cpu_sync1 = 1'b1,  rst_cpu = 1'b1;
+    always @(posedge clk_in_100MHz_g)  rst_cpu_sync1 <= !locked_top_clocks;
+    //assign rst_cpu = !locked_top_clocks;  // CPU comes out of reset after everything else
+    always @(posedge clk_cpu)  rst_cpu <= rst_cpu_sync1;
 
-    assign LED[0] = locked_top_clocks;
-    genvar i; // Occupy GPIO elements if not used elsewhere...
-    generate for (i = 1; i < 4; i = i+1) begin // Used to skip i=0 for debug check above
-        assign LED[i] = SWITCH[0] && SWITCH[1] && BUTTON[i];
-    end; endgenerate
+    // TODO: Debounce all switch & button signals (including board reset "CK_RST")
+    assign LED[0] = locked_top_clocks ^ BUTTON[0];
+    assign LED[1] = CK_RST ^ BUTTON[1];
+    assign LED[2] = SWITCH[0] && SWITCH[1] && BUTTON[2];
+    assign LED[3] = SWITCH[0] && SWITCH[1] && BUTTON[3];
+    // TODO: Map RGB LEDs in constraints file and drive them with PWM
+
+    // Borrowed from 2024 top: Use IOBs to drive/sense the UART serial lines...
+    wire cpu_tx, cpu_rx;
+    (* IOB = "true" *) reg fpga_serial_tx_iob;
+    (* IOB = "true" *) reg fpga_serial_rx_iob;
+    assign FPGA_SERIAL_TX = fpga_serial_tx_iob;
+    assign cpu_rx = fpga_serial_rx_iob;
+    always @(posedge clk_cpu) begin
+        fpga_serial_tx_iob <= cpu_tx;
+        fpga_serial_rx_iob <= FPGA_SERIAL_RX;
+    end
 
     CPUEchoUART #(
         .CPU_FREQ(CPU_FREQ),
         .BAUD_RATE(BAUD_RATE)
     )(
-        .clk(clk_cpu), .rst(rst_cpu), .stall(1'b0),
-        .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-        .FPGA_SERIAL_TX(FPGA_SERIAL_TX)
+        .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
+        .SerialRX(cpu_rx),  .SerialTX(cpu_tx)
     );
 
     //assign {VGA_HS_O,VGA_VS_O,VGA_R,VGA_G,VGA_B} = 14'd0; // No video yet
     VGATestPattern vga_gen (
         .PXL_CLK(clk_pixel_40MHz),
-        .VGA_HS_O(VGA_HS_O),
-        .VGA_VS_O(VGA_VS_O),
-        .VGA_R(VGA_R),
-        .VGA_G(VGA_G),
-        .VGA_B(VGA_B)
+        .VGA_HS_O(VGA_HS_O),  .VGA_VS_O(VGA_VS_O),
+        .VGA_R(VGA_R),  .VGA_G(VGA_G),  .VGA_B(VGA_B)
     );
 
 endmodule
@@ -313,7 +332,7 @@ module ml505top #(
         rst_user_base = reset_lines[0] || (&reset_r); //USER-clock domain (already)
         //Though no need to sync here, nice to pin down signal origin to sync element
     end
-
+video
     //A mini reset "tree" for more flexible placement on the way to each domain
     //NOTE:Creates a little latency & discrepancies based on each domain period
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE" *)
@@ -335,7 +354,7 @@ module ml505top #(
     assign rst_dvi_bus_g = reset_dvi_rr[2];
 
 
-    wire cpu_clk, dvi_clk, clk200, clk0, clk90, clkdiv0, pll_fb;
+    wire cpu_clk, dvi_clk, clk200, clk0, clk90, clkdiv0, pll_fb_in, pll_fb_out;
     PLL_BASE #(
         .CLKIN_PERIOD(  10.0), .CLKFBOUT_PHASE(0.0),
         .CLKFBOUT_MULT( 24),
@@ -356,7 +375,7 @@ module ml505top #(
         .CLKOUT3(clk0),
         .CLKOUT4(clk90),
         .CLKOUT5(clkdiv0),
-        .CLKFBIN(pll_fb),   .CLKFBOUT(pll_fb)
+        .CLKFBOUT(pll_fb_out), .CLKFBIN(pll_fb_in)  // Should buffer!
     );
     IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
     BUFG  cpu_clk_buf  ( .I(cpu_clk),  .O(cpu_clk_g)  );
@@ -365,7 +384,8 @@ module ml505top #(
     BUFG  clk0_buf     ( .I(clk0),     .O(clk0_g)     );
     BUFG  clk90_buf    ( .I(clk90),    .O(clk90_g)    );
     BUFG  clkdiv0_buf  ( .I(clkdiv0),  .O(clkdiv0_g)  );
-
+//  BUFG  pll_fb_buf   ( .I(pll_fb_out), .O(pll_fb_in));
+    assign pll_fb_in = pll_fb_out;  // Mistakenly forgot to buffer!
 
 
 `ifndef COLT45_KILLFUN //Just to trigger text editor to hide this section

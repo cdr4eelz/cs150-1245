@@ -5,8 +5,8 @@ module CPUEchoUART #(
     input clk, rst, stall,
 
     // Serial
-    input  FPGA_SERIAL_RX,
-    output FPGA_SERIAL_TX
+    input  SerialRX,
+    output SerialTX
 );
 
     wire [7:0] DataIn;
@@ -16,16 +16,21 @@ module CPUEchoUART #(
     wire DataOutReady, DataOutValid;
     reg PendingTX;
 
-    UART #(  // Note this module ties RX & TX lines to IO registers
-        .CLOCK_FREQ(CPU_FREQ),
-        .BAUD_RATE(BAUD_RATE)
-    ) uart ( .Clock(clk), .Reset(rst),
-        .SIn(FPGA_SERIAL_RX), .DataOut(DataOut),
-        .DataOutValid(DataOutValid), .DataOutReady(DataOutReady),
-        .SOut(FPGA_SERIAL_TX), .DataIn(DataIn),
-        .DataInValid(DataInValid), .DataInReady(DataInReady)
+//  Bypass old "UART" module to avoid redundant IOB registers...
+    UATransmit #(
+        .CLOCK_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
+    ) uatransmit( .Clock(clk),  .Reset(rst),
+        .DataIn(DataIn),  .DataInValid(DataInValid),
+        .DataInReady(DataInReady),  .SOut(SerialTX)
+    );
+    UAReceive #(
+        .CLOCK_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
+    ) uareceive( .Clock(clk),  .Reset(rst),
+        .DataOut(DataOut),  .DataOutValid(DataOutValid),
+        .DataOutReady(DataOutReady),  .SIn(SerialRX)
     );
 
+    // This is the very simple "echo", TX for each RX
     assign DataOutReady = 1'b1;
     assign DataIn = DataOut_r, DataInValid = PendingTX;
     always @(posedge clk) begin

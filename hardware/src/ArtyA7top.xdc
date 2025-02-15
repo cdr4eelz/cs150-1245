@@ -8,6 +8,13 @@
 set_property -dict { PACKAGE_PIN E3    IOSTANDARD LVCMOS33 } [get_ports { CLK_100MHz }]; #IO_L12P_T1_MRCC_35 Sch=gclk[100]
 create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports { CLK_100MHz }];
 
+# Address a warning about these 2 properies being missing: *** SEE: ug470_7Series_Config.pdf (page 29) ***
+#set_property CFGBVS value1 [current_design];  #where value1 is either VCCO or GND
+#set_property CONFIG_VOLTAGE value2 [current_design];  #where value2 is the voltage provided to configuration bank 0
+set_property CFGBVS VCCO        [current_design];  # Choosing VCCO and 3.3v because a lower setting can DAMAGE ...
+set_property CONFIG_VOLTAGE 3.3 [current_design];  #   ... the chip if various inputs are driven by higher V!
+
+
 ##Switches
 
 set_property -dict { PACKAGE_PIN A8    IOSTANDARD LVCMOS33 } [get_ports { SWITCH[0] }]; #IO_L12N_T1_MRCC_16 Sch=sw[0]
@@ -56,7 +63,7 @@ set_property -dict { PACKAGE_PIN B8    IOSTANDARD LVCMOS33 } [get_ports { BUTTON
 #set_property -dict { PACKAGE_PIN D13   IOSTANDARD LVCMOS33 } [get_ports { ja[4] }]; #IO_L6N_T0_VREF_15 Sch=ja[7]
 #set_property -dict { PACKAGE_PIN B18   IOSTANDARD LVCMOS33 } [get_ports { ja[5] }]; #IO_L10P_T1_AD11P_15 Sch=ja[8]
 #set_property -dict { PACKAGE_PIN A18   IOSTANDARD LVCMOS33 } [get_ports { ja[6] }]; #IO_L10N_T1_AD11N_15 Sch=ja[9]
-#set_property -dict { PACKAGE_PIN K16   IOSTANDARD LVCMOS33 } [get_ports { ja[7] }]; #IO_25_15 Sch=ja[10]FPGA_SERIAL_TX
+#set_property -dict { PACKAGE_PIN K16   IOSTANDARD LVCMOS33 } [get_ports { ja[7] }]; #IO_25_15 Sch=ja[10]
 
 ##Pmod Header JB
     ### First half of PMOD-VGA (takes two full headers)
@@ -92,7 +99,7 @@ set_property -dict { PACKAGE_PIN V14   IOSTANDARD LVCMOS33 } [get_ports { VGA_VS
 #set_property -dict { PACKAGE_PIN G2    IOSTANDARD LVCMOS33 } [get_ports { jd[7] }]; #IO_L15N_T2_DQS_35 Sch=jd[10]
 
 ##USB-UART Interface
-## Can use these on Arty-A7 and other boards with integrated JTAG-UART USB connection with UART rx & tx
+## Can use these on Arty-A7 with integrated JTAG/UART<->USB connection to PL fabric
 set_property -dict { PACKAGE_PIN D10   IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_TX }]; #IO_L19N_T3_VREF_16 Sch=uart_rxd_out
 set_property -dict { PACKAGE_PIN A9    IOSTANDARD LVCMOS33 } [get_ports { FPGA_SERIAL_RX }]; #IO_L14N_T2_SRCC_16 Sch=uart_txd_in
 
@@ -144,7 +151,7 @@ set_property -dict { PACKAGE_PIN A9    IOSTANDARD LVCMOS33 } [get_ports { FPGA_S
 ##NOTE: These pins will need to be connected to the XADC core when used as differential analog inputs (Chipkit analog pins A6-A11)
 
 #set_property -dict { PACKAGE_PIN B7    IOSTANDARD LVCMOS33 } [get_ports { ck_io[20] }]; #IO_L2P_T0_AD12P_35 Sch=ad_p[12]
-#set_property -dict { PACKAGE_PIN B6    P_T0_15 Sch=ja[2]IOSTANDARD LVCMOS33 } [get_ports { ck_io[21] }]; #IO_L2N_T0_AD12N_35 Sch=ad_n[12]
+#set_property -dict { PACKAGE_PIN B6    IOSTANDARD LVCMOS33 } [get_ports { ck_io[21] }]; #IO_L2N_T0_AD12N_35 Sch=ad_n[12]
 #set_property -dict { PACKAGE_PIN E6    IOSTANDARD LVCMOS33 } [get_ports { ck_io[22] }]; #IO_L5P_T0_AD13P_35 Sch=ad_p[13]
 #set_property -dict { PACKAGE_PIN E5    IOSTANDARD LVCMOS33 } [get_ports { ck_io[23] }]; #IO_L5N_T0_AD13N_35 Sch=ad_n[13]
 #set_property -dict { PACKAGE_PIN A4    IOSTANDARD LVCMOS33 } [get_ports { ck_io[24] }]; #IO_L8P_T1_AD14P_35 Sch=ad_p[14]
@@ -182,11 +189,12 @@ set_property -dict { PACKAGE_PIN A9    IOSTANDARD LVCMOS33 } [get_ports { FPGA_S
 #set_property -dict { PACKAGE_PIN M18   IOSTANDARD LVCMOS33 } [get_ports { ck_sda }]; #IO_L4N_T0_D05_14 Sch=ck_sda
 #set_property -dict { PACKAGE_PIN A14   IOSTANDARD LVCMOS33 } [get_ports { scl_pup }]; #IO_L9N_T1_DQS_AD3N_15 Sch=scl_pup
 #set_property -dict { PACKAGE_PIN A13   IOSTANDARD LVCMOS33 } [get_ports { sda_pup }]; #IO_L9P_T1_DQS_AD3P_15 Sch=sda_pup
+#set_property -dict { PACKAGE_PIN G18   IOSTANDARD LVCMOS33 } [get_ports { eth_ref_clk }]; #IO_L22P_T3_A17_15 Sch=eth_ref_clk
 
 ##Misc. ChipKit signals
 
 #set_property -dict { PACKAGE_PIN M17   IOSTANDARD LVCMOS33 } [get_ports { ck_ioa }]; #IO_L10N_T1_D15_14 Sch=ck_ioa
-#set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 } [get_ports { ck_rst }]; #IO_L16P_T2_35 Sch=ck_rst
+set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 } [get_ports { CK_RST }]; #IO_L16P_T2_35 Sch=ck_rst
 
 ##SMSC Ethernet PHY
 

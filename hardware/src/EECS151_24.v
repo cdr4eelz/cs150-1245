@@ -22,7 +22,26 @@
  REGISTER_CE
  REGISTER_R
  REGISTER_R_CE
+ ...
+
+::: AVAILABLE MODULES :::
+module REGISTER_24(q, d, clk);
+module REGISTER_CE_24(q, d, ce, clk);
+module REGISTER_R_24(q, d, rst, clk);
+module REGISTER_R_CE_24(q, d, rst, ce, clk);
+--- Memory Blocks ---
+module ASYNC_ROM_24(q, addr);
+module ASYNC_RAM_24(q, d, addr, we, clk);
+module SYNC_ROM_24(q, addr, en, clk);
+module SYNC_RAM_24(q, d, addr, we, en, clk);
+module SYNC_ROM_DP_24(q0, addr0, en0, q1, addr1, en1, clk);
+module ASYNC_RAM_DP_24(q0, d0, addr0, we0, q1, d1, addr1, we1, clk);
+module SYNC_RAM_DP_24(q0, d0, addr0, we0, en0, q1, d1, addr1, we1, en1, clk);
+module SYNC_RAM_WBE_24(q, d, addr, en, wbe, clk);
+module SYNC_RAM_DP_WBE_24(q0, d0, addr0, en0, wbe0, q1, d1, addr1, en1, wbe1, clk);
+module ASYNC_RAM_1W2R_24(d0, addr0, we0, q1, addr1, q2, addr2, clk);
 */
+
 `ifndef EECS151_V
 `define EECS151_V
 

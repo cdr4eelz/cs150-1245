@@ -85,6 +85,10 @@ build/impl/$(TOP).bit: build/synth/$(TOP).dcp $(ABS_TOP)/../scripts/impl.tcl
 impl: build/impl/$(TOP).bit
 all: build/impl/$(TOP).bit
 
+warn: impl
+	egrep -e 'WARNING' -C3 --color=always build/synth/synth.log build/impl/impl.log || \
+		egrep -i -e 'Errors|WARNINGS|Critical Warnings' --color=always build/synth/synth.log build/impl/impl.log
+
 program: build/impl/$(TOP).bit $(ABS_TOP)/../scripts/program.tcl
 	cd build/impl && $(VIVADO) $(VIVADO_OPTS) -source $(ABS_TOP)/../scripts/program.tcl
 
@@ -116,5 +120,5 @@ clean-sim:
 	sim/*.tbi sim/*.fst sim/*.jou sim/*.log sim/*.out
 
 
-.PHONY: setup ips synth impl program program-force vivado all clean
+.PHONY: setup ips synth impl warn program program-force vivado all clean
 .PRECIOUS: sim/%.tb sim/%.tbi sim/%.fst sim/%.vpd
