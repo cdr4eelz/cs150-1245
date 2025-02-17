@@ -33,10 +33,10 @@ module UAReceive(
   wire                            Start;
   wire                            RXRunning;
 
-  reg     [9:0]                   RXShift;
-  reg     [3:0]                   BitCounter;
-  reg     [ClockCounterWidth-1:0] ClockCounter;
-  reg                             HasByte;
+  reg     [9:0]                   RXShift = 10'b00_0000_0000;;
+  reg     [3:0]                   BitCounter = 4'd0;
+  reg     [ClockCounterWidth-1:0] ClockCounter = 0;
+  reg                             HasByte = 1'b0;
 
   //--|Signal Assignments|------------------------------------------------------
 
@@ -76,7 +76,11 @@ module UAReceive(
 
   //--|Shift Register|----------------------------------------------------------
   always @(posedge Clock) begin
-    if (Sample && RXRunning) RXShift <= {SIn, RXShift[9:1]};
+    if (Reset) begin
+      RXShift <= 10'b00_0000_0000;
+    end else if (Sample && RXRunning) begin
+      RXShift <= {SIn, RXShift[9:1]};
+    end
   end
 
   

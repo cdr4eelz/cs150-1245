@@ -9,39 +9,37 @@ module CPUEchoUART #(
     output SerialTX
 );
 
-    wire [7:0] DataIn;
-    wire DataInReady, DataInValid;
-    wire [7:0] DataOut;
-    reg [7:0] DataOut_r;
-    wire DataOutReady, DataOutValid;
-    reg PendingTX;
+    wire [7:0] DataInTX;
+    wire DataInReadyTX, DataInValidTX;
+    wire [7:0] DataOutRX;
+    reg [7:0] DataOut_r = 8'd35;
+    wire DataOutReadyRX, DataOutValidRX;
+    reg PendingTX = 1'b0;
 
-//  Bypass old "UART" module to avoid redundant IOB registers...
-    UATransmit #(
+//  This "UART" module avoids redundant top-level IOB registers...
+//      ...BUT has one register set between IOB's and TX/RX logic.
+    UART #(
         .CLOCK_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
-    ) uatransmit( .Clock(clk),  .Reset(rst),
-        .DataIn(DataIn),  .DataInValid(DataInValid),
-        .DataInReady(DataInReady),  .SOut(SerialTX)
-    );
-    UAReceive #(
-        .CLOCK_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
-    ) uareceive( .Clock(clk),  .Reset(rst),
-        .DataOut(DataOut),  .DataOutValid(DataOutValid),
-        .DataOutReady(DataOutReady),  .SIn(SerialRX)
+    ) uartModule( .Clock(clk),  .Reset(rst),
+        .DataInTX(DataInTX),  .DataInValidTX(DataInValidTX),
+        .DataInReadyTX(DataInReadyTX),  .SOutTX(SerialTX),
+        .DataOutRX(DataOutRX),  .DataOutValidRX(DataOutValidRX),
+        .DataOutReadyRX(DataOutReadyRX),  .SInRX(SerialRX)
     );
 
     // This is the very simple "echo", TX for each RX
-    assign DataOutReady = 1'b1;
-    assign DataIn = DataOut_r, DataInValid = PendingTX;
+    assign DataOutReadyRX = !rst;
+    assign DataInTX = rst ? 8'd0 : DataOut_r;
+    assign DataInValidTX = rst ? 1'b0 : PendingTX;
     always @(posedge clk) begin
         if (rst) begin
             DataOut_r <= 0;
             PendingTX <= 1'b0;
         end else if (!stall) begin
-            if (DataOutValid && DataOutReady) begin
-                DataOut_r <= DataOut;
+            if (DataOutValidRX && DataOutReadyRX) begin
+                DataOut_r <= DataOutRX;
                 PendingTX <= 1'b1;
-            end else if (DataInValid && DataInReady) begin
+            end else if (DataInValidTX && DataInReadyTX) begin
                 PendingTX <= 1'b0;
             end
         end

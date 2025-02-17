@@ -8,15 +8,15 @@ module ArtyA7top #(
     // TODO: Debounce CK_RST and feed a simple reset module from it
 
     // Basic GPIO (Note that some IOs are ignored if not present on other board)
-    input  [1:0] SWITCH,  // Only 2 of 4 switches, PYNQ has only 2
-    input  [3:0] BUTTON,  // 4 pushbuttons
-    output [3:0] LED,     // 4 on/off LEDs, not RBG LEDs
+    input   [1:0]   SWITCH,  // Only 2 of 4 switches, PYNQ has only 2
+    input   [3:0]   BUTTON,  // 4 pushbuttons
+    output  [3:0]   LED,     // 4 on/off LEDs, not RBG LEDs
 
     // SERIAL (UART)
-    input         FPGA_SERIAL_RX,
-    output        FPGA_SERIAL_TX,
+    input           FPGA_SERIAL_RX,
+    output          FPGA_SERIAL_TX,
 
-    // Video Out, 444 RGB (Could dumb down other board with DVI)
+    // VGA style video Out, 444 RGB (Could dumb down to 4-bits elsewhere)
     output VGA_HS_O,      // PMOD VGA: H_SYNC
     output VGA_VS_O,      // PMOD VGA: V_SYNC
     output [3:0] VGA_R,   // PMOD VGA: 4-bit red
@@ -26,13 +26,12 @@ module ArtyA7top #(
 
     // BUFFER the board clock (manually switch between Arty-A7 vs PYNQ)
     wire clk_in_100MHz_g, clk_temp_1;  // Arty-A7 or PYNQ ARM-CPU clk-out
-    IBUF (.I(CLK_100MHz), .O(clk_temp_1));  // Vivado refuses IBUFG!
-    BUFG (.I(clk_temp_1), .O(clk_in_100MHz_g));  // Vivado refuses IBUFG!
+    IBUF board_clk_ibuf (.I(CLK_100MHz), .O(clk_temp_1));  // Vivado refuses IBUFG!
+    BUFG board_clk_bufg (.I(clk_temp_1), .O(clk_in_100MHz_g));  // Must explicitly add BUFG.
     //wire clk_in_125MHz_G;  // PYNQ board clock
     //IBUFG (.I(CLK_125MHz), .O(clk_in_125MHz_g));
 
-    reg reset_top_clocks = 1'b1;
-    wire locked_top_clocks;  // Participate in startup sequence
+    wire reset_top_clocks, locked_top_clocks;  // Participate in startup sequence
     wire clk_mig_100MHz, clk_migref_200MHz, clk_pixel_40MHz, clk_cpu;
     clk_wiz_0 top_clocks (  // Generate various clocks for components
         // Clock in ports
@@ -47,24 +46,46 @@ module ArtyA7top #(
         .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
         .locked(locked_top_clocks)  // output locked (ACTIVE HIGH)
     );
-    //TODO: Create a decent "reset tree" to resume components in a good sequence
-    //NOTE: Reset logic must use board-clock "clk_in_100MHz_g"
-    always @(posedge clk_in_100MHz_g)  reset_top_clocks <= !CK_RST;
-    //assign reset_top_clocks = !CK_RST;  // Top CLocks are first to come out of reset
-    // Then some other support components come out of reset (like DRAM)
-    reg rst_cpu_sync1 = 1'b1,  rst_cpu = 1'b1;
-    always @(posedge clk_in_100MHz_g)  rst_cpu_sync1 <= !locked_top_clocks;
-    //assign rst_cpu = !locked_top_clocks;  // CPU comes out of reset after everything else
-    always @(posedge clk_cpu)  rst_cpu <= rst_cpu_sync1;
 
-    // TODO: Debounce all switch & button signals (including board reset "CK_RST")
-    assign LED[0] = locked_top_clocks ^ BUTTON[0];
-    assign LED[1] = CK_RST ^ BUTTON[1];
-    assign LED[2] = SWITCH[0] && SWITCH[1] && BUTTON[2];
-    assign LED[3] = SWITCH[0] && SWITCH[1] && BUTTON[3];
+    //TODO: Create a decent "reset tree" to resume components in a good sequence
+    //NOTE: Early reset logic must use board-clock "clk_in_100MHz_g"
+    ButtonClean #(
+        .Width(1)
+    ) clean_rst_top (
+        .Inputs(!CK_RST),
+        .Clock(clk_in_100MHz_g), .Reset(1'b0),
+        .Outputs(reset_top_clocks)
+    );  //assign reset_top_clocks = !CK_RST;  // Top CLocks are first to come out of reset
+    // Then some other support components come out of reset (like DRAM)
+    wire rst_cpu;  // CPU comes out of reset after everything else
+    Synchronizer #(
+        .Width(1)
+    ) sync_rst_cpu (
+        .async_signal(!locked_top_clocks),
+        .Clock(clk_cpu),  // NOTE: This clock is bad when PLL not locked!
+        .sync_signal(rst_cpu)
+    );
+
+    // Debounce all switch & button signals
+    wire [5:0] clean_inputs;
+    wire [1:0] switches;
+    wire [3:0] buttons;
+    ButtonClean #(
+        .Width(6)  // 4 buttons + 2 switches = 6 signals
+    ) clean_GPIO (
+        .Inputs( { BUTTON[3:0], SWITCH[1:0] } ),
+        .Clock(clk_cpu), .Reset(rst_cpu),
+        .Outputs(clean_inputs)
+    );
+    assign { buttons[3:0], switches[1:0] } = clean_inputs;
+
+    assign LED[0] = locked_top_clocks ^ buttons[0];
+    assign LED[1] = CK_RST ^ buttons[1];
+    assign LED[2] = switches[0] && switches[1] && buttons[2];
+    assign LED[3] = switches[0] && switches[1] && buttons[3];
     // TODO: Map RGB LEDs in constraints file and drive them with PWM
 
-    // Borrowed from 2024 top: Use IOBs to drive/sense the UART serial lines...
+    // Borrowed from 2024/2019 top level IOBs to drive/sense UART serial lines...
     wire cpu_tx, cpu_rx;
     (* IOB = "true" *) reg fpga_serial_tx_iob;
     (* IOB = "true" *) reg fpga_serial_rx_iob;
@@ -78,7 +99,7 @@ module ArtyA7top #(
     CPUEchoUART #(
         .CPU_FREQ(CPU_FREQ),
         .BAUD_RATE(BAUD_RATE)
-    )(
+    ) CPU (
         .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
         .SerialRX(cpu_rx),  .SerialTX(cpu_tx)
     );

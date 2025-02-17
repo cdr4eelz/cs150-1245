@@ -26,14 +26,14 @@ module UATransmit(
 
     //--|Solution|----------------------------------------------------------------
 
-    reg [3:0] BitCount;
-    reg [ClockCounterWidth-1:0] ClockCounter;
-    reg [9:0] ShiftOut;
+    reg [3:0] BitCount = 4'd0;
+    reg [ClockCounterWidth-1:0] ClockCounter = 0;
+    reg [9:0] ShiftOut = 10'b1111_1111_11;
 
     wire TXRunning, SymbolEdge, StartTX;
 
     assign DataInReady = ((BitCount == 0) || ((BitCount == 1) && SymbolEdge));
-    assign SOut = ShiftOut[0]; //(TXRunning) ? ShiftOut[0] : 1'b1;
+    assign SOut = (TXRunning) ? ShiftOut[0] : 1'b1;
 
     assign SymbolEdge = (ClockCounter == SymbolEdgeTime-1);
     assign TXRunning = (BitCount != 0);

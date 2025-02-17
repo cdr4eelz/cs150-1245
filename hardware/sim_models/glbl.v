@@ -4,6 +4,7 @@
 `ifndef GLBL
 `define GLBL
 //`timescale  1 ps / 1 ps
+`timescale 1ns/1ns
 
 module glbl ();
 

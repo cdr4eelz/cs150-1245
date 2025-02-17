@@ -86,8 +86,8 @@ impl: build/impl/$(TOP).bit
 all: build/impl/$(TOP).bit
 
 warn: impl
-	egrep -e 'WARNING' -C3 --color=always build/synth/synth.log build/impl/impl.log || \
-		egrep -i -e 'Errors|WARNINGS|Critical Warnings' --color=always build/synth/synth.log build/impl/impl.log
+	egrep -e '^WARNING|^CRITICAL WARNING' -C3 --color=always build/synth/synth.log build/impl/impl.log || \
+		egrep -i -C0 -e 'Errors|Warnings|Critical Warnings' --color=always build/synth/synth.log build/impl/impl.log
 
 program: build/impl/$(TOP).bit $(ABS_TOP)/../scripts/program.tcl
 	cd build/impl && $(VIVADO) $(VIVADO_OPTS) -source $(ABS_TOP)/../scripts/program.tcl
@@ -101,8 +101,8 @@ vivado: build
 lint:
 	verilator -DABS_TOP=$(ABS_TOP) --lint-only --top-module $(TOP) --top glbl \
 		$(ABS_TOP)/sim_models/glbl.v -I$(ABS_TOP)/sim_models -I$(ABS_TOP)/gen \
-		--bbox-unsup --timing -I$(ABS_TOP)/src
-## $(RTL) ## Uses "include" of directories then follows tree from top.
+		--bbox-unsup --timing -I$(ABS_TOP)/src -I$(ABS_TOP)/src/base_util \
+		$(RTL)
 
 sim_build/compile_simlib/synopsys_sim.setup:
 	mkdir -p sim_build/compile_simlib
