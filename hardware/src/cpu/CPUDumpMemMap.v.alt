@@ -1,9 +1,9 @@
 `include "../cpuglobal.vh"
-`include "../tuntap.vh"
 
 module CPUDumpMemMap #(
+    parameter CPU_FREQ = 50_000_000,
+    parameter BAUD_RATE =   115_200,
     parameter DD=`COLT45_DD,
-    parameter CPU_FREQ=50_000_000,
     parameter COLT45_STEPMAX=0
 )(
     input clk, rst, stall,
@@ -94,7 +94,7 @@ module CPUDumpMemMap #(
         .wea  ( {3'b000, (STATE === 2)} ),
         .dina ( {24'b0, TX_Data} ),
         .douta( IOSTATUS ),
-    //RVAs
+    //UART
         .RVa_RX(UARX), .RVa_TX(UATX),
     //GPU control
                                 .gp_rcode(gp_rcode),
@@ -103,7 +103,7 @@ module CPUDumpMemMap #(
         .pf_wframe(pf_wframe),  .gp_wcode(gp_wcode), .gp_wframe(gp_wframe)
     ) /* synthesis syn_noprune=1 */;
 
-    UARTRVA #(.ClockFreq(CPU_FREQ)) uartrva
+    UARTRVA #(.ClockFreq(CPU_FREQ), .BAUD_RATE(BAUD_RATE)) uartrva
     ( .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX),  .UARX(UARX),   .IRQ_RX(IRQ_RX), //Receiver
         .UATX(UATX),  .SOut(FPGA_SERIAL_TX),  .IRQ_TX(IRQ_TX) //Transmitter

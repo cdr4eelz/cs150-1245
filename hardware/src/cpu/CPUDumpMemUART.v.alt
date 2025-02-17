@@ -1,8 +1,10 @@
 `include "../cpuglobal.vh"
 
 module CPUDumpMemUART #(
+    parameter CPU_FREQ = 50_000_000,
+    parameter BAUD_RATE =   115_200,
+
     parameter DD=`COLT45_DD,
-    parameter CPU_FREQ=50_000_000,
     parameter COLT45_STEPMAX=9
 )(
     input clk,
@@ -84,7 +86,7 @@ module CPUDumpMemUART #(
       /*.enb(1'b1),*/       .doutb(OUT_IB)
     );
 
-    UART #(.ClockFreq(CPU_FREQ)) uart
+    UART #(.ClockFreq(CPU_FREQ), .BAUD_RATE(BAUD_RATE)) uart
     (   .Clock(clk), .Reset(rst),
         .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
         // Transmitter  (handshakes go both in/out)

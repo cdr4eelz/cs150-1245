@@ -1,15 +1,16 @@
 // Simple adapter to house MemoryBank <=> MIPS150 interface
 
 module MIPS150 #(
-    parameter CPU_FREQ = 50_000_000,
-    parameter PC_BOOT=32'h4000_0000, //NOTE: h6000_0000 for SCRATCH_IMEM
-    parameter CPU_CORE = "" //Defaults to "MIPS" (MIPS.core)
+    parameter CPU_FREQ  = 50_000_000,
+    parameter BAUD_RATE =    115_200,
+    parameter PC_BOOT   = 32'h4000_0000, //NOTE: h6000_0000 for SCRATCH_IMEM
+    parameter CPU_CORE  = "" //Defaults to "MIPS" (MIPS.core)
 )(
     input   clk, rst, stall,
 
 // Serial (UART):
-    input   FPGA_SERIAL_RX,
-    output  FPGA_SERIAL_TX,
+    input   SerialRX,
+    output  SerialTX,
 
 // Memory Caches:
     output [ 31:0]  dcache_addr,    icache_addr,
@@ -81,7 +82,8 @@ end else begin:MEMS //"MIPS" & any others wanting MemBank
 
     // Memory Bank & Memory Mapped I/O
     MemBank #(
-        .CPU_FREQ(CPU_FREQ)
+        .CPU_FREQ(CPU_FREQ),
+        .BAUD_RATE(BAUD_RATE)
     ) bank (
         .clk(clk), .rst(rst), .stall(stall),
     // Memory/IO <==> CPU-CORE
@@ -93,9 +95,8 @@ end else begin:MEMS //"MIPS" & any others wanting MemBank
         ._WriteMask(_WriteMask),
     // Interrupts <==> COP0150
         .irq_uart0(irq_uart0), .irq_uart1(irq_uart1),
-
     // Serial (UART):
-        .FPGA_SERIAL_RX(FPGA_SERIAL_RX), .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .SerialRX(SerialRX), .SerialTX(SerialTX),
     // Memory Caches:
         .dcache_addr(dcache_addr),   .icache_addr(icache_addr),
         .dcache_we  (dcache_we  ),   .icache_we  (icache_we  ),
@@ -118,10 +119,11 @@ generate if (CPU_CORE=="ECHODDR") begin:ECHODDR
     //MemBank & RegFile unused (left to raisin)
 
     CPUEchoDDR #(
-        .CPU_FREQ(CPU_FREQ)
+        .CPU_FREQ(CPU_FREQ),
+        .BAUD_RATE(BAUD_RATE)
     ) core (
         .clk(clk), .rst(rst), .stall(stall),
-        .FPGA_SERIAL_RX(FPGA_SERIAL_RX), .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .SerialRX(SerialRX), .SerialTX(SerialTX),
         .dcache_addr (dcache_addr),   .icache_addr (icache_addr),
         .dcache_we   (dcache_we  ),   .icache_we   (icache_we  ),
         .dcache_re   (dcache_re  ),   .icache_re   (icache_re  ),

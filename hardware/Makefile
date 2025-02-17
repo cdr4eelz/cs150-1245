@@ -102,6 +102,7 @@ lint:
 	verilator -DABS_TOP=$(ABS_TOP) --lint-only --top-module $(TOP) --top glbl \
 		$(ABS_TOP)/sim_models/glbl.v -I$(ABS_TOP)/sim_models -I$(ABS_TOP)/gen \
 		--bbox-unsup --timing -I$(ABS_TOP)/src -I$(ABS_TOP)/src/base_util \
+		-I$(ABS_TOP)/src/innerds -I$(ABS_TOP)/src/gpu -I$(ABS_TOP)/src/base_mem \
 		$(RTL)
 
 sim_build/compile_simlib/synopsys_sim.setup:

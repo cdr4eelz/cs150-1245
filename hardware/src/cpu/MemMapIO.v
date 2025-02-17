@@ -1,5 +1,4 @@
 `include "../cpuglobal.vh"
-`include "../tuntap.vh"
 
 module MemMapIO #(
     parameter BADNESS=0, BAD_WORD=32'hFED1C007, BAD_BYTE=8'h11,
@@ -14,8 +13,13 @@ module MemMapIO #(
     input  [31:0] dina,   //Data in grabbed at clock edge if enabled
     output reg [31:0] douta,//DATA read (behaves like synchronous memory with registered output)
 
-// DOS SHAKES POR FAVOR:
-    inout `BUS_RVA_type(8) RVa_RX, RVa_TX,
+// UART ins & outs:
+    output          Rx_Ready,   // OUT: We offer to take a byte
+    input           Rx_Valid,   // IN : UART announcing a byte
+    input  [7:0]    Rx_Data,    // IN : Data from UART
+    output [7:0]    Tx_Data,    // OUT: Data to UART
+    output          Tx_Valid,   // OUT: We announce a byte
+    input           Tx_Ready,   // IN : UART can take a byte from us
 
 // GPU control:
     output          pf_vframe,  gp_vcode,  gp_vframe,
@@ -77,15 +81,6 @@ localparam [5:0]            //   DATA-ENCODING/DESC
             default: HOT_ADDR = 0;
         endcase
     end
-
-//RVA-Pair operations
-    // Forward patchwork (individual ready/valid lines to consolidated RVA SHAKE below):
-    wire      Rx_Ready;   // OUT: We offer to take a byte
-    wire       Rx_Valid;   // IN : UART announcing a byte
-    wire [ 7:0] Rx_Data;    // IN : Data from UART
-    wire [ 7:0] Tx_Data;  // OUT: Data to UART
-    wire       Tx_Valid;   // OUT: We announce a byte
-    wire      Tx_Ready;     // IN : UART can take a byte from us
 
     // Drive these pre-clock (continuous drive) so other RVA sees them at clock
     assign Rx_Ready = isRead && HOT_ADDR[H_D0RxData]; //(addra==12'h003)
@@ -154,19 +149,6 @@ localparam [5:0]            //   DATA-ENCODING/DESC
         //NOTE:Avoiding unnecessary resets -- if (rst) DOUTA <= 0; else
         if (isRead) douta <= MUX_DOUTA;
     end
-
-
-    BUS_RVA_tap #(.InWidth(8)) TAP_RVA_Rx
-    ( ._BUS_(RVa_RX), //Incoming
-        .DataReady(Rx_Ready),
-        .DataValid(Rx_Valid), .Data(Rx_Data)
-    );
-
-    BUS_RVA_tun #(.InWidth(8)) TUN_RVA_Tx
-    ( ._BUS_(RVa_TX), //Outgoing
-        .DataValid(Tx_Valid), .Data(Tx_Data),
-        .DataReady(Tx_Ready)
-    );
 
 
 // synthesis translate_off
