@@ -14,6 +14,7 @@
 *.coe
 *.mif
 *.mem
+*.hex
 *.v
 *.dis
 *.hak

@@ -7,7 +7,7 @@ NOPTS ?= $(wildcard *.nopt.c)
 CSRCS ?= $(filter-out $(NOPTS),$(ALLCS))
 SSRCS ?= $(wildcard *.s) $(START)
 
-OUTS ?= mif coe mem # "dump v"
+OUTS ?= mif coe mem hex # "dump v"
 SECS ?= inst data
 
 OBJS = $(SOBJS) $(COBJS)

@@ -53,6 +53,11 @@ $(TARGET).elf: $(ELF_INPUT)
 %.data.dump: %.elf
 	-($(PDUMP) -j .data $^ -xS >$@ || exit 0)
 
+%.inst.hex: %.elf
+	-$(PCOPY) -j .text -O verilog $^ $@
+%.data.hex: %.elf
+	-$(PCOPY) -j .data -O verilog $^ $@
+
 
 %.mif: %.bin
 	bin2mif < $^ > $@
@@ -65,7 +70,7 @@ $(TARGET).elf: $(ELF_INPUT)
 
 
 clean:
-	$(RM) -f *.o *.ll *.ll.s *.c.s *.elf *.bin *.mif *.coe *.mem *.v *.dump *.log $(OBJS)
+	$(RM) -f *.o *.ll *.ll.s *.c.s *.elf *.bin *.mif *.coe *.mem *.v *.hex *.dump *.log $(OBJS)
 
 .PHONY: clean $(TARGET) elf dump data inst both bins
 .PRECIOUS: %.s %.c.ll %.c.ll.s
