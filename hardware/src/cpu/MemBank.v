@@ -56,7 +56,7 @@ module MemBank #(
 
     reg _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_ISR;
     reg _hot_IB, _hot_DB;
-    always @(*) begin
+    always @(*) begin  //TODO: Figure out if OK to drive "reg" in always@(*)!!!
         {_hot_IO,_hot_BR,_hot_DC,_hot_IB,_hot_DB,_hot_IC,_hot_ISR} = 0;
         if (MemToRegDX_ || MemWriteDX_) begin
             case (DMEM_ADDR[31:28])
@@ -94,9 +94,9 @@ module MemBank #(
     reg  [31: 0] MUX_IMEM;
     always @(*) begin:_MUX_IMEM_ //Drive instruction from appropriate memory component
         case (P_hoti)
-            4'b1000: MUX_IMEM = INST_ISR;       //0xC => ISR
-            4'b0100: MUX_IMEM = INST_BR;        //0x4 => BR
-            4'b0010: MUX_IMEM = INST_IC;        //0x1 => IC
+            4'b1000: MUX_IMEM = INST_ISR;       //0xC => ISR   Should be 0x8?
+            4'b0100: MUX_IMEM = INST_BR;        //0x4 => BR    Should be 0x4?
+            4'b0010: MUX_IMEM = INST_IC;        //0x1 => IC    Should be 0x2?
             4'b0001: MUX_IMEM = (XTRA_IMEM)?INST_IB:DEAD_IMEM;//XTRA:  0x6 => IB (Scratch-IMEM)
             default: MUX_IMEM = DEAD_IMEM; //TODO: Make "HALT" instruction rather than "NOP"
         endcase
@@ -138,45 +138,70 @@ module MemBank #(
         INST_IC     = icache_dout;
 //    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
 
-    isr_mem bram_isr
-    ( .clka(clk), .ena(!stall && _hot_ISR),
-        .addra(DMEM_ADDR[13:2]),
-      /*.douta(RData_IB),//OUT-32*/
-        .wea(_WriteMask), .dina(_WDataMasked),
+    imem_24 bram_isr
+    (   .clk(clk), .ena(!stall && _hot_ISR),
+        .addra(DMEM_ADDR[15:2]),  //input [13:0]
+        .wea(_WriteMask),  .dina(_WDataMasked),
+        .addrb(IMEM_ADDR[15:2]),  //input [13:0]
+        .doutb(INST_ISR)
+    );
+//    isr_mem bram_isr
+//    ( .clka(clk), .ena(!stall && _hot_ISR),
+//        .addra(DMEM_ADDR[13:2]),
+//      /*.douta(RData_IB),//OUT-32*/
+//        .wea(_WriteMask), .dina(_WDataMasked),
+//    // INSTRUCTION Fletch (sic :)
+//      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
+//      /*.enb(1'b1)*/ .doutb(INST_ISR) //No use for hoti_ISR_
+//    ) /* synthesis syn_noprune=1 */;
 
-    // INSTRUCTION Fletch (sic :)
-      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-      /*.enb(1'b1)*/ .doutb(INST_ISR) //No use for hoti_ISR_
-    ) /* synthesis syn_noprune=1 */;
-
-    bios_mem bram_bios
-    ( .clka(clk), .ena(!stall && _hot_BR),
+    bios_mem_24 bram_bios
+    (   .clk(clk),  .ena(!stall && _hot_BR),
         .addra(DMEM_ADDR[13:2]),
         .douta(RData_BR),//OUT-32
-      /*.wea(_WriteMask), .dina(_WDataMasked),*/
+        .enb(hoti_BR_),
+        .addrb(IMEM_ADDR[13:2]),
+        .doutb(INST_BR)
+    );
+//    bios_mem bram_bios
+//    ( .clka(clk), .ena(!stall && _hot_BR),
+//        .addra(DMEM_ADDR[13:2]),
+//        .douta(RData_BR),//OUT-32
+//      /*.wea(_WriteMask), .dina(_WDataMasked),*/
+//    // Instruction reading port (b)
+//      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
+//        .enb(hoti_BR_), .doutb(INST_BR)
+//    ) /* synthesis syn_noprune=1 */;
 
-    // Instruction reading port (b)
-      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-        .enb(hoti_BR_), .doutb(INST_BR)
-    ) /* synthesis syn_noprune=1 */;
+    dmem_24 bram_dmem
+    (   .clk(clk),  .en(!stall && _hot_DB),
+        .addr(DMEM_ADDR[15:2]),  //input [13:0]
+        .dout(RData_DB),//OUT-32
+        .we(_WriteMask),  .din(_WDataMasked)
+    );
+//    dmem_blk_ram bram_dmem
+//    ( .clka(clk), .ena(!stall && _hot_DB),
+//        .addra(DMEM_ADDR[13:2]),
+//        .douta(RData_DB),//OUT-32
+//        .wea(_WriteMask), .dina(_WDataMasked)
+//    ) /* synthesis syn_noprune=1 */;
 
-    dmem_blk_ram bram_dmem
-    ( .clka(clk), .ena(!stall && _hot_DB),
-        .addra(DMEM_ADDR[13:2]),
-        .douta(RData_DB),//OUT-32
-        .wea(_WriteMask), .dina(_WDataMasked)
-    ) /* synthesis syn_noprune=1 */;
-
-    imem_blk_ram bram_imem
-    ( .clka(clk), .ena(!stall && _hot_IB),
-        .addra(DMEM_ADDR[13:2]),
-      /*.douta(RData_IB),//OUT-32*/
-        .wea(_WriteMask), .dina(_WDataMasked),
-
-    // INSTRUCTION Fletch (sic :)
-      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-      /*.enb(1'b1)*/ .doutb(INST_IB) //No use for hoti_IB_
-    ) /* synthesis syn_noprune=1 */;
+    imem_24 bram_imem
+    (   .clk(clk), .ena(!stall && _hot_IB),
+        .addra(DMEM_ADDR[15:2]),  //input [13:0]
+        .wea(_WriteMask),  .dina(_WDataMasked),
+        .addrb(IMEM_ADDR[15:2]),  //input [13:0]
+        .doutb(INST_IB)
+    );
+//    imem_blk_ram bram_imem
+//    ( .clka(clk), .ena(!stall && _hot_IB),
+//        .addra(DMEM_ADDR[13:2]),
+//      /*.douta(RData_IB),//OUT-32*/
+//        .wea(_WriteMask), .dina(_WDataMasked),
+//    // INSTRUCTION Fletch (sic :)
+//      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
+//      /*.enb(1'b1)*/ .doutb(INST_IB) //No use for hoti_IB_
+//    ) /* synthesis syn_noprune=1 */;
 
     wire Rx_Ready, Rx_Valid, Tx_Valid, Tx_Ready;
     wire [7:0] Rx_Data, Tx_Data;
@@ -201,7 +226,7 @@ module MemBank #(
     ) /* synthesis syn_noprune=1 */;
 
     UART #(
-        .ClockFreq(CPU_FREQ),
+        .CLOCK_FREQ(CPU_FREQ),
         .BAUD_RATE(BAUD_RATE)
     ) uart_mem (
         .Clock(clk),  .Reset(rst),

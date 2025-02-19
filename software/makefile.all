@@ -55,8 +55,10 @@ $(TARGET).elf: $(ELF_INPUT)
 
 %.inst.hex: %.elf
 	-$(PCOPY) -j .text -O verilog $^ $@
+	-chmod -x $@
 %.data.hex: %.elf
 	-$(PCOPY) -j .data -O verilog $^ $@
+	-chmod -x $@
 
 
 %.mif: %.bin

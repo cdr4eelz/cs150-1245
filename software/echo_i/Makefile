@@ -1,5 +1,6 @@
 TARGET ?= echo_i
-LDSTYLE ?= inject_basic
+LDSTYLE ?= direct
+OLDTIME ?= inject_basic
 
 include ../makefile.pre
 

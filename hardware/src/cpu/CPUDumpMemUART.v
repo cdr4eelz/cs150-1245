@@ -12,23 +12,8 @@ module CPUDumpMemUART #(
     input stall,
 
     // Serial
-    input FPGA_SERIAL_RX,
-    output FPGA_SERIAL_TX,
-
-// CP2+
-    // Memory system connections
-    output [ 31:0] dcache_addr, icache_addr,
-    output [  3:0] dcache_we,   icache_we,
-    output         dcache_re,   icache_re,
-    output [ 31:0] dcache_din,  icache_din,
-    input  [ 31:0] dcache_dout, icache_dout,
-
-// CP4+
-    output          pf_vframe,    gp_vcode, gp_vframe,
-    output [ 31:0]  pf_wframe,    gp_wcode, gp_wframe,
-    input  [ 31:0]                gp_rcode,
-    input  [ 15:0]  pf_status,              gp_status,
-    input           irq_pf_frame, irq_gp_done
+    input SerialRX,
+    output SerialTX
 );
 
     wire [13: 0]    ADDR, ADDR_NEXT;
@@ -64,37 +49,49 @@ module CPUDumpMemUART #(
 
     // Key components indirectly wired elsewhere
 
-    bios_mem bram_bios
-    ( .clka(clk),   .addra(ADDR_W),
-        .ena( ~stall),      .douta(OUT_BRa),
-      /*.wea(4'b0000),      .dina(32'b0),*/
-      .clkb(clk),   .addrb(ADDR_W),
-        .enb( 1'b1),        .doutb(OUT_BRb)
+    bios_mem_24 bram_bios
+    (   .clk(clk),  .ena(~stall),
+        .addra(ADDR_W),
+        .douta(OUT_BRa),//OUT-32
+        .enb(1'b1),
+        .addrb(ADDR_W),
+        .doutb(OUT_BRb)
     );
 
-    dmem_blk_ram bram_dmem
+/*  bios_mem bram_bios
+    ( .clka(clk),   .addra(ADDR_W),
+        .ena( ~stall),      .douta(OUT_BRa),
+      //.wea(4'b0000),      .dina(32'b0),
+      .clkb(clk),   .addrb(ADDR_W),
+        .enb( 1'b1),        .doutb(OUT_BRb)
+    );  */
+
+/*  dmem_blk_ram bram_dmem
     ( .clka(clk),   .addra(ADDR_W),
         .ena( ~stall),      .douta(OUT_DB),
         .wea(4'b0000),      .dina (32'd0)
-    );
+    );  */
 
-    imem_blk_ram bram_imem
+/*    imem_blk_ram bram_imem
     ( .clka(clk),   .addra(12'b0),
-        .ena(   1'b0),    /*.douta(),*/
+        .ena(   1'b0),    //.douta(),
         .wea(4'b0000),      .dina(32'b0),
       .clkb(clk),   .addrb(ADDR_W),
-      /*.enb(1'b1),*/       .doutb(OUT_IB)
-    );
+      //.enb(1'b1),
+      .doutb(OUT_IB)
+    );  */
 
-    UART #(.ClockFreq(CPU_FREQ), .BAUD_RATE(BAUD_RATE)) uart
-    (   .Clock(clk), .Reset(rst),
-        .SIn(FPGA_SERIAL_RX), .SOut(FPGA_SERIAL_TX),
+    UART #(
+        .CLOCK_FREQ(CPU_FREQ),
+        .BAUD_RATE(BAUD_RATE)
+    ) uart (  .Clock(clk),  .Reset(rst),
+        .SInRX(SerialRX),  .SOutTX(SerialTX),
         // Transmitter  (handshakes go both in/out)
-        .DataInReady(TX_Ready),
-        .DataInValid(TX_Valid), .DataIn(TX_Data),
+        .DataInReadyTX(TX_Ready),
+        .DataInValidTX(TX_Valid),  .DataInTX(TX_Data),
         // Receiver     (handshakes go both in/out)
-        .DataOutReady(1'b1), // We were *born* ready!
-        .DataOutValid(  ), .DataOut(  ) // ...but insolent :(
+        .DataOutReadyRX(1'b1), // We were *born* ready!
+        .DataOutValidRX(  ),  .DataOutRX(  ) // ...but insolent :(
     );
 
 // synthesis translate_off

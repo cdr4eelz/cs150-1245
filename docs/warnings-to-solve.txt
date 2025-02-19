@@ -26,3 +26,20 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 
 =======================
 
+build/synth/synth.log-INFO: [Synth 8-6157] synthesizing module 'imem_24' [/FPGA/cs150/hardware/src/memories/imem_24.v:3]
+build/synth/synth.log-INFO: [Synth 8-6155] done synthesizing module 'imem_24' (1#1) [/FPGA/cs150/hardware/src/memories/imem_24.v:3]
+build/synth/synth.log-INFO: [Synth 8-6157] synthesizing module 'bios_mem_24' [/FPGA/cs150/hardware/src/memories/bios_mem_24.v:3]
+build/synth/synth.log:CRITICAL WARNING: [Synth 8-4445] could not open $readmem data file '/FPGA/cs150/hardware/../software/bios151v3/bios151v3.hex'; please make sure the file is added to project and has read permission, ignoring [/FPGA/cs150/hardware/src/memories/bios_mem_24.v:28]
+build/synth/synth.log-
+build/synth/synth.log-Warning: Trying to implement RAM in registers. Block RAM or DRAM implementation is not possible for one or more of the following reasons :
+build/synth/synth.log-	1: Unable to determine number of words or word size in RAM. 
+build/synth/synth.log-	2: No valid read/write found for RAM. 
+build/synth/synth.log-RAM dissolved into registers
+build/synth/synth.log:WARNING: [Synth 8-3848] Net mem in module/entity bios_mem_24 does not have driver. [/FPGA/cs150/hardware/src/memories/bios_mem_24.v:12]
+build/synth/synth.log:WARNING: [Synth 8-3848] Net mem in module/entity bios_mem_24 does not have driver. [/FPGA/cs150/hardware/src/memories/bios_mem_24.v:12]
+...
+----------- WORKAROUND ------------
+Seems to get better when .hex file is present and useable.
+
+=======================
+
