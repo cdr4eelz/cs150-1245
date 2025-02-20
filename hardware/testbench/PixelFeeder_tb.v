@@ -1,8 +1,8 @@
 `timescale 1ns/1ns //NOTE: Very modest precision!
 
-`include "../cpuglobal.vh"
+`include "../src/cpuglobal.vh"
 
-module PixelFeederTestbench;
+module PixelFeeder_tb;
 
 //Clocks driven at bottom (to encourage use of the clk*_g signals only)
 wire clk29_g,   cpu_clk_g,  dvi_clk_g,  user_clk_g;

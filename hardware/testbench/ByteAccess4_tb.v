@@ -1,6 +1,6 @@
 `timescale 1ns/1ns
 
-module ByteAccess4Testbench;
+module ByteAccess4_tb;
 
 // Register and wires to test the ByteAccess4 decode/shift
     reg [ 1:0] MemShift;

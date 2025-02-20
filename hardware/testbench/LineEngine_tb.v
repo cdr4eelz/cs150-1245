@@ -6,7 +6,7 @@
 
 `timescale 1ns / 100ps
 
-module LineEngineTestbench;
+module LineEngine_tb;
     parameter SCANLINERUNNER = 1, LITTLEWORDIAN = 1;
 
     parameter ClockFreq = 50_000_000;

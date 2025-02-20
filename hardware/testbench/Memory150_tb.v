@@ -18,7 +18,7 @@
 `define MODELSIM 1
 `endif
 
-module Memory150TestBench;
+module Memory150_tb;
     parameter LITTLEWORDIAN = 0;
     parameter CPU_FREQ  = 50_000_000; //CPU-clock
     parameter HalfCycle = 5; //USER-clock 100MHz (half-period)

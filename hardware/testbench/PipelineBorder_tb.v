@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
 
-`include "../cpuglobal.vh"
+`include "../src/cpuglobal.vh"
 
-module PipelineBorderTestbench;
+module PipelineBorder_tb;
     reg clk, rst, stall;
     reg [3:0] IN;
     wire [3:0] outA, outB;

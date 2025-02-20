@@ -11,11 +11,11 @@
 // If #1 is in the initial block of your testbench, time advances by
 // 1ns rather than 1ps
 
-`include "../cpuglobal.vh"
-`include "../innerds/opcode.vh"
-`include "../innerds/aluop.vh"
+`include "../src/cpuglobal.vh"
+`include "../src/innerds/opcode.vh"
+`include "../src/innerds/aluop.vh"
 
-module ALUTestbench;
+module ALU_tb;
     parameter Halfcycle = 5; //half period is 5ns
 
     localparam Cycle = 2*Halfcycle;

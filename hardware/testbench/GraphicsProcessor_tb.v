@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module GraphicsProcessorTestbench;
+module GraphicsProcessor_tb;
 
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;

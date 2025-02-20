@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-`include "../gpu/gpcommands.vh"
+`include "../src/gpu/gpcommands.vh"
 
 module GPUTestbench;
 

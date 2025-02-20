@@ -8,9 +8,9 @@
 //  it doesn't check that you're mux-ing the correct values into the inputs
 //  of the ALU. 
 
-`include "../cpuglobal.vh"
+`include "../src/cpuglobal.vh"
 
-module ALUTestVectorTestbench;
+module ALUTestVector_tb;
 
     parameter Halfcycle = 5; //half period is 5ns
 

@@ -1,9 +1,9 @@
 `timescale 1ns/1ps
 
-`include "../cpuglobal.vh"
-`include "../innerds/opcode.vh"
+`include "../src/cpuglobal.vh"
+`include "../src/innerds/opcode.vh"
 
-module StageDXTestbench;
+module StageDX_tb;
 
     // No Clock Signal
 

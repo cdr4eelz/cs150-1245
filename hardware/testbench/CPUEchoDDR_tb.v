@@ -1,16 +1,17 @@
 `timescale 1ns/1ps
 
-`include "../cpuglobal.vh"
+`include "../src/cpuglobal.vh"
 
-module EchoTestbenchCaches;
-    parameter LITTLEWORDIAN = 1;
+module CPUEchoDDR_tb;
+    parameter LITTLEWORDIAN = 0;
     parameter CPU_FREQ  = 50_000_000; //CPU-clock
     parameter HalfCycle = 5; //USER-clock 100MHz (half-period)
-    parameter CPU_CORE = "";
+    parameter CPU_CORE = "ECHODDR";
 `include "base_clock.vh"
 `include "base_mem.vh"
 `include "base_echo.vh"
 `include "base_mips.vh"
+
 
 initial begin
     DataIn = 8'h7a;

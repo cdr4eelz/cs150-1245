@@ -5,7 +5,7 @@
 
 `timescale 1ns / 1ps
 
-module FrameFillerTestbench;
+module FrameFiller_tb;
     parameter SCANLINERUNNER = 1, LITTLEWORDIAN = 0;
 
     parameter ClockFreq = 50_000_000;

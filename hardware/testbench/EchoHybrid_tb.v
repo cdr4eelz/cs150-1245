@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
 
-`include "../cpuglobal.vh"
+`include "../src/cpuglobal.vh"
 
-module EchoTestbenchHybrid;
+module EchoHybrid_tb;
     parameter LITTLEWORDIAN = 1;
     parameter CPU_FREQ  = 50_000_000; //CPU-clock
     parameter HalfCycle = 5; //USER-clock 100MHz (half-period)

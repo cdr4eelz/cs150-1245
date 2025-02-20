@@ -1,8 +1,8 @@
 `timescale 10ns/10ps
 
-`include "../cpuglobal.vh"
+`include "../src/cpuglobal.vh"
 
-module CPUDumpMemMapTestbench;
+module CPUDumpMemUART_tb;
     reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
 
@@ -16,30 +16,15 @@ module CPUDumpMemMapTestbench;
     parameter HalfCycle = 5;
     parameter Cycle = 2*HalfCycle;
     parameter ClockFreq = 50_000_000;
-    parameter StallRingSize = 3;
-    parameter StallRingInit = 'b00000000000000000001;
 
     initial Clock = 0;
     always #(HalfCycle) Clock <= ~Clock;
-
-//    always @(posedge Clock) Stall <= ~Stall;
-    reg [StallRingSize-1:0] StallRing;
-//    initial begin StallRing = 0; Stall = 0; end
-    always @(posedge Clock) begin
-        if (Reset) begin
-            StallRing <= StallRingInit;
-        end else begin
-            StallRing <= {StallRing[StallRingSize-2:0], StallRing[StallRingSize-1]};
-        end
-        Stall <= StallRing[StallRingSize-1];
-    end
-    wire StallClock = Clock || Stall; // Gated clock for reference/cheating
-
+    initial Stall = 0;
+    always @(posedge Clock) Stall <= ~Stall;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    CPUDumpMemMap DUT
-//  (   .clk(StallClock), .rst(Reset), .stall(1'b0),
+    CPUDumpMemUART DUT
     (   .clk(Clock), .rst(Reset), .stall(Stall),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
@@ -57,10 +42,8 @@ module CPUDumpMemMapTestbench;
         .irq_pf_frame(1'b0), .irq_gp_done(1'b0)
     );
 
-    UART #(
-        .ClockFreq(ClockFreq)
-    ) uart_tb (
-        .Clock(           Clock),
+    UART        #( .ClockFreq(       ClockFreq))
+    uart_tb( .Clock(           Clock),
         .Reset(           Reset),
         .DataIn(          DataIn),
         .DataInValid(     DataInValid),
@@ -76,7 +59,7 @@ module CPUDumpMemMapTestbench;
 
     initial begin
         Reset = 0; DataInValid = 0; DataOutReady = 0; #(3*Cycle)
-        
+
         Reset = 1; #(6*Cycle)
         Reset = 0; #1;
         while (finalcountdowneurope > 0) begin
@@ -89,22 +72,7 @@ module CPUDumpMemMapTestbench;
             #1; finalcountdowneurope = finalcountdowneurope - 1;
         end
         $display("Got enough.");
-        $stop();
+        $finish();
     end
-
-/*
-    $monitor("Rx_Ready %b %b %h", iomap_listener.Rx_Ready, iomap_listener.uart.uareceive.HasByte, iomap_listener.rdata);
-
-    reg  [11:0] Addr;
-    wire [31:0] RData;
-    `BUS_MMAP_type IOLISTEN;
-    BUS_MMAP_tun BUS_IOMAP( ._BUS_(IOLISTEN),
-        .Addr   (Addr),
-        .RMask  (4'b1111),      .RData  (RData),
-        .WMask  (4'b0000),      .WData  (32'bz)
-    );
-
-    //TODO: MMIO "listener" to capture serial-out
-*/
 
 endmodule

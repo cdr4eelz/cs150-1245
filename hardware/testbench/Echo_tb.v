@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
 
-`include "../cpuglobal.vh"
+`include "../src/cpuglobal.vh"
 
-module EchoTestbench;
+module Echo_tb;
 
     reg Clock, Reset; wire Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;

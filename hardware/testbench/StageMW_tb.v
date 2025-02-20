@@ -1,14 +1,14 @@
 `timescale 1ns/1ps
 
-`include "../cpuglobal.vh"
-`include "../tuntap.vh"
-`include "../innerds/opcode.vh"
+`include "../src/cpuglobal.vh"
+`include "../src/innerds/opcode.vh"
+//`include "../tuntap.vh"
 
-module StageMWTestbench;
+module StageMW_tb;
 
     wire clk, rst, stall;
 
-    `BUS_RVA_type(8) UARX, UATX; // Ready-Valid
+//  `BUS_RVA_type(8) UARX, UATX; // Ready-Valid
 
     reg    [31:0]   INST_ADDR, MemAddr, RegWValue;
     wire   [ 5:0]   WBK_Reg;
