@@ -10,10 +10,11 @@ SMIFS := $(SELFS:%.elf=%.mif)
 SCOES := $(SELFS:%.elf=%.coe)
 SVEES := $(SELFS:%.elf=%.v)
 DUMPS := $(SELFS:%.elf=%.dump)
+SHEXS := $(SELFS:%.elf=%.hex)
 
 PRE ?= mips-linux-gnu-
 
-default: mifs coes dumps
+default: mifs coes dumps hexes
 
 all: objs elfs mifs coes vees dumps
 
@@ -25,6 +26,9 @@ all: objs elfs mifs coes vees dumps
 
 %.bin: %.elf
 	$(PRE)objcopy --only-section=.text -O binary $< $@
+
+%.hex: %.elf
+	$(PRE)objcopy --only-section=.text -O verilog $< $@
 
 %.mif: %.bin
 	bin2mif < $< > $@
@@ -53,8 +57,10 @@ vees: $(SVEES)
 
 dumps: $(DUMPS)
 
-clean:
-	rm -f *.elf *.bin *.mif *.coe *.v *.o *.ld *.dump *.list
+hexes: $(SHEXS)
 
-.PHONY: clean all elfs objs mifs coes vees dumps
+clean:
+	rm -f *.elf *.bin *.mif *.coe *.v *.o *.ld *.dump *.list *.hex
+
+.PHONY: clean all elfs objs mifs coes vees dumps hexes
 .PRECIOUS: %.ld

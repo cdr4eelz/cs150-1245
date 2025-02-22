@@ -8,12 +8,13 @@ FPGA_PART               ?= xc7a100tcsg324-1
 BOARD_PART              ?= digilentinc.com:arty-a7-100:part0:1.1
 RTL_SRC                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.v"))
 RTL_GEN                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen -type f -name "*.v"))
-RTL                     += $(RTL_SRC) $(RTL_GEN)
+RTL                     += $(RTL_SRC) ### $(RTL_GEN)
 CON_SRC                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.xdc"))
 CON_GEN                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen -type f -name "*.xdc"))
-CONSTRAINTS             += $(CON_SRC) $(CON_GEN)
-IP_XPI                  += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.xci"))
-## IP_XPIX += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.xcix")) ## XPIX Only useable in Vivado
+CONSTRAINTS             += $(CON_SRC) ### $(CON_GEN)
+IP_XCI                  += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen -type f -name "*.xci"))
+RTL_VHD                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.vhd"))
+IP_CHECKPOINTS          += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.dcp"))
 TOP                     ?= ArtyA7top
 VCS                     := vcs -full64
 VCS_OPTS                := -notice -PP -line +lint=all,noVCDE +v2k -timescale=1ns/10ps -debug -sverilog +define+ABS_TOP=$(ABS_TOP) +incdir+$(ABS_TOP)/src/riscv_core
@@ -44,24 +45,30 @@ sim/%.fst: sim/%.tbi
 #sim/isa/%.fst: sim/isa/isa_testbench.tbi $(ABS_TOP)/../software/riscv-isa-tests/%.hex
 #	cd sim/isa && $(VVP) isa_testbench.tbi -fst +hex_file=$(word 2,$^) +test_name=$(basename $(notdir $(word 2,$^))) |& tee $(basename $(notdir $(word 2,$^))).log
 
-build/target.tcl: $(RTL) $(CONSTRAINTS) $(IP_XPI)
+build/target.tcl: $(RTL) $(CONSTRAINTS) $(RTL_VHD) $(IP_XCI) $(IP_CHECKPOINTS)
 	mkdir -p build
 	truncate -s 0 $@
 	echo "set VERBOSE                        -verbose"      >> $@
 	echo "set ABS_TOP                        $(ABS_TOP)"    >> $@
 	echo "set TOP                            $(TOP)"        >> $@
-	echo "set FPGA_PART                      $(FPGA_PART)"  >> $@
 	echo "set BOARD_PART                     $(BOARD_PART)" >> $@
+	echo "set FPGA_PART                      $(FPGA_PART)"  >> $@
 	echo "set_param general.maxThreads       4"             >> $@
 	echo "set_param general.maxBackupLogs    0"             >> $@
 	echo -n "set RTL { " >> $@
 	FLIST="$(RTL)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
 	echo "}" >> $@
+	echo -n "set RTL_VHD { " >> $@
+	FLIST="$(RTL_VHD)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
+	echo "}" >> $@
 	echo -n "set CONSTRAINTS { " >> $@
 	FLIST="$(CONSTRAINTS)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
 	echo "}" >> $@
-	echo -n "set IP_XPI { " >> $@
-	FLIST="$(IP_XPI)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
+	echo -n "set IP_XCI { " >> $@
+	FLIST="$(IP_XCI)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
+	echo "}" >> $@
+	echo -n "set IP_CHECKPOINTS { " >> $@
+	FLIST="$(IP_CHECKPOINTS)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
 	echo "}" >> $@
 
 

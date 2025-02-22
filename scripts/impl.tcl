@@ -2,8 +2,13 @@ source ../target.tcl
 
 open_checkpoint ${ABS_TOP}/build/synth/${TOP}.dcp
 
+#read_checkpoint /FPGA/cs150/hardware/src/temp/bios_mem/bios_mem.dcp
+#if {[string trim ${IP_CHECKPOINTS}] ne ""} {
+#    read_checkpoint ${IP_CHECKPOINTS}
+#}
+
 if {[string trim ${CONSTRAINTS}] ne ""} {
-  read_xdc ${CONSTRAINTS}
+    read_xdc ${CONSTRAINTS}
 }
 
 opt_design

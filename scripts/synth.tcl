@@ -5,15 +5,20 @@ if {[string trim ${RTL}] ne ""} {
   read_verilog ${VERBOSE} -sv ${RTL}
 }
 
+# Read VHD source files
+if {[string trim ${RTL_VHD}] ne ""} {
+  read_vhdl ${VERBOSE} ${RTL_VHD}
+}
+
 # Read user constraints
 if {[string trim ${CONSTRAINTS}] ne ""} {
   read_xdc ${VERBOSE} ${CONSTRAINTS}
 }
 
 ## Read user IP files/archives (SHOULD LOOP THROUGH EACH ONE???)
-#if {[string trim ${IP_XPIX}] ne ""} {
-#    read_ip ${VERBOSE} ${IP_XPIX}
-#}
+if {[string trim ${IP_XCI}] ne ""} {
+    read_ip ${VERBOSE} ${IP_XCI}
+}
 
 
 synth_design -name "script_synth" -part ${FPGA_PART} -top ${TOP} \

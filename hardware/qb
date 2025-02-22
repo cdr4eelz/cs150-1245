@@ -1,8 +1,13 @@
 #!/bin/bash -eux
 
+HDIV="_____________________________________________________"
+
 reset
 make lint
+echo HDIV
 make synth
+echo HDIV
 make impl
+echo HDIV
 make warn
 

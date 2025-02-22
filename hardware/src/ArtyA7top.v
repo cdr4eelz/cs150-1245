@@ -1,7 +1,7 @@
 module ArtyA7top #(
     parameter CPU_FREQ  = 50_000_000, // LATER (used primarily for BAUD rate calc)
     parameter BAUD_RATE =    115_200,
-    CPU_CORE = "DUMPMEMUART"
+    CPU_CORE = "" //"DUMPUART"
 )(
     input CLK_100MHz,  // Board clock for Arty-A7
     //input CLK_125MHz,  // Board clock for PYNQ
@@ -111,24 +111,16 @@ module ArtyA7top #(
 
     generate if (CPU_CORE=="ECHOUART") begin:ECHOUART
 
-        CPUEchoUART #(
-            .CPU_FREQ(CPU_FREQ),
-            .BAUD_RATE(BAUD_RATE)
-        ) CPU (
-            .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
-            .SerialRX(cpu_rx),  .SerialTX(cpu_tx)
-        );
+        CPUEchoUART #( .CPU_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
+        ) CPU ( .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
+            .SerialRX(cpu_rx),  .SerialTX(cpu_tx) );
         assign init_done = 1'b1;
 
-    end else if (CPU_CORE=="DUMPMEMUART") begin:DUMPMEM
+    end else if (CPU_CORE=="DUMPUART") begin:DUMPUART
         
-        CPUDumpMemUART #(
-            .CPU_FREQ(CPU_FREQ),
-            .BAUD_RATE(BAUD_RATE)
-        ) CPU (
-            .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
-            .SerialRX(cpu_rx),  .SerialTX(cpu_tx)
-        );
+        CPUDumpUART #( .CPU_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
+        ) CPU ( .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
+            .SerialRX(cpu_rx),  .SerialTX(cpu_tx) );
         assign init_done = 1'b1;
 
     end else begin:MIPS150

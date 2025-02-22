@@ -53,14 +53,6 @@ $(TARGET).elf: $(ELF_INPUT)
 %.data.dump: %.elf
 	-($(PDUMP) -j .data $^ -xS >$@ || exit 0)
 
-%.inst.hex: %.elf
-	-$(PCOPY) -j .text -O verilog $^ $@
-	-chmod -x $@
-%.data.hex: %.elf
-	-$(PCOPY) -j .data -O verilog $^ $@
-	-chmod -x $@
-
-
 %.mif: %.bin
 	bin2mif < $^ > $@
 %.coe: %.bin
@@ -69,6 +61,8 @@ $(TARGET).elf: $(ELF_INPUT)
 	bin2mem 0 < $^ > $@
 %.v: %.bin
 	bin2rom < $^ > $@
+%.hex: %.bin
+	bin2coe < $^ |tail --lines=+3 |head --lines=-1 > $@
 
 
 clean:

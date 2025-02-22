@@ -25,7 +25,9 @@ module bios_mem_24 (
 //  `define STRINGIFY_BIOS2(x) `"x/../software/bios151v3/bios151v3.hex`"
 //  `define STRINGIFY_BIOS2(x) `"x/../software/bios150v3/bios150v3.inst.hex`"
     `define STRINGIFY_BIOS2(x) `"x/../software/echo_i/echo_i.inst.hex`"
-    
+//  `define STRINGIFY_BIOS2(x) `"x/../software/testdata/testdata.hex`"
+//  `define STRINGIFY_BIOS2(x) `"x/../software/gios/gios.inst.coe`"
+
     `ifdef SYNTHESIS
         initial begin
             $readmemh(`STRINGIFY_BIOS2(`ABS_TOP), mem);
