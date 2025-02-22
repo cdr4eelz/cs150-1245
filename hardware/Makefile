@@ -6,15 +6,15 @@ VIVADO                  ?= vivado
 VIVADO_OPTS             ?= -nolog -nojournal -mode batch
 FPGA_PART               ?= xc7a100tcsg324-1
 BOARD_PART              ?= digilentinc.com:arty-a7-100:part0:1.1
-RTL_SRC                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.v"))
-RTL_GEN                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen -type f -name "*.v"))
+RTL_SRC                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src    -type f -name "*.v"))
+RTL_GEN_DISABLE         += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen_ip -type f -name "*.v"))
 RTL                     += $(RTL_SRC) ### $(RTL_GEN)
-CON_SRC                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.xdc"))
-CON_GEN                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen -type f -name "*.xdc"))
+CON_SRC                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src    -type f -name "*.xdc"))
+CON_GEN_DISABLE         += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen_ip -type f -name "*.xdc"))
 CONSTRAINTS             += $(CON_SRC) ### $(CON_GEN)
-IP_XCI                  += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen -type f -name "*.xci"))
-RTL_VHD                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.vhd"))
-IP_CHECKPOINTS          += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src -type f -name "*.dcp"))
+RTL_VHD                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src    -type f -name "*.vhd"))
+IP_CHECKPOINTS_DISABLE  += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src    -type f -name "*.dcp"))
+IP_XCI                  += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen_ip/ip_Arty.srcs/ -type f -name "*.xci"))
 TOP                     ?= ArtyA7top
 VCS                     := vcs -full64
 VCS_OPTS                := -notice -PP -line +lint=all,noVCDE +v2k -timescale=1ns/10ps -debug -sverilog +define+ABS_TOP=$(ABS_TOP) +incdir+$(ABS_TOP)/src/riscv_core
@@ -45,7 +45,7 @@ sim/%.fst: sim/%.tbi
 #sim/isa/%.fst: sim/isa/isa_testbench.tbi $(ABS_TOP)/../software/riscv-isa-tests/%.hex
 #	cd sim/isa && $(VVP) isa_testbench.tbi -fst +hex_file=$(word 2,$^) +test_name=$(basename $(notdir $(word 2,$^))) |& tee $(basename $(notdir $(word 2,$^))).log
 
-build/target.tcl: $(RTL) $(CONSTRAINTS) $(RTL_VHD) $(IP_XCI) $(IP_CHECKPOINTS)
+build/target.tcl: $(RTL) $(CONSTRAINTS) $(RTL_VHD) $(IP_XCI) # $(IP_CHECKPOINTS)
 	mkdir -p build
 	truncate -s 0 $@
 	echo "set VERBOSE                        -verbose"      >> $@
@@ -67,9 +67,9 @@ build/target.tcl: $(RTL) $(CONSTRAINTS) $(RTL_VHD) $(IP_XCI) $(IP_CHECKPOINTS)
 	echo -n "set IP_XCI { " >> $@
 	FLIST="$(IP_XCI)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
 	echo "}" >> $@
-	echo -n "set IP_CHECKPOINTS { " >> $@
-	FLIST="$(IP_CHECKPOINTS)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
-	echo "}" >> $@
+#	echo -n "set IP_CHECKPOINTS { " >> $@
+#	FLIST="$(IP_CHECKPOINTS)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
+#	echo "}" >> $@
 
 
 setup: build/target.tcl

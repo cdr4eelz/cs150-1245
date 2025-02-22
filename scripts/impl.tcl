@@ -2,6 +2,7 @@ source ../target.tcl
 
 open_checkpoint ${ABS_TOP}/build/synth/${TOP}.dcp
 
+#This section is unneeded, using "read_ip" elsewhere instead!
 #read_checkpoint /FPGA/cs150/hardware/src/temp/bios_mem/bios_mem.dcp
 #if {[string trim ${IP_CHECKPOINTS}] ne ""} {
 #    read_checkpoint ${IP_CHECKPOINTS}

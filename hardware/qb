@@ -4,10 +4,13 @@ HDIV="_____________________________________________________"
 
 reset
 make lint
-echo HDIV
+echo $(HDIV)
+
 make synth
-echo HDIV
+echo $(HDIV)
+
 make impl
-echo HDIV
+echo $(HDIV)
+
 make warn
 

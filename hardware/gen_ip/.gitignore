@@ -1,0 +1,11 @@
+# Avoid committing anything to "gen" directory, where secondary components get
+#    generated based on "master" files, such as .xci IP core files, and project
+#    itself. The project itself can be regenerated too, but easier to store it.
+
+/*
+### TODO: exempt .xci (IP details) and .xpr (project).
+!/*.tcl
+!/*.xpr
+### TODO: Figure out how to exempt the .xci deep in the directory path
+!*.xci
+

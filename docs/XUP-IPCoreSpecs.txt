@@ -23,7 +23,7 @@ CSET reset_type=SYNC
 SELECT Block_Memory_Generator xilinx.com:ip:blk_mem_gen:7.3
 CSET component_name=dmem_blk_ram
 CSET memory_type=Single_Port_RAM
-CSET coe_file=./dmem_blk_ram.coe
+CSET coe_file=./dmem_blk_ram.coe --> software/draw/draw.inst.coe
 CSET write_depth_a=4096
 CSET write_width_a=32
 CSET enable_a=Use_ENA_Pin
@@ -39,7 +39,7 @@ CSET use_byte_write_enable=true
 SELECT Block_Memory_Generator xilinx.com:ip:blk_mem_gen:7.3
 CSET component_name=imem_blk_ram
 CSET memory_type=Simple_Dual_Port_RAM
-CSET coe_file=./imem_blk_ram.coe
+CSET coe_file=./imem_blk_ram.coe --> software/zeros/zeros.coe
 CSET write_depth_a=4096
 CSET write_width_a=32
 CSET enable_a=Use_ENA_Pin
@@ -55,7 +55,7 @@ CSET use_byte_write_enable=true
 SELECT Block_Memory_Generator xilinx.com:ip:blk_mem_gen:7.3
 CSET component_name=isr_mem
 CSET memory_type=Simple_Dual_Port_RAM
-CSET coe_file=./isr_mem.coe
+CSET coe_file=./isr_mem.coe --> software/isr/isr3.coe
 CSET write_depth_a=4096
 CSET write_width_a=32
 CSET collision_warnings=ALL

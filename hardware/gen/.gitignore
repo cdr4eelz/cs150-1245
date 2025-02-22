@@ -1,5 +1,0 @@
-# Avoid committing anything to "gen" directory, where secondary components get
-#    generated based on "master" files elsewhere, such as .xci IP core files.
-
-*
-

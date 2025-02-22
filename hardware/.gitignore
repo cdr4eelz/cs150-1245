@@ -1,3 +1,4 @@
+### TODO: Update these exclusions for modern Vivado layout ###
 *.daidir
 sim/output.txt
 sim/*.tb
