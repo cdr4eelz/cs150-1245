@@ -73,8 +73,8 @@ module MemoryDDR #(
     always @(posedge clk_cpu)  init_r <= locked;
     assign init_done = init_r;
 
-    assign dcache_dout = 32'd0; //output  [31:0]  dcache_dout,
-    assign icache_dout = 32'd0; //output  [31:0]  icache_dout,
+    //assign dcache_dout = 32'd0; //output  [31:0]  dcache_dout,
+    //assign icache_dout = 32'd0; //output  [31:0]  icache_dout,
     assign d_stall = 1'b0;
     assign i_stall = 1'b0;
     assign stall = d_stall || i_stall;
@@ -87,5 +87,20 @@ module MemoryDDR #(
     assign gp_status = 16'd0;
     assign irq_pf_frame = 1'b0;
     assign irq_gp_done = 1'b0;
+
+    big_mem fake_cache_mem (
+        .clka(clk_cpu),    // input wire clka
+        .ena(1'b1),      // input wire ena
+        .wea(dcache_we),      // input wire [3 : 0] wea
+        .addra(dcache_addr[18:2]),  // input wire [16 : 0] addra
+        .dina(dcache_din),    // input wire [31 : 0] dina
+        .douta(dcache_dout),  // output wire [31 : 0] douta
+        .clkb(clk_cpu),    // input wire clkb
+        .enb(1'b1),      // input wire enb
+        .web(icache_we),      // input wire [3 : 0] web
+        .addrb(icache_addr[18:2]),  // input wire [16 : 0] addrb
+        .dinb(icache_din),    // input wire [31 : 0] dinb
+        .doutb(icache_dout)  // output wire [31 : 0] doutb
+    );
 
 endmodule

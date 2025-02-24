@@ -1,8 +1,8 @@
-#source ../target.tcl
+###source ../target.tcl
 set VERBOSE -verbose
 
-create_project ${VERBOSE} -ip -part "xc7a100tcsg324-1" "ip_Arty"
-set project_obj [get_projects "ip_Arty"]
+create_project ${VERBOSE} -ip -part "xc7a100tcsg324-1" "ip_manage"
+set project_obj [get_projects "ip_manage"]
 set_property "part"               "xc7a100tcsg324-1"                      $project_obj
 set_property "board_part"         "digilentinc.com:arty-a7-100:part0:1.1" $project_obj
 set_property "default_lib"        "xil_defaultlib"                        $project_obj

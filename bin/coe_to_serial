@@ -86,13 +86,17 @@ sleep 1
 
 echo -e  "\n\nFile written." >&2
 
-select yn in "jal" "nah"; do
-    if [ "$yn" == "jal" ]; then
-        send_str "jal ${JALADDR} "
-        echo "sent:jal ${JALADDR}" >&2
-        sleep 1
-        break
-    else
-        break
-    fi
-done
+#select yn in "jal" "nah"; do
+#   if [ "$yn" == "jal" ]; then
+#       send_str "jal ${JALADDR} "
+#       echo "sent:jal ${JALADDR}" >&2
+#
+#
+#      sleep 1
+#       break
+#   else
+#       break
+#   fi
+#done
+
+

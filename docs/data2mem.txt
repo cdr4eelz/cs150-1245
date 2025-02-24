@@ -1,0 +1,438 @@
+write_mem_info <output.mmi file>
+
+updatemem
+
+======================================
+
+write_bmm <output.bmm file>
+    Relatest to data2mem command.
+
+data2mem
+    <-bm FILENAME [.bmm]> |
+    <<[-bm FILENAME [.bmm]]>
+     <-bd FILENAME [<.elf>|<.mem>] [<[<boot [ADDRESS]>] tag TagName <TagName>...>]>...
+     <-o <u|v|h|m|b|p> FILENAME [.ucf|.v|.vhd|.mem|.bit|.bmm]>
+     <-p PARTNAME>
+     -i>> |
+    <-u> |
+    <<-bd FILENAME [.elf]> -d [e|r]> [<-o m FILENAME [.mem]>]>> |
+    <<-bm FILENAME [.bmm]>
+     <-bd FILENAME [<.elf>|<.mem>] [<[<boot [ADDRESS]>] tag TagName <TagName>...>]>...
+     <-bt FILENAME [.bit]> <-o b FILENAME [.bit]>> |
+    <<-bm FILENAME [.bmm]> <-bt FILENAME [.bit]> -d -[<o d FILENAME [.dmp]>]>> |
+    <-bx [FILEPATH]> |
+    <-mf <p PNAME PTYPE PID <a SNAME MTYPE ASTART BWIDTH <s BSIZE DWIDTH IBASE>...>...>...>> |
+    <<-pp FILENAME [.bmm]> <-o p FILENAME [.bmm]>> |
+    <-f FILENAME [.opt]> |
+    <-w [on|off] > |
+    <-q [s|e|w|i]> |
+    <-intstyle silent|ise|xflow> |
+    <-log FILENAME [.log]> |
+    <-h [<option [< option>...]> | support ]> |
+    <-encrypt [bbram | efuse] [StartCBC=<hex_string>] [Key0=<hex_string>] [HMAC=<hex_string>] [FILENAME[.nky]]>
+
+
+-bm FILENAME
+     Name of the input BMM file.  If the file extension is missing, a .bmm
+     file extension is assumed.  If this is option not unspecified, the ELF
+     or MEM root file name with a .bmm extension is assumed.  If only this
+     option is given, then the BMM file is merely syntax checked and any
+     errors are reported.  Only one -bm option can be used.
+
+
+-bd FILENAME [tag <address space names..>]
+     Name of the an input ELF or MEM data file.  If the file extension is
+     missing, .elf is assumed.  The .mem extension MUST be supplied to
+     indicate a MEM file.  If TagNames are given, only the address spaces of
+     the same names within the BMM file will be used for translation.  All
+     other input file data outside of the TagName address spaces will be
+     ignored.  As many -bd options can be used as needed.
+
+     TagNames consist of two forms.  First, the names on a processor's memory
+     map, ADDRESS_MAP/END_ADDRESS_MAP structure, allows a single name to
+     refer to the enitre group of encapsulated ADDRESS_SPACEs.  Specifying
+     only a processor's TagName will confine data translation to just that
+     processor's ADDRESS_SPACEs.  To refer to any specific ADDRESS_SPACE
+     within a named, processor's TagName group, use the processor's TagName
+     followed by a '.' character, and then the ADDRESS_SPACE's TagName;
+     example, 'cpu1.memory'.
+
+     Second, for backwards compatibility, ADDRESS_SPACEs that are defined
+     outside of any ADDRESS_MAP/END_ADDRESS_MAP structure will be encapsulated
+     inside an implied null processor name. These ADDRESS_SPACEs are therefore
+     still refered to with just their ADDRESS_SPACE name as its TagName.
+
+     Two TagName keywords are allowed, 'tag' and 'boot'.  The 'tag' keyword
+     merely seperates the address space names from the data file name.  The
+     'boot' keyword identifies the data file as containing the boot address
+     for a processor, and must preceed the 'tag' keyword.  If the optional
+     ADDRESS value follows the 'boot' keyword, then the ADDRESS value will
+     override the data file's boot address.  Only one 'boot' keyword can be
+     used for each processor TagName group.  If no 'boot' keyword is used for
+     a processor TagName group, then the last -bd data file encountered for
+     that group will be used for the processor's boot address.
+
+     If no further options are specified, '-o u FILENAME' functionality is
+     assumed.
+
+
+-bx [FILEPATH]
+     File path to output individual memory device MEM files for performing HDL
+     simulations.  If the file path isn't supplied, then the current working
+     directory is assumed.
+
+     If an OUTPUT keyword exists on a BitLane, the supplied MEM file name is
+     used for output.  Otherwise, the output MEM file name will be a combination
+     of the Address Space name and a numeric value appended to the end of the
+     Address Space name.  If TagNames are given, only the address spaces of
+     the same names within the BMM file will be used for translation.  All
+     other input file data outside of the TagName address spaces will be
+     ignored.  As many -bx options can be used as needed.
+
+     TagNames consist of two forms.  First, the names on a processor's memory
+     map, ADDRESS_MAP/END_ADDRESS_MAP structure, allows a single name to
+     refer to the enitre group of encapsulated ADDRESS_SPACEs.  Specifying
+     only a processor's TagName will confine data translation to just that
+     processor's ADDRESS_SPACEs.  To refer to any specific ADDRESS_SPACE
+     within a named, processor's TagName group, use the processor's TagName
+     followed by a '.' character, and then the ADDRESS_SPACE's TagName;
+     example, 'cpu1.memory'.
+
+     Second, for backwards compatibility, ADDRESS_SPACEs that are defined
+     outside of any ADDRESS_MAP/END_ADDRESS_MAP structure will be encapsulated
+     inside an implied null processor name. These ADDRESS_SPACEs are therefore
+     still refered to with just their ADDRESS_SPACE name as its TagName.
+
+     Data files for translation to individual memory device MEM files are
+     supplied by using the -bd option.
+
+
+-bt FILENAME
+     Name of the input BIT file.  If the file extension is missing, .bit is
+     assumed.  If the -o option is not specified, the output BIT file name
+     will have the same root file name as the input BIT file, with a '_rp'
+     appended to the end.  Also, the device type is automatically set from
+     the BIT file header, and the -p option will have no effect.
+
+
+-u
+     Update -o text output files for all Address Spaces, even if no data was
+     transformed into an Address Space.  Depending on file type, an output
+     file will be either empty, or will contain initializations of all zero.
+     If this option is not used, only Address Spaces that receive transformed
+     data will be output.
+
+
+-i
+     Ignore ELF or MEM data that is outside an address space defined in the
+     BMM file.  Otherwise, an error will be generated.
+
+
+-mf <BMM info items>
+    Create a BMM definition.  The following items define an Address Space
+    within the BMM file.  All items must be given, and must appear in the
+    order indicated.  As many groups of items can be given, to define all
+    Address Spaces within the BMM file.  As many separate '-mf' options
+    definitions as needed can used.
+
+    These definitions can substitute for a '-bm' file option, or can be used
+    to generate a BMM file.  Use the '-o p FILENAME' option to output a
+    generated BMM file.  The syntax is contained in four groups, and can be
+    combined into a single '-mf' option.
+
+
+    The User Memory Device Definition group items mean:
+
+    -mf m MNAME MSIZE <MWIDTH [MWIDTH...]>
+
+       'm'    = The following three items define an User Memory definition.
+                This allows non-BRAM memories to be defined as large, and
+                with availible configuration bits widths as needed.  A User
+                Memory Device definition must be defined before it's use,
+                either in the same '-mf' option, or in a previously separate
+                '-mf' option.
+
+       MNAME  = Alpha-numeric name of a User Defined Memory Device.
+
+       MSIZE  = Hex byte size of the User Memory Device.  I.e., 0x1FFFF.
+
+       MWIDTH = Numeric bit widths the User Memory Device can be configured
+                to.  As many bit widths can be specified as needed.
+
+
+    The Address Space Definition group items mean:
+
+    -mf <p PNAME PTYPE PID
+            <a ANAME ['w' | 'b'] ASTART BWIDTH
+                <s MTYPE BSIZE DWIDTH IBASE...>...>...>
+
+       'p'    = The following three items define an Address Map definition.
+                As many Address Map definitions are repeated back-to-back.
+                An Address Map definition must have at least one Address
+                Space definition.
+
+       PNAME  = Alpha-numeric name of the Processor Map.
+
+       PTYPE  = Alpha-numeric name of the processor type in the Address Map.
+                Legal processor types consists of 'PPC405', 'MICROBLAZE',
+                and 'PICOBLAZE'.
+
+       PID    = Numeric ID of the Address Map.
+
+       'a'    = The following three items define an Address Space definition,
+                for the previous Address Map definition.  As many Address
+                Space definitions as needed are repeated back-to-back.  An
+                Address Space definition must have at least one Address Range
+                definition.
+
+       ANAME  = Alpha-numeric name of the Address Space.
+
+      'w'|'b' = Addressing style for the Address Space definition.  A 'b'
+                specifies byte addressing. Each LSB increment will advance
+                the addressing by one byte.  A 'w' specifies word addressing.
+                Each LSB increment will advance the addressing in BWIDTH
+                bit sized values.
+
+                This item is optional, and if missing, byte addressing is
+                assumed.
+
+       ASTART = Hex address the Address Space starts from.  I.e., 0xFFF00000
+
+       BWIDTH = Numeric bit width of the bus access for the Address Space.
+
+       's'    = The following four items define an Address Range definition,
+                for the previous Address Space definition.  As many Address
+                Range definitions as needed are repeated back-to-back.
+
+       MTYPE  = The memory type the Address Range is construct of.  Legal
+                memory types are 'RAMB4', 'RAMB16', 'RAMB18', and any User
+                Defined Memory Device.
+
+       BSIZE  = Hex byte size of the Address Range.  I.e., 0x1FFFF.
+
+       DWIDTH = Numeric bit width of each bitLane within an Address Range.
+
+       IBASE  = Base alpha-numeric hierarchy/part instance name assigned to
+                each bitLane device.  To make each instance names unique, an
+                increasing numeric value is appended to the right end of the
+                root instance name.  Values start at zero.
+
+
+    The Address Template Definition group items mean:
+
+    -mf <t TNAME ['w' | 'b'] ASIZE BWIDTH
+            <s MTYPE BSIZE DWIDTH IBASE...>...>
+
+       't'    = The following three items define an Address Template definition.
+                This defines the static aspects of an address space. Then one
+                template can be used to instance multiple address spaces.
+
+       TNAME  = Alpha-numeric name of the Address Template.
+
+      'w'|'b' = Addressing style for the Address Template definition.  A 'b'
+                specifies byte addressing. Each LSB increment will advance
+                the addressing by one byte.  A 'w' specifies word addressing.
+                Each LSB increment will advance the addressing in BWIDTH
+                bit sized values.
+
+                This item is optional, and if missing, byte addressing is
+                assumed.
+
+        ASIZE = Hex byte size of the Address Template.  I.e., 0x1FFFF.
+
+       BWIDTH = Numeric bit width of the bus access for the Address Template.
+
+       's'    = The following four items define an Address Range definition,
+                for the previous Address Space definition.  As many Address
+                Range definitions as needed are repeated back-to-back.
+
+       MTYPE  = The memory type the Address Range is construct of.  Legal
+                memory types are 'RAMB4', 'RAMB16', 'RAMB18', and any User
+                Defined Memory Device.
+
+       BSIZE  = Hex byte size of the Address Range.  I.e., 0x1FFFF.
+
+       DWIDTH = Numeric bit width of each bitLane within an Address Range.
+
+       IBASE  = Base alpha-numeric hierarchy/part instance name assigned to
+                each bitLane device.  To make each instance names unique, an
+                increasing numeric value is appended to the right end of the
+                root instance name.  Values start at zero.  In addition, a
+                base instance path can begin with a '*/' syntax.  When the
+                template is expanded to an instance, instance IROOT and IBASE
+                are joined together to form a complete instance path.
+
+
+    The Address Instance Definition group items mean:
+
+    -mf i TNAME INAME ASTART IROOT
+
+       'i'    = The following four items define an Address Instance definition.
+                This defines the dynamic aspects of an address space. Then the
+                instance items can be applied to an address template, to create
+                a new address instance.
+
+       TNAME  = Alpha-numeric name of the Address Template.
+
+       INAME  = Alpha-numeric name of the Address Instance.
+
+       ASTART = Hex address the Address Space starts from.  I.e., 0xFFF00000
+
+       IROOT  = Root alpha-numeric hierarchy/part instance name applied to
+                each bitLane device.  See the description for IBASE.
+
+
+
+-pp FILENAME
+     Name of the input preprocess file.  If the file extension is missing, a
+     .bmm file extension is assumed.  If a '-o p FILENAME' option is specified
+     the preprocessed output is sent to that file.  If the file extension is
+     not specified, a .bmm extension is assumed.  If If a '-o p FILENAME' option
+     is not specified, the preprocessed output is sent to the console.  Input
+     files do not have to be a BMM file.  Any text based file can be used as
+     input.
+
+
+-o u|v|h|m|b|p|d|i FILENAME
+     The name of the output file(s).  The string preceding the file name
+     indicates which file formats are to be output.  No spaces can separate
+     the file type characters, but can appear in any order.  As many, or as
+     few file type characters can be used at once.  Upper and lower case
+     letters are equivalent.
+
+     The file type characters mean:
+
+         'u' = UCF file format, a .ucf file extension.
+         'v' = Verilog file format, a .v file extension.
+         'h' = VHDL file format, a .vhd file extension.
+         'm' = MEM file format, a .mem file extension.
+         'b' = BIT file format, a .bit file extension.
+         'p' = Preprocessed BMM info, a .bmm file extension.
+         'd' = Dump information text file, a .dmp file extension.
+         'i' = Zynq Boot Image, a .bin file extension.
+
+     The FILENAME applies to all specified output file types.  If different
+     output file names are desired for muliple output file types, use multiple
+     '-o' options for each file name and it's output file types.  If the file
+     extension is missing, the appropriate file extension will be added to
+     specified output file types.  If the file extension is specified, the
+     appropriate file extension will be added to the remaining file formats.
+     An output file contains data from all translated input data files.
+
+     NOTE: the 'm' file type is no longer used for outputting MEM files for
+           individual memory devices.  See the new -bx option for outputting
+           these MEM files.
+
+
+-p PARTNAME
+     Name of the target Xilinx part.  Use the -h option to obtain the full
+     supported part name list.
+
+
+-d a|b|e|r|u
+     Dump the contents of the input ELF or BIT file as formatted text records.
+     BIT file dumps display the BIT file commands, and the contents of each
+     BRAM.  When dumping ELF files, two optional modifier characters may
+     follow the -d option.  No spaces can separate the modifier characters,
+     but can appear in any order.  As many, or as few modifier characters can
+     be used at once. A upper case letter will disable the format type.
+
+     These modifiers mean:
+
+         'a' = ABBREVIATED mode. Controls display of header information in BIT
+                                 dumps.
+
+         'b' = BRIEF mode.       Limits the hex output of sections in ELF dumps
+                                 to 4096 bytes.
+
+         'e' = EXTENDED mode.    Display additional information for each ELF
+                                 section.
+
+         'r' = RAW mode.         This includes some redundant ELF information.
+
+         'u' = UNFORMATTED mode. Limits hex output to just hex values with no
+                                 address field or character equivalents values.
+
+
+-f FILENAME [.opt]
+     Name of an option file.  If the file extension is missing, an .opt file
+     extension is assumed.  These options are identical to the command line
+     options, just in a text file instead.  A option, and its items, must
+     appear on the same text line.  However, as many options can appear on
+     the same text line as desired.  This option can be used only once, and
+     a .opt file can't contain a -f option.
+
+
+-w [off|on]
+     Prevent or allow file overwrites.  Using this option with the 'off'
+     modifier will cause an error message to be output if a file of the same
+     name is going to be overwritten.  Using the 'on' modifier will allow
+     overwrite files without notice.  Using the '-w' with no modifiers is
+     equivalent to using a '-w on' option. This is also the default when no
+     option is given.
+
+
+-q e|w|i|s
+     Disable the output of messages.  The string following the option indicates
+     which messages types will be disabled.  No spaces can separate the message
+     type characters, but can appear in any order.  As many, or as few message
+     type characters can be used at once.  The message type string is optional.
+     Leaving the message type blank is equivalent to using '-q s'. A upper case
+     letter will enable the message type.
+
+     The message type characters mean:
+
+         's' = Disable STATUS messages.
+         'i' = Disable INFO messages.
+         'w' = Disable WARNING messages.
+         'e' = Disable ERROR messages.
+
+
+-intstyle silent | ise | xflow
+     An alternate form of the '-q' option.  Using this option is equivalent
+     to using a '-q siwe' option.
+
+
+-log FILENAME [.log]
+     Enable an output Log file.  If the file extension is missing, a .log file
+     extension is assumed.  Otherwise, the supplied extension will be persevered.
+     Log files are defaulted to disabled when no option is given.
+
+     All enabled messages will be contained in this file.
+
+
+-h option_list | all | sup[port]
+     Print help text for command line options.  If only a '-h' is given, then
+     only the option summary is output. If the '-h' is followed by a space
+     separated list of option names (without the dash), help is output for
+     the listed options.  For example, '-h bm bd i' gives help on the 'bm',
+     'bd', and 'i' options.  Use '-h all' for help on all options.  Lastly,
+     use '-h support' to list the devices the tool supports.  The keyword
+     'support' can be abbreviated up to 'sup'.
+
+
+-encrypt [bbram | efuse]
+         [StartCBC = <hex_string>]
+         [Key0 = <hex_string>]
+         [HMAC = <hex_string>]
+         [FILENAME[.nky]]
+     Specifies a standard Xilinx key file for encryption operations.
+
+     The optional "bbram | efuse" keywords control what key source will
+     contain the decryption key in the FPGA. If a key source keyword isn't
+     given, "bbram" will be used as the default key source.
+
+     The optional "StartCBC, Key0, and HMAC" keywords allow a override
+     key to entered on the tool command line.  Defining one of these keys
+     will override the corresponding key in a key file.  However, the key
+     in the key file will not be updated with the defined key.
+
+     If the optional file name is not given, a new key file with a new set
+     of keys is created and then used.  If the file name is given, but the
+     file does not exist, a new key file is created with file name given with
+     a new set of keys, and then used.  If the key file does exist, that files
+     with its key is used.
+
+
+
+data2mem -w off

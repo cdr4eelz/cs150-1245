@@ -26,3 +26,6 @@ report_utilization -file post_place_utilization.rpt
 report_timing_summary -warn_on_violation -file post_route_timing_summary.rpt
 
 write_bitstream -force ${TOP}.bit
+
+### write_mem_info test.mmi
+### write_bmm      test.bmm
