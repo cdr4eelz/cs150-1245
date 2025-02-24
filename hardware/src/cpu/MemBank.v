@@ -70,7 +70,7 @@ module MemBank #(
                 4'b0001: _hot_DC = 1'b1;                        //  0x1
                 4'b0110: _hot_IB = XTRA_IMEM && 1'b1; //MemWriteDX_; //XTRA:Scratch-IMEM 0x6
                 4'b0101: _hot_DB = XTRA_IMEM && 1'b1;        //XTRA:Scratch-DMEM 0x5
-                4'b1100: _hot_ISR = MemWriteDX_; //ISR// 0xC
+                4'b1100: _hot_ISR = 1'b1; //MemWriteDX_; //ISR// 0xC
             endcase
         end
     end
@@ -104,7 +104,7 @@ module MemBank #(
     assign IMEM_DATA = MUX_IMEM;
 
 
-    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB, RData_IB;
+    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB, RData_IB, RData_ISR;
     reg  [31: 0] MUX_DMEM;
     always @(*) begin:_MUX_DMEM_
         case (P_selD)
@@ -114,6 +114,7 @@ module MemBank #(
             4'b0001: MUX_DMEM = RData_DC;                       //  0x1
             4'b0101: MUX_DMEM = (XTRA_DMEM)?RData_DB:DEAD_DMEM;//XTRA: Scratchpad-DMEM  0x5
             4'b0110: MUX_DMEM = (XTRA_IMEM)?RData_IB:DEAD_DMEM;//XTRA: Scratchpad-IMEM  0x6
+            4'b1100: MUX_DMEM = RData_ISR;                      //  0xC
             default: MUX_DMEM = DEAD_DMEM;
         endcase // CAUTIOUS trapping of EVERY case
     end
@@ -199,11 +200,12 @@ module MemBank #(
     isr_mem bram_isr
     ( .clka(clk), .ena(!stall && _hot_ISR),
         .addra(DMEM_ADDR[13:2]),
-      /*.douta(RData_IB),//OUT-32*/
+        .douta(RData_ISR),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
     // INSTRUCTION Fletch (sic :)
-      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-      .enb(1'b1), .doutb(INST_ISR) //No use for hoti_ISR_
+        .clkb(clk),   .addrb(IMEM_ADDR[13:2]),
+        .enb(1'b1),   .web(4'b0000),
+        .dinb(32'd0), .doutb(INST_ISR) //No use for hoti_ISR_
     ) /* synthesis syn_noprune=1 */;
 
 
