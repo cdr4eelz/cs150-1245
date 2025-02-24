@@ -66,6 +66,18 @@ build/target.tcl: $(RTL) $(CONSTRAINTS) $(RTL_VHD) $(IP_XCI) # $(IP_CHECKPOINTS)
 #	echo -n "set IP_CHECKPOINTS { " >> $@
 #	FLIST="$(IP_CHECKPOINTS)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
 #	echo "}" >> $@
+	echo '#=========================================#' >> $@
+	echo 'create_project $(VERBOSE) -part $(FPGA_PART) -in_memory "mem_proj"' >> $@
+	echo 'set project_obj                          [get_projects "mem_proj"]' >> $@
+	echo 'set_property "part"               "$(FPGA_PART)"     [get_projects "mem_proj"]' >> $@
+	echo 'set_property "board_part"         "$(BOARD_PART)"    [get_projects "mem_proj"]' >> $@
+	echo 'set_property "default_lib"        "xil_defaultlib"   [get_projects "mem_proj"]' >> $@
+	echo 'set_property "simulator_language" "Mixed"            [get_projects "mem_proj"]' >> $@
+	echo 'set_property "target_language"    "Verilog"          [get_projects "mem_proj"]' >> $@
+# CORE CONTAINERS hold generated IP files in zip archive. Difficult outside Vivado.
+	echo 'set_property coreContainer.enable 0                  [get_projects "mem_proj"]' >> $@
+	echo 'set_property DESIGN_MODE RTL                   [ current_fileset ]' >> $@
+	echo '#=========================================#' >> $@
 
 
 setup: build/target.tcl

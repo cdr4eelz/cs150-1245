@@ -10,9 +10,10 @@ int main(void)
     {
         while (!RECV_CTRL) ;
         char byte = RECV_DATA;
+        if (byte == 0x03) return 0;
         while (!TRAN_CTRL) ;
         TRAN_DATA = byte;
     }
 
-    return 0;
+    return 1;
 }

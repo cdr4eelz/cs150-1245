@@ -92,13 +92,13 @@ module MemoryDDR #(
         .clka(clk_cpu),    // input wire clka
         .ena(1'b1),      // input wire ena
         .wea(dcache_we),      // input wire [3 : 0] wea
-        .addra(dcache_addr[18:2]),  // input wire [16 : 0] addra
+        .addra(dcache_addr[16:2]),  // input wire [16 : 0] addra
         .dina(dcache_din),    // input wire [31 : 0] dina
         .douta(dcache_dout),  // output wire [31 : 0] douta
         .clkb(clk_cpu),    // input wire clkb
         .enb(1'b1),      // input wire enb
         .web(icache_we),      // input wire [3 : 0] web
-        .addrb(icache_addr[18:2]),  // input wire [16 : 0] addrb
+        .addrb(icache_addr[16:2]),  // input wire [16 : 0] addrb
         .dinb(icache_din),    // input wire [31 : 0] dinb
         .doutb(icache_dout)  // output wire [31 : 0] doutb
     );
