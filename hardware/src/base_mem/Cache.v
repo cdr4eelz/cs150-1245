@@ -116,29 +116,32 @@ module Cache #(
     // block ram for the cache:
     // 8kb
     // 256 rows / 32 bytes per row
-    cache_data_blk_ram cache_data(
-        .clka(clk),
-        .ena(mem_en),
-        .wea(data_we),
-        .addra(index_hold),
-        .dina(data_line_in),
-        .clkb(clk),
-        .rstb(rst),
-        .enb(mem_en),
-        .addrb(index),
-        .doutb(data_line_out));
+    cache_data_blk_ram cache_data (
+        .clka(clk),            // input wire clka
+        .ena(mem_en),          // input wire ena
+        .wea(data_we),         // input wire [31 : 0] wea
+        .addra(index_hold),    // input wire [7 : 0] addra
+        .dina(data_line_in),   // input wire [255 : 0] dina
+        .clkb(clk),            // input wire clkb
+        .rstb(rst),            // input wire rstb
+        .enb(mem_en),          // input wire enb
+        .addrb(index),         // input wire [7 : 0] addrb
+        .doutb(data_line_out)  // output wire [255 : 0] doutb
+    );
 
-    cache_tag_blk_ram cache_tag(
-        .clka(clk),
-        .ena(mem_en),
-        .wea(tag_we),
-        .addra(index_hold),
-        .dina(tag_line_in),
-        .clkb(clk),
-        .rstb(rst),
-        .enb(mem_en),
-        .addrb(index),
-        .doutb(tag_line_out));
+    cache_tag_blk_ram cache_tag (
+        .clka(clk),            // input wire clka
+        .ena(mem_en),          // input wire ena
+        .wea(tag_we),          // input wire [0 : 0] wea
+        .addra(index_hold),    // input wire [7 : 0] addra
+        .dina(tag_line_in),    // input wire [20 : 0] dina
+        .clkb(clk),            // input wire clkb
+        .rstb(rst),            // input wire rstb
+        .enb(mem_en),          // input wire enb
+        .addrb(index),         // input wire [7 : 0] addrb
+        .doutb(tag_line_out)   // output wire [20 : 0] doutb
+    );
+
 
     // Assignments for the cache block ram:
     assign mem_en  = (ns == IDLE) || (|data_we) || re;

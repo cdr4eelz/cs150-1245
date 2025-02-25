@@ -27,8 +27,8 @@ all: objs elfs mifs coes vees dumps
 %.bin: %.elf
 	$(PRE)objcopy --only-section=.text -O binary $< $@
 
-%.hex: %.elf
-	$(PRE)objcopy --only-section=.text -O verilog $< $@
+%.hex: %.bin
+	bin2coe < $^ |tail --lines=+3 |head --lines=-1 > $@
 
 %.mif: %.bin
 	bin2mif < $< > $@
