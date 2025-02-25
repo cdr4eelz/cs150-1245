@@ -1,5 +1,5 @@
 SECTIONS
 {
-  . = 0x50001000;
+  . = 0x60001000;
   .text : { *(.start); *(.rodata.*) *(.dss .data) *(.text) }
 }

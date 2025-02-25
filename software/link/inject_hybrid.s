@@ -3,4 +3,6 @@
 
 _start:
     li      $sp, 0x50003000
-    j       main
+    jal     main
+    nop
+
