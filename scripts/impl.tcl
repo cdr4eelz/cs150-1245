@@ -12,7 +12,7 @@ if {[string trim ${CONSTRAINTS}] ne ""} {
     read_xdc ${CONSTRAINTS}
 }
 
-opt_design
+opt_design -debug_log -verbose
 place_design
 write_checkpoint -force ${TOP}_placed.dcp
 phys_opt_design

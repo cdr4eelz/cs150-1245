@@ -100,7 +100,7 @@ build/impl/$(TOP).bit: build/synth/$(TOP).dcp $(ABS_TOP)/../scripts/impl.tcl
 impl: build/impl/$(TOP).bit
 all: build/impl/$(TOP).bit
 
-warn: impl
+warn: build/synth/synth.log build/impl/impl.log
 	egrep -e '^WARNING|^CRITICAL WARNING' -C3 --color=always build/synth/synth.log build/impl/impl.log || \
 		egrep -i -C0 -e 'Errors|Warnings|Critical Warnings' --color=always build/synth/synth.log build/impl/impl.log
 
