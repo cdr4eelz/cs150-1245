@@ -4,7 +4,7 @@
 `define IDX_ADDR_OFFSET 4:2
 `define IDX_ADDR_INDEX 12:5
 `define IDX_ADDR_TAG 27:13
-`define IDX_ADDR_DRAM 27:5
+`define IDX_ADDR_DRAM 27:5   //23'b WIDTH
 
 `define IDX_TAG_TAG 18:0
 `define IDX_TAG_VALID 19

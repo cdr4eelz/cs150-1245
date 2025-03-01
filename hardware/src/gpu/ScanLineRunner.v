@@ -15,7 +15,7 @@ module ScanLineRunner #(
     input           caf_full,
     input           wdf_full,
     output          caf_wren,
-    output  [ 30:0] caf_addr,
+    output  [ 27:0] caf_addr,
     output          wdf_wren,
     output  [127:0] wdf_data,
     output  [ 15:0] wdf_mask,
@@ -176,7 +176,7 @@ module ScanLineRunner #(
     end
 
     assign SLR_MASTER_ready = (cs_M[MH_IDLE]);
-    assign caf_addr  = {6'b000000, cpu_addr[27:3]}; //Make 31-bit DDR-address (@double-word)
+    assign caf_addr  = {3'b000, cpu_addr[27:3]}; //WAS:6'd0, Make 31-bit DDR-address (@double-word)
     assign caf_wren     = (cs_M[MH_DDR1]);
     assign wdf_wren    = (cs_M[MH_DDR1] || cs_M[MH_DDR2]);
     assign wdf_data      = (LITTLEWORDIAN)

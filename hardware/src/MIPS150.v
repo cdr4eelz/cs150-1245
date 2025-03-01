@@ -4,6 +4,7 @@ module MIPS150 #(
     parameter CPU_FREQ  = 50_000_000,
     parameter BAUD_RATE =    115_200,
     parameter PC_BOOT   = 32'h4000_0000, //NOTE: h6000_0000 for SCRATCH_IMEM
+    parameter PC_ISR    = 32'hC000_0180,
     parameter CPU_CORE  = "" //Defaults to "MIPS" (MIPS.core)
 )(
     input   clk, rst, stall,
@@ -82,33 +83,33 @@ end else begin:MEMS //"MIPS" & any others wanting MemBank
 
     // Memory Bank & Memory Mapped I/O
     MemBank #(
-        .CPU_FREQ(CPU_FREQ),
-        .BAUD_RATE(BAUD_RATE)
+        .CPU_FREQ(CPU_FREQ), .BAUD_RATE(BAUD_RATE)
     ) bank (
-        .clk(clk), .rst(rst), .stall(stall),
+        .clk(clk), .rst(rst), .stall(stall),                    //input
     // Memory/IO <==> CPU-CORE
-        .IMEM_ADDR(IMEM_ADDR), .DMEM_ADDR(DMEM_ADDR),
-        .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
-        .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
-        .PCinBIOSDX_(PCinBIOSDX_),
-        ._WDataMasked(_WDataMasked),
-        ._WriteMask(_WriteMask),
+        .IMEM_ADDR  (IMEM_ADDR),    .DMEM_ADDR(DMEM_ADDR),      //input[31:0]
+        .IMEM_DATA  (IMEM_DATA),    .DMEM_DATA(DMEM_DATA),      //output[31:0]
+        .MemToRegDX_(MemToRegDX_),  .MemWriteDX_(MemWriteDX_),  //input
+        .PCinBIOSDX_(PCinBIOSDX_),                              //input
+        ._WDataMasked(_WDataMasked),                            //input[31:0]
+        ._WriteMask (_WriteMask),                               //input[3:0]
     // Interrupts <==> COP0150
-        .irq_uart0(irq_uart0), .irq_uart1(irq_uart1),
+        .irq_uart0(irq_uart0), .irq_uart1(irq_uart1),           //output
     // Serial (UART):
-        .SerialRX(SerialRX), .SerialTX(SerialTX),
+        .SerialRX(SerialRX), .SerialTX(SerialTX), //input-RX, output-TX
     // Memory Caches:
-        .dcache_addr(dcache_addr),   .icache_addr(icache_addr),
-        .dcache_we  (dcache_we  ),   .icache_we  (icache_we  ),
-        .dcache_re  (dcache_re  ),   .icache_re  (icache_re  ),
-        .dcache_din (dcache_din ),   .icache_din (icache_din ),
-        .dcache_dout(dcache_dout),   .icache_dout(icache_dout),
+        .dcache_addr(dcache_addr),  .icache_addr(icache_addr),  //output[31:0]
+        .dcache_we  (dcache_we  ),  .icache_we  (icache_we  ),  //output[3:0]
+        .dcache_re  (dcache_re  ),  .icache_re  (icache_re  ),  //output
+        .dcache_din (dcache_din ),  .icache_din (icache_din ),  //output[31:0]
+        .dcache_dout(dcache_dout),  .icache_dout(icache_dout),  //input[31:0]
     // GPU control:
-        .pf_vframe(pf_vframe),   .gp_vcode(gp_vcode), .gp_vframe(gp_vframe),
-        .pf_wframe(pf_wframe),   .gp_wcode(gp_wcode), .gp_wframe(gp_wframe),
-                                 .gp_rcode(gp_rcode),
-        .pf_status(pf_status),                        .gp_status(gp_status)
+        .pf_vframe(pf_vframe),  .gp_vcode(gp_vcode),    .gp_vframe(gp_vframe),  //output
+        .pf_wframe(pf_wframe),  .gp_wcode(gp_wcode),    .gp_wframe(gp_wframe),  //output[31:0]
+                                .gp_rcode(gp_rcode),                            //input[31:0]
+        .pf_status(pf_status),                          .gp_status(gp_status)   //input[15:0]
     );
+
 
 end endgenerate
 
@@ -134,7 +135,7 @@ generate if (CPU_CORE=="ECHODDR") begin:ECHODDR
 end else begin:MIPS
 
     CPUMIPS #(
-        .PC_BOOT(PC_BOOT)
+        .PC_BOOT(PC_BOOT), .PC_ISR(PC_ISR)
     ) core (
         .clk(clk), .rst(rst), .stall(stall),
     // Regfile (async-read, sync-write)

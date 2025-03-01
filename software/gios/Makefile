@@ -1,5 +1,6 @@
 TARGET ?= gios
-LDSTYLE ?= as_bioscache
+LDSTYLE ?= min_bios_extra
+#LDSTYLE ?= as_bioscache
 #LDSTYLE ?= as_bioscratch
 
 include ../makefile.pre

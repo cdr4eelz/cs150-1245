@@ -6,7 +6,7 @@ module CPUMIPS #(
     parameter COLT45_SCOPE=0, COLT45_BRK=0,
     parameter COLT45_PC=0, COLT45_REGREAD=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
-    input   clk, rst, stall,
+    input  clk, rst, stall,
 
 // Regfile lines
     output          REGFILE_we,

@@ -31,7 +31,7 @@ module GraphicsProcessor #(
 //DDR FIFOs (read-only for GP cmd):
     input           raf_full,
     output          raf_wren,
-    output  [ 30:0] raf_addr,
+    output  [ 27:0] raf_addr, //WAS: [30:0]
     output          rdf_rden,
     input           rdf_wren,
     input   [127:0] rdf_data,
@@ -227,7 +227,7 @@ module GraphicsProcessor #(
 
 
 //FETCH GPCode chunks & present as 32-bit INSTruction stream
-    assign raf_addr  = {6'd0, code_chunk, 2'b00}; //Chunk addr in 64-bit "resolution"
+    assign raf_addr  = {3'd0, code_chunk, 2'b00}; //WAS: 3'd0  Chunk addr in 64-bit "resolution"
     assign raf_wren  = (cs_M==MS_PROC) && !rdf_rden && chunk_advance;
     //NOTE:Don't base raf_wren on !raf_full when using RequestController!!!
 

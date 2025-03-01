@@ -26,6 +26,7 @@
 //      - Read only path to access the instructions from DDR2
 //-----------------------------------------------------------------------------
 
+
 module RequestController(
     input           clk,
     input           rst,
@@ -37,49 +38,49 @@ module RequestController(
 
     // Inst-cache (inputs);         [Read/Write/Stall]
     input           inst_caf_wren,
-    input [ 33:0]   inst_caf_cadr,
+    input [ 30:0]   inst_caf_cadr, // {cmd-3,addr-28} WAS: [33:0]
     input           inst_wdf_wren,
-    input [143:0]   inst_wdf_mdat,
+    input [143:0]   inst_wdf_mdat, // {mask-16,data-128}
     input           inst_rdf_rden,
     input           inst_stall,
     // Data-cache (inputs);         [Read/Write/Stall]
     input           data_caf_wren,
-    input [ 33:0]   data_caf_cadr,
+    input [ 30:0]   data_caf_cadr, // {cmd-3,addr-28} WAS: [33:0]
     input           data_wdf_wren,
-    input [143:0]   data_wdf_mdat,
+    input [143:0]   data_wdf_mdat, // {mask-16,data-128}
     input           data_rdf_rden,
     input           data_stall,
 
     // GraphicsProcessor (inputs);  [Read-only]
     input           gcmd_raf_wren,
-    input [ 30:0]   gcmd_raf_addr,
+    input [ 27:0]   gcmd_raf_addr, //WAS: [30:0]
     input           gcmd_rdf_rden,
     // PixelFeeder (inputs);        [Read-only]
     input           pixf_raf_wren,
-    input [ 30:0]   pixf_raf_addr,
+    input [ 27:0]   pixf_raf_addr, //WAS: [30:0]
     input           pixf_rdf_rden,
 //NOTE:Read-only interface uses only subset of fifo signals
 
     // FrameFiller (inputs);        [Write-only]
     input           fill_waf_wren,
-    input [ 30:0]   fill_waf_addr,
+    input [ 27:0]   fill_waf_addr, //WAS [30:0]
     input           fill_wdf_wren,
     input [143:0]   fill_wdf_mdat,
     // LineEngine (inputs);         [Write-only]
     input           line_waf_wren,
-    input [ 30:0]   line_waf_addr,
+    input [ 27:0]   line_waf_addr, //WAS [30:0]
     input           line_wdf_wren,
     input [143:0]   line_wdf_mdat,
     // Bypass (inputs);             [Write-only]
     input           bpas_waf_wren,
-    input [ 30:0]   bpas_waf_addr,
+    input [ 27:0]   bpas_waf_addr, //WAS [30:0]
     input           bpas_wdf_wren,
     input [143:0]   bpas_wdf_mdat,
 //NOTE:Write-only interface uses only subset of fifo signals
 
     // To DDR2 FIFOs (outputs);     [Master access]
     output reg          caf_wren,
-    output reg [ 33:0]  caf_cadr,
+    output reg [ 30:0]  caf_cadr, // {cmd-3,addr-28} WAS: [33:0]
     output reg          wdf_wren,
     output reg [143:0]  wdf_mdat,
     output              rdf_rden,
@@ -138,7 +139,7 @@ module RequestController(
     reg  [11:0] serviced_reads; // extra bit b/c 2 chunks - use [11:1] to cmpare.
 
     wire fetch_issued;
-    assign fetch_issued = caf_wren && (caf_cadr[33:31] == 3'b001) && !ff_full;
+    assign fetch_issued = caf_wren && (caf_cadr[30:28] == 3'b001) && !ff_full;
 
     always @(posedge clk) begin
         if(rst)

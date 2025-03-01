@@ -16,7 +16,7 @@ module GPU #(
 //DDR-FIFOs (Read-only for GraphicsProcessor):
     input           gcmd_raf_full,
     output          gcmd_raf_wren,
-    output  [ 30:0] gcmd_raf_addr,
+    output  [ 27:0] gcmd_raf_addr, //WAS: [30:0]
     output          gcmd_rdf_rden,
     input           gcmd_rdf_wren,
     input   [127:0] gcmd_rdf_data,
@@ -24,7 +24,7 @@ module GPU #(
 //DDR-FIFOs (Write-only for ScanLineRunner):
     input           slr_waf_full,
     output          slr_waf_wren,
-    output  [ 30:0] slr_waf_addr,
+    output  [ 27:0] slr_waf_addr, //WAS: [30:0]
     input           slr_wdf_full,
     output          slr_wdf_wren,
     output  [ 15:0] slr_wdf_mask,
@@ -131,7 +131,7 @@ module GPU #(
     localparam SLR_FF       = 0,
                 SLR_LE      = 1,
                 SLR_EL      = 2;
-    localparam  SLR__CNT = 3;
+    localparam   SLR__CNT   = 3;
 
     wire [(SLR__CNT)-1:0] SLRs_ready;
     wire [(SLR__CNT)-1:0] SLRs_valid;
@@ -182,9 +182,11 @@ module GPU #(
         .FF_frame (fill_frame),
     //DDR FIFOs (write-only):
         .caf_full(1'b1), .wdf_full(1'b1),
+/* verilator lint_off PINCONNECTEMPTY */
         .caf_wren    (), .wdf_wren    (),
         .caf_addr    (), .wdf_mask    (),
         .wdf_data(),
+/* verilator lint_on  PINCONNECTEMPTY */
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_FF]                    ),
         .SLR_valid(SLRs_valid           [SLR_FF]                    ),
@@ -216,9 +218,11 @@ module GPU #(
         .LE_frame  (line_frame),
     //DDR FIFOs (write-only):
         .caf_full(1'b1), .wdf_full(1'b1),
+/* verilator lint_off PINCONNECTEMPTY */
         .caf_wren    (), .wdf_wren    (),
         .caf_addr    (), .wdf_mask    (),
         .wdf_data(),
+/* verilator lint_on  PINCONNECTEMPTY */
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_LE]                    ),
         .SLR_valid(SLRs_valid           [SLR_LE]                    ),

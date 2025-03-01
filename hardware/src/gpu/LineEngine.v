@@ -21,7 +21,7 @@ module LineEngine #(
     input           caf_full,
     input           wdf_full,
     output          caf_wren,
-    output  [ 30:0] caf_addr,
+    output  [ 27:0] caf_addr,
     output          wdf_wren,
     output  [127:0] wdf_data,
     output  [ 15:0] wdf_mask,
@@ -207,11 +207,11 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
     assign adv1   = SLR_ready, //Used iif MH_RUN1 implying SLR_valid
             adv2  = 1'b1;
 
-    assign caf_wren       = 1'b0,
-            caf_addr   = 31'bx,
-            wdf_wren     = 1'b0,
-            wdf_data       = 128'bx,
-            wdf_mask  = 16'bx;
+    assign caf_wren     = 1'b0,
+            caf_addr    = 28'bx,
+            wdf_wren    = 1'b0,
+            wdf_data    = 128'bx,
+            wdf_mask    = 16'bx;
 
 end else begin:_NO_SLR_
 
@@ -222,7 +222,7 @@ end else begin:_NO_SLR_
     wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
     wire [ 2:0] offset_pixel  = (LITTLEWORDIAN) ? x[2:0] : ~x[2:0];
 
-    assign caf_addr  = {6'b000000, cpu_addr[27:3]}, //Turn into 31-bit "DoubleWord" or DDR-address
+    assign caf_addr  = {3'b000, cpu_addr[27:3]}, //Turn into 31-bit "DoubleWord" or DDR-address
             wdf_mask = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} },
             wdf_data      = {4{color_r}}, //Replicate same color on all 4 pixels of both writes
             caf_wren     = (cs_M[MH_RUN1]),

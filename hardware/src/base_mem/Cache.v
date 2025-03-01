@@ -18,7 +18,7 @@
 //    stall   : indicates the CPU should STALL
 //    dout    : 32-bit Data-OUT result after a read
 //    caf_wren: WRite ENable for Command/Address Fifo
-//    caf_cadr: {3-bit-Cmd,31-bit-Address} Double-Request for Command/Address Fifo
+//    caf_cadr: {3-bit-Cmd,28-bit-Address} Double-Request for Command/Address Fifo
 //    wdf_mdat: {16-bit-Mask,128-bit-DATa} input (must issue 2x per write-cmd)
 //    wdf_wren: WRite-ENable scalar for ddr2 Write-Data-Fifo
 //    rdf_rden: ReaD-ENable  scalar for ddr2  Read-Data-Fifo
@@ -44,9 +44,9 @@ module Cache #(
     output          stall,
     output [31:0]   dout,
     output          rdf_rden,
-    output [33:0]   caf_cadr,
+    output [30:0]   caf_cadr, //{cmd-3,addr-28}  WAS: [33:0]
     output          caf_wren,
-    output [143:0]  wdf_mdat,
+    output [143:0]  wdf_mdat, //{mask-16,data-128}
     output          wdf_wren,
 
     // Needed for set-associative cache
@@ -202,18 +202,18 @@ module Cache #(
 
     // FIFO output partial values:
     wire [  2:0]  f_cmd;
-    wire [ 30:0]  f_addr;
+    wire [ 27:0]  f_addr; //WAS: [30:0]
     wire [127:0]  f_data;
     wire [ 15:0]  f_mask;
     assign f_cmd  = (cs == WRITE1) ? 3'b000 : 3'b001;
-    assign f_addr = {6'b0, addr_hold[`IDX_ADDR_DRAM], 2'b0};
+    assign f_addr = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00}; //{pad-3,addr-23,pad-2} //WAS: pad-6
     assign f_data = {4{din_hold}};
     // active low, so we have to flip the bits
     assign f_mask = (cs == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
 
     // FIFO output assignments:
     assign caf_wren = (cs == WRITE1) || (cs == FETCH );
-    assign caf_cadr = {f_cmd, f_addr};
+    assign caf_cadr = {f_cmd, f_addr}; // {cmd-3,addr-28}
     assign wdf_wren = (cs == WRITE1) || (cs == WRITE2);
     assign wdf_mdat = {f_mask, f_data};
     assign rdf_rden = (cs == READ1 ) || (cs == READ2 );

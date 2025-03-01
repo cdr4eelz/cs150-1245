@@ -15,7 +15,7 @@ module FrameFiller #(
     input           caf_full,
     input           wdf_full,
     output          caf_wren,
-    output [ 30:0]  caf_addr,
+    output [ 27:0]  caf_addr,
     output          wdf_wren,
     output [ 15:0]  wdf_mask,
     output [127:0]  wdf_data,
@@ -109,11 +109,11 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
             T_DONE_LINE = slr_advance,
             T_DONE_FULL = slr_advance && lastY;
 
-    assign caf_wren       = 1'b0,
-            caf_addr   = 31'bx,
-            wdf_wren     = 1'b0,
-            wdf_data       = 128'bx,
-            wdf_mask  = 16'bx;
+    assign caf_wren     = 1'b0,
+            caf_addr    = 28'bx,
+            wdf_wren    = 1'b0,
+            wdf_data    = 128'bx,
+            wdf_mask    = 16'bx;
 
 end else begin:_NO_SLR_
 
@@ -131,12 +131,12 @@ end else begin:_NO_SLR_
             T_DONE_LINE = mem_advance && lastX,
             T_DONE_FULL = mem_advance && lastX && lastY;
 
-    wire [31:0] head_addr = {4'h1, framebits, y[9:0], x[9:0], 2'b00}; //"Byte" address
-    assign caf_wren       = ((cs == S_RUN) && !x[2]), //Skip address on odds's
-            caf_addr   = {6'd0, head_addr[27:3]},  //Turn into 31-bit "DoubleWord" or DDR-address
-            wdf_wren     = (cs == S_RUN),            //Data & mask on odd & even
-            wdf_data       = {4{color_r}},             //Replicate same color on all 4 pixels of both writes
-            wdf_mask  = {4{4'b0000}};             //Write all bytes on every write
+    wire [31:0] head_addr   = {4'h1, framebits, y[9:0], x[9:0], 2'b00}; //"Byte" address
+    assign caf_wren         = ((cs == S_RUN) && !x[2]), //Skip address on odds's
+            caf_addr        = {3'b000, head_addr[27:3]},  //Turn into 31-bit "DoubleWord" or DDR-address
+            wdf_wren        = (cs == S_RUN),            //Data & mask on odd & even
+            wdf_data        = {4{color_r}},             //Replicate same color on all 4 pixels of both writes
+            wdf_mask        = {4{4'b0000}};             //Write all bytes on every write
 
 end endgenerate
 

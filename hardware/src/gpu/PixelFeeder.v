@@ -19,7 +19,7 @@ module PixelFeeder #(
 //DDR FIFOs (read-only) @cpu_clk_g:
     input           raf_full,
     output          raf_wren,
-    output [ 30:0]  raf_addr,
+    output [ 27:0]  raf_addr,
     output          rdf_rden,
     input           rdf_wren,
     input  [127:0]  rdf_data,
@@ -188,7 +188,7 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
     wire raf_advance = raf_wren && !raf_full; //NOTE: Always raf_full until we assert raf_wren first!
 
-    assign raf_addr  = {6'd0, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
+    assign raf_addr  = {3'b000, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
     assign raf_wren  = (state == FETCH); //Declare when FETCH addr ready (but might not happen)
     assign irq_frame = interrupt_r;
     assign pf_status = {

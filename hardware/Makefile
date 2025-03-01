@@ -115,6 +115,7 @@ program-force:
 vivado: build
 	cd build && nohup $(VIVADO) </dev/null >/dev/null 2>&1 &
 
+## TODO: Activate "-Wall" but have config file to handle lint_off actions as needed...
 lint:
 	verilator -DABS_TOP=$(ABS_TOP) --lint-only --top-module $(TOP) --top glbl \
 		$(ABS_TOP)/sim_models/glbl.v -I$(ABS_TOP)/sim_models -I$(ABS_TOP)/gen \

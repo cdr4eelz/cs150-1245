@@ -12,6 +12,7 @@ module InstructionPreview #(
 
 //TODO:Consider a pretty simple casex for this
 generate if (USE_DECODER) begin:_DECODER_
+/* verilator lint_off PINCONNECTEMPTY */
     InstructionControl decodeControl(
         ._inst(_inst),
         // Global control signals
@@ -27,6 +28,7 @@ generate if (USE_DECODER) begin:_DECODER_
         // Specific to Instruction-Preview
         .Deviant(couldBranch)
     );
+/* verilator lint_on PINCONNECTEMPTY */
 end else begin:_COMPUTE_
     wire [5:0] _opcode_ = _inst[31:26];
     wire [5:0] _funct_  = _inst[5:0];
