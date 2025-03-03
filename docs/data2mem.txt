@@ -1,3 +1,8 @@
+https://docs.amd.com/r/2022.1-English/ug1580-updatemem/Using-UpdateMEM
+
+
+======================================
+
 write_mem_info <output.mmi file>
 
 updatemem
