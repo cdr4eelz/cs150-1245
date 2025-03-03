@@ -97,11 +97,6 @@ module ArtyA7top #(
         .Outputs(clean_combo) );
     assign { buttons[3:0], switches[1:0] } = clean_combo;  // Separate the signals
 
-    assign LED[0] = locked_top_clocks ^ buttons[0];
-    assign LED[1] = init_done ^ buttons[1]; //CK_RST ^ buttons[1];
-    assign LED[2] = reset_top_clocks ^ buttons[2]; //switches[0] && switches[1] && buttons[2];
-    assign LED[3] = rst_cpu ^ buttons[3]; //switches[0] && switches[1] && buttons[3];
-    // TODO: Map RGB LEDs in constraints file and drive them with PWM
 
     // Borrowed from 2024/2019 top level IOBs to drive/sense UART serial lines...
     wire cpu_tx, cpu_rx;
@@ -155,7 +150,7 @@ module ArtyA7top #(
         // Critical clock & reset
             .clk_cpu        (clk_cpu),
             .clk_pix        (clk_pix),
-            .clk_mig        (clk_mig),
+            .clk_mig        (clk_in_100MHz_g), //WAS:clk_mig
             .clk_mig_ref    (clk_mig_ref),
             .rst_cpu_mem    (rst_cpu),
             .rst_cpu_bus    (rst_cpu),  //TODO: Distinguish "mem" & "bus" & CPU resets?
@@ -231,7 +226,14 @@ module ArtyA7top #(
 
         assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
 
-    end endgenerate
+
+        assign LED[0] = (locked_top_clocks & init_done) ^ buttons[0];
+        assign LED[1] = (reset_top_clocks & rst_cpu) ^ buttons[1];
+        assign LED[2] = stall_icache ^ buttons[2];
+        assign LED[3] = stall_dcache ^ buttons[3];
+        // TODO: Map RGB LEDs in constraints file and drive them with PWM
+
+    end endgenerate;
 
     //assign {VGA_HS_O,VGA_VS_O,VGA_R,VGA_G,VGA_B} = 14'd0; // No video yet
     VGATestPattern vga_gen (

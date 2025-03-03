@@ -187,7 +187,7 @@ module Cache #(
     // State transition logic:
     always @(*) begin
         ns = IDLE;
-        case(cs)
+        if (!rst) case(cs)
             IDLE   : ns = (we_hold) ?                     WRITE1
                                     : ((read_miss) ? FETCH   : IDLE );
             WRITE1 : ns = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;

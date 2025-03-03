@@ -126,16 +126,20 @@ module PixelFeeder #(
     pixel_fifo pf_fifo (
         .rst(cpu_rst_g), //Internal cross-clock sync
         //WRITE: CPU clock domain
-        .wr_clk(cpu_clk_g),
-        .full(feeder_full),
-        .wr_en(feeder_wren), //rdf_wren
-        .din(feeder_data), //rdf_data
+        .wr_clk(cpu_clk_g),     // input
+        .full(feeder_full),     // output
+        .wr_en(feeder_wren),    //input              rdf_wren
+        .din(feeder_data),      // input wire [127:0]  rdf_data
         //READ: DVI clock domain
-        .rd_clk(dvi_clk_g),
-        .empty(feeder_empty),
-        .rd_en(video_ready && isRunning),
-        .dout(feeder_raw) //NOTE: First-word-fallthrough but no "valid" signal avail!
+        .rd_clk(dvi_clk_g),     // input
+        .empty(feeder_empty),   // output
+        .rd_en(video_ready && isRunning), // input
+        .dout(feeder_raw),      // output  NOTE: First-word-fallthrough but no "valid" signal avail!
+        // NEW UNKNOWN SIGNALS
+        .wr_rst_busy( /*wr_rst_busy*/ ),    // output wire wr_rst_busy
+        .rd_rst_busy( /*rd_rst_busy*/ )     // output wire rd_rst_busy
     );
+
 
 //FAULT and ACTVE detection
     reg  video_fault_dvi, video_fault_cpu, video_fault, video_active;

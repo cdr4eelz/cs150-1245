@@ -45,7 +45,7 @@ module MemoryDDR #(
     output [0:0]    ddr3_cs_n,      // output   WAS: DDR2_CS0_B,
     output [1:0]    ddr3_dm,        // output   WAS: [7:0] DDR2_DM
     output [0:0]    ddr3_odt,       // output   WAS: DDR2_ODT0
-    output          ddr3_reset_n,   // ??? TODO: Examine this...relates to "init_done"?
+    output          ddr3_reset_n,   // ???
 
 // Cache <=> CPU:
     input   [31:0]  dcache_addr,    icache_addr,
@@ -72,13 +72,13 @@ module MemoryDDR #(
     assign init_done = init_calib_complete; //Assign rather than renaming
 
 
-//DONE: Check use of "fifo_caf_rdy" vs. old "!fifo_caf_full"
+//TODO: Check use of "fifo_caf_rdy" vs. old "!fifo_caf_full"
 //        Also check "fifo_wdf_rdy" vs. old "!fifo_wdf_full"
 //      Seems like current use is okay. It controls a FIFO but doesn't propagate.
 
 // MIG feeds clock/rst back to us (use for clock-crossing FIFOs)
-    wire         ui_clk;
-    wire         ui_clk_sync_rst;
+    wire            ui_clk;
+    wire            ui_clk_sync_rst;
 
 // FIFOs <=> DDR3/MIG:                      [clk_cpu domain?]
 //  wire            fifo_caf_empty; //FIFO: <Unused>
@@ -104,8 +104,6 @@ module MemoryDDR #(
     wire            rcon_rdf_rden;  //RCON: "ready"
     wire            rcon_rdf_wren;  //FIFO: "valid"
     wire [127:0]    ALLR_rdf_data;  //FIFO: ALL-Readers         NOTE:Same width
-
-
 
     //Inst/Data-Caches <=> RequestController:   [Read-Write]
     wire         inst_caf_full,     data_caf_full;
@@ -212,7 +210,7 @@ module MemoryDDR #(
       //.app_wdf_wren(fifo_wdf_wren) //DDR2  <= FIFO: "valid"
         .app_wdf_rdy        (fifo_wdf_rdy),             // output         WAS: !.app_wdf_afull(fifo_wdf_full)
       //.app_wdf_afull(fifo_wdf_full) //DDR2 =>  FIFO: "!ready"
-        .app_wdf_end(1'b0),  // input
+        .app_wdf_end(1'b1),  // input
       //TODO: ???? Is "end" a new requirement???
 
         .app_rd_data        (fifo_rdf_data),            // output [127:0] WAS: .rd_data_fifo_out
@@ -327,26 +325,26 @@ module MemoryDDR #(
     // The RequestController gives each cache the illusion of having
     //   exclusive DDR2 Access:
     RequestController rcon (
-        .clk(cpu_clk_g),
-        .rst(rst_cpu_bus),
+        .clk(clk_cpu),
+        .rst(rst_cpu_bus), //MAYBE: rst_cpu_mem???
     // Master/RequestController interface:
-        .caf_full(rcon_caf_full), //RCON  <= FIFO: "!ready"
+        .caf_full(rcon_caf_full), //input  RCON  <= FIFO: "!ready"
         .caf_wren(rcon_caf_wren), //RCON =>  FIFO: "valid"
         .caf_cadr(rcon_caf_cadr), //RCON =>  FIFO: {cmd,addr}
-        .wdf_full(rcon_wdf_full), //RCON  <= FIFO: "!ready"
+        .wdf_full(rcon_wdf_full), //input RCON  <= FIFO: "!ready"
         .wdf_wren(rcon_wdf_wren), //RCON =>  FIFO: "valid"
         .wdf_mdat(rcon_wdf_mdat), //RCON =>  FIFO: {mask,data}
         .rdf_rden(rcon_rdf_rden), //RCON =>  FIFO: "ready" (ignored?)
-        .rdf_wren(rcon_rdf_wren), //RCON  <= FIFO: "valid"
+        .rdf_wren(rcon_rdf_wren), //input RCON  <= FIFO: "valid"
     // Read/Write/Stall interfaces:
         //Data-Cache interface:         //Inst-Cache interface:
         .data_caf_full(data_caf_full),  .inst_caf_full(inst_caf_full), //OUT
-        .data_caf_wren(data_caf_wren),  .inst_caf_wren(inst_caf_wren),
-        .data_caf_cadr(data_caf_cadr),  .inst_caf_cadr(inst_caf_cadr),
+        .data_caf_wren(data_caf_wren),  .inst_caf_wren(inst_caf_wren), //IN
+        .data_caf_cadr(data_caf_cadr),  .inst_caf_cadr(inst_caf_cadr), //IN [30:0] {cmd-3,addr-28}
         .data_wdf_full(data_wdf_full),  .inst_wdf_full(inst_wdf_full), //OUT
-        .data_wdf_wren(data_wdf_wren),  .inst_wdf_wren(inst_wdf_wren),
-        .data_wdf_mdat(data_wdf_mdat),  .inst_wdf_mdat(inst_wdf_mdat),
-        .data_rdf_rden(data_rdf_rden),  .inst_rdf_rden(inst_rdf_rden),
+        .data_wdf_wren(data_wdf_wren),  .inst_wdf_wren(inst_wdf_wren), //IN
+        .data_wdf_mdat(data_wdf_mdat),  .inst_wdf_mdat(inst_wdf_mdat), //IN {mask-16,data-128}
+        .data_rdf_rden(data_rdf_rden),  .inst_rdf_rden(inst_rdf_rden), //IN
         .data_rdf_wren(data_rdf_wren),  .inst_rdf_wren(inst_rdf_wren), //OUT
         .data_stall(d_stall),           .inst_stall(i_stall),
 // New for cp4-5:
@@ -391,7 +389,7 @@ module MemoryDDR #(
     Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) icache (
-        .clk(cpu_clk_g),
+        .clk(clk_cpu),
         .rst(rst_cpu_bus),
         // <= Cache Client (CPU)
         .addr(icache_addr),
@@ -407,10 +405,10 @@ module MemoryDDR #(
         .stall(i_stall),
         .dout (icache_dout),
         // => RequestController
-        .rdf_rden(inst_rdf_rden),
+        .rdf_rden(inst_rdf_rden), // IN
         .caf_cadr(inst_caf_cadr), // {cmd-3,addr-28}
         .caf_wren(inst_caf_wren),
-        .wdf_mdat(inst_wdf_mdat),
+        .wdf_mdat(inst_wdf_mdat), // {mask-16,data-128}
         .wdf_wren(inst_wdf_wren),
         //Unused in this project
         .tag_hit(), .tag_valid(), .state()
@@ -420,7 +418,7 @@ module MemoryDDR #(
     Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) dcache (
-        .clk(cpu_clk_g),
+        .clk(clk_cpu),
         .rst(rst_cpu_bus),
         // <= Cache Client (CPU)
         .addr(dcache_addr),
@@ -447,15 +445,41 @@ module MemoryDDR #(
 
     assign stall = d_stall || i_stall;
 
-    assign video_valid = 1'b1;
-    assign video       = 32'h00_80_80_FF;
+    //assign video_valid = 1'b1;
+    //assign video       = 32'h00_80_80_FF;
 
-    assign pf_status = 16'd0;
-    assign irq_pf_frame = 1'b0;
+    //assign pf_status = 16'd0;
+    //assign irq_pf_frame = 1'b0;
     //assign gp_rcode = 32'd0;
     //assign gp_status = 16'd0;
     //assign irq_gp_done = 1'b0;
 
+    // For feeding pixels to the DVI module:
+    PixelFeeder #(
+        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
+        .LITTLEWORDIAN(LITTLEWORDIAN)
+    ) pf (
+        .cpu_clk_g(clk_cpu),
+        .cpu_rst_g(rst_cpu_bus),
+        .dvi_clk_g(clk_pix),
+        .dvi_rst_g(rst_pix),
+    //DDR FIFOs (read-only):
+        .raf_full(pixf_raf_full),
+        .raf_wren(pixf_raf_wren), //OUT
+        .raf_addr(pixf_raf_addr), //OUT
+        .rdf_wren(pixf_rdf_wren), //OUT
+        .rdf_rden(pixf_rdf_rden),
+        .rdf_data(ALLR_rdf_data),
+    // DVI driver:
+        .video_ready(video_ready),
+        .video_valid(video_valid), //OUT
+        .video      (video), //OUT
+    // FRAME control <=> CPU:
+        .pf_vframe(pf_vframe),
+        .pf_wframe(pf_wframe),
+        .pf_status(pf_status), //OUT
+        .irq_frame(irq_pf_frame) //OUT
+    ) /* synthesis syn_noprune=1 */;
 
     GPU #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
