@@ -29,22 +29,22 @@ module ArtyA7top #(
     output [3:0]    VGA_B,      // PMOD VGA: 4-bit blue
 
     // DDR3 Inouts
-    inout [15:0]    ddr3_dq,        // inout [63:0] DDR2_D
-    inout [1:0]     ddr3_dqs_n,     // inout [7:0] DDR2_DQS_N
-    inout [1:0]     ddr3_dqs_p,     // inout [7:0] DDR2_DQS_P
+    inout [15:0]    ddr3_dq,        // inout WAS: [63:0] DDR2_D
+    inout [1:0]     ddr3_dqs_n,     // inout WAS: [7:0] DDR2_DQS_N
+    inout [1:0]     ddr3_dqs_p,     // inout WAS: [7:0] DDR2_DQS_P
     // DDR3 Outputs
-    output [13:0]   ddr3_addr,      // output [12:0] DDR2_A
-    output [2:0]    ddr3_ba,        // output [1:0] DDR2_BA
-    output          ddr3_ras_n,     // output DDR2_RAS_B
-    output          ddr3_cas_n,     // output DDR2_CAS_B
-    output          ddr3_we_n,      // output DDR2_WE_B
-    output [0:0]    ddr3_ck_p,      // output [1:0] DDR2_CLK_P
-    output [0:0]    ddr3_ck_n,      // output [1:0] DDR2_CLK_N
-    output [0:0]    ddr3_cke,       // output DDR2_CKE0
-    output [0:0]    ddr3_cs_n,      // output DDR2_CS0_B,
-    output [1:0]    ddr3_dm,        // output [7:0] DDR2_DM
-    output [0:0]    ddr3_odt,       // output DDR2_ODT0
-    output          ddr3_reset_n    // ??? Use this for FIFO reset?
+    output [13:0]   ddr3_addr,      // output WAS: [12:0] DDR2_A
+    output [2:0]    ddr3_ba,        // output WAS: [1:0] DDR2_BA
+    output          ddr3_ras_n,     // output WAS: DDR2_RAS_B
+    output          ddr3_cas_n,     // output WAS: DDR2_CAS_B
+    output          ddr3_we_n,      // output WAS: DDR2_WE_B
+    output [0:0]    ddr3_ck_p,      // output WAS: [1:0] DDR2_CLK_P
+    output [0:0]    ddr3_ck_n,      // output WAS: [1:0] DDR2_CLK_N
+    output [0:0]    ddr3_cke,       // output WAS: DDR2_CKE0
+    output [0:0]    ddr3_cs_n,      // output WAS: DDR2_CS0_B,
+    output [1:0]    ddr3_dm,        // output WAS: [7:0] DDR2_DM
+    output [0:0]    ddr3_odt,       // output WAS: DDR2_ODT0
+    output          ddr3_reset_n    // output WAS: ???
 );
 
     // BUFFER the board clock (manually switch between Arty-A7 vs PYNQ)
