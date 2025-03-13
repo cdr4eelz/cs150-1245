@@ -1,3 +1,19 @@
+
+Using "`define SKIP_CALIB" approach did not help MIG simulate it quicker.
+  Instead it never asserted calibration-done and didn't function.
+If MIG fails, make sure the timing/resolution is fast enough (see Example).
+
+parameter SIMULATION            = "TRUE";
+parameter SIM_BYPASS_INIT_CAL   = "FAST";
+
+
+
+    // MIG System reset - Default polarity of sys_rst pin is Active Low.
+    // System reset polarity will change based on the option
+    // selected in GUI.
+        input sys_rst
+
+
 Interesting options to aid pre-bugging:
 
 vlog:
@@ -50,3 +66,76 @@ $display("<format>", exp1, exp2, ...);  // formatted write to display
   any other characters between the quotes are displayed
   the expressions are taken in order of the format indication
   ,, in the expression list inserts one space in the output
+
+
+
+
+Interesting commands: "fork" "wait" "disable" of compeeting named block:
+
+  initial
+  begin : Logging
+     fork
+        begin : calibration_done
+           wait (init_calib_complete);
+           $display("Calibration Done");
+           #50000000.0;
+           if (!tg_compare_error) begin
+              $display("TEST PASSED");
+           end
+           else begin
+              $display("TEST FAILED: DATA ERROR");
+           end
+           disable calib_not_done;
+            $finish;
+        end
+
+        begin : calib_not_done
+           if (SIM_BYPASS_INIT_CAL == "SIM_INIT_CAL_FULL")
+             #2500000000.0;
+           else
+             #1000000000.0;
+           if (!init_calib_complete) begin
+              $display("TEST FAILED: INITIALIZATION DID NOT COMPLETE");
+           end
+           disable calibration_done;
+            $finish;
+        end
+     join
+  end
+
+
+  parameter tCK = 3077;
+  parameter REFCLK_FREQ           = 200.0;
+  parameter CLKIN_PERIOD          = 10000;
+
+  localparam real REFCLK_PERIOD = (1000000.0/(2*REFCLK_FREQ));
+  localparam RESET_PERIOD = 200000; //in pSec
+  localparam real SYSCLK_PERIOD = tCK;
+
+//**************************************************************************//
+
+  //**************************************************************************//
+  // Reset Generation
+  //**************************************************************************//
+  initial begin
+    sys_rst_n = 1'b0;
+    #RESET_PERIOD
+      sys_rst_n = 1'b1;
+   end
+
+   assign sys_rst = RST_ACT_LOW ? sys_rst_n : ~sys_rst_n;
+
+  //**************************************************************************//
+  // Clock Generation
+  //**************************************************************************//
+
+  initial
+    sys_clk_i = 1'b0;
+  always
+    sys_clk_i = #(CLKIN_PERIOD/2.0) ~sys_clk_i;
+
+
+  initial
+    clk_ref_i = 1'b0;
+  always
+    clk_ref_i = #REFCLK_PERIOD ~clk_ref_i;

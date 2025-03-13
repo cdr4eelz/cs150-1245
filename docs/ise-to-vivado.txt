@@ -2,6 +2,11 @@ ise-to-vivado
 
 ** It seems like the Arty-A7-100 board is recognized best by older Vivado versions. Currently, 2019 seems the best for recognizing the board in the repo, and also PMODs potentially involved. On an Arty, the key PMOD is the RGB (dual PMOD) dealio. Also, not that the Arty board also maps an existing UART to the PL fabric, so it seems that the extra USB-UART PMOD is unnecessary! It would be cool to make the PYNQ work out, but the DDR3_SDRAM via Zynq ARM CPU AXI4 interface (mysterious setup) makes it difficult unless living with BLOCKRAM or "SPRITES-ONLY" or whatever.
 
+# SAMPLE false path constraints taken from FIFO reset (THIS IS LIKE "TIG" IN OLD .ucf CONSTRATINTS)
+set_false_path -through [get_ports rst] -to [get_pins -of [get_cells -hier -filter name=~*rstbt*/*] -filter {REF_PIN_NAME == PRE}]  
+set_false_path -from [get_cells -hierarchical -filter {NAME =~ *rstbt*/*rst_reg[*]}]
+set_false_path -from [get_cells -hierarchical -filter {NAME =~ *rstbt*/*rst_reg_reg}]
+
 
 Every tool, script, and IP is different between ISE and Vivado. Makefiles can be used, but generally they share their role with TCL scripts.
 
@@ -182,3 +187,13 @@ If you want to set all paths between two clock domains:
 Because you want to set false paths from i/o ports,use
     set_false_path -from [get_ports FanControl_PWM]
     set_false_path -from [get_ports FanControl_Tacho]
+===============================================================
+The port from which all paths are to be set as false paths:
+    set_false_path -from [get_ports ...]
+    set_false_path -to [get_pins {...}]
+    set_false_path -through  [get_pins {...}]
+    set_false_path -from  [get_pins {...}]
+    set_false_path -from [get_cells <x>] -to [get_cells <y>]
+If you want to set all paths between two clock domains:
+    set_false_path -from [get_clocks <x>] -to [get_clocks <y>]
+===============================================================

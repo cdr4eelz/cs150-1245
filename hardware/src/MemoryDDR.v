@@ -160,8 +160,7 @@ module MemoryDDR #(
     wire [143:0] bpas_wdf_mdat = {bpas_wdf_mask,bpas_wdf_data};
 
 
-    mig_arty_a7_100 #(
-    ) u_mig_arty_a7_100 (
+    mig_arty_a7_100 u_mig_arty_a7_100 ( // There are no parameters available
         // DDR3 InOuts
         .ddr3_dq                (ddr3_dq),              // inout  [15:0]
         .ddr3_dqs_n             (ddr3_dqs_n),           // inout  [1:0]
@@ -210,15 +209,15 @@ module MemoryDDR #(
       //.app_wdf_wren(fifo_wdf_wren) //DDR2  <= FIFO: "valid"
         .app_wdf_rdy        (fifo_wdf_rdy),             // output         WAS: !.app_wdf_afull(fifo_wdf_full)
       //.app_wdf_afull(fifo_wdf_full) //DDR2 =>  FIFO: "!ready"
-        .app_wdf_end(1'b1),  // input
-      //TODO: ???? Is "end" a new requirement???
+        .app_wdf_end(fifo_wdf_wren),  // input
+      //NOTE: The "_end" are obsolete & will be removed in future.
 
         .app_rd_data        (fifo_rdf_data),            // output [127:0] WAS: .rd_data_fifo_out
       //.rd_data_fifo_out(fifo_rdf_data) //DDR2 =>  FIFO: data
         .app_rd_data_valid  (fifo_rdf_wren),            // output         WAS: .rd_data_valid
       //.rd_data_valid(fifo_rdf_wren) //DDR2 =>  FIFO: "valid"
         .app_rd_data_end(/* app_rd_data_end */),  // output
-      //TODO: ???? Is "end" a new requirement???
+      //NOTE: The "_end" are obsolete & will be removed in future.
 
         // Unknown new signals, appearing to have a "request/acknowledge" pattern to them
         .app_sr_req         (1'b0),                     // input
