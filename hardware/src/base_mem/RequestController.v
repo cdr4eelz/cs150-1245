@@ -3,8 +3,8 @@
 // Author: James Parker
 //
 // This module is designed to give the caches the illusion of having exclusive
-//   access to the DDR2 FIFOs. Additionally, it interleaves requests when both
-//   caches attempt to access DDR2 simultaneously. The instruction cache is
+//   access to the DDR3 FIFOs. Additionally, it interleaves requests when both
+//   caches attempt to access DDR3 simultaneously. The instruction cache is
 //   given priority (i.e. it's requests are serviced first).
 //
 // When there are access collisions, this module tells the data cache that the
@@ -12,18 +12,18 @@
 //
 // There are some optimizations this module does not attempt that you may
 //   experiment with for the performance contest:
-//      - Recognizing duplicate read requests and performing only one DDR2 access
+//      - Recognizing duplicate read requests and performing only one DDR3 access
 //      - Giving reads priority (because we don't block on completing writes)
 //
 // v2 Changes:
 // To support the framebuffer, there are three new access paths:
-//      - Write-only path from the line engine to DDR2
-//      - Write-only path from the color filler to the DDR2
-//      - Read-only path from DDR2 to a module that feeds DVI with pixels.
+//      - Write-only path from the line engine to DDR3
+//      - Write-only path from the color filler to the DDR3
+//      - Read-only path from DDR3 to a module that feeds DVI with pixels.
 //
 // v3 changes: (Ian Juch)
 // To support graphics command processor:
-//      - Read only path to access the instructions from DDR2
+//      - Read only path to access the instructions from DDR3
 //-----------------------------------------------------------------------------
 
 
@@ -31,7 +31,7 @@ module RequestController(
     input           clk,
     input           rst,
 
-    // DDR2 FIFOs (inputs);         [Master access]
+    // DDR3 FIFOs (inputs);         [Master access]
     input           caf_full,
     input           wdf_full,
     input           rdf_wren,
@@ -78,7 +78,7 @@ module RequestController(
     input [143:0]   bpas_wdf_mdat,
 //NOTE:Write-only interface uses only subset of fifo signals
 
-    // To DDR2 FIFOs (outputs);     [Master access]
+    // To DDR3 FIFOs (outputs);     [Master access]
     output reg          caf_wren,
     output reg [ 30:0]  caf_cadr, // {cmd-3,addr-28} WAS: [33:0]
     output reg          wdf_wren,
@@ -207,7 +207,7 @@ module RequestController(
 
 
     //**************************************************************************
-    // This section is for determining the signals to the DDR2 fifos and the
+    // This section is for determining the signals to the DDR3 fifos and the
     // full signals to send to the various access paths.
     //************************************************************************
 

@@ -3,14 +3,15 @@
 */
 
 module ArtyA7top #(
-    parameter CPU_FREQ  = 50_000_000, // LATER (used primarily for BAUD rate calc)
-    parameter BAUD_RATE =    115_200,
-    CPU_CORE = "" //"DUMPUART"
+    parameter   CPU_FREQ        =50_000_000, // LATER (used primarily for BAUD rate calc)
+                BAUD_RATE       =   115_200,
+    parameter   SCREEN_WIDTH    = 800,
+                SCREEN_HEIGHT   =     600,
+    parameter   CPU_CORE        = "" //"DUMPUART"
 )(
     input CLK_100MHz,  // Board clock for Arty-A7
     //input CLK_125MHz,  // Board clock for PYNQ
-    input CK_RST,  // "ChipKit Reset" (Active LOW)
-    // TODO: Debounce CK_RST and feed a simple reset module from it
+    input CK_RST_N,  // "ChipKit Reset" (Active LOW)
 
     // Basic GPIO (Note that some IOs are ignored if not present on other board)
     input   [1:0]   SWITCH,  // Only 2 of 4 switches, PYNQ has only 2
@@ -48,20 +49,29 @@ module ArtyA7top #(
 );
 
     // BUFFER the board clock (manually switch between Arty-A7 vs PYNQ)
-    wire clk_in_100MHz_g, clk_temp_1;  // Arty-A7 or PYNQ ARM-CPU clk-out
-    IBUF board_clk_ibuf (.I(CLK_100MHz), .O(clk_temp_1));  // Vivado refuses IBUFG!
-    BUFG board_clk_bufg (.I(clk_temp_1), .O(clk_in_100MHz_g));  // Must explicitly add BUFG.
+    wire clk_in_100MHz; //, clk_in_100MHz_g;  // Arty-A7 or PYNQ ARM-CPU clk-out
+    IBUF board_clk_ibuf (.I(CLK_100MHz), .O(clk_in_100MHz));  // Vivado refuses IBUFG!
+    //BUFG board_clk_bufg (.I(clk_temp_1), .O(clk_in_100MHz_g));  // Must explicitly add BUFG.
     //wire clk_in_125MHz_G;  // PYNQ board clockDDR
     //IBUFG (.I(CLK_125MHz), .O(clk_in_125MHz_g));
 
-    wire reset_top_clocks, locked_top_clocks;  // Participate in startup sequence
-    wire clk_mig, clk_mig_ref, clk_cpu, clk_pix;
+    //TODO: Create a decent "reset tree" to resume components in a good sequence
+    //NOTE: Early reset logic using board-clock "clk_in_100MHz"
+    wire reset_top_clocks;
+    ButtonClean #( .Width(1) ) clean_rst_top (
+        .Inputs(!CK_RST_N),
+        .Clock(clk_in_100MHz), .Reset(1'b0),
+        .Outputs(reset_top_clocks)
+    );  //assign reset_top_clocks = !CK_RST_N;  // Top CLocks are first to come out of reset
+
+    wire locked_top_clocks;  // Participate in startup sequence
+    wire clk_mig_sys, clk_mig_ref, clk_cpu, clk_pix;
     clk_wiz_0 top_clocks (  // Generate various clocks for components
     // Clock in ports
-        .clk_in_100MHz(clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
+        .clk_in_100MHz(clk_in_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
         //.clk_in_125MHz(clk_in_125MHz_g),  // INPUT for PYNQ (from board)
     // Clock out ports (rebuild clk_wiz if needs change)
-        .clk_mig_100MHz     (clk_mig),      // output MIG primary clk
+        .clk_mig_100MHz     (clk_mig_sys),  // output MIG primary clk
         .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG
         .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
         .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
@@ -70,13 +80,6 @@ module ArtyA7top #(
         .locked(locked_top_clocks)  // output locked (ACTIVE HIGH)
     );  // NOTE: clk_wiz puts BUFG on its output clocks
 
-    //TODO: Create a decent "reset tree" to resume components in a good sequence
-    //NOTE: Early reset logic must use board-clock "clk_in_100MHz_g"
-    ButtonClean #( .Width(1) ) clean_rst_top (
-        .Inputs(!CK_RST),
-        .Clock(clk_in_100MHz_g), .Reset(1'b0),
-        .Outputs(reset_top_clocks)
-    );  //assign reset_top_clocks = !CK_RST;  // Top CLocks are first to come out of reset
     // Then some other support components come out of reset (like DRAM)
     wire rst_cpu, rst_pix, init_done;  // TODO: CPU comes out of reset after everything else
     Synchronizer #( .Width(1) ) sync_rst_cpu (
@@ -85,7 +88,7 @@ module ArtyA7top #(
     Synchronizer #( .Width(1) ) sync_rst_pix (
         .async_signal(!locked_top_clocks || !init_done),
         .Clock(clk_pix),  .sync_signal(rst_pix));  // NOTE: This clock is bad when PLL not locked!
-    
+
 
     // Debounce all switch & button signals
     wire [5:0] clean_combo;
@@ -117,7 +120,7 @@ module ArtyA7top #(
         assign init_done = 1'b1;
 
     end else if (CPU_CORE=="DUMPUART") begin:DUMPUART
-        
+
         CPUDumpUART #( .CPU_FREQ(CPU_FREQ),  .BAUD_RATE(BAUD_RATE)
         ) CPU ( .clk(clk_cpu),  .rst(rst_cpu),  .stall(1'b0),
             .SerialRX(cpu_rx),  .SerialTX(cpu_tx) );
@@ -145,12 +148,12 @@ module ArtyA7top #(
         wire        irq_pf_frame,   irq_gp_done;
 
         MemoryDDR #(
-            .SIM_ONLY(1'b0)
+            .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT)
         ) mem_arch (
         // Critical clock & reset
             .clk_cpu        (clk_cpu),
             .clk_pix        (clk_pix),
-            .clk_mig        (clk_in_100MHz_g), //WAS:clk_mig
+            .clk_mig_sys    (clk_mig_sys),
             .clk_mig_ref    (clk_mig_ref),
             .rst_cpu_mem    (rst_cpu),
             .rst_cpu_bus    (rst_cpu),  //TODO: Distinguish "mem" & "bus" & CPU resets?
@@ -198,7 +201,7 @@ module ArtyA7top #(
         );
 
         assign video_ready = 1'b0;
-        
+
         // MIPS 150 CPU
         MIPS150 #(
             .CPU_FREQ(CPU_FREQ),

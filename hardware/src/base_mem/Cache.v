@@ -65,17 +65,16 @@ module Cache #(
                 CWRITEB  = 3'b110;
 
     //registers:
-    // state for DDR2 FSM
+    // state for DDR3 FSM
     reg [2:0]     cs, ns;
     assign state = cs;
     // register to hold first 128-bits read back
-    // from DDR2
+    // from DDR3
     reg [127:0]   first_read;
 
-    // register data in to write into the cache
-    // either:
-    // a) 1 cycle later - after a tag check
-    // b) many cycles later - after doing a fetch from DDR2
+    // Register data in to write into the cache either:
+    //   a) 1 cycle later - after a tag check
+    //   b) Many cycles later - after fetch from DDR3
     reg [31:0]    din_hold;
 
     // register address
