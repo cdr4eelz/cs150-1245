@@ -17,7 +17,7 @@
 `define SZ_TAGLINE `SZ_TAG+`SZ_METADATA
 `define SZ_CACHELINE 256 
 
-`define CAP_CACHE 256
-`define SZ_CACHE $clog2(`CAP_CACHE)
+// `define CAP_CACHE 256 //UNUSED?
+// `define SZ_CACHE $clog2(`CAP_CACHE) //UNUSED?
 
 `endif //CACHE

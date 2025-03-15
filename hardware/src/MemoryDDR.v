@@ -215,13 +215,13 @@ module MemoryDDR #(
       //.rd_data_fifo_out(fifo_rdf_data)    //DDR2 =>  FIFO: data
         .app_rd_data_valid  (fifo_rdf_wren),    // output         WAS: .rd_data_valid
       //.rd_data_valid(fifo_rdf_wren)       //DDR2 =>  FIFO: "valid"
-        .app_rd_data_end    (/* UNUSED */),     // output
+        .app_rd_data_end    ( ),     // output  UNUSED
       //NOTE: The "_end" are depricated & unused, to be removed from MIG
 
         // Unknown new signals, appearing to have a "request/acknowledge" pattern to them
-        .app_sr_req (1'b0), .app_sr_active  (/* UNUSED */), // input / output
-        .app_ref_req(1'b0), .app_ref_ack    (/* UNUSED */), // input / output
-        .app_zq_req (1'b0), .app_zq_ack     (/* UNUSED */), // input / output
+        .app_sr_req (1'b0), .app_sr_active  ( ), // input / output  UNUSED
+        .app_ref_req(1'b0), .app_ref_ack    ( ), // input / output  UNUSED
+        .app_zq_req (1'b0), .app_zq_ack     ( ), // input / output  UNUSED
 
         // System Clock Port (MIG generates various other clocks from this)
         .sys_clk_i          (clk_mig_sys),      // input  Currently 100MHz
@@ -233,7 +233,7 @@ module MemoryDDR #(
         .ui_clk             (clk_mig_ui),       // output WAS: .clk0_tb(ddr2_clock_tb)
         .ui_clk_sync_rst    (rst_mig_ui),       // output WAS: .rst0_tb(ddr2_rst_tb)
 
-        .device_temp        (/* device_temp */) // output [11:0]
+        .device_temp        ( ) // output [11:0]  UNUSED
     );
     // OLD DDR2 (MIG) module:
 /*  mig_v3_61 #(
@@ -263,8 +263,7 @@ module MemoryDDR #(
                                                     //DDR2  <= FIFO: always-ready
         .rd_data_valid    (fifo_rdf_wren),          //DDR2 =>  FIFO: "valid"  BECOMES: .app_rd_data_valid
         .rd_data_fifo_out (fifo_rdf_data)           //DDR2 =>  FIFO: data     BECOMES: .app_rd_data
-    ) */;
-
+    ); */
 
 // Clock-crossing FIFOs (RCON[clk_cpu] <=> FIFOs <=> MIG[clk_mig_ui]):
     //{Command,Address} Fifo (RCON => FIFO => DDR3-MIG)...
@@ -277,11 +276,11 @@ module MemoryDDR #(
         .din    (rcon_caf_cadr),  //input[30:0] : FIFO  <= RCON: {cmd-3,addr-28} = 31
     // FIFO-RD: DDR3 clock-domain
         .rd_clk (clk_mig_ui),       // input    : MIG sys_clk_i clock
-        .empty  (/*fifo_caf_empty*/), // output : <Unused>
+        .empty  ( ), // output : <Unused> (fifo_caf_empty)
         .rd_en  (fifo_caf_rdy),     // input    : FIFO  <= DDR3: "ready"  WAS: !fifo_caf_full
         .valid  (fifo_caf_wren),    // output   : FIFO =>  DDR3: "valid"
         .dout   (fifo_caf_cadr)  //output[30:0] : FIFO =>  DDR3: {cmd-3,addr-28} = 31
-    ) /* synthesis syn_noprune=1 */;
+    );
 
     //Write-mask/Data Fifo (RCON => FIFO => DDR3-MIG)...
     mig_wdf ddr3_mdat_fifo (
@@ -293,44 +292,44 @@ module MemoryDDR #(
         .din    (rcon_wdf_mdat), //input[143:0] : FIFO  <= RCON: {mask-16,data-128} = 144
         // FIFO-RD: DDR3 clock-domain
         .rd_clk (clk_mig_ui),       // input    : MIG sys_clk_i clock
-        .empty  (/*fifo_wdf_empty*/), // output : <Unused> (WHY?)
+        .empty  ( ), // output : <Unused> (fifo_wdf_empty)
         .rd_en  (fifo_wdf_rdy),     // input    : FIFO  <= DDR3: "ready"  WAS: !fifo_wdf_full
         .valid  (fifo_wdf_wren),    // output   : FIFO =>  DDR3: "valid"
         .dout   (fifo_wdf_mdat) //output[143:0] : FIFO =>  DDR3: {mask-16,data-128} = 144
-    ) /* synthesis syn_noprune=1 */;
+    );
 
     //Read Data Fifo (DDR3 => FIFO => RCON):
     mig_rdf  ddr3_read_fifo (
         .rst(rst_mig_ui),           // input    : NOT rst_cpu_bus?
         // FIFO-WR: DDR3 clock-domain
         .wr_clk(clk_mig_ui),        // input    : MIG sys_clk_i
-        .full  (/*fifo_rdf_full*/), // output   : FIFO =>  DDR3: N/A (always ready)
+        .full  ( ), // output   : FIFO =>  DDR3: N/A (always ready) fifo_rdf_full
         .wr_en (fifo_rdf_wren),     // input    : FIFO  <= DDR3: "ready"
         .din   (fifo_rdf_data),  //input[127:0] : FIFO  <= DDR3: data-128
         // FIFO-RD: RCON clock-domain
         .rd_clk(clk_cpu),           // input    : CPU/RCON clock
-        .empty (/*rcon_rdf_empty*/), // output  : <Unused>
+        .empty ( ), // output  : <Unused>  rcon_rdf_empty
         .rd_en (rcon_rdf_rden),     // input    : FIFO  <= RCON: "ready"
         .valid (rcon_rdf_wren),     // output   : FIFO =>  RCON: "valid"
         .dout  (ALLR_rdf_data)  //output[127:0] : FIFO => ALL-Readers (direct) data-128
-    ) /* synthesis syn_noprune=1 */;
+    );
 
     // The RequestController gives each cache the illusion of having
     //   exclusive DDR3 Access:
-    RequestController rcon (
+/*    RequestController rcon (
         .clk(clk_cpu),
         .rst(rst_cpu_bus),  //MAYBE: rst_cpu_mem???
     // Master/RequestController interface:
-/*
-        .caf_full(rcon_caf_full),   //input  RCON  <= FIFO  : "!ready"
-        .caf_wren(rcon_caf_wren),   //RCON =>  FIFO         : "valid"
-        .caf_cadr(rcon_caf_cadr),   //RCON =>  FIFO         : {cmd,addr}
-        .wdf_full(rcon_wdf_full),   //input  RCON  <= FIFO  : "!ready"
-        .wdf_wren(rcon_wdf_wren),   //RCON =>  FIFO         : "valid"
-        .wdf_mdat(rcon_wdf_mdat),   //RCON =>  FIFO         : {mask,data}
-        .rdf_rden(rcon_rdf_rden),   //RCON =>  FIFO         : "ready" (ignored?)
-        .rdf_wren(rcon_rdf_wren),   //input  RCON  <= FIFO  : "valid"
-*/
+
+//        .caf_full(rcon_caf_full),   //input  RCON  <= FIFO  : "!ready"
+//        .caf_wren(rcon_caf_wren),   //RCON =>  FIFO         : "valid"
+//        .caf_cadr(rcon_caf_cadr),   //RCON =>  FIFO         : {cmd,addr}
+//        .wdf_full(rcon_wdf_full),   //input  RCON  <= FIFO  : "!ready"
+//        .wdf_wren(rcon_wdf_wren),   //RCON =>  FIFO         : "valid"
+//        .wdf_mdat(rcon_wdf_mdat),   //RCON =>  FIFO         : {mask,data}
+//        .rdf_rden(rcon_rdf_rden),   //RCON =>  FIFO         : "ready" (ignored?)
+//        .rdf_wren(rcon_rdf_wren),   //input  RCON  <= FIFO  : "valid"
+
         .caf_full(1'b1),   //input  RCON  <= FIFO  : "!ready"
         .caf_wren( ),   //RCON =>  FIFO         : "valid"
         .caf_cadr( ),   //RCON =>  FIFO         : {cmd,addr}
@@ -387,7 +386,7 @@ module MemoryDDR #(
         .bpas_wdf_full(bpas_wdf_full), //OUT
         .bpas_wdf_wren(bpas_wdf_wren),
         .bpas_wdf_mdat(bpas_wdf_mdat)
-    ) /* synthesis syn_noprune=1 */;
+    );
 
     // The instruction cache:
     Cache #(
@@ -416,8 +415,8 @@ module MemoryDDR #(
         .wdf_wren   (inst_wdf_wren),
         //Unused in this project
         .tag_hit(), .tag_valid(), .state()
-    ) /* synthesis syn_noprune=1 */;
-
+    );
+*/
     // Data cache:
     Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
@@ -447,7 +446,7 @@ module MemoryDDR #(
         .tag_hit(), .tag_valid(), .state()
     ) /* synthesis syn_noprune=1 */;
 
-    assign stall = d_stall || i_stall;
+    assign stall = d_stall; /* || i_stall;
 
     //assign video_valid = 1'b1;
     //assign video       = 32'h00_80_80_FF;
@@ -459,7 +458,7 @@ module MemoryDDR #(
     //assign irq_gp_done = 1'b0;
 
     // For feeding pixels to the DVI module:
-    PixelFeeder #(
+/*    PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) pf (
@@ -483,7 +482,7 @@ module MemoryDDR #(
         .pf_wframe(pf_wframe),
         .pf_status(pf_status), //OUT
         .irq_frame(irq_pf_frame) //OUT
-    ) /* synthesis syn_noprune=1 */;
+    );
 
     GPU #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
@@ -512,8 +511,8 @@ module MemoryDDR #(
         .slr_wdf_wren(bpas_wdf_wren), //OUT
         .slr_wdf_mask(bpas_wdf_mask), //OUT[15:0]
         .slr_wdf_data(bpas_wdf_data)  //OUT[127:0]
-    ) /* synthesis syn_noprune=1 */;
-
+    );
+*/
 
 
 /*  // This memory intercepts dcache & icache before RCON & MIG
