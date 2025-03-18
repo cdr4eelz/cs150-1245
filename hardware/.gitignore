@@ -18,3 +18,5 @@ sim/small
 scripts/__pycache__
 test_results
 build
+xvlog.pb
+*.pb

@@ -1,38 +1,39 @@
 # based mostly on 2019 skeleton version
 
 SHELL                   := $(shell which bash) -o pipefail
-ABS_TOP                 := $(subst /cygdrive/c/,C:/,$(shell pwd))
+ABS_TOP                 := $(shell pwd)
+SCRIPT_DIR              ?= ${ABS_TOP}/../scripts
 VIVADO                  ?= vivado
 VIVADO_OPTS             ?= -nolog -nojournal -mode batch
 FPGA_PART               ?= xc7a100tcsg324-1
 BOARD_PART              ?= digilentinc.com:arty-a7-100:part0:1.1
-RTL                     += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src    -type f -name "*.v"))
-CONSTRAINTS             += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src    -type f -name "*.xdc"))
-RTL_VHD                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src    -type f -name "*.vhd"))
-IP_CHECKPOINTS_DISABLE  += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/src    -type f -name "*.dcp"))
-IP_XCI                  += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/gen -type f -name "*.xci" |egrep -v -e "\.cache")) #TODO: restrict find rather than grep
+
+RTL                     += $(shell find $(ABS_TOP)/src    -type f -name "*.v")
+CONSTRAINTS             += $(shell find $(ABS_TOP)/src    -type f -name "*.xdc")
+RTL_VHD                 += $(shell find $(ABS_TOP)/src    -type f -name "*.vhd")
+RTL_SYS                 += $(shell find $(ABS_TOP)/src    -type f -name "*.sv")
+IP_CHECKPOINTS_DISABLE  += $(shell find $(ABS_TOP)/src    -type f -name "*.dcp")
+IP_XCI                  += $(shell find $(ABS_TOP)/gen -name '*.cache' -prune -o -type f -name "*.xci")
 TOP                     ?= ArtyA7top
-VCS                     := vcs -full64
-VCS_OPTS                := -notice -PP -line +lint=all,noVCDE +v2k -timescale=1ns/10ps -debug -sverilog +define+ABS_TOP=$(ABS_TOP) +incdir+$(ABS_TOP)/src/riscv_core
-SIM_RTL                 += $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/sim -type f -name "*.v"))
-SIM_MODELS              := $(subst /cygdrive/c/,C:/,$(shell find $(ABS_TOP)/sim_models -type f -name "*.v"))
+SIM_RTL                 += $(shell find $(ABS_TOP)/sim -type f -name "*.v")
+SIM_MODELS              := $(shell find $(ABS_TOP)/sim_models -type f -name "*.v")
 IVERILOG                := iverilog
 IVERILOG_OPTS           := -Ttyp -D IVERILOG=1 -D ABS_TOP=$(ABS_TOP) -I $(ABS_TOP)/src/riscv_core -g2012
 VVP                     := vvp
 
 # Simulations
-sim/%.tb: sim/%.v $(RTL) $(SIM_MODELS)
-	cd sim && $(VCS) $(VCS_OPTS) -o $*.tb $(RTL) $(SIM_MODELS) $*.v -top $* -top glbl
-
-sim/%.vpd: sim/%.tb
-	cd sim && ./$*.tb +verbose=1 +vpdfile+$*.vpd |& tee $*.log
-
-sim/%.tbi: sim/%.v $(RTL)
-	cd sim && $(IVERILOG) $(IVERILOG_OPTS) -o $*.tbi $*.v $(RTL) $(SIM_MODELS)
-
-sim/%.fst: sim/%.tbi
-	cd sim && $(VVP) $*.tbi -fst |& tee $*.log
-
+#sim/%.tb: sim/%.v $(RTL) $(SIM_MODELS)
+#	cd sim && $(VCS) $(VCS_OPTS) -o $*.tb $(RTL) $(SIM_MODELS) $*.v -top $* -top glbl
+#
+#sim/%.vpd: sim/%.tb
+#	cd sim && ./$*.tb +verbose=1 +vpdfile+$*.vpd |& tee $*.log
+#
+#sim/%.tbi: sim/%.v $(RTL)
+#	cd sim && $(IVERILOG) $(IVERILOG_OPTS) -o $*.tbi $*.v $(RTL) $(SIM_MODELS)
+#
+#sim/%.fst: sim/%.tbi
+#	cd sim && $(VVP) $*.tbi -fst |& tee $*.log
+#
 # ISA Tests
 #sim/isa/isa_testbench.tbi: sim/isa_testbench.v $(RTL) $(SIM_MODELS)
 #	mkdir -p sim/isa
@@ -82,20 +83,20 @@ build/target.tcl: $(RTL) $(CONSTRAINTS) $(RTL_VHD) $(IP_XCI) # $(IP_CHECKPOINTS)
 
 setup: build/target.tcl
 
-gen: build/target.tcl $(ABS_TOP)/../scripts/ips.tcl
+gen: build/target.tcl $(SCRIPT_DIR)/ips.tcl
 
 
 ips: gen/ips
 
-build/synth/$(TOP).dcp: build/target.tcl $(ABS_TOP)/../scripts/synth.tcl
+build/synth/$(TOP).dcp: build/target.tcl $(SCRIPT_DIR)/synth.tcl
 	mkdir -p ./build/synth/
-	cd ./build/synth/ && $(VIVADO) $(VIVADO_OPTS) -source $(ABS_TOP)/../scripts/synth.tcl |& tee synth.log
+	cd ./build/synth/ && $(VIVADO) $(VIVADO_OPTS) -source $(SCRIPT_DIR)/synth.tcl |& tee synth.log
 
 synth: build/synth/$(TOP).dcp
 
-build/impl/$(TOP).bit: build/synth/$(TOP).dcp $(ABS_TOP)/../scripts/impl.tcl
+build/impl/$(TOP).bit: build/synth/$(TOP).dcp $(SCRIPT_DIR)/impl.tcl
 	mkdir -p ./build/impl/
-	cd ./build/impl && $(VIVADO) $(VIVADO_OPTS) -source $(ABS_TOP)/../scripts/impl.tcl |& tee impl.log
+	cd ./build/impl && $(VIVADO) $(VIVADO_OPTS) -source $(SCRIPT_DIR)/impl.tcl |& tee impl.log
 
 impl: build/impl/$(TOP).bit
 all: build/impl/$(TOP).bit
@@ -106,11 +107,11 @@ warn:
 	egrep -e '^WARNING|^CRITICAL WARNING' -C3 --color=always build/synth/synth.log build/impl/impl.log || \
 		egrep -i -C0 -e 'Errors|Warnings|Critical Warnings' --color=always build/synth/synth.log build/impl/impl.log
 
-program: build/impl/$(TOP).bit $(ABS_TOP)/../scripts/program.tcl
-	cd build/impl && $(VIVADO) $(VIVADO_OPTS) -source $(ABS_TOP)/../scripts/program.tcl
+program: build/impl/$(TOP).bit $(SCRIPT_DIR)/program.tcl
+	cd build/impl && $(VIVADO) $(VIVADO_OPTS) -source $(SCRIPT_DIR)/program.tcl
 
 program-force:
-	cd build/impl && $(VIVADO) $(VIVADO_OPTS) -source $(ABS_TOP)/../scripts/program.tcl
+	cd build/impl && $(VIVADO) $(VIVADO_OPTS) -source $(SCRIPT_DIR)/program.tcl
 
 vivado: build
 	cd build && nohup $(VIVADO) </dev/null >/dev/null 2>&1 &
@@ -123,11 +124,11 @@ lint:
 		-I$(ABS_TOP)/src/innerds -I$(ABS_TOP)/src/gpu -I$(ABS_TOP)/src/base_mem \
 		$(RTL)
 
-sim_build/compile_simlib/synopsys_sim.setup:
-	mkdir -p sim_build/compile_simlib
-	cd build/sim_build/compile_simlib && $(VIVADO) $(VIVADO_OPTS) -source $(ABS_TOP)/../scripts/compile_simlib.tcl
-
-compile_simlib: sim_build/compile_simlib/synopsys_sim.setup
+#sim_build/compile_simlib/synopsys_sim.setup:
+#	mkdir -p sim_build/compile_simlib
+#	cd build/sim_build/compile_simlib && $(VIVADO) $(VIVADO_OPTS) -source $(SCRIPT_DIR)/compile_simlib.tcl
+#
+#compile_simlib: sim_build/compile_simlib/synopsys_sim.setup
 
 clean:
 	rm -rf ./build
@@ -139,5 +140,5 @@ clean-sim:
 	sim/*.tbi sim/*.fst sim/*.jou sim/*.log sim/*.out
 
 
-.PHONY: setup ips synth impl warn program program-force vivado all clean
+.PHONY: setup ips synth impl warn program program-force vivado all clean clean-sim lint warn gen
 .PRECIOUS: sim/%.tb sim/%.tbi sim/%.fst sim/%.vpd
