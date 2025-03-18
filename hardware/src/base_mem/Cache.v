@@ -1,4 +1,4 @@
-//NOTE:COLT45: LITTLEWORDIAN allows natural ordering of 32-bit words within 128-bit DDR chunks
+//NOTE:COLT45: LITTLEWORDIAN allows natural ordering of 32-bit words within 256-bit DDR chunks
 
 //----------------------------------------------------------------------------
 // Module: Cache
@@ -58,10 +58,10 @@ module Cache #(
     // State declarations:
     localparam  IDLE     = 3'b000,
                 WRITE1   = 3'b001,
-                //WRITE2 = 3'b010,
+                WRITE2   = 3'b010,
                 FETCH    = 3'b011,
                 READ1    = 3'b100,
-                //READ2  = 3'b101,
+                READ2    = 3'b101,
                 CWRITEB  = 3'b110;
 
     //registers:
@@ -70,11 +70,12 @@ module Cache #(
     assign DBG_cache_cs = current_state;
     // register to hold first 128-bits read back
     // from DDR3
-    //reg [127:0]   first_read;
+    reg [127:0]   first_read;
 
-    // Register data in to write into the cache either:
-    //   a) 1 cycle later - after a tag check
-    //   b) Many cycles later - after fetch from DDR3
+    // register data in to write into the cache
+    // either:
+    // a) 1 cycle later - after a tag check
+    // b) many cycles later - after doing a fetch from DDR3
     reg [31:0]    din_hold;
 
     // register address
@@ -85,7 +86,7 @@ module Cache #(
     reg [3:0]     we_hold;
 
     wire mem_en;
-    wire [15:0] data_we;
+    wire [31:0] data_we;
     wire tag_we;
     wire [`SZ_CACHELINE-1:0] data;
 
@@ -106,7 +107,7 @@ module Cache #(
     wire [`SZ_INDEX-1:0] index_hold    = addr_hold[`IDX_ADDR_INDEX];
     wire [`SZ_TAG-1:0] tag_hold        = addr_hold[`IDX_ADDR_TAG];
 
-    wire [15:0] we_mask_hold;
+    wire [31:0] we_mask_hold;
 
     wire write_hit_hold;
     wire tag_equal;
@@ -115,40 +116,37 @@ module Cache #(
     // block ram for the cache:
     // 8kb
     // 256 rows / 32 bytes per row
-    cache_data_blk_ram cache_data (
-        .clka(clk),            // input wire clka
-        .ena(mem_en),          // input wire ena
-        .wea(data_we),         // input wire [15 : 0] wea
-        .addra(index_hold),    // input wire [7 : 0] addra
-        .dina(data_line_in),   // input wire [127 : 0] dina
-        .clkb(clk),            // input wire clkb
-        .rstb(rst),            // input wire rstb
-        .enb(mem_en),          // input wire enb
-        .addrb(index),         // input wire [7 : 0] addrb
-        .doutb(data_line_out)  // output wire [127 : 0] doutb
-    );
+    cache_data_blk_ram cache_data(
+        .clka(clk),
+        .ena(mem_en),
+        .wea(data_we),
+        .addra(index_hold),
+        .dina(data_line_in),
+        .clkb(clk),
+        .rstb(rst),
+        .enb(mem_en),
+        .addrb(index),
+        .doutb(data_line_out));
 
-    cache_tag_blk_ram cache_tag (
-        .clka(clk),            // input wire clka
-        .ena(mem_en),          // input wire ena
-        .wea(tag_we),          // input wire [0 : 0] wea
-        .addra(index_hold),    // input wire [7 : 0] addra
-        .dina(tag_line_in),    // input wire [20 : 0] dina
-        .clkb(clk),            // input wire clkb
-        .rstb(rst),            // input wire rstb
-        .enb(mem_en),          // input wire enb
-        .addrb(index),         // input wire [7 : 0] addrb
-        .doutb(tag_line_out)   // output wire [20 : 0] doutb
-    );
-
+    cache_tag_blk_ram cache_tag(
+        .clka(clk),
+        .ena(mem_en),
+        .wea(tag_we),
+        .addra(index_hold),
+        .dina(tag_line_in),
+        .clkb(clk),
+        .rstb(rst),
+        .enb(mem_en),
+        .addrb(index),
+        .doutb(tag_line_out));
 
     // Assignments for the cache block ram:
     assign mem_en  = (next_state == IDLE) || (|data_we) || re;
-    assign data_we = (next_state == CWRITEB) ? 16'hFFFF :
-                      {16{write_hit_hold}} & we_mask_hold;
+    assign data_we = (next_state == CWRITEB) ? 32'hFFFFFFFF :
+                      {32{write_hit_hold}} & we_mask_hold;
     assign tag_we = (next_state == CWRITEB) || (write_hit_hold);
 
-    assign we_mask_hold = {12'b000000000000, we_hold} << {offset_hold, 2'b00};
+    assign we_mask_hold = {28'b0, we_hold} << {offset_hold, 2'b0};
 
 
     // Some signals to make the FSM cleaner:
@@ -174,35 +172,28 @@ module Cache #(
             din_hold  <= din;
         end
 
-        //if(current_state == READ1)
-        //    first_read <= rdf_data;
+        if(current_state == READ1)
+            first_read <= rdf_data;
 
         if(current_state == IDLE)
             active_data_line <= data_line_out;
         else if(next_state == CWRITEB)
-            active_data_line <= rdf_data;
+            active_data_line <= {first_read, rdf_data};
     end
 
     // State transition logic:
     always @(*) begin
         next_state = IDLE;
-        if (!rst) case(current_state)
-/*          IDLE    : ns = (we_hold) ?                     WRITE1
-                                     : ((read_miss) ? FETCH   : IDLE );
-            WRITE1  : ns = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
-            WRITE2  : ns = (!wdf_full             ) ? IDLE    : WRITE2;
-            FETCH   : ns = (             !caf_full) ? READ1   : FETCH;
-            READ1   : ns = (       rdf_wren       ) ? READ2   : READ1;
-            READ2   : ns = (       rdf_wren       ) ? CWRITEB : READ2;
-            CWRITEB : ns = IDLE;
-            default : ns = IDLE; */
-            IDLE    :   next_state  = (|we_hold)    ?       WRITE1
-                                                : ((read_miss) ? FETCH   : IDLE );
-            WRITE1  :   next_state  = (!wdf_full && !caf_full) ? IDLE    : WRITE1;
-            FETCH   :   next_state  = (             !caf_full) ? READ1   : FETCH;
-            READ1   :   next_state  = (       rdf_wren       ) ? CWRITEB : READ1; //STUCK HERE
-            CWRITEB :   next_state  = IDLE;
-            default :   next_state  = IDLE;
+        case(current_state)
+            IDLE   : next_state = (we_hold) ?                     WRITE1
+                                    : ((read_miss) ? FETCH   : IDLE );
+            WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
+            WRITE2 : next_state = (!wdf_full             ) ? IDLE    : WRITE2;
+            FETCH  : next_state = (             !caf_full) ? READ1   : FETCH;
+            READ1  : next_state = (       rdf_wren       ) ? READ2   : READ1;
+            READ2  : next_state = (       rdf_wren       ) ? CWRITEB : READ2;
+            CWRITEB: next_state = IDLE;
+            default: next_state = IDLE;
         endcase
     end
 
@@ -212,27 +203,27 @@ module Cache #(
     wire [127:0]  f_data;
     wire [ 15:0]  f_mask;
     assign f_cmd  = (current_state == WRITE1) ? 3'b000 : 3'b001;
-    assign f_addr = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00}; //{pad-3,addr-23,pad-2} //WAS: pad-6
+    assign f_addr = {6'b000000, addr_hold[`IDX_ADDR_DRAM], 2'b00};
     assign f_data = {4{din_hold}};
     // active low, so we have to flip the bits
-//  assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
-    assign f_mask =                                         ~we_mask_hold[15:0];
+    assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
 
     // FIFO output assignments:
-    assign caf_wren = (current_state == WRITE1) || (current_state == FETCH);
-    assign caf_cadr = {f_cmd, f_addr}; // {cmd-3,addr-28}
-    assign wdf_wren = (current_state == WRITE1);
+    assign caf_wren = (current_state == WRITE1) || (current_state == FETCH );
+    assign caf_cadr = {f_cmd, f_addr};
+    assign wdf_wren = (current_state == WRITE1) || (current_state == WRITE2);
     assign wdf_mdat = {f_mask, f_data};
-    assign rdf_rden = (current_state == READ1);
+    assign rdf_rden = (current_state == READ1 ) || (current_state == READ2 );
 
     // CPU output assignments:
     //   data out is either from cache line out or active cache line if there is a read
-    assign data   = (current_state == IDLE) ? data_line_out : active_data_line;
-    assign dout   = (data >> {offset_hold, 5'b0}); // Drop to 4'b0 ??? WAS: 5'b0
+    assign data   = (current_state == IDLE) ? data_line_out[255:0] : active_data_line[255:0];
+    assign dout   = (data >> {offset_hold, 5'b0});
     assign stall  = (next_state != IDLE);
 
-    // If writing back data from DDR3, use current 128-bits from read data FIFO
-    assign data_line_in = (next_state == CWRITEB) ? rdf_data : {4{din_hold}};
+    // If we're writing back data from DDR3, use the registered 128-bits
+    // (first_read) and the current 128 bits from the read data FIFO
+    assign data_line_in = (next_state == CWRITEB) ? {first_read, rdf_data} : {8{din_hold}};
     assign tag_line_in = {1'b0, 1'b1, tag_hold};
 
 endmodule
