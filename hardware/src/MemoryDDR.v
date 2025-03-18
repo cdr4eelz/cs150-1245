@@ -53,6 +53,7 @@ module MemoryDDR #(
     input   [31:0]  dcache_din,     icache_din,
     output  [31:0]  dcache_dout,    icache_dout,
     output          d_stall,        i_stall,
+    output   [3:0]  DBG_dcache,     DBG_icache,  //4-bits, Cache returns 3-bits
 
 // PixelFeeder <=> DVI Controller:
     input           video_ready,
@@ -69,6 +70,7 @@ module MemoryDDR #(
 
     wire stall, init_calib_complete;
     assign init_done = init_calib_complete; //Assign rather than renaming
+    wire [2:0]  DBG_dcache_cs,  DBG_icache_cs;
 
 
 //TODO: Check use of "fifo_caf_rdy" vs. old "!fifo_caf_full"
@@ -387,9 +389,9 @@ module MemoryDDR #(
         .bpas_wdf_wren(bpas_wdf_wren),
         .bpas_wdf_mdat(bpas_wdf_mdat)
     );
-
+*/
     // The instruction cache:
-    Cache #(
+/*  Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) icache (
         .clk(clk_cpu),
@@ -414,7 +416,8 @@ module MemoryDDR #(
         .wdf_mdat   (inst_wdf_mdat),   // {mask-16,data-128}
         .wdf_wren   (inst_wdf_wren),
         //Unused in this project
-        .tag_hit(), .tag_valid(), .state()
+        .tag_hit(), .tag_valid(),
+        .DBG_cache_cs(DBG_icache_cs)
     );
 */
     // Data cache:
@@ -443,19 +446,22 @@ module MemoryDDR #(
         .wdf_mdat   (data_wdf_mdat),
         .wdf_wren   (data_wdf_wren),
         //Unused in this project
-        .tag_hit(), .tag_valid(), .state()
-    ) /* synthesis syn_noprune=1 */;
+        .tag_hit(), .tag_valid(),
+        .DBG_cache_cs(DBG_dcache_cs)
+    );
 
-    assign stall = d_stall; /* || i_stall;
+    assign stall = d_stall; // || i_stall;
+    assign DBG_dcache = { d_stall, DBG_dcache_cs };
+    assign DBG_icache = 4'b0000; //{ inst_rdf_wren, DBG_icache_cs };
 
-    //assign video_valid = 1'b1;
-    //assign video       = 32'h00_80_80_FF;
+    assign video_valid = 1'b1;
+    assign video       = 32'h00_80_80_FF;
 
-    //assign pf_status = 16'd0;
-    //assign irq_pf_frame = 1'b0;
-    //assign gp_rcode = 32'd0;
-    //assign gp_status = 16'd0;
-    //assign irq_gp_done = 1'b0;
+    assign pf_status = 16'd0;
+    assign irq_pf_frame = 1'b0;
+    assign gp_rcode = 32'd0;
+    assign gp_status = 16'd0;
+    assign irq_gp_done = 1'b0;
 
     // For feeding pixels to the DVI module:
 /*    PixelFeeder #(
@@ -483,8 +489,8 @@ module MemoryDDR #(
         .pf_status(pf_status), //OUT
         .irq_frame(irq_pf_frame) //OUT
     );
-
-    GPU #(
+*/
+/*  GPU #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) gpu (
@@ -531,7 +537,7 @@ module MemoryDDR #(
         .doutb  (icache_dout)           // output   [31 : 0]
     ); */
 
-
+    // Patch DataCache directly with FIFOs (like RCON)
     assign  data_caf_full   = rcon_caf_full,
             data_wdf_full   = rcon_wdf_full,
             data_rdf_wren   = rcon_rdf_wren;

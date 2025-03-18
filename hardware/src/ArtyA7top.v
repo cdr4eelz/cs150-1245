@@ -17,6 +17,7 @@ module ArtyA7top #(
     input   [1:0]   SWITCH,  // Only 2 of 4 switches, PYNQ has only 2
     input   [3:0]   BUTTON,  // 4 pushbuttons
     output  [3:0]   LED,     // 4 on/off LEDs, not RBG LEDs
+    output led0_b,  led1_g, led2_r, led3_b, // 4 RGB LEDs distinguished by color
 
     // SERIAL (UART)
     input           FPGA_SERIAL_RX,
@@ -138,6 +139,7 @@ module ArtyA7top #(
         wire [31:0] dcache_din,     icache_din;
         wire [31:0] dcache_dout,    icache_dout;
         wire        stall_dcache,   stall_icache; //stall_cache;
+        wire  [3:0] DBG_dcache,     DBG_icache;
         wire        video_ready,    video_valid;
         wire [31:0] video;//[23:0]
     //  wire        fb0; ???Was this "framebuffer0" like pf_wframe???
@@ -186,6 +188,7 @@ module ArtyA7top #(
             .dcache_din (dcache_din ),  .icache_din (icache_din ),  //input[31:0]
             .dcache_dout(dcache_dout),  .icache_dout(icache_dout),  //output[31:0]
             .d_stall   (stall_dcache),  .i_stall   (stall_icache),  //output
+            .DBG_dcache (DBG_dcache ),  .DBG_icache (DBG_icache ),  //output[3:0]
 
         // PixelFeeder <=> DVI driver:
             .video_ready(video_ready),  //input
@@ -229,12 +232,14 @@ module ArtyA7top #(
 
         assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
 
-
-        assign LED[0] = (locked_top_clocks & init_done) ^ buttons[0];
-        assign LED[1] = (reset_top_clocks & rst_cpu) ^ buttons[1];
-        assign LED[2] = stall_icache ^ buttons[2];
-        assign LED[3] = stall_dcache ^ buttons[3];
+        assign LED[0] = buttons[0] ^ (locked_top_clocks & init_done);
+        assign LED[1] = buttons[1] ^ (reset_top_clocks & rst_cpu);
+        assign LED[2] = buttons[2] ^ stall_icache;
+        assign LED[3] = buttons[3] ^ stall_dcache;
         // TODO: Map RGB LEDs in constraints file and drive them with PWM
+        wire [3:0] led_rgb_set;
+        assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_icache;
+        assign { led3_b, led2_r, led1_g, led0_b } = led_rgb_set ^ buttons;
 
     end endgenerate;
 
