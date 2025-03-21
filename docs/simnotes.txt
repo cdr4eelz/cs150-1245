@@ -1,3 +1,9 @@
+launch_simulation
+xvlog --incr --relax -prj fetcher_tb1_vlog.prj
+xvhdl --incr --relax -prj fetcher_tb1_vhdl.prj
+xelab -wto 8ef746f83fb54077a641f210ffd3d351 --incr --debug typical --relax --mt 8 -L xil_defaultlib -L fifo_generator_v13_2_4 -L unisims_ver -L unimacro_ver -L secureip -L xpm --snapshot fetcher_tb1_behav xil_defaultlib.fetcher_tb1 xil_defaultlib.glbl -log elaborate.log
+xsim fetcher_tb1_behav -key {Behavioral:sim_1:Functional:fetcher_tb1} -tclbatch {fetcher_tb1.tcl} -view {/FPGA/migit/fetcher/fetcher_top_behav.wcfg} -log {simulate.log}
+
 
 Using "`define SKIP_CALIB" approach did not help MIG simulate it quicker.
   Instead it never asserted calibration-done and didn't function.

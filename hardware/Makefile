@@ -1,25 +1,36 @@
 # based mostly on 2019 skeleton version
 
 SHELL                   := $(shell which bash) -o pipefail
-ABS_TOP                 := $(shell pwd)
+ABS_TOP                 ?= $(shell pwd)
+
+-include local.mk       # Overrides for local situation (note "?=" & "+=" here, allowing overrides)
+
 SCRIPT_DIR              ?= ${ABS_TOP}/../scripts
-VIVADO                  ?= vivado
-VIVADO_OPTS             ?= -nolog -nojournal -mode batch
+SRC_DIR                 ?= ${ABS_TOP}/src
+CONSTR_DIR              ?= ${SRC_DIR}
+IP_DIR                  ?= ${ABS_TOP}/gen
+IP_SIM_DIR              ?= ${ABS_TOP}/gen/ip_user_files/sim_scripts
+
 FPGA_PART               ?= xc7a100tcsg324-1
 BOARD_PART              ?= digilentinc.com:arty-a7-100:part0:1.1
-
-RTL                     += $(shell find $(ABS_TOP)/src    -type f -name "*.v")
-CONSTRAINTS             += $(shell find $(ABS_TOP)/src    -type f -name "*.xdc")
-RTL_VHD                 += $(shell find $(ABS_TOP)/src    -type f -name "*.vhd")
-RTL_SYS                 += $(shell find $(ABS_TOP)/src    -type f -name "*.sv")
-IP_CHECKPOINTS_DISABLE  += $(shell find $(ABS_TOP)/src    -type f -name "*.dcp")
-IP_XCI                  += $(shell find $(ABS_TOP)/gen -name '*.cache' -prune -o -type f -name "*.xci")
 TOP                     ?= ArtyA7top
+
+RTL                     += $(shell find $(SRC_DIR)    -type f -name "*.v")
+RTL_VHD                 += $(shell find $(SRC_DIR)    -type f -name "*.vhd")
+RTL_SYS                 += $(shell find $(SRC_DIR)    -type f -name "*.sv")
+CONSTRAINTS             += $(shell find $(CONSTR_DIR) -type f -name "*.xdc")
+#IP_CHECKPOINTS_DISABLE  += $(shell find $(SRC_DIR)    -type f -name "*.dcp")
+IP_XCI                  += $(shell find $(IP_DIR) -type f -name "*.xci" |grep -v -i '.cache/')
+IP_SIM_PRJ              += $(shell find $(IP_SIM_DIR)  -type f -name '*.prj')
 SIM_RTL                 += $(shell find $(ABS_TOP)/sim -type f -name "*.v")
-SIM_MODELS              := $(shell find $(ABS_TOP)/sim_models -type f -name "*.v")
-IVERILOG                := iverilog
-IVERILOG_OPTS           := -Ttyp -D IVERILOG=1 -D ABS_TOP=$(ABS_TOP) -I $(ABS_TOP)/src/riscv_core -g2012
-VVP                     := vvp
+SIM_MODELS              ?= $(shell find $(ABS_TOP)/sim_models -type f -name "*.v")
+VIVADO                  ?= vivado
+VIVADO_OPTS             ?= -nolog -nojournal -mode batch
+IVERILOG                ?= iverilog
+IVERILOG_OPTS           ?= -Ttyp -D IVERILOG=1 -D ABS_TOP=$(ABS_TOP) -I $(ABS_TOP)/src/riscv_core -g2012
+VVP                     ?= vvp
+
+#TODO: Generate a .prj file listing for RTL & SIM_RTL. When to use "sim" and "sim_models" & testbench.
 
 # Simulations
 #sim/%.tb: sim/%.v $(RTL) $(SIM_MODELS)
@@ -42,7 +53,7 @@ VVP                     := vvp
 #sim/isa/%.fst: sim/isa/isa_testbench.tbi $(ABS_TOP)/../software/riscv-isa-tests/%.hex
 #	cd sim/isa && $(VVP) isa_testbench.tbi -fst +hex_file=$(word 2,$^) +test_name=$(basename $(notdir $(word 2,$^))) |& tee $(basename $(notdir $(word 2,$^))).log
 
-build/target.tcl: $(RTL) $(CONSTRAINTS) $(RTL_VHD) $(IP_XCI) # $(IP_CHECKPOINTS)
+build/target.tcl: $(RTL) $(RTL_VHD) $(RTL_SV) $(CONSTRAINTS) $(IP_XCI) # $(IP_CHECKPOINTS)
 	mkdir -p build
 	truncate -s 0 $@
 	echo 'set VERBOSE                        "-verbose"'    >> $@
@@ -58,15 +69,15 @@ build/target.tcl: $(RTL) $(CONSTRAINTS) $(RTL_VHD) $(IP_XCI) # $(IP_CHECKPOINTS)
 	echo -n "set RTL_VHD { " >> $@
 	FLIST="$(RTL_VHD)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
 	echo "}" >> $@
+	echo -n "set RTL_SYS { " >> $@
+	FLIST="$(RTL_SYS)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
+	echo "}" >> $@
 	echo -n "set CONSTRAINTS { " >> $@
 	FLIST="$(CONSTRAINTS)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
 	echo "}" >> $@
 	echo -n "set IP_XCI { " >> $@
 	FLIST="$(IP_XCI)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
 	echo "}" >> $@
-#	echo -n "set IP_CHECKPOINTS { " >> $@
-#	FLIST="$(IP_CHECKPOINTS)"; for f in $$FLIST; do echo -n "$$f " ; done >> $@
-#	echo "}" >> $@
 	echo 'exec echo "#=========================================#"' >> $@
 	echo 'create_project -part $(FPGA_PART) -in_memory "mem_proj"' >> $@
 	echo 'set project_obj                                      [get_projects "mem_proj"]' >> $@
