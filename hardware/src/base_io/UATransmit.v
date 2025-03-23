@@ -1,7 +1,7 @@
 `ifndef MACROSAFE
 `define MACROSAFE
 `endif // required to get this to compile...
-`include "../base_util/Const.v"
+`include "../base_util/const.vh"
 
 module UATransmit(
     input   Clock, Reset,

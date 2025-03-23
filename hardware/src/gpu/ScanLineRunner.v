@@ -2,7 +2,7 @@
 `ifndef MACROSAFE
 `define MACROSAFE
 `endif // required to get this to compile...
-`include "../base_util/Const.v"
+`include "../base_util/const.vh"
 
 module ScanLineRunner #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,

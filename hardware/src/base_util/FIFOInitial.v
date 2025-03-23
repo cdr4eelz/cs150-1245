@@ -43,7 +43,7 @@
 `ifndef MACROSAFE
 `define MACROSAFE
 `endif // required to get this to compile...
-`include "Const.v"
+`include "const.vh"
 //==============================================================================
 
 //------------------------------------------------------------------------------

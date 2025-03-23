@@ -1,4 +1,5 @@
 //==============================================================================
+//  *NEW_FILE_NAME* : Renamed to "const.vh" so Makefile finds it and treats as a header.
 //	File:		$URL: svn+ssh://repositorypub@repository.eecs.berkeley.edu/public/Projects/GateLib/trunk/Core/GateCore/Hardware/Const.v $
 //	Version:	$Revision: 27051 $
 //	Author:		Greg Gibeling (http://www.gdgib.com/)
