@@ -10,6 +10,7 @@ SRC_DIR                 ?= ${ABS_TOP}/src
 CONSTR_DIR              ?= ${SRC_DIR}
 IP_DIR                  ?= ${ABS_TOP}/gen
 IP_SIM_DIR              ?= ${ABS_TOP}/gen/ip_user_files/sim_scripts
+SIM_MODEL_DIR           ?= $(ABS_TOP)/sim_models
 
 FPGA_PART               ?= xc7a100tcsg324-1
 BOARD_PART              ?= digilentinc.com:arty-a7-100:part0:1.1
@@ -23,7 +24,8 @@ CONSTRAINTS             += $(shell find $(CONSTR_DIR) -type f -name "*.xdc")
 IP_XCI                  += $(shell find $(IP_DIR) -type f -name "*.xci" |grep -v -i '.cache/')
 IP_SIM_PRJ              += $(shell find $(IP_SIM_DIR)  -type f -name '*.prj')
 SIM_RTL                 += $(shell find $(ABS_TOP)/sim -type f -name "*.v")
-SIM_MODELS              ?= $(shell find $(ABS_TOP)/sim_models -type f -name "*.v")
+SIM_INCLUDE             ?= $(shell find $(SRC_DIR)     -name '*.vh' -printf '%h\n' |sort -u)
+SIM_MODELS              ?= $(shell find $(SIM_MODEL_DIR) -type f -name "*.v")
 VIVADO                  ?= vivado
 VIVADO_OPTS             ?= -nolog -nojournal -mode batch
 IVERILOG                ?= iverilog
@@ -116,7 +118,7 @@ warn:
 	mkdir -p build/synth/          build/impl/
 	touch -m build/synth/synth.log build/impl/impl.log
 	egrep -e '^WARNING|^CRITICAL WARNING' -C3 --color=always build/synth/synth.log build/impl/impl.log || \
-		egrep -i -C0 -e 'Errors|Warnings|Critical Warnings' --color=always build/synth/synth.log build/impl/impl.log
+		egrep -i -C0 -e 'Error|Warning|Critical Warning' --color=always build/synth/synth.log build/impl/impl.log
 
 program: build/impl/$(TOP).bit $(SCRIPT_DIR)/program.tcl
 	cd build/impl && $(VIVADO) $(VIVADO_OPTS) -source $(SCRIPT_DIR)/program.tcl
@@ -130,10 +132,9 @@ vivado: build
 ## TODO: Activate "-Wall" but have config file to handle lint_off actions as needed...
 lint:
 	verilator -DABS_TOP=$(ABS_TOP) --lint-only --top-module $(TOP) --top glbl \
-		$(ABS_TOP)/sim_models/glbl.v -I$(ABS_TOP)/sim_models -I$(ABS_TOP)/gen \
-		--bbox-unsup --timing -I$(ABS_TOP)/src -I$(ABS_TOP)/src/base_util \
-		-I$(ABS_TOP)/src/innerds -I$(ABS_TOP)/src/gpu -I$(ABS_TOP)/src/base_mem \
-		$(RTL)
+		--bbox-unsup --timing \
+		-I$(SRC_DIR) $(SIM_INCLUDE:%=-I%) \
+		$(SIM_MODELS) $(RTL)
 
 #sim_build/compile_simlib/synopsys_sim.setup:
 #	mkdir -p sim_build/compile_simlib

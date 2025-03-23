@@ -12,9 +12,9 @@
 
 `define SZ_OFFSET             3
 `define SZ_INDEX              8
-`define SZ_TAG (32-`SZ_OFFSET-`SZ_INDEX-2)
+`define SZ_TAG (32-`SZ_OFFSET-`SZ_INDEX-2) // 19
 `define SZ_METADATA           2
-`define SZ_TAGLINE `SZ_TAG+`SZ_METADATA
+`define SZ_TAGLINE `SZ_TAG+`SZ_METADATA    // 21
 `define SZ_CACHELINE        256
 
 `define CAP_CACHE           256     // UNUSED?

@@ -56,13 +56,14 @@ module Cache #(
 );
 
     // State declarations:
-    localparam  IDLE     = 3'b000,
-                WRITE1   = 3'b001,
-                WRITE2   = 3'b010,
-                FETCH    = 3'b011,
-                READ1    = 3'b100,
-                READ2    = 3'b101,
-                CWRITEB  = 3'b110;
+    localparam  IDLE        = 3'd0, // 000
+                WRITE1      = 3'd1, // 001
+                WRITE2      = 3'd2, // 010
+                FETCH1      = 3'd3, // 011
+                FETCH2      = 3'd4, // 100
+                READ1       = 3'd5, // 101
+                READ2       = 3'd6, // 110
+                CWRITEB     = 3'd7; // 111
 
     //registers:
     // state for DDR3 FSM
@@ -186,10 +187,11 @@ module Cache #(
         next_state = IDLE;
         case(current_state)
             IDLE   : next_state = (we_hold) ?                     WRITE1
-                                    : ((read_miss) ? FETCH   : IDLE );
+                                    : ((read_miss) ? FETCH1  : IDLE );
             WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
-            WRITE2 : next_state = (!wdf_full             ) ? IDLE    : WRITE2;
-            FETCH  : next_state = (             !caf_full) ? READ1   : FETCH;
+            WRITE2 : next_state = (!wdf_full && !caf_full) ? IDLE    : WRITE2; // WAS: "!wdf_full" only
+            FETCH1 : next_state = (             !caf_full) ? FETCH2  : FETCH1;
+            FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2;
             READ1  : next_state = (       rdf_wren       ) ? READ2   : READ1;
             READ2  : next_state = (       rdf_wren       ) ? CWRITEB : READ2;
             CWRITEB: next_state = IDLE;
@@ -197,23 +199,27 @@ module Cache #(
         endcase
     end
 
+    wire    isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
+    wire    isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
+    wire    isReading   = (current_state == READ1 ) || (current_state == READ2 );
+
     // FIFO output partial values:
     wire [  2:0]  f_cmd;
     wire [ 27:0]  f_addr; //WAS: [30:0]
     wire [127:0]  f_data;
     wire [ 15:0]  f_mask;
-    assign f_cmd  = (current_state == WRITE1) ? 3'b000 : 3'b001;
-    assign f_addr = {6'b000000, addr_hold[`IDX_ADDR_DRAM], 2'b00};
+    assign f_cmd  = (isWriting) ? 3'b000 : 3'b001; // Write = 0 : Read = 1
+    assign f_addr = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00}; // WAS 6'b000000
     assign f_data = {4{din_hold}};
     // active low, so we have to flip the bits
     assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
 
     // FIFO output assignments:
-    assign caf_wren = (current_state == WRITE1) || (current_state == FETCH );
+    assign caf_wren = (isWriting) || (isFetching);
     assign caf_cadr = {f_cmd, f_addr};
-    assign wdf_wren = (current_state == WRITE1) || (current_state == WRITE2);
+    assign wdf_wren = (isWriting);
     assign wdf_mdat = {f_mask, f_data};
-    assign rdf_rden = (current_state == READ1 ) || (current_state == READ2 );
+    assign rdf_rden = isReading;
 
     // CPU output assignments:
     //   data out is either from cache line out or active cache line if there is a read
@@ -222,7 +228,7 @@ module Cache #(
     assign stall  = (next_state != IDLE);
 
     // If we're writing back data from DDR3, use the registered 128-bits
-    // (first_read) and the current 128 bits from the read data FIFO
+    // (first_read) and the current 128-bits from the read data FIFO
     assign data_line_in = (next_state == CWRITEB) ? {first_read, rdf_data} : {8{din_hold}};
     assign tag_line_in = {1'b0, 1'b1, tag_hold};
 
