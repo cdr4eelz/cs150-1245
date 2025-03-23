@@ -202,14 +202,16 @@ module Cache #(
     wire    isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
     wire    isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
     wire    isReading   = (current_state == READ1 ) || (current_state == READ2 );
+    wire    isSecond    = (current_state == WRITE2) || (current_state == FETCH2);
 
     // FIFO output partial values:
     wire [  2:0]  f_cmd;
-    wire [ 27:0]  f_addr; //WAS: [30:0]
+    wire [ 27:0]  f_addr_base, f_addr; //WAS: [30:0]
     wire [127:0]  f_data;
     wire [ 15:0]  f_mask;
     assign f_cmd  = (isWriting) ? 3'b000 : 3'b001; // Write = 0 : Read = 1
-    assign f_addr = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00}; // WAS 6'b000000
+    assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00}; // WAS 6'b000000
+    assign f_addr = (isSecond) ? (f_addr_base + 8) : f_addr_base;
     assign f_data = {4{din_hold}};
     // active low, so we have to flip the bits
     assign f_mask = (current_state == WRITE1) ? ~we_mask_hold[31:16] : ~we_mask_hold[15:0];
