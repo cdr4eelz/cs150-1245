@@ -5,8 +5,8 @@ module ButtonClean #(
 ) (
     input Clock,
     input Reset,
-    input [Width-1:0] Inputs,
-    output reg [Width-1:0] Outputs
+    input [Width-1:0] IN,
+    output [Width-1:0] OUT
 );
     wire [Width-1:0] synched;
 
@@ -14,7 +14,7 @@ module ButtonClean #(
         .Width(Width)
     ) syncher (
         .Clock(Clock),
-        .async_signal(Inputs),
+        .async_signal(IN),
         .sync_signal(synched)
     );
 
@@ -28,7 +28,7 @@ module ButtonClean #(
             .Reset(Reset),
             .Enable(1'b1),
             .In(synched[i]),
-            .Out(Outputs[i]),
+            .Out(OUT[i]),
             .Half( /* Unused */ )
         );
     end

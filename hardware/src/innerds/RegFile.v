@@ -14,6 +14,8 @@
 //  Author: <<YOUR NAME HERE>>
 //-----------------------------------------------------------------------------
 
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 
 

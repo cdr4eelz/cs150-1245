@@ -60,9 +60,9 @@ module ArtyA7top #(
     //NOTE: Early reset logic using board-clock "clk_in_100MHz"
     wire reset_top_clocks;
     ButtonClean #( .Width(1) ) clean_rst_top (
-        .Inputs(!CK_RST_N),
+        .IN(!CK_RST_N),
         .Clock(clk_in_100MHz), .Reset(1'b0),
-        .Outputs(reset_top_clocks)
+        .OUT(reset_top_clocks)
     );  //assign reset_top_clocks = !CK_RST_N;  // Top CLocks are first to come out of reset
 
     wire locked_top_clocks;  // Participate in startup sequence
@@ -96,9 +96,9 @@ module ArtyA7top #(
     wire [1:0] switches;
     wire [3:0] buttons;
     ButtonClean #( .Width(6) ) clean_GPIO (  // 4 buttons + 2 switches = 6 signals
-        .Inputs( { BUTTON[3:0], SWITCH[1:0] } ),  // Merge into 6-bit signal
+        .IN( { BUTTON[3:0], SWITCH[1:0] } ),  // Merge into 6-bit signal
         .Clock(clk_cpu), .Reset(rst_cpu),
-        .Outputs(clean_combo) );
+        .OUT(clean_combo) );
     assign { buttons[3:0], switches[1:0] } = clean_combo;  // Separate the signals
 
 
