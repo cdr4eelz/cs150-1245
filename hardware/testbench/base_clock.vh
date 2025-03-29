@@ -1,6 +1,71 @@
 
     // Reference Clock (100MHz) & board reset (elimated)
-    reg USER_CLK, USER_RST;
+
+    wire CLK_100MHz;  // Board clock for Arty-A7
+    //wire CLK_125MHz;  // Board clock for PYNQ
+    wire CK_RST_N  // "ChipKit Reset" (Active LOW)
+
+    initial CLK_100MHz = 0;
+    always #(HalfCycle) CLK_100MHz = ~CLK_100MHz;
+
+    //wire reset_top_clocks = !CK_RST_N;
+    wire reset_top_clocks;
+    ButtonClean #( .Width(1) ) clean_rst_top (
+        .Inputs(!CK_RST_N),
+        .Clock(clk_in_100MHz), .Reset(1'b0),
+        .Outputs(reset_top_clocks)
+    );  //assign reset_top_clocks = !CK_RST_N;  // Top CLocks are first to come out of reset
+
+    wire locked_top_clocks;  // Participate in startup sequence
+    wire clk_mig_sys, clk_mig_ref, clk_cpu, clk_pix;
+    clk_wiz_0 top_clocks (  // Generate various clocks for components
+    // Clock in ports
+        .clk_in_100MHz(CLK_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
+        //.clk_in_125MHz(CLK_125MHz),  // INPUT for PYNQ (from board)
+    // Clock out ports (rebuild clk_wiz if needs change)
+        .clk_mig_100MHz     (clk_mig_sys),  // output MIG primary clk
+        .clk_migref_200MHz  (clk_mig_ref),  // output REF clk for MIG
+        .clk_pixel_40MHz    (clk_pix),      // output Pixel for VGA/DVI
+        .clk_cpu_50MHz      (clk_cpu),      // output modest CPU speed
+        // Status and control signals
+        .reset(reset_top_clocks),  // input reset (ACTIVE HIGH)
+        .locked(locked_top_clocks)  // output locked (ACTIVE HIGH)
+    );  // NOTE: clk_wiz puts BUFG on its output clocks
+
+    // Then some other support components come out of reset (like DRAM)
+    wire rst_cpu, rst_pix, init_done;  // TODO: CPU comes out of reset after everything else
+    Synchronizer #( .Width(1) ) sync_rst_cpu (
+        .async_signal(!locked_top_clocks || !init_done ),
+        .Clock(clk_cpu),  .sync_signal(rst_cpu));  // NOTE: This clock is bad when PLL not locked!
+    Synchronizer #( .Width(1) ) sync_rst_pix (
+        .async_signal(!locked_top_clocks || !init_done),
+        .Clock(clk_pix),  .sync_signal(rst_pix));  // NOTE: This clock is bad when PLL not locked!
+
+
+task BaseClockReset;
+begin
+    $display("Resetting clocks...");
+    CK_RST_N = 0; //Active-LOW
+    repeat (3) @( posedge CLK_100MHz ) ;
+    CK_RST_N = 1;
+    wait ( locked_top_clocks ) ; // wait for pll to lock
+    repeat (10) @( posedge cpu_clk_g ) ; // reset for 10 cc
+    rst_cpu_mem = 0;
+    wait ( init_done ) ; // wait for ddr init done
+    repeat (2) @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
+    fork
+        @( posedge cpu_clk_g ) rst_cpu_bus = 0;
+        @( posedge dvi_clk_g ) rst_dvi_bus = 0;
+    join
+    repeat (2) @( posedge cpu_clk_g ) ;
+    repeat (2) @( posedge cpu_clk_g ) ;
+    $display("Resetting clocks... done.");
+end
+endtask
+
+
+/*  reg USER_CLK, USER_RST;
     localparam Cycle = (2 * HalfCycle);
     initial USER_CLK = 0;
     always #(HalfCycle) USER_CLK= ~USER_CLK;
@@ -64,3 +129,4 @@ begin
     $display("Resetting clocks... done.");
 end
 endtask
+*/
