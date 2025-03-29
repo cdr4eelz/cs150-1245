@@ -262,7 +262,7 @@ module RequestController(
             // Read-only path for GraphicsController:
             caf_cadr  = {3'b001, gcmd_raf_addr};
             caf_wren  = gcmd_raf_wren && !ff_full;
-            wdf_mdat  = {16'hFFFF, 128'bx}; // doesn't matter ; not writing
+            wdf_mdat  = {16'hFFFF, 128'd0}; // doesn't matter ; not writing
             wdf_wren  = 1'b0; //not writing
         end
         else if(pixf_raf_wren && !reserved) begin
@@ -270,7 +270,7 @@ module RequestController(
             // Read-only path for PixelFeeder:
             caf_cadr  = {3'b001, pixf_raf_addr};
             caf_wren  = pixf_raf_wren && !ff_full;
-            wdf_mdat  = {16'hFFFF, 128'bx}; // doesn't matter ; not writing
+            wdf_mdat  = {16'hFFFF, 128'd0}; // doesn't matter ; not writing
             wdf_wren  = 1'b0; //not writing
         end
 

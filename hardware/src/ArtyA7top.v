@@ -82,7 +82,10 @@ module ArtyA7top #(
     );  // NOTE: clk_wiz puts BUFG on its output clocks
 
     // Then some other support components come out of reset (like DRAM)
-    wire rst_cpu, rst_pix, init_done;  // TODO: CPU comes out of reset after everything else
+    wire rst_cpu, rst_mig_sys_n, rst_pix, init_done;  // TODO: CPU comes out of reset after everything else
+    Synchronizer #( .Width(1) ) sync_rst_mig_sys_n (
+        .async_signal(!locked_top_clocks || !reset_top_clocks),
+        .Clock(clk_mig_sys),  .sync_signal(rst_mig_sys_n));  // NOTE: This clock is bad when PLL not locked!
     Synchronizer #( .Width(1) ) sync_rst_cpu (
         .async_signal(!locked_top_clocks || !init_done ),
         .Clock(clk_cpu),  .sync_signal(rst_cpu));  // NOTE: This clock is bad when PLL not locked!
@@ -154,11 +157,12 @@ module ArtyA7top #(
         ) mem_arch (
         // Critical clock & reset
             .clk_cpu        (clk_cpu),
-            .clk_pix        (clk_pix),
-            .clk_mig_sys    (clk_mig_sys),
-            .clk_mig_ref    (clk_mig_ref),
             .rst_cpu_mem    (rst_cpu),
             .rst_cpu_bus    (rst_cpu),  //TODO: Distinguish "mem" & "bus" & CPU resets?
+            .clk_mig_sys    (clk_mig_sys),
+            .rst_mig_sys_n  (rst_mig_sys_n),
+            .clk_mig_ref    (clk_mig_ref),
+            .clk_pix        (clk_pix),
             .rst_pix        (rst_pix),
             .locked         (locked_top_clocks),  //Acts as an active HIGH reset
             .init_done      (init_done),  // Output HIGH when MIG is ready

@@ -18,11 +18,12 @@ module MemoryDDR #(
 ) (
 // Clocks & Resets:
     input           clk_cpu,
-    input           clk_pix,
-    input           clk_mig_sys,
-    input           clk_mig_ref,
     input           rst_cpu_mem,
     input           rst_cpu_bus,
+    input           clk_mig_sys,
+    input           rst_mig_sys_n,
+    input           clk_mig_ref,
+    input           clk_pix,
     input           rst_pix,
     input           locked,
     output          init_done,  // init_calib_complete (related to ddr3_reset_n below???)
@@ -132,22 +133,22 @@ module MemoryDDR #(
 
     //FrameFiller <=> RequestController:        [Write-only]
     wire         fill_waf_full; //RCON:
-    wire         fill_waf_wren  = 1'b0; //Unused (SLR-only)
-    wire [ 27:0] fill_waf_addr  = 31'bx; //WAS: [30:0]
+    wire         fill_waf_wren; //Unused (SLR-only)
+    wire [ 27:0] fill_waf_addr; //WAS: [30:0]
     wire         fill_wdf_full; //RCON:
-    wire         fill_wdf_wren  = 1'b0;
-    wire [ 15:0] fill_wdf_mask  = 16'bx;
-    wire [127:0] fill_wdf_data  = 128'bx;
+    wire         fill_wdf_wren;
+    wire [ 15:0] fill_wdf_mask;
+    wire [127:0] fill_wdf_data;
     wire [143:0] fill_wdf_mdat = {fill_wdf_mask,fill_wdf_data};
 
     //LineEngine <=> RequestController:         [Write-only]
     wire         line_waf_full; //RCON:
-    wire         line_waf_wren  = 1'b0; //Unused (SLR-only)
-    wire [ 27:0] line_waf_addr  = 28'bx; //WAS: [30:0]
+    wire         line_waf_wren; //Unused (SLR-only)
+    wire [ 27:0] line_waf_addr; //WAS: [30:0]
     wire         line_wdf_full; //RCON:
-    wire         line_wdf_wren  = 1'b0;
-    wire [ 15:0] line_wdf_mask  = 16'bx;
-    wire [127:0] line_wdf_data  = 128'bx;
+    wire         line_wdf_wren;
+    wire [ 15:0] line_wdf_mask;
+    wire [127:0] line_wdf_data;
     wire [143:0] line_wdf_mdat = {line_wdf_mask,line_wdf_data};
 
     //Bypass/SLR <=> RequestController:         [Write-only]
@@ -230,7 +231,7 @@ module MemoryDDR #(
         // Reference Clock Port (Always 200MHz, drives "iodelay" lines)app_zq_ack
         .clk_ref_i          (clk_mig_ref),      // input  ALWAYS 200MHz
         // Reset MIG, presumably in ".sys_clk_i" clock domain???
-        .sys_rst            (rst_cpu_mem),      // input
+        .sys_rst            (rst_mig_sys_n),      // input  ACTIVE-LOW
         // A clock OUTPUT from MIG to match "UI" or "app" that drives one side of our FIFOs
         .ui_clk             (clk_mig_ui),       // output WAS: .clk0_tb(ddr2_clock_tb)
         .ui_clk_sync_rst    (rst_mig_ui),       // output WAS: .rst0_tb(ddr2_rst_tb)
@@ -420,6 +421,9 @@ module MemoryDDR #(
         .DBG_cache_cs(DBG_icache_cs)
     );
 */
+
+    assign i_stall = 1'b0;
+
     // Data cache:
     Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
@@ -450,7 +454,7 @@ module MemoryDDR #(
         .DBG_cache_cs(DBG_dcache_cs)
     );
 
-    assign stall = d_stall; // || i_stall;
+    assign stall = d_stall || i_stall; //TODO: This combined "stall" signal never used!?!
     assign DBG_dcache = { d_stall, DBG_dcache_cs };
     assign DBG_icache = 4'b0000; //{ inst_rdf_wren, DBG_icache_cs };
 
