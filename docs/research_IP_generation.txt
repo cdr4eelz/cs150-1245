@@ -1,3 +1,19 @@
+*** MAY NOT MATTER, BUT WE CAN SET CLOCKS ON FIFOs ***
+report_property  [get_ips {pixel_fifo}] -regexp .*_CLK.FREQ_HZ
+
+Property                  Type    Read-only  Value
+CONFIG.CORE_CLK.FREQ_HZ   string  false      100000000
+CONFIG.READ_CLK.FREQ_HZ   string  false      100000000
+CONFIG.WRITE_CLK.FREQ_HZ  string  false      100000000
+
+set_property CONFIG.READ_CLK.FREQ_HZ {40000000} [get_ips {pixel_fifo}]
+
+set_property CONFIG.WRITE_CLK.FREQ_HZ {50000000} [get_ips {mig_caf}]
+set_property CONFIG.WRITE_CLK.FREQ_HZ {50000000} [get_ips {mig_wdf}]
+set_property CONFIG.READ_CLK.FREQ_HZ {50000000} [get_ips {mig_rdf}]
+
+
+
    create_project project_1 myproj -part xc7z020clg400-1L
    set_property BOARD_PART tul.com.tw:pynq-z2:part0:1.0 [current_project]
 
