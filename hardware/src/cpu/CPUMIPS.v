@@ -28,8 +28,9 @@ module CPUMIPS #(
     input  [31: 0]  IMEM_DATA, DMEM_DATA,
     output          MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
     output [31: 0]  _WDataMasked,
-    output [ 3: 0]  _WriteMask
+    output [ 3: 0]  _WriteMask,
 
+    output [ 3: 0]  CNTDEBUG
 );
 
 //BRK tap (in transition)
@@ -109,6 +110,8 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     );
 //  assign DO_ISR = {BRA_IRQPending_DX2F_,stall,INST_CouldBranch_F_,WAS_Branch,WAS_ISR} == 5'b10000;
     assign DO_ISR = BRA_IRQPending_DX2F_ && ~|{stall,INST_CouldBranch_F_,WAS_Branch,WAS_ISR};
+
+    assign CNTDEBUG = CNT_Inst[10:7];
 
 
 //=============--- "PIPELINE"-PEEK: F/DX ---=============

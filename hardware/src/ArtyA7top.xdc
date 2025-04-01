@@ -23,7 +23,18 @@ set_false_path -to   [get_ports led*]
 # Below removes path analysis related to init_calib_complete
 #set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_out_50MHz_clk_wiz_fetcher]
 set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_cpu_50MHz_clk_wiz_0]
+set_false_path -from [get_clocks clk_pll_i] -to [get_clocks clk_pixel_40MHz_clk_wiz_0]
 
+set_false_path -to [get_ports VGA_R[*]]
+set_false_path -to [get_ports VGA_G[*]]
+set_false_path -to [get_ports VGA_B[*]]
+set_false_path -to [get_ports VGA_HS_O]
+set_false_path -to [get_ports VGA_VS_O]
+set_false_path -from [get_ports BUTTON[*]]
+set_false_path -from [get_ports SWITCH[*]]
+set_false_path -from [get_ports CK_RST_N]
+set_false_path -to [get_ports FPGA_SERIAL_TX]
+set_false_path -from [get_ports FPGA_SERIAL_RX]
 
 ##Switches
 
@@ -98,7 +109,6 @@ set_property -dict { PACKAGE_PIN V14   IOSTANDARD LVCMOS33 } [get_ports { VGA_VS
 #set_property -dict { PACKAGE_PIN U13   IOSTANDARD LVCMOS33 } [get_ports { jc[7] }]; #IO_L23N_T3_A02_D18_14 Sch=jc_n[4]
 
 ##Pmod Header JD
-
 #set_property -dict { PACKAGE_PIN D4    IOSTANDARD LVCMOS33 } [get_ports { jd[1] }]; #IO_L11N_T1_SRCC_35 Sch=jd[1]
 #set_property -dict { PACKAGE_PIN D3    IOSTANDARD LVCMOS33 } [get_ports { jd[2] }]; #IO_L12N_T1_MRCC_35 Sch=jd[2]
 #set_property -dict { PACKAGE_PIN F4    IOSTANDARD LVCMOS33 } [get_ports { jd[3] }]; #IO_L13P_T2_MRCC_35 Sch=jd[3]

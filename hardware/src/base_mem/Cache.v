@@ -172,7 +172,7 @@ module Cache #(
             re_hold   <= 1'b0;
             we_hold   <= 4'b_0000;
             din_hold  <= 32'h_0000_0000;
-        end else if((next_state == IDLE) && (|we || (re == 1'b1))) begin
+        end else if((next_state == IDLE)) begin //&& (|we || (re == 1'b1))) begin
             addr_hold <= addr;
             re_hold   <= re;
             we_hold   <= we;
@@ -200,10 +200,10 @@ module Cache #(
                                     : ((read_miss) ? FETCH1  : IDLE );
             WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
             WRITE2 : next_state = (!wdf_full && !caf_full) ? IDLE    : WRITE2; // WAS: "!wdf_full" only
-            FETCH1 : next_state = (             !caf_full) ? FETCH2  : FETCH1;
-            FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2;
-            READ1  : next_state = (       rdf_wren       ) ? READ2   : READ1;
-            READ2  : next_state = (       rdf_wren       ) ? CWRITEB : READ2;
+            FETCH1 : next_state = (             !caf_full) ? READ1   : FETCH1;
+            READ1  : next_state = ( rdf_rden && rdf_wren ) ? FETCH2  : READ1;
+            FETCH2 : next_state = (             !caf_full) ? READ2   : FETCH2;
+            READ2  : next_state = ( rdf_rden && rdf_wren ) ? CWRITEB : READ2;
             CWRITEB: next_state = IDLE;
             default: next_state = IDLE;
         endcase
@@ -212,7 +212,9 @@ module Cache #(
     wire    isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
     wire    isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
     wire    isReading   = (current_state == READ1 ) || (current_state == READ2 );
-    wire    isSecond    = (current_state == WRITE2) || (current_state == FETCH2);
+    wire    isSecond    = (current_state == WRITE2)
+                            || (current_state == FETCH2)
+                            || (current_state == READ2);
 
     // FIFO output partial values:
     wire [  2:0]  f_cmd;

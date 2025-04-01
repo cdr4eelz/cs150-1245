@@ -25,7 +25,8 @@ module MIPS150 #(
     output [ 31:0]  pf_wframe,    gp_wcode, gp_wframe,
     input  [ 31:0]                gp_rcode,
     input  [ 15:0]  pf_status,              gp_status,
-    input           irq_pf_frame, irq_gp_done
+    input           irq_pf_frame, irq_gp_done,
+    output [3:0] CNTDEBUG
 );
 
     wire irq_uart0, irq_uart1;
@@ -154,7 +155,8 @@ end else begin:MIPS
         .IMEM_DATA(IMEM_DATA), .DMEM_DATA(DMEM_DATA),
         .MemToRegDX_(MemToRegDX_), .MemWriteDX_(MemWriteDX_),
         .PCinBIOSDX_(PCinBIOSDX_),
-        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask)
+        ._WDataMasked(_WDataMasked), ._WriteMask(_WriteMask),
+        .CNTDEBUG(CNTDEBUG)
     );
 end //<default> CPUMIPS
 
