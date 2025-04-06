@@ -54,7 +54,8 @@ module MemoryDDR #(
     input   [31:0]  dcache_din,     icache_din,
     output  [31:0]  dcache_dout,    icache_dout,
     output          d_stall,        i_stall,
-    output   [3:0]  DBG_dcache,     DBG_icache,  //4-bits, Cache returns 3-bits
+    output   [3:0]  DBG_dcache,     DBG_icache,
+    output DBG_clk_mig_ui, DBG_rst_mig_ui,
 
 // PixelFeeder <=> DVI Controller:
     input           video_ready,
@@ -69,9 +70,9 @@ module MemoryDDR #(
     output          irq_pf_frame, irq_gp_done
 );
 
-    wire init_calib_complete;
+    (* mark_debug = "true" *) wire init_calib_complete;
     assign init_done = init_calib_complete; //Assign rather than renaming
-    wire [2:0]  DBG_dcache_cs,  DBG_icache_cs;
+    (* mark_debug = "true" *) wire [3:0]  DBG_dcache_cs,  DBG_icache_cs;
 
 
 //TODO: Check use of "fifo_caf_rdy" vs. old "!fifo_caf_full"
@@ -80,34 +81,35 @@ module MemoryDDR #(
 
 // MIG feeds clock/rst back to us (use for clock-crossing FIFOs)
     wire            clk_mig_ui;
-    wire            rst_mig_ui;
+    (* mark_debug = "true" *) wire            rst_mig_ui;
+    assign DBG_clk_mig_ui = clk_mig_ui, DBG_rst_mig_ui = rst_mig_ui;
 
 // FIFOs <=> DDR3/MIG:                      [clk_mig_ui domain]
-    wire            fifo_caf_empty; //FIFO: <Unused>  // FOR Debugging waveform
-    wire            fifo_caf_rdy;   //DDR3: "ready"             WAS: !fifo_caf_full
-    wire            fifo_caf_wren;  //FIFO: "valid"
-    wire [ 30:0]    fifo_caf_cadr;  //FIFO: {cmd-3,addr-28}     NOTE:Width WAS: [33:0]
-    wire            fifo_wdf_empty; //FIFO: <Unused>  // FOR Debugging waveform
-    wire            fifo_wdf_rdy;   //DDR3: "ready"             WAS: !fifo_wdf_full
-    wire            fifo_wdf_wren;  //FIFO: "valid"
-    wire [143:0]    fifo_wdf_mdat;  //FIFO: {mask-16,data-128}  NOTE:Same width
-    wire            fifo_rdf_full;  //FIFO: N/A (always-ready) FOR Debugging waveform
-    wire            fifo_rdf_wren;  //DDR3: "valid"
-    wire [127:0]    fifo_rdf_data;  //DDR3: data                NOTE:Same width
-    wire            fifo_caf_under, fifo_wdf_under, fifo_rdf_wrack; //FOR DEBUG
+    (* mark_debug = "true" *) wire            fifo_caf_empty; //FIFO: <Unused>  // FOR Debugging waveform
+    (* mark_debug = "true" *) wire            fifo_caf_rdy;   //DDR3: "ready"             WAS: !fifo_caf_full
+    (* mark_debug = "true" *) wire            fifo_caf_wren;  //FIFO: "valid"
+    (* mark_debug = "true" *) wire [ 30:0]    fifo_caf_cadr;  //FIFO: {cmd-3,addr-28}     NOTE:Width WAS: [33:0]
+    (* mark_debug = "true" *) wire            fifo_wdf_empty; //FIFO: <Unused>  // FOR Debugging waveform
+    (* mark_debug = "true" *) wire            fifo_wdf_rdy;   //DDR3: "ready"             WAS: !fifo_wdf_full
+    (* mark_debug = "true" *) wire            fifo_wdf_wren;  //FIFO: "valid"
+    (* mark_debug = "true" *) wire [143:0]    fifo_wdf_mdat;  //FIFO: {mask-16,data-128}  NOTE:Same width
+    (* mark_debug = "true" *) wire            fifo_rdf_full;  //FIFO: N/A (always-ready) FOR Debugging waveform
+    (* mark_debug = "true" *) wire            fifo_rdf_wren;  //DDR3: "valid"
+    (* mark_debug = "true" *) wire [127:0]    fifo_rdf_data;  //DDR3: data                NOTE:Same width
+    (* mark_debug = "true" *) wire            fifo_caf_under, fifo_wdf_under, fifo_rdf_wrack; //FOR DEBUG
     
 // RequestController/MASTER <=> FIFOs:      [clk_cpu domain]
-    wire            rcon_caf_full;  //FIFO: "!ready"
-    wire            rcon_caf_wren;  //RCON: "valid"
-    wire [ 30:0]    rcon_caf_cadr;  //RCON: {cmd-3,addr-28}     NOTE:Width WAS: [33:0]
-    wire            rcon_wdf_full;  //FIFO: "!ready"
-    wire            rcon_wdf_wren;  //RCON: "valid"
-    wire [143:0]    rcon_wdf_mdat;  //RCON: {mask-16,data-128}  NOTE:Same width
-    wire            rcon_rdf_empty; //FIFO: <Unused>  // FOR Debugging waveform
-    wire            rcon_rdf_rden;  //RCON: "ready"
-    wire            rcon_rdf_wren;  //FIFO: "valid"
-    wire [127:0]    ALLR_rdf_data;  //FIFO: ALL-Readers         NOTE:Same width
-    wire            rcon_caf_wrack, rcon_wdf_wrack, rcon_rdf_under; //FOR DEBUG
+    (* mark_debug = "true" *) wire            rcon_caf_full;  //FIFO: "!ready"
+    (* mark_debug = "true" *) wire            rcon_caf_wren;  //RCON: "valid"
+    (* mark_debug = "true" *) wire [ 30:0]    rcon_caf_cadr;  //RCON: {cmd-3,addr-28}     NOTE:Width WAS: [33:0]
+    (* mark_debug = "true" *) wire            rcon_wdf_full;  //FIFO: "!ready"
+    (* mark_debug = "true" *) wire            rcon_wdf_wren;  //RCON: "valid"
+    (* mark_debug = "true" *) wire [143:0]    rcon_wdf_mdat;  //RCON: {mask-16,data-128}  NOTE:Same width
+    (* mark_debug = "true" *) wire            rcon_rdf_empty; //FIFO: <Unused>  // FOR Debugging waveform
+    (* mark_debug = "true" *) wire            rcon_rdf_rden;  //RCON: "ready"
+    (* mark_debug = "true" *) wire            rcon_rdf_wren;  //FIFO: "valid"
+    (* mark_debug = "true" *) wire [127:0]    ALLR_rdf_data;  //FIFO: ALL-Readers         NOTE:Same width
+    (* mark_debug = "true" *) wire            rcon_caf_wrack, rcon_wdf_wrack, rcon_rdf_under; //FOR DEBUG
 
     //Inst/Data-Caches <=> RequestController:   [Read-Write]
     wire         inst_caf_full,     data_caf_full;
@@ -275,7 +277,7 @@ module MemoryDDR #(
 
     //{Command,Address} Fifo (RCON => FIFO => DDR3-MIG)...
     mig_caf ddr3_cadr_fifo (
-        .rst    (rst_mig_ui),       // input    : NOT rst_cpu_bus?
+        .rst    (rst_cpu_bus),      // input    : rst_cpu_bus vs rst_mig_ui
     // FIFO-WR: RCON clock-domain
         .wr_clk (clk_cpu),          // input    : CPU/RCON clock
         .full   (rcon_caf_full),    // output   : FIFO =>  RCON: "!ready"
@@ -293,7 +295,7 @@ module MemoryDDR #(
 
     //Write-mask/Data Fifo (RCON => FIFO => DDR3-MIG)...
     mig_wdf ddr3_mdat_fifo (
-        .rst    (rst_mig_ui),       // input    : NOT rst_cpu_bus?
+        .rst    (rst_cpu_bus),      // input    : rst_cpu_bus vs rst_mig_ui
         // FIFO-WR: RCON clock-domain
         .wr_clk (clk_cpu),          // input    : CPU/RCON clock
         .full   (rcon_wdf_full),     // output  : FIFO =>  RCON: "!ready"
@@ -311,7 +313,7 @@ module MemoryDDR #(
 
     //Read Data Fifo (DDR3 => FIFO => RCON):
     mig_rdf  ddr3_read_fifo (
-        .rst(rst_mig_ui),           // input    : NOT rst_cpu_bus?
+        .rst(rst_mig_ui),           // input    : rst_cpu_bus vs rst_mig_ui
         // FIFO-WR: DDR3 clock-domain
         .wr_clk(clk_mig_ui),        // input    : MIG sys_clk_i
         .full  (fifo_rdf_full),     // output   : FIFO =>  DDR3: N/A (always ready) MIG doesn't check this 
@@ -437,7 +439,7 @@ module MemoryDDR #(
 */
 
     assign i_stall = 1'b0;
-    //assign d_stall = 1'b0;
+    assign DBG_icache_cs = 4'b0000;
 
     // Data cache:
     Cache #(
@@ -469,8 +471,8 @@ module MemoryDDR #(
         .DBG_cache_cs(DBG_dcache_cs)
     );
 
-    assign DBG_dcache = { d_stall, DBG_dcache_cs };
-    assign DBG_icache = 4'b0000; //{ inst_rdf_wren, DBG_icache_cs };
+    assign DBG_dcache = DBG_dcache_cs;
+    assign DBG_icache = DBG_icache_cs;
 
     assign video_valid = 1'b1;
     assign video       = 32'h00_80_80_FF;

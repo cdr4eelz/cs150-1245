@@ -53,7 +53,7 @@ module Cache #(
     output          tag_hit,
     output          tag_valid,
 // Debug state machine current-state:
-    output [2:0]    DBG_cache_cs
+    output [3:0]    DBG_cache_cs
 );
 
     // State declarations:
@@ -68,29 +68,29 @@ module Cache #(
 
     //registers:
     // state for DDR3 FSM
-    reg [2:0] current_state, next_state;
-    assign DBG_cache_cs = current_state;
+    (* mark_debug = "true" *) reg [2:0] current_state, next_state;
+
     // register to hold first 128-bits read back
     // from DDR3
-    reg [127:0]   first_read;
+    (* mark_debug = "true" *) reg [127:0]   first_read;
 
     // register data in to write into the cache
     // either:
     // a) 1 cycle later - after a tag check
     // b) many cycles later - after doing a fetch from DDR3
-    reg [31:0]    din_hold;
+    (* mark_debug = "true" *) reg [31:0]    din_hold;
 
     // register address
-    reg [31:0]    addr_hold;
+    (* mark_debug = "true" *) reg [31:0]    addr_hold;
 
     // register read and write enables
-    reg           re_hold;
-    reg [3:0]     we_hold;
+    (* mark_debug = "true" *) reg           re_hold;
+    (* mark_debug = "true" *) reg [3:0]     we_hold;
 
-    wire mem_en;
-    wire [31:0] data_we;
-    wire tag_we;
-    wire [`SZ_CACHELINE-1:0] data;
+    (* mark_debug = "true" *) wire mem_en;
+    (* mark_debug = "true" *) wire [31:0] data_we;
+    (* mark_debug = "true" *) wire tag_we;
+    (* mark_debug = "true" *) wire [`SZ_CACHELINE-1:0] data;
 
     wire [`SZ_CACHELINE-1:0] data_line_out;
     wire [`SZ_TAGLINE-1:0] tag_line_out;
@@ -160,8 +160,23 @@ module Cache #(
 
     assign read_miss = re_hold && !tag_hit;
 
+    localparam STUCK_MAX_CYCLES = 8'd48;
+    (* mark_debug = "true" *) reg [7:0] stuckCycles;
+    (* mark_debug = "true" *) wire stuckTrigger = (stuckCycles == 0);
+    (* mark_debug = "true" *) reg [31:0] stuckResets;
+    assign DBG_cache_cs = {stuckTrigger, current_state};
+
     // synchronous logic:
     always @(posedge clk) begin
+        if(rst || (current_state == IDLE) || (next_state != current_state)) begin
+            stuckCycles <= STUCK_MAX_CYCLES;
+        end else if(!stuckTrigger) begin
+            stuckCycles <= stuckCycles - 1;
+        end else begin
+            // next_state change will hopefully avoid repeated increments!
+            stuckResets <= stuckResets + 1;
+        end
+
         if(rst)
             current_state <= IDLE;
         else
@@ -194,33 +209,37 @@ module Cache #(
 
     // State transition logic:
     always @(*) begin
-        next_state = IDLE;
-        case(current_state)
-            IDLE   : next_state = (we_hold) ?                     WRITE1
-                                    : ((read_miss) ? FETCH1  : IDLE );
-            WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
-            WRITE2 : next_state = (!wdf_full && !caf_full) ? IDLE    : WRITE2; // WAS: "!wdf_full" only
-            FETCH1 : next_state = (             !caf_full) ? READ1   : FETCH1;
-            READ1  : next_state = ( rdf_rden && rdf_wren ) ? FETCH2  : READ1;
-            FETCH2 : next_state = (             !caf_full) ? READ2   : FETCH2;
-            READ2  : next_state = ( rdf_rden && rdf_wren ) ? CWRITEB : READ2;
-            CWRITEB: next_state = IDLE;
-            default: next_state = IDLE;
-        endcase
+        if(stuckTrigger && isReading) begin // Start again if results didn't reach us (major HACK)
+            next_state = FETCH1;
+        end else begin
+            next_state = IDLE;
+            case(current_state)
+                IDLE   : next_state = (we_hold) ?                     WRITE1
+                                        : ((read_miss) ? FETCH1  : IDLE );
+                WRITE1 : next_state = (!wdf_full && !caf_full) ? WRITE2  : WRITE1;
+                WRITE2 : next_state = (!wdf_full && !caf_full) ? IDLE    : WRITE2; // WAS: "!wdf_full" only
+                FETCH1 : next_state = (             !caf_full) ? FETCH2  : FETCH1;
+                FETCH2 : next_state = (             !caf_full) ? READ1   : FETCH2;
+                READ1  : next_state = ( rdf_rden && rdf_wren ) ? READ2   : READ1;
+                READ2  : next_state = ( rdf_rden && rdf_wren ) ? CWRITEB : READ2;
+                CWRITEB: next_state = IDLE;
+                default: next_state = IDLE;
+            endcase
+        end
     end
 
-    wire    isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
-    wire    isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
-    wire    isReading   = (current_state == READ1 ) || (current_state == READ2 );
-    wire    isSecond    = (current_state == WRITE2)
+    (* mark_debug = "true" *) wire    isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
+    (* mark_debug = "true" *) wire    isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
+    (* mark_debug = "true" *) wire    isReading   = (current_state == READ1 ) || (current_state == READ2 );
+    (* mark_debug = "true" *) wire    isSecond    = (current_state == WRITE2)
                             || (current_state == FETCH2)
                             || (current_state == READ2);
 
     // FIFO output partial values:
-    wire [  2:0]  f_cmd;
-    wire [ 27:0]  f_addr_base, f_addr; //WAS: [30:0]
-    wire [127:0]  f_data;
-    wire [ 15:0]  f_mask;
+    (* mark_debug = "true" *) wire [  2:0]  f_cmd;
+    (* mark_debug = "true" *) wire [ 27:0]  f_addr_base, f_addr; //WAS: [30:0]
+    (* mark_debug = "true" *) wire [127:0]  f_data;
+    (* mark_debug = "true" *) wire [ 15:0]  f_mask;
     assign f_cmd  = (isWriting) ? 3'b000 : 3'b001; // Write = 0 : Read = 1
     assign f_addr_base = {3'b000, addr_hold[`IDX_ADDR_DRAM], 2'b00}; // WAS 6'b000000
     assign f_addr = (isSecond) ? (f_addr_base + 8) : f_addr_base;

@@ -83,7 +83,8 @@ module ArtyA7top #(
 //TODO: Figure out if we need BUFG on these clocks???
 
     // Then some other support components come out of reset (like DRAM)
-    wire rst_cpu, rst_mig_sys_n, rst_pix, init_done;  // TODO: CPU comes out of reset after everything else
+    (* mark_debug = "true" *) wire rst_cpu, init_done;  // TODO: CPU comes out of reset after everything else
+    wire rst_mig_sys_n, rst_pix; // Avoid debug on these since it brings in 2 extra clock domains
     Synchronizer #( .Width(1) ) sync_rst_mig_sys_n (
         .async_signal(!locked_top_clocks || !reset_top_clocks),
         .Clock(clk_mig_sys),  .sync_signal(rst_mig_sys_n));  // NOTE: This clock is bad when PLL not locked!
@@ -133,17 +134,20 @@ module ArtyA7top #(
 
     end else begin:MIPS150
 
-        wire stall_top, stall_dip;
+        (* mark_debug = "true" *) wire stall_top, stall_dip;
         assign stall_dip = switches[1]; //1'b0;  // TODO: Tie-in to a GPIO switch (and invert repeatedly)
 
         // MemoryDDR (WAS: Memory150)
-        wire [31:0] dcache_addr,    icache_addr;
-        wire [ 3:0] dcache_we,      icache_we;
-        wire        dcache_re,      icache_re;
-        wire [31:0] dcache_din,     icache_din;
-        wire [31:0] dcache_dout,    icache_dout;
-        wire        stall_dcache,   stall_icache; //stall_cache;
-        wire  [3:0] DBG_dcache,     DBG_icache;
+        (* mark_debug = "true" *) wire [31:0] dcache_addr,    icache_addr;
+        (* mark_debug = "true" *) wire [ 3:0] dcache_we,      icache_we;
+        (* mark_debug = "true" *) wire        dcache_re,      icache_re;
+        (* mark_debug = "true" *) wire [31:0] dcache_din,     icache_din;
+        (* mark_debug = "true" *) wire [31:0] dcache_dout,    icache_dout;
+        (* mark_debug = "true" *) wire        stall_dcache,   stall_icache; //stall_cache;
+        (* mark_debug = "true" *) wire  [3:0] DBG_dcache,     DBG_icache;
+        wire DBG_clk_mig_ui;
+        (* mark_debug = "true" *) wire DBG_rst_mig_ui;
+
         wire        video_ready,    video_valid;
         wire [31:0] video;//[23:0]
     //  wire        fb0; ???Was this "framebuffer0" like pf_wframe???
@@ -167,6 +171,8 @@ module ArtyA7top #(
             .rst_pix        (rst_pix),
             .locked         (locked_top_clocks),  //Acts as an active HIGH reset
             .init_done      (init_done),  // Output HIGH when MIG is ready
+            .DBG_clk_mig_ui (DBG_clk_mig_ui),
+            .DBG_rst_mig_ui (DBG_rst_mig_ui),
 
         // DDR3 InOuts
             .ddr3_dq        (ddr3_dq),      // inout  [15:0]
@@ -210,7 +216,7 @@ module ArtyA7top #(
 
         assign video_ready = 1'b0;
 
-        wire [3:0] CNTDEBUG;
+        (* mark_debug = "true" *) wire [3:0] DBG_COUNT;
 
         // MIPS 150 CPU
         MIPS150 #(
@@ -236,19 +242,27 @@ module ArtyA7top #(
             .pf_status  (pf_status),                            .gp_status(gp_status),
             .irq_pf_frame(irq_pf_frame),    .irq_gp_done(irq_gp_done),
 
-            .CNTDEBUG(CNTDEBUG)
+            .DBG_COUNT(DBG_COUNT)
         );
 
         assign stall_top = stall_dip || stall_icache || stall_dcache; //stall_cache
 
-        assign LED[0] = buttons[0] ^ (locked_top_clocks & init_done);
-        assign LED[1] = buttons[1] ^ (reset_top_clocks & rst_cpu);
+        assign LED[0] = buttons[0] ^ (locked_top_clocks && init_done);
+        assign LED[1] = buttons[1] ^ (reset_top_clocks && rst_cpu);
         assign LED[2] = buttons[2] ^ stall_dcache;
         assign LED[3] = buttons[3] ^ stall_top;
         // TODO: Map RGB LEDs in constraints file and drive them with PWM
-        wire [3:0] led_rgb_set;
-        assign led_rgb_set = (switches[0]) ? DBG_dcache : CNTDEBUG;
+        (* mark_debug = "true" *) wire [3:0] led_rgb_set;
+        assign led_rgb_set = (switches[0]) ? DBG_dcache : DBG_COUNT;
         assign { led3_b, led2_r, led1_g, led0_b } = led_rgb_set ^ buttons;
+
+        (* mark_debug = "true" *) wire [3:0] DBG_dcache_MIG;
+        Synchronizer #( .Width(4) ) sync_cache_dbg (
+            .async_signal(DBG_dcache),
+            .Clock(DBG_clk_mig_ui),
+            .sync_signal(DBG_dcache_MIG)
+        );
+        (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];
 
     end endgenerate;
 
