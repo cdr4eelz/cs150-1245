@@ -1,7 +1,5 @@
-TARGET ?= dumpecho
+TARGET ?= dumpagain
 LDSTYLE ?= modern_scratch
-#LDSTYLE ?= direct
-#LDSTYLE ?= inject_hybrid
 
 include ../makefile.pre
 
