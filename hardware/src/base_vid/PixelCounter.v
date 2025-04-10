@@ -82,11 +82,11 @@ module	PixelCounter(Clock, Reset, PixelX, PixelY, PixelActive, PixelHSync, Pixel
 	//--------------------------------------------------------------------------
 	//	I/O
 	//--------------------------------------------------------------------------
-	input					Clock, Reset;
-	output	[XWidth-1:0]	PixelX;
-	output	[YWidth-1:0]	PixelY;
-	output					PixelActive, PixelHSync, PixelVSync;
-	input					PixelIncrement;
+	input  wire					Clock, Reset;
+	output wire	[XWidth-1:0]	PixelX;
+	output wire	[YWidth-1:0]	PixelY;
+	output wire					PixelActive, PixelHSync, PixelVSync;
+	input  wire					PixelIncrement;
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------

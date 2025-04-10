@@ -65,9 +65,9 @@ module	Counter(Clock, Reset, Set, Load, Enable, In, Count);
 	//--------------------------------------------------------------------------
 	//	I/O
 	//--------------------------------------------------------------------------
-	input					Clock, Reset, Set, Load, Enable;
-	input	[Width-1:0]		In;
-	output	[Width-1:0]		Count;
+	input  wire					Clock, Reset, Set, Load, Enable;
+	input  wire	[Width-1:0]		In;
+	output wire	[Width-1:0]		Count;
 	//--------------------------------------------------------------------------
 
 	//--------------------------------------------------------------------------

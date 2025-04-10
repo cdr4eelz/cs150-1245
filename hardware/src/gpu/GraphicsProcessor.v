@@ -25,54 +25,54 @@
 module GraphicsProcessor #(
     parameter LITTLEWORDIAN=1
 )(
-    input clk,
-    input rst,
+    input  wire clk,
+    input  wire rst,
 
 //DDR FIFOs (read-only for GP cmd):
-    input           raf_full,
-    output          raf_wren,
-    output  [ 27:0] raf_addr, //WAS: [30:0]
-    output          rdf_rden,
-    input           rdf_wren,
-    input   [127:0] rdf_data,
+    input  wire         raf_full,
+    output wire         raf_wren,
+    output wire[ 27:0]  raf_addr, //WAS: [30:0]
+    output wire         rdf_rden,
+    input  wire         rdf_wren,
+    input  wire[127:0]  rdf_data,
 
 //GraphicsProcessor interface:
-    input           GP_vcode, GP_vframe,
-    input   [ 31:0] GP_wcode, GP_wframe,
-    output  [ 31:0] GP_rcode,
-    output  [  5:0]           GP_rframe,
-    output          GP_ready,
-    output          GP_fault,
+    input  wire         GP_vcode, GP_vframe,
+    input  wire[ 31:0]  GP_wcode, GP_wframe,
+    output wire[ 31:0]  GP_rcode,
+    output wire[  5:0]            GP_rframe,
+    output wire         GP_ready,
+    output wire         GP_fault,
 
 //FrameFiller interface:
-    input           FF_ready,
-    output          FF_valid,
-    output  [ 31:0] FF_color,
-    output  [ 31:0] FF_frame,
+    input  wire         FF_ready,
+    output wire         FF_valid,
+    output wire[ 31:0]  FF_color,
+    output wire[ 31:0]  FF_frame,
 
 //LineEngine interface:
-    input           LE_ready,
-    output          LE_color_valid,
-    output  [ 31:0] LE_color,
-    output          LE_x0_valid,
-    output          LE_y0_valid,
-    output          LE_x1_valid,
-    output          LE_y1_valid,
-    output  [  9:0] LE_point,
-    output          LE_trigger,
-    output  [ 31:0] LE_frame,
+    input  wire         LE_ready,
+    output wire         LE_color_valid,
+    output wire[ 31:0]  LE_color,
+    output wire         LE_x0_valid,
+    output wire         LE_y0_valid,
+    output wire         LE_x1_valid,
+    output wire         LE_y1_valid,
+    output wire[  9:0]  LE_point,
+    output wire         LE_trigger,
+    output wire[ 31:0]  LE_frame,
 
 //ElipseEngine interface:
-    input           EL_ready,
-    output          EL_color_valid,
-    output  [ 31:0] EL_color,
-    output          EL_xc_valid,
-    output          EL_yc_valid,
-    output          EL_a_valid,
-    output          EL_b_valid,
-    output  [  9:0] EL_point,
-    output          EL_trigger,
-    output  [ 31:0] EL_frame
+    input  wire         EL_ready,
+    output wire         EL_color_valid,
+    output wire[ 31:0]  EL_color,
+    output wire         EL_xc_valid,
+    output wire         EL_yc_valid,
+    output wire         EL_a_valid,
+    output wire         EL_b_valid,
+    output wire[  9:0]  EL_point,
+    output wire         EL_trigger,
+    output wire[ 31:0]  EL_frame
 );
 
    //Your code goes here. GL HF.

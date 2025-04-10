@@ -8,34 +8,34 @@ module MemBank #(
     parameter DD=`COLT45_DD,
     parameter COLT45_SCRATCH=0, COLT45_MEMWRITE=0
 )(
-    input   clk, rst, stall,
+    input  wire clk, rst, stall,
 
 // Memory/IO lines (snagged from MIPS150):
-    input  [31: 0]  IMEM_ADDR, DMEM_ADDR,
-    output [31: 0]  IMEM_DATA, DMEM_DATA,
-    input           MemToRegDX_, MemWriteDX_, PCinBIOSDX_, //TODO:Rename
-    input  [31: 0]  _WDataMasked, //TODO:Rename
-    input  [ 3: 0]  _WriteMask,
+    input  wire[31: 0]  IMEM_ADDR, DMEM_ADDR,
+    output wire[31: 0]  IMEM_DATA, DMEM_DATA,
+    input  wire         MemToRegDX_, MemWriteDX_, PCinBIOSDX_, //TODO:Rename
+    input  wire[31: 0]  _WDataMasked, //TODO:Rename
+    input  wire[ 3: 0]  _WriteMask,
 
 // Serial (UART):
-    input   SerialRX,
-    output  SerialTX,
+    input  wire SerialRX,
+    output wire SerialTX,
 
 // Interrupts:
-    output irq_uart0, irq_uart1,
+    output wire irq_uart0, irq_uart1,
 
 // Memory Caches:
-    output [ 31:0]  dcache_addr,  icache_addr,
-    output [  3:0]  dcache_we,    icache_we,
-    output          dcache_re,    icache_re,
-    output [ 31:0]  dcache_din,   icache_din,
-    input  [ 31:0]  dcache_dout,  icache_dout,
+    output wire[ 31:0]  dcache_addr,  icache_addr,
+    output wire[  3:0]  dcache_we,    icache_we,
+    output wire         dcache_re,    icache_re,
+    output wire[ 31:0]  dcache_din,   icache_din,
+    input  wire[ 31:0]  dcache_dout,  icache_dout,
 
 // GPU control:
-    output          pf_vframe,  gp_vcode, gp_vframe,
-    output [ 31:0]  pf_wframe,  gp_wcode, gp_wframe,
-    input  [ 31:0]              gp_rcode,
-    input  [ 15:0]  pf_status,            gp_status
+    output wire         pf_vframe,  gp_vcode, gp_vframe,
+    output wire[ 31:0]  pf_wframe,  gp_wcode, gp_wframe,
+    input  wire[ 31:0]              gp_rcode,
+    input  wire[ 15:0]  pf_status,            gp_status
 );
 
 //TODO: Ideally generate "isRead/isWrite" signals WHILE generating _WriteMask

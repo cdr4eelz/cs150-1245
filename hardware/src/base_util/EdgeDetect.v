@@ -66,8 +66,8 @@ module EdgeDetect(Clock, Reset, Enable, In, Out);
 	//--------------------------------------------------------------------------
 	//	I/O
 	//--------------------------------------------------------------------------
-	input					Clock, Reset, Enable;
-	input					In;
+	input wire				Clock, Reset, Enable;
+	input wire				In;
 	output reg				Out;
 	//--------------------------------------------------------------------------
 

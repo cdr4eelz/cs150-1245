@@ -6,31 +6,31 @@ module CPUMIPS #(
     parameter COLT45_SCOPE=0, COLT45_BRK=0,
     parameter COLT45_PC=0, COLT45_REGREAD=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
-    input  clk, rst, stall,
+    input  wire clk, rst, stall,
 
 // Regfile lines
-    output          REGFILE_we,
-    output [31: 0]  REGFILE_wd,
-    output [ 4: 0]  REGFILE_ra1, REGFILE_ra2, REGFILE_wa,
-    input  [31: 0]  REGFILE_rd1, REGFILE_rd2,
+    output wire         REGFILE_we,
+    output wire [31: 0] REGFILE_wd,
+    output wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa,
+    input  wire [31: 0] REGFILE_rd1, REGFILE_rd2,
 
 // COP0 lines
-    output          COP0_we,
-    output [31: 0]  COP0_wd,
-    output [ 4: 0]  COP0_ra,
-    input  [31: 0]  COP0_rd,
-    output [31: 0]  intr_pc,
-    output          intr_handled,
-    input           intr_request,
+    output wire         COP0_we,
+    output wire [31: 0] COP0_wd,
+    output wire [ 4: 0] COP0_ra,
+    input  wire [31: 0] COP0_rd,
+    output wire [31: 0] intr_pc,
+    output wire         intr_handled,
+    input  wire         intr_request,
 
 // Memory lines
-    output [31: 0]  IMEM_ADDR, DMEM_ADDR,
-    input  [31: 0]  IMEM_DATA, DMEM_DATA,
-    output          MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
-    output [31: 0]  _WDataMasked,
-    output [ 3: 0]  _WriteMask,
+    output wire [31: 0] IMEM_ADDR, DMEM_ADDR,
+    input  wire [31: 0] IMEM_DATA, DMEM_DATA,
+    output wire         MemToRegDX_, MemWriteDX_, PCinBIOSDX_,
+    output wire[31: 0]  _WDataMasked,
+    output wire[ 3: 0]  _WriteMask,
 
-    output [ 3: 0]  DBG_COUNT
+    output wire[ 3: 0]  DBG_COUNT
 );
 
 //BRK tap (in transition)

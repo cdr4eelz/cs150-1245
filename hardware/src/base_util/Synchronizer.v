@@ -3,9 +3,9 @@
 module Synchronizer #(
     parameter Width = 1
 ) (
-    input Clock,
-    input [Width-1:0] async_signal,
-    output [Width-1:0] sync_signal
+    input  wire Clock,
+    input  wire[Width-1:0] async_signal,
+    output wire[Width-1:0] sync_signal
 );
     // Create your 2 flip-flop synchronizer here
     // This module takes in a vector of 1-bit asynchronous (from different clock domain or not clocked) signals

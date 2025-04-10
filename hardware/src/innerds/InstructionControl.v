@@ -5,23 +5,23 @@ module InstructionControl #(
     parameter DD=`COLT45_DD
 )(
     // Input instruction to decode (PC-relative branch/jump finalized elsewhere)
-    input [31:0] _inst,
+    input   wire[31:0]  _inst,
     // Signals used for instruction "Preview" during fetch stage
-    output Deviant,
+    output  wire        Deviant,
     // Global or post-DX control signals
-    output MemSigned, MemToReg, MemWrite,
-    output [ 1:0] MemShift,
-    output [ 4:0] DestReg,
+    output  wire        MemSigned, MemToReg, MemWrite,
+    output  wire[ 1:0]  MemShift,
+    output  wire[ 4:0]  DestReg,
     // Signals consumed mostly by DX stage
-    output ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, Branch,
-    output [ 3:0] ALUOp,
-    output [ 2:0] CmpOp,
-    output [15:0] IMMED,
-    output [27:0] NEARADDR,
-    output [ 4:0] SRC1, SRC2, SHAMT,
+    output  wire        ALUSrcA, ALUSrcB, ISigned, Jump, JR, Link, Branch,
+    output  wire[ 3:0]  ALUOp,
+    output  wire[ 2:0]  CmpOp,
+    output  wire[15:0]  IMMED,
+    output  wire[27:0]  NEARADDR,
+    output  wire[ 4:0]  SRC1, SRC2, SHAMT,
     // COP0 additions
-    output COPREAD, COPWRITE,
-    output [ 4:0] COPADDR
+    output  wire        COPREAD, COPWRITE,
+    output  wire[ 4:0]  COPADDR
 );
 
     // OPCODE and major categories

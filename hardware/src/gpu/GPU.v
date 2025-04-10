@@ -3,32 +3,32 @@ module GPU #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
     parameter LITTLEWORDIAN=1, WATCH_SLR=1
 )(
-    input clk,
-    input rst,
+    input  wire clk,
+    input  wire rst,
 
 //GraphicsProcessor interface:
-    input           gp_vcode, gp_vframe,
-    input   [ 31:0] gp_wcode, gp_wframe,
-    output  [ 31:0] gp_rcode,
-    output  [ 15:0]           gp_status,
-    output          irq_gp_done,
+    input  wire         gp_vcode, gp_vframe,
+    input  wire[ 31:0]  gp_wcode, gp_wframe,
+    output wire[ 31:0]  gp_rcode,
+    output wire[ 15:0]  gp_status,
+    output wire         irq_gp_done,
 
 //DDR-FIFOs (Read-only for GraphicsProcessor):
-    input           gcmd_raf_full,
-    output          gcmd_raf_wren,
-    output  [ 27:0] gcmd_raf_addr, //WAS: [30:0]
-    output          gcmd_rdf_rden,
-    input           gcmd_rdf_wren,
-    input   [127:0] gcmd_rdf_data,
+    input  wire         gcmd_raf_full,
+    output wire         gcmd_raf_wren,
+    output wire[ 27:0]  gcmd_raf_addr, //WAS: [30:0]
+    output wire         gcmd_rdf_rden,
+    input  wire         gcmd_rdf_wren,
+    input  wire[127:0]  gcmd_rdf_data,
 
 //DDR-FIFOs (Write-only for ScanLineRunner):
-    input           slr_waf_full,
-    output          slr_waf_wren,
-    output  [ 27:0] slr_waf_addr, //WAS: [30:0]
-    input           slr_wdf_full,
-    output          slr_wdf_wren,
-    output  [ 15:0] slr_wdf_mask,
-    output  [127:0] slr_wdf_data
+    input  wire         slr_waf_full,
+    output wire         slr_waf_wren,
+    output wire[ 27:0]  slr_waf_addr, //WAS: [30:0]
+    input  wire         slr_wdf_full,
+    output wire         slr_wdf_wren,
+    output wire[ 15:0]  slr_wdf_mask,
+    output wire[127:0]  slr_wdf_data
 );
 
     // GraphicsProcessor <=> FrameFiller:

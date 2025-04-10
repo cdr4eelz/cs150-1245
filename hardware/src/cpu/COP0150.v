@@ -1,22 +1,22 @@
 
 module COP0150(
-    input               clk, //Clock
-    input               ena, //Enable
-    input               rst, //Reset
+    input wire              clk, //Clock
+    input wire              ena, //Enable
+    input wire              rst, //Reset
 
-    input               COP0_we, //DataInEnable
-    input       [31:0]  COP0_wd, //DataIn
-    input       [ 4:0]  COP0_ra, //DataAddress
-    output      [31:0]  COP0_rd, //DataOut
+    input wire              COP0_we, //DataInEnable
+    input wire      [31:0]  COP0_wd, //DataIn
+    input wire      [ 4:0]  COP0_ra, //DataAddress
+    output wire     [31:0]  COP0_rd, //DataOut
 
-    input       [31:0]  intr_pc, //InterruptedPC
-    input               intr_handled, //InterruptHandled
-    output              intr_request, //InterruptRequest
+    input wire      [31:0]  intr_pc, //InterruptedPC
+    input wire              intr_handled, //InterruptHandled
+    output wire             intr_request, //InterruptRequest
 
-    input               irq_uart0, //UART0Request
-    input               irq_uart1, //UART1Request
-    input               irq_pf_frame, //PixelFeederRequest
-    input               irq_gp_done //GraphicsProcessorRequest
+    input wire              irq_uart0, //UART0Request
+    input wire              irq_uart1, //UART1Request
+    input wire              irq_pf_frame, //PixelFeederRequest
+    input wire              irq_gp_done //GraphicsProcessorRequest
 );
 
     reg   [31:0]  dataout_r;

@@ -2,14 +2,14 @@
 module DDRStage #(
     parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
-    input           clk, rst,
+    input  wire         clk, rst,
 
 //DDR FIFOs (read-only):
-    input           raf_full,
-    input           raf_wren, //Ignored if rdf_rden (meaning busy with pending read)
-    output reg      rdf_rden,  //"Caller" waits until !rdf_rden before next use
-    input           rdf_wren,  //From memory RequestController
-    input   [127:0] rdf_data,   //  (likewise)
+    input  wire         raf_full,
+    input  wire         raf_wren, //Ignored if rdf_rden (meaning busy with pending read)
+    output reg          rdf_rden,  //"Caller" waits until !rdf_rden before next use
+    input  wire         rdf_wren,  //From memory RequestController
+    input  wire[127:0]  rdf_data,   //  (likewise)
 
 //DDR chunk (256-bits)
     output reg          chunk_valid,

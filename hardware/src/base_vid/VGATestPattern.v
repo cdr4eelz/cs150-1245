@@ -15,13 +15,15 @@
 -- *** Translated to Verilog and "simplified" by Erik Rogers (Feb 2025) ***
 --------------------------------------------------------------------------------*/
 
+`default_nettype none
+
 module VGATestPattern (
-    input PXL_CLK, // MUST match the other resolution parameters (see end of file)
-    output VGA_HS_O,
-    output VGA_VS_O,
-    output [3:0] VGA_R,
-    output [3:0] VGA_G,
-    output [3:0] VGA_B
+    input  wire PXL_CLK, // MUST match the other resolution parameters (see end of file)
+    output wire VGA_HS_O,
+    output wire VGA_VS_O,
+    output wire [3:0] VGA_R,
+    output wire [3:0] VGA_G,
+    output wire [3:0] VGA_B
 );
 
     // See the end of this file for settings for other resolutions.
@@ -85,7 +87,7 @@ module VGATestPattern (
         -- Clock out ports
         CLK_OUT1 => PXL_CLK); */
 
-    wire h_LOW, v_LOW, v_8, h_3;
+    wire h_LOW, v_LOW, v_8, h_3, v_3;
     wire [3:0] val_color;
     assign h_LOW = (h_cntr_reg < 512); // Split left/right regions
     assign v_LOW = (v_cntr_reg < 256); // Split top/bottom regions

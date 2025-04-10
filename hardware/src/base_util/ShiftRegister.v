@@ -71,16 +71,16 @@ module	ShiftRegister(Clock, Reset, Load, Enable, PIn, SIn, POut, SOut);
 	//--------------------------------------------------------------------------
 	//	Control Inputs
 	//--------------------------------------------------------------------------
-	input					Clock, Reset, Load, Enable;
+	input  wire				Clock, Reset, Load, Enable;
 	//--------------------------------------------------------------------------
 
 	//--------------------------------------------------------------------------
 	//	Parallel and Serial I/O
 	//--------------------------------------------------------------------------
-	input	[PWidth-1:0]	PIn;
-	input	[SWidth-1:0]	SIn;
-	output 	[PWidth-1:0]	POut;
-	output	[SWidth-1:0]	SOut;
+	input  wire[PWidth-1:0]	PIn;
+	input  wire[SWidth-1:0]	SIn;
+	output wire[PWidth-1:0]	POut;
+	output wire[SWidth-1:0]	SOut;
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------

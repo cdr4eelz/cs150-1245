@@ -4,28 +4,28 @@ module MemMapIO #(
     parameter BADNESS=0, BAD_WORD=32'hFED1C007, BAD_BYTE=8'h11,
     parameter COLT45_SHAKE=1, COLT45_POLLS=0
 )(
-    input clk, rst, stall,
+    input  wire clk, rst, stall,
 
 // DAS BUS:
-    input         ena,    //ena is like "memory" style "enable port a"
-    input  [11:0] addra,  //Address for read or write (use zero if worried about side effects)
-    input  [ 3:0] wea,    //Write enable & byte mask together (ena must also be active for write)
-    input  [31:0] dina,   //Data in grabbed at clock edge if enabled
+    input  wire       ena,    //ena is like "memory" style "enable port a"
+    input  wire[11:0] addra,  //Address for read or write (use zero if worried about side effects)
+    input  wire[ 3:0] wea,    //Write enable & byte mask together (ena must also be active for write)
+    input  wire[31:0] dina,   //Data in grabbed at clock edge if enabled
     output reg [31:0] douta,//DATA read (behaves like synchronous memory with registered output)
 
 // UART ins & outs:
-    output          Rx_Ready,   // OUT: We offer to take a byte
-    input           Rx_Valid,   // IN : UART announcing a byte
-    input  [7:0]    Rx_Data,    // IN : Data from UART
-    output [7:0]    Tx_Data,    // OUT: Data to UART
-    output          Tx_Valid,   // OUT: We announce a byte
-    input           Tx_Ready,   // IN : UART can take a byte from us
+    output wire         Rx_Ready,   // OUT: We offer to take a byte
+    input  wire         Rx_Valid,   // IN : UART announcing a byte
+    input  wire[7:0]    Rx_Data,    // IN : Data from UART
+    output wire[7:0]    Tx_Data,    // OUT: Data to UART
+    output wire         Tx_Valid,   // OUT: We announce a byte
+    input  wire         Tx_Ready,   // IN : UART can take a byte from us
 
 // GPU control:
-    output          pf_vframe,  gp_vcode,  gp_vframe,
-    output [ 31:0]  pf_wframe,  gp_wcode,  gp_wframe,
-    input  [ 31:0]              gp_rcode,
-    input  [ 15:0]  pf_status,             gp_status
+    output wire         pf_vframe,  gp_vcode,  gp_vframe,
+    output wire[ 31:0]  pf_wframe,  gp_wcode,  gp_wframe,
+    input  wire[ 31:0]              gp_rcode,
+    input  wire[ 15:0]  pf_status,             gp_status
 );
 
 //                  Table 2: I/O Memory Map

@@ -25,25 +25,25 @@ module StageMW (
 //    input clk, rst, stall,
 
     // Inputs that peek into prior stage (to accommodate synchronous components this stage uses)
-    input  [ 1: 0]  _MemShift, _MemAddrShift,
-    input  [31: 0]  _MemWValue,
-    input           _MemWrite,
+    input  wire[ 1: 0]  _MemShift, _MemAddrShift,
+    input  wire[31: 0]  _MemWValue,
+    input  wire         _MemWrite,
 
     // Inputs held stable during our stage for us
-    input  [ 1: 0]  MemShift_MW, MemAddrShift_MW,
-    input  [31: 0]  RDataRaw,
-    input  [ 4: 0]  DestReg_MW,
-    input           MemToReg_MW,
-    input  [31: 0]  RegWValue_MW,
+    input  wire[ 1: 0]  MemShift_MW, MemAddrShift_MW,
+    input  wire[31: 0]  RDataRaw,
+    input  wire[ 4: 0]  DestReg_MW,
+    input  wire         MemToReg_MW,
+    input  wire[31: 0]  RegWValue_MW,
 
     // Outputs fed back to prior stages
-    output [ 4: 0]  WBK_Reg_,
-    output [31: 0]  WBK_Val_,
-    output          WBK_CanFWD_,
+    output wire[ 4: 0]  WBK_Reg_,
+    output wire[31: 0]  WBK_Val_,
+    output wire         WBK_CanFWD_,
 
     // Memory/IO drives
-    output [ 3: 0] _WriteMask,
-    output [31: 0] _WDataMasked
+    output wire[ 3: 0] _WriteMask,
+    output wire[31: 0] _WDataMasked
 );
 
     wire [3:0] _ByteMask;

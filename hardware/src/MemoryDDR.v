@@ -17,57 +17,57 @@ module MemoryDDR #(
     parameter LITTLEWORDIAN=1 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 ) (
 // Clocks & Resets:
-    input           clk_cpu,
-    input           rst_cpu_mem,
-    input           rst_cpu_bus,
-    input           clk_mig_sys,
-    input           rst_mig_sys_n,
-    input           clk_mig_ref,
-    input           clk_pix,
-    input           rst_pix,
-    input           locked,
-    output          init_done,  // init_calib_complete (related to ddr3_reset_n below???)
+    input  wire         clk_cpu,
+    input  wire         rst_cpu_mem,
+    input  wire         rst_cpu_bus,
+    input  wire         clk_mig_sys,
+    input  wire         rst_mig_sys_n,
+    input  wire         clk_mig_ref,
+    input  wire         clk_pix,
+    input  wire         rst_pix,
+    input  wire         locked,
+    output wire         init_done,  // init_calib_complete (related to ddr3_reset_n below???)
 
 // DDR3 Pads:
     // DDR3 Inouts
-    inout [15:0]    ddr3_dq,        // inout    WAS: DDR2_D[63:0]
-    inout [1:0]     ddr3_dqs_n,     // inout    WAS: DDR2_DQS_N[7:0]
-    inout [1:0]     ddr3_dqs_p,     // inout    WAS: DDR2_DQS_P[7:0]
+    inout wire[15:0]    ddr3_dq,        // inout    WAS: DDR2_D[63:0]
+    inout wire[ 1:0]    ddr3_dqs_n,     // inout    WAS: DDR2_DQS_N[7:0]
+    inout wire[ 1:0]    ddr3_dqs_p,     // inout    WAS: DDR2_DQS_P[7:0]
     // DDR3 Outputs
-    output [13:0]   ddr3_addr,      // output   WAS: [12:0] DDR2_A    *** One bit wider ***
-    output [2:0]    ddr3_ba,        // output   WAS: [1:0] DDR2_BA    *** One bit wider ***
-    output          ddr3_ras_n,     // output   WAS: DDR2_RAS_B
-    output          ddr3_cas_n,     // output   WAS: DDR2_CAS_B
-    output          ddr3_we_n,      // output   WAS: DDR2_WE_B
-    output [0:0]    ddr3_ck_p,      // output   WAS: [1:0] DDR2_CLK_P
-    output [0:0]    ddr3_ck_n,      // output   WAS: [1:0] DDR2_CLK_N
-    output [0:0]    ddr3_cke,       // output   WAS: DDR2_CKE0
-    output [0:0]    ddr3_cs_n,      // output   WAS: DDR2_CS0_B,
-    output [1:0]    ddr3_dm,        // output   WAS: [7:0] DDR2_DM
-    output [0:0]    ddr3_odt,       // output   WAS: DDR2_ODT0
-    output          ddr3_reset_n,   // ???
+    output wire[13:0]   ddr3_addr,      // output   WAS: [12:0] DDR2_A    *** One bit wider ***
+    output wire[ 2:0]   ddr3_ba,        // output   WAS: [1:0] DDR2_BA    *** One bit wider ***
+    output wire         ddr3_ras_n,     // output   WAS: DDR2_RAS_B
+    output wire         ddr3_cas_n,     // output   WAS: DDR2_CAS_B
+    output wire         ddr3_we_n,      // output   WAS: DDR2_WE_B
+    output wire[ 0:0]   ddr3_ck_p,      // output   WAS: [1:0] DDR2_CLK_P
+    output wire[ 0:0]   ddr3_ck_n,      // output   WAS: [1:0] DDR2_CLK_N
+    output wire[ 0:0]   ddr3_cke,       // output   WAS: DDR2_CKE0
+    output wire[ 0:0]   ddr3_cs_n,      // output   WAS: DDR2_CS0_B,
+    output wire[ 1:0]   ddr3_dm,        // output   WAS: [7:0] DDR2_DM
+    output wire[ 0:0]   ddr3_odt,       // output   WAS: DDR2_ODT0
+    output wire         ddr3_reset_n,   // ???
 
 // Cache <=> CPU:
-    input   [31:0]  dcache_addr,    icache_addr,
-    input   [ 3:0]  dcache_we,      icache_we,
-    input           dcache_re,      icache_re,
-    input   [31:0]  dcache_din,     icache_din,
-    output  [31:0]  dcache_dout,    icache_dout,
-    output          d_stall,        i_stall,
-    output   [3:0]  DBG_dcache,     DBG_icache,
-    output DBG_clk_mig_ui, DBG_rst_mig_ui,
+    input  wire[31:0]   dcache_addr,    icache_addr,
+    input  wire[ 3:0]   dcache_we,      icache_we,
+    input  wire         dcache_re,      icache_re,
+    input  wire[31:0]   dcache_din,     icache_din,
+    output wire[31:0]   dcache_dout,    icache_dout,
+    output wire         d_stall,        i_stall,
+    output wire[ 3:0]   DBG_dcache,     DBG_icache,
+    output wire DBG_clk_mig_ui, DBG_rst_mig_ui,
 
-// PixelFeeder <=> DVI Controller:
-    input           video_ready,
-    output          video_valid,
-    output  [31: 0] video, //[23:0]
+// PixelFeeder <=> DVI/VGA Controller:
+    input  wire         video_ready,
+    output wire         video_valid,
+    output wire[31:0]   video, //[23:0]
 
 // GPU <=> CPU:
-    input           pf_vframe,    gp_vcode, gp_vframe,
-    input   [31: 0] pf_wframe,    gp_wcode, gp_wframe,
-    output  [31: 0]               gp_rcode,
-    output  [15: 0] pf_status,              gp_status,
-    output          irq_pf_frame, irq_gp_done
+    input  wire         pf_vframe,    gp_vcode, gp_vframe,
+    input  wire[31: 0]  pf_wframe,    gp_wcode, gp_wframe,
+    output wire[31: 0]                gp_rcode,
+    output wire[15: 0]  pf_status,              gp_status,
+    output wire         irq_pf_frame, irq_gp_done
 );
 
     (* mark_debug = "true" *) wire init_calib_complete;
@@ -436,13 +436,11 @@ module MemoryDDR #(
         .tag_hit(), .tag_valid(),
         .DBG_cache_cs(DBG_icache_cs)
     );
-*/
-
-    assign i_stall = 1'b0;
+*/  assign i_stall = 1'b0;
     assign DBG_icache_cs = 4'b0000;
 
     // Data cache:
-    Cache #(
+/*  Cache #(
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) dcache (
         .clk(clk_cpu),
@@ -470,23 +468,17 @@ module MemoryDDR #(
         .tag_hit(), .tag_valid(),
         .DBG_cache_cs(DBG_dcache_cs)
     );
+*/  assign d_stall = 1'b0;
+    assign DBG_dcache_cs = 4'b0000;
 
     assign DBG_dcache = DBG_dcache_cs;
     assign DBG_icache = DBG_icache_cs;
 
-    assign video_valid = 1'b1;
-    assign video       = 32'h00_80_80_FF;
-
-    assign pf_status = 16'd0;
-    assign irq_pf_frame = 1'b0;
-    assign gp_rcode = 32'd0;
-    assign gp_status = 16'd0;
-    assign irq_gp_done = 1'b0;
-
     // For feeding pixels to the DVI module:
-/*    PixelFeeder #(
+    PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
-        .LITTLEWORDIAN(LITTLEWORDIAN)
+        .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
+.COLT45_TESTPAT(3)  //TEMP: Focus on video feed first
     ) pf (
         .cpu_clk_g(clk_cpu),
         .cpu_rst_g(rst_cpu_bus),
@@ -509,7 +501,11 @@ module MemoryDDR #(
         .pf_status(pf_status), //OUT
         .irq_frame(irq_pf_frame) //OUT
     );
-*/
+    //assign video_valid = 1'b1;
+    //assign video       = 32'h00_80_80_FF;
+    //assign pf_status = 16'd0;
+    //assign irq_pf_frame = 1'b0;
+
 /*  GPU #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .LITTLEWORDIAN(LITTLEWORDIAN)
@@ -538,7 +534,9 @@ module MemoryDDR #(
         .slr_wdf_mask(bpas_wdf_mask), //OUT[15:0]
         .slr_wdf_data(bpas_wdf_data)  //OUT[127:0]
     );
-*/
+*/  assign gp_rcode = 32'd0;
+    assign gp_status = 16'd0;
+    assign irq_gp_done = 1'b0;
 
 
   // This memory intercepts dcache & icache before RCON & MIG
@@ -558,7 +556,7 @@ module MemoryDDR #(
     ); */
 
     // Patch DataCache directly with FIFOs (like RCON)
-    assign  data_caf_full   = rcon_caf_full,
+/*  assign  data_caf_full   = rcon_caf_full,
             data_wdf_full   = rcon_wdf_full,
             data_rdf_wren   = rcon_rdf_wren;
     assign  rcon_rdf_rden   = data_rdf_rden,
@@ -566,5 +564,14 @@ module MemoryDDR #(
             rcon_caf_cadr   = data_caf_cadr,
             rcon_wdf_wren   = data_wdf_wren,
             rcon_wdf_mdat   = data_wdf_mdat;
+*/
+    assign  pixf_raf_full   = rcon_caf_full,
+            //data_wdf_full   = rcon_wdf_full,
+            data_rdf_wren   = rcon_rdf_wren;
+    assign  rcon_rdf_rden   = pixf_rdf_wren,
+            rcon_caf_wren   = pixf_raf_wren,
+            rcon_caf_cadr   = {3'b001, pixf_raf_addr}, //READ command
+            rcon_wdf_wren   = 0,
+            rcon_wdf_mdat   = 0;
 
 endmodule

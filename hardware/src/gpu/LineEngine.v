@@ -3,38 +3,38 @@ module LineEngine #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
     parameter SCANLINERUNNER=0, LITTLEWORDIAN=1
 )(
-    input           clk, rst,
+    input  wire         clk, rst,
 
 //Line control <=> GPU:
-    output          LE_ready, //Can start issuing values/trigger
-    input           LE_color_valid, //LE_color capture
-    input   [ 31:0] LE_color,   //8-zeros, 3 x 8-bit R/G/B
-    input           LE_x0_valid,//LE_point captured into x0
-    input           LE_y0_valid,//  ... y0
-    input           LE_x1_valid,//  ... x1
-    input           LE_y1_valid,//  ... y1
-    input   [  9:0] LE_point,   //Point data with each LE_[x0,y0,x1,y1]_valid
-    input           LE_trigger, //Trigger drawing (LE_frame captured)
-    input   [ 31:0] LE_frame,   //Frame-base (modulo 0x0040_0000)
+    output wire         LE_ready, //Can start issuing values/trigger
+    input  wire         LE_color_valid, //LE_color capture
+    input  wire[ 31:0]  LE_color,   //8-zeros, 3 x 8-bit R/G/B
+    input  wire         LE_x0_valid,//LE_point captured into x0
+    input  wire         LE_y0_valid,//  ... y0
+    input  wire         LE_x1_valid,//  ... x1
+    input  wire         LE_y1_valid,//  ... y1
+    input  wire[  9:0]  LE_point,   //Point data with each LE_[x0,y0,x1,y1]_valid
+    input  wire         LE_trigger, //Trigger drawing (LE_frame captured)
+    input  wire[ 31:0]  LE_frame,   //Frame-base (modulo 0x0040_0000)
 
 //DDR FIFOs (write-only): [if !SCANLINERUNNER]
-    input           caf_full,
-    input           wdf_full,
-    output          caf_wren,
-    output  [ 27:0] caf_addr,
-    output          wdf_wren,
-    output  [127:0] wdf_data,
-    output  [ 15:0] wdf_mask,
+    input  wire         caf_full,
+    input  wire         wdf_full,
+    output wire         caf_wren,
+    output wire[ 27:0]  caf_addr,
+    output wire         wdf_wren,
+    output wire[127:0]  wdf_data,
+    output wire[ 15:0]  wdf_mask,
 
 //SLR control (write-only): [if SCANLINERUNNER]
-    input           SLR_ready,
-    output          SLR_valid,
-    output  [ 31:0] SLR_frame,
-    output  [ 31:0] SLR_color_edge,
-    output  [ 31:0] SLR_color_fill,
-    output  [  9:0] SLR_row,
-    output  [  9:0] SLR_col_start,
-    output  [  9:0] SLR_col_finish
+    input  wire         SLR_ready,
+    output wire         SLR_valid,
+    output wire[ 31:0]  SLR_frame,
+    output wire[ 31:0]  SLR_color_edge,
+    output wire[ 31:0]  SLR_color_fill,
+    output wire[  9:0]  SLR_row,
+    output wire[  9:0]  SLR_col_start,
+    output wire[  9:0]  SLR_col_finish
 );
 
     // Implement Bresenham's line drawing algorithm here!

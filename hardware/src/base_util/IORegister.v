@@ -58,8 +58,8 @@ module	IORegister(Clock, Reset, Set, Enable, In, Out);
 	//--------------------------------------------------------------------------
 	//	Inputs & Outputs
 	//--------------------------------------------------------------------------
-	input					Clock, Enable, Reset, Set;
-	input	[Width-1:0]		In;
+	input wire					Clock, Enable, Reset, Set;
+	input wire	[Width-1:0]		In;
 	output reg [Width-1:0]	Out =					Initial /* synthesis syn_useioff = 1 iob = true useioff = 1 */;
 	//--------------------------------------------------------------------------
 

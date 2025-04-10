@@ -89,8 +89,8 @@ module	CountCompare(Count, TerminalCount);
 	`endif
 
 	//	I/O
-	input	[Width-1:0]		Count;
-	output					TerminalCount;
+	input wire	[Width-1:0]		Count;
+	output wire					TerminalCount;
 	
 	//	Multiple Implementations
 	generate if (Width > 1) begin:WIDE

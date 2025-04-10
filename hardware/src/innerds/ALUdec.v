@@ -10,7 +10,7 @@
 `include "aluop.vh"
 
 module ALUdec(
-  input [5:0] funct, opcode,
+  input wire [5:0] funct, opcode,
   output reg [3:0] ALUop
 );
 

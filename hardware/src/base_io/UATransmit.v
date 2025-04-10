@@ -4,13 +4,13 @@
 `include "../base_util/const.vh"
 
 module UATransmit(
-    input   Clock, Reset,
+    input  wire         Clock, Reset,
 
-    input   [7:0] DataIn,
-    input         DataInValid,
-    output        DataInReady,
+    input  wire[7:0]    DataIn,
+    input  wire         DataInValid,
+    output wire         DataInReady,
 
-    output        SOut
+    output wire         SOut
 );
 //  // for log2 function
 //  `include "../base_util/util.vh"

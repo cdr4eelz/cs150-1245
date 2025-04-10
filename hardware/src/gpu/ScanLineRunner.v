@@ -9,26 +9,26 @@ module ScanLineRunner #(
     parameter LITTLEWORDIAN=1,  //Order of 32-bit WORDS within each 256-bit block
     parameter SLR_COUNT=1       //Arbitrate multiple SLRs
 )(
-    input           clk, rst,
+    input  wire         clk, rst,
 
 //DDR FIFOs (write-only):
-    input           caf_full,
-    input           wdf_full,
-    output          caf_wren,
-    output  [ 27:0] caf_addr,
-    output          wdf_wren,
-    output  [127:0] wdf_data,
-    output  [ 15:0] wdf_mask,
+    input  wire         caf_full,
+    input  wire         wdf_full,
+    output wire         caf_wren,
+    output wire[ 27:0]  caf_addr,
+    output wire         wdf_wren,
+    output wire[127:0]  wdf_data,
+    output wire[ 15:0]  wdf_mask,
 
 //ScanRun control(s) <=> Engine/GPU (concatenated buses):
-    output [(SLR_COUNT)-1:0] SLRs_ready,
-    input  [(SLR_COUNT)-1:0]    SLRs_valid,
-    input  [(SLR_COUNT*32)-1:0] SLRs_frame,
-    input  [(SLR_COUNT*32)-1:0] SLRs_color_edge,
-    input  [(SLR_COUNT*32)-1:0] SLRs_color_fill,
-    input  [(SLR_COUNT*10)-1:0] SLRs_row,
-    input  [(SLR_COUNT*10)-1:0] SLRs_col_start,
-    input  [(SLR_COUNT*10)-1:0] SLRs_col_finish
+    output wire[(SLR_COUNT)-1:0]    SLRs_ready,
+    input  wire[(SLR_COUNT)-1:0]    SLRs_valid,
+    input  wire[(SLR_COUNT*32)-1:0] SLRs_frame,
+    input  wire[(SLR_COUNT*32)-1:0] SLRs_color_edge,
+    input  wire[(SLR_COUNT*32)-1:0] SLRs_color_fill,
+    input  wire[(SLR_COUNT*10)-1:0] SLRs_row,
+    input  wire[(SLR_COUNT*10)-1:0] SLRs_col_start,
+    input  wire[(SLR_COUNT*10)-1:0] SLRs_col_finish
 );
 
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",

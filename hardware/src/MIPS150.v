@@ -7,26 +7,26 @@ module MIPS150 #(
     parameter PC_ISR    = 32'hC000_0180,
     parameter CPU_CORE  = "" //Defaults to "MIPS" (MIPS.core)
 )(
-    input   clk, rst, stall,
+    input  wire    clk, rst, stall,
 
 // Serial (UART):
-    input   SerialRX,
-    output  SerialTX,
+    input  wire    SerialRX,
+    output wire    SerialTX,
 
 // Memory Caches:
-    output [ 31:0]  dcache_addr,    icache_addr,
-    output [  3:0]  dcache_we,      icache_we,
-    output          dcache_re,      icache_re,
-    output [ 31:0]  dcache_din,     icache_din,
-    input  [ 31:0]  dcache_dout,    icache_dout,
+    output wire[ 31:0] dcache_addr,    icache_addr,
+    output wire[  3:0] dcache_we,      icache_we,
+    output wire        dcache_re,      icache_re,
+    output wire[ 31:0] dcache_din,     icache_din,
+    input  wire[ 31:0] dcache_dout,    icache_dout,
 
 // GPU control:
-    output          pf_vframe,    gp_vcode, gp_vframe,
-    output [ 31:0]  pf_wframe,    gp_wcode, gp_wframe,
-    input  [ 31:0]                gp_rcode,
-    input  [ 15:0]  pf_status,              gp_status,
-    input           irq_pf_frame, irq_gp_done,
-    output [3:0] DBG_COUNT
+    output wire        pf_vframe,    gp_vcode, gp_vframe,
+    output wire[ 31:0] pf_wframe,    gp_wcode, gp_wframe,
+    input  wire[ 31:0]               gp_rcode,
+    input  wire[ 15:0] pf_status,              gp_status,
+    input  wire        irq_pf_frame, irq_gp_done,
+    output wire[  3:0] DBG_COUNT
 );
 
     wire irq_uart0, irq_uart1;

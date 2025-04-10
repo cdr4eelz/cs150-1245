@@ -9,44 +9,44 @@ module ArtyA7top #(
                 SCREEN_HEIGHT   =     600,
     parameter   CPU_CORE        = "" //"DUMPUART"
 )(
-    input CLK_100MHz,  // Board clock for Arty-A7
+    input  wire         CLK_100MHz,  // Board clock for Arty-A7
     //input CLK_125MHz,  // Board clock for PYNQ
-    input CK_RST_N,  // "ChipKit Reset" (Active LOW)
+    input  wire         CK_RST_N,  // "ChipKit Reset" (Active LOW)
 
     // Basic GPIO (Note that some IOs are ignored if not present on other board)
-    input   [1:0]   SWITCH,  // Only 2 of 4 switches, PYNQ has only 2
-    input   [3:0]   BUTTON,  // 4 pushbuttons
-    output  [3:0]   LED,     // 4 on/off LEDs, not RBG LEDs
-    output led0_b,  led1_g, led2_r, led3_b, // 4 RGB LEDs distinguished by color
+    input  wire[1:0]    SWITCH,  // Only 2 of 4 switches, PYNQ has only 2
+    input  wire[3:0]    BUTTON,  // 4 pushbuttons
+    output wire[3:0]    LED,     // 4 on/off LEDs, not RBG LEDs
+    output wire led0_b, led1_g, led2_r, led3_b, // 4 RGB LEDs distinguished by color
 
     // SERIAL (UART)
-    input           FPGA_SERIAL_RX,
-    output          FPGA_SERIAL_TX,
+    input  wire         FPGA_SERIAL_RX,
+    output wire         FPGA_SERIAL_TX,
 
     // VGA style video Out, 444 RGB (Could dumb down to 4-bits elsewhere)
-    output          VGA_HS_O,       // PMOD VGA: H_SYNC
-    output          VGA_VS_O,       // PMOD VGA: V_SYNC
-    output [3:0]    VGA_R,      // PMOD VGA: 4-bit red
-    output [3:0]    VGA_G,      // PMOD VGA: 4-bit green
-    output [3:0]    VGA_B,      // PMOD VGA: 4-bit blue
+    output wire         VGA_HS_O,       // PMOD VGA: H_SYNC
+    output wire         VGA_VS_O,       // PMOD VGA: V_SYNC
+    output wire[3:0]    VGA_R,      // PMOD VGA: 4-bit red
+    output wire[3:0]    VGA_G,      // PMOD VGA: 4-bit green
+    output wire[3:0]    VGA_B,      // PMOD VGA: 4-bit blue
 
     // DDR3 Inouts
-    inout [15:0]    ddr3_dq,        // inout WAS: [63:0] DDR2_D
-    inout [1:0]     ddr3_dqs_n,     // inout WAS: [7:0] DDR2_DQS_N
-    inout [1:0]     ddr3_dqs_p,     // inout WAS: [7:0] DDR2_DQS_P
+    inout  wire[15:0]   ddr3_dq,        // inout WAS: [63:0] DDR2_D
+    inout  wire[1:0]    ddr3_dqs_n,     // inout WAS: [7:0] DDR2_DQS_N
+    inout  wire[1:0]    ddr3_dqs_p,     // inout WAS: [7:0] DDR2_DQS_P
     // DDR3 Outputs
-    output [13:0]   ddr3_addr,      // output WAS: [12:0] DDR2_A
-    output [2:0]    ddr3_ba,        // output WAS: [1:0] DDR2_BA
-    output          ddr3_ras_n,     // output WAS: DDR2_RAS_B
-    output          ddr3_cas_n,     // output WAS: DDR2_CAS_B
-    output          ddr3_we_n,      // output WAS: DDR2_WE_B
-    output [0:0]    ddr3_ck_p,      // output WAS: [1:0] DDR2_CLK_P
-    output [0:0]    ddr3_ck_n,      // output WAS: [1:0] DDR2_CLK_N
-    output [0:0]    ddr3_cke,       // output WAS: DDR2_CKE0
-    output [0:0]    ddr3_cs_n,      // output WAS: DDR2_CS0_B,
-    output [1:0]    ddr3_dm,        // output WAS: [7:0] DDR2_DM
-    output [0:0]    ddr3_odt,       // output WAS: DDR2_ODT0
-    output          ddr3_reset_n    // output WAS: ???
+    output wire[13:0]   ddr3_addr,      // output WAS: [12:0] DDR2_A
+    output wire[2:0]    ddr3_ba,        // output WAS: [1:0] DDR2_BA
+    output wire         ddr3_ras_n,     // output WAS: DDR2_RAS_B
+    output wire         ddr3_cas_n,     // output WAS: DDR2_CAS_B
+    output wire         ddr3_we_n,      // output WAS: DDR2_WE_B
+    output wire[0:0]    ddr3_ck_p,      // output WAS: [1:0] DDR2_CLK_P
+    output wire[0:0]    ddr3_ck_n,      // output WAS: [1:0] DDR2_CLK_N
+    output wire[0:0]    ddr3_cke,       // output WAS: DDR2_CKE0
+    output wire[0:0]    ddr3_cs_n,      // output WAS: DDR2_CS0_B,
+    output wire[1:0]    ddr3_dm,        // output WAS: [7:0] DDR2_DM
+    output wire[0:0]    ddr3_odt,       // output WAS: DDR2_ODT0
+    output wire         ddr3_reset_n    // output WAS: ???
 );
 
     // BUFFER the board clock (manually switch between Arty-A7 vs PYNQ)
@@ -214,7 +214,7 @@ module ArtyA7top #(
             .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done)                      //output
         );
 
-        assign video_ready = 1'b0;
+        //assign video_ready = 1'b0;
 
         (* mark_debug = "true" *) wire [3:0] DBG_COUNT;
 
@@ -264,13 +264,27 @@ module ArtyA7top #(
         );
         (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];
 
-    end endgenerate;
+        VGAFramer VGA (
+            .clk_pix(clk_pix), // input
+
+            .video(video),  // input [31:0]
+            .video_valid(video_valid), // input
+            .video_ready(video_ready), // output
+
+            .VGA_HS_O(VGA_HS_O), // output
+            .VGA_VS_O(VGA_VS_O), // output
+            .VGA_R(VGA_R), // output [3:0]
+            .VGA_G(VGA_G), // output [3:0]
+            .VGA_B(VGA_B) // output [3:0]
+        );
+
+    end endgenerate
 
     //assign {VGA_HS_O,VGA_VS_O,VGA_R,VGA_G,VGA_B} = 14'd0; // No video yet
-    VGATestPattern vga_gen (
+/*  VGATestPattern vga_gen (
         .PXL_CLK(clk_pix),
         .VGA_HS_O(VGA_HS_O),  .VGA_VS_O(VGA_VS_O),
         .VGA_R(VGA_R),  .VGA_G(VGA_G),  .VGA_B(VGA_B)
     );
-
+*/
 endmodule

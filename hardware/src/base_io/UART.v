@@ -1,17 +1,17 @@
 module UART(
-    input   Clock,
-    input   Reset,
+    input  wire         Clock,
+    input  wire         Reset,
 
-    input   [7:0]   DataInTX,
-    input           DataInValidTX,
-    output          DataInReadyTX,
+    input  wire[7:0]    DataInTX,
+    input  wire         DataInValidTX,
+    output wire         DataInReadyTX,
 
-    output  [7:0]   DataOutRX,
-    output          DataOutValidRX,
-    input           DataOutReadyRX,
+    output wire[7:0]    DataOutRX,
+    output wire         DataOutValidRX,
+    input  wire         DataOutReadyRX,
 
-    output  SOutTX,
-    input   SInRX
+    output wire         SOutTX,
+    input  wire         SInRX
 );
     parameter   CLOCK_FREQ  =   50_000_000;
     parameter   BAUD_RATE   =      115_200;

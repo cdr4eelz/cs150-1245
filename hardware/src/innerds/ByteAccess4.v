@@ -1,10 +1,10 @@
 module ByteAccess4 #(
     parameter BigEndian = 1 //NOTE: Endianess option UNIMPLEMENTED (always BIG)!!!
 ) (
-    input  [ 1: 0]  MemShift,
-    input  [ 1: 0]  SubIndex,
+    input wire [ 1: 0]  MemShift,
+    input wire [ 1: 0]  SubIndex,
     output reg [ 3: 0]  ByteMask,
-    input  [31: 0]  WordFull,
+    input wire [31: 0]  WordFull,
     output reg [31: 0]  WordMasked,
     output reg [31: 0]  ValExtract
 );

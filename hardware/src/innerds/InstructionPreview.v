@@ -5,9 +5,9 @@ module InstructionPreview #(
     parameter USE_DECODER=1
 )(
     // Inputs to decode (PC to pin down branch/jump)
-    input [31:0 ] _inst,
+    input  wire[31:0 ]  _inst,
     // Preview basics about instruction
-    output couldBranch
+    output wire         couldBranch
 );
 
 //TODO:Consider a pretty simple casex for this

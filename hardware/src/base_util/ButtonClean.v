@@ -3,10 +3,10 @@ module ButtonClean #(
                 BounceWidth = 16,
                 SimWidth    = 4
 ) (
-    input Clock,
-    input Reset,
-    input [Width-1:0] IN,
-    output [Width-1:0] OUT
+    input   wire Clock,
+    input   wire Reset,
+    input   wire [Width-1:0] IN,
+    output  wire [Width-1:0] OUT
 );
     wire [Width-1:0] synched;
 

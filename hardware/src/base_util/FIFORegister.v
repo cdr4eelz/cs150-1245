@@ -90,23 +90,23 @@ module	FIFORegister(
 	//--------------------------------------------------------------------------
 	//	System I/O
 	//--------------------------------------------------------------------------
-	input					Clock, Reset;
+	input  wire					Clock, Reset;
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------
 	//	Input Interface
 	//--------------------------------------------------------------------------
-	input	[Width-1:0]		InData;					// Transfered when Valid & Ready are both asserted
-	input					InValid;
-	output					InAccept;				// Must not be a function of InValid, may actually be InReady, depending on the BWLatency parameter
+	input  wire	[Width-1:0]		InData;					// Transfered when Valid & Ready are both asserted
+	input  wire					InValid;
+	output wire					InAccept;				// Must not be a function of InValid, may actually be InReady, depending on the BWLatency parameter
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------
 	//	Output Interface
 	//--------------------------------------------------------------------------
-	output	[Width-1:0]		OutData;				// Transfered when Valid & Ready are both asserted
-	output					OutSend;				// Must not be a function of OutReady, may actually be OutValid, depending on the FWLatency parameter
-	input					OutReady;
+	output wire[Width-1:0]		OutData;				// Transfered when Valid & Ready are both asserted
+	output wire					OutSend;				// Must not be a function of OutReady, may actually be OutValid, depending on the FWLatency parameter
+	input  wire					OutReady;
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------

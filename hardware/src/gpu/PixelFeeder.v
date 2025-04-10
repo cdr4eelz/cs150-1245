@@ -3,35 +3,35 @@
 `include "gpcommands.vh"
 
 module PixelFeeder #(
-    parameter DVI_CLOCK_HZ=50_000_000,
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter LITTLEWORDIAN=1, //TODO:Unimplemented!
+    parameter DVI_CLOCK_HZ  =40_000_000,
+    parameter SCREEN_WIDTH  =800, SCREEN_HEIGHT=600,
+    parameter LITTLEWORDIAN =1, //TODO:Unimplemented!
     parameter PIXFO_CAPACITY=(2048/2), //max pixel_fifo "chunk" capacity (adjust to 256-bit units)
     parameter PIXFO_STARTUP =PIXFO_CAPACITY - 100, //fake source until pixel_fifo is this full
     parameter PIXFO_TARGET  =PIXFO_CAPACITY - 5, //1 "af" req => 2 "rdf" 128b resp => 8 pixfo 32b "rd"
     parameter COLT45_TESTPAT=0 // 1..3 are non-DDR test feeds of various sorts
 )(
 //System:
-    input           cpu_clk_g,
-    input           cpu_rst_g,
-    input           dvi_clk_g,
-    input           dvi_rst_g,
+    input  wire         cpu_clk_g,
+    input  wire         cpu_rst_g,
+    input  wire         dvi_clk_g,
+    input  wire         dvi_rst_g,
 //DDR FIFOs (read-only) @cpu_clk_g:
-    input           raf_full,
-    output          raf_wren,
-    output [ 27:0]  raf_addr,
-    output          rdf_rden,
-    input           rdf_wren,
-    input  [127:0]  rdf_data,
+    input  wire         raf_full,
+    output wire         raf_wren,
+    output wire[ 27:0]  raf_addr,
+    output wire         rdf_rden,
+    input  wire         rdf_wren,
+    input  wire[127:0]  rdf_data,
 // DVI driver @dvi_clk_g:
-    input           video_ready,
-    output          video_valid,
-    output [ 31:0]  video, //[23:0]
+    input  wire         video_ready,
+    output wire         video_valid,
+    output wire[ 31:0]  video, //[23:0]
 // FRAME control <=> CPU @cpu_clk_g:
-    input           pf_vframe,  //Signal new pf_wframe is to be captured this clock cycle
-    input  [ 31:0]  pf_wframe,  //Address or Frame# for base of NEXT frame once this one is done
-    output [ 15:0]  pf_status, //Composite status ("ready" signal not present/used)
-    output          irq_frame     //1-cycle pulse after frame transition (except startup frame)
+    input  wire         pf_vframe,  //Signal new pf_wframe is to be captured this clock cycle
+    input  wire[ 31:0]  pf_wframe,  //Address or Frame# for base of NEXT frame once this one is done
+    output wire[ 15:0]  pf_status, //Composite status ("ready" signal not present/used)
+    output wire         irq_frame     //1-cycle pulse after frame transition (except startup frame)
 );
 
     // Hint: States
@@ -56,7 +56,7 @@ module PixelFeeder #(
     // pixel_fifo available space tracked on CPU-clocked side in large chunks.  The chunks
     //    serve to reduce inter-clock signal rate, framebitskeep counters small (but separate),
     //    and create a hysteresis.  Synchronizing with 4-cycle signal/acknowledge loop.
-    //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE and/or TIG
+    //NOTE: Cross-clock async registers might need ASYNC_REG=TRUE and/or TIG (false_path).
 
 // Cross-clock signal & acknowledge (using 4-cycle ack technique from Fall-13 for chunks)
     reg chunk_inc, chunk_ack, fifo_start;
@@ -80,8 +80,8 @@ module PixelFeeder #(
     reg  [ 3:0] count_dviread; //Rolls over on every 16 pixel "read-chunk"
 
     wire video_adv = (video_valid && video_ready); //reset will trump this
-    wire rollCOL = (curCOL >= SCREEN_WIDTH-1); //Could use fast-counter/pixelrange
-    wire rollROW = (curROW >= SCREEN_HEIGHT-1);
+    wire rollCOL = (curCOL >= SCREEN_WIDTH - 1); //Could use fast-counter/pixelrange
+    wire rollROW = (curROW >= SCREEN_HEIGHT - 1);
 
     always @(posedge dvi_clk_g) begin
         if (dvi_rst_r) begin //Use synchronized reset
@@ -98,13 +98,13 @@ module PixelFeeder #(
                 end
                 case ({rollROW, rollCOL}) //Manage our col/row/frame/scene business
                     (2'b11): begin
-                        curFRAME <= curFRAME+1;
+                        curFRAME <= curFRAME + 1;
                         {curCOL,curROW} <= {32'd0, 32'd0};
                         if (fifo_start_clkDVI) isRunning <= 1'b1; //Switch to FIFO on frame boundary
                     end
-                    (2'b01): {curCOL,curROW} <= {32'd0, curROW+1};
+                    (2'b01): {curCOL,curROW} <= {32'd0, curROW + 1};
                     //2'b10 just means we're ON last row but not yet at end
-                    default: curCOL <= curCOL+1;
+                    default: curCOL <= curCOL + 1;
                 endcase
             end
         end
@@ -122,7 +122,7 @@ module PixelFeeder #(
     assign rdf_rden    = 1'b1; //Always ready to read (want to fill up)!
 
 //TODO:Insert DDRStage before pixel_fifo to allow LITTLEWORDIAN flip
-
+generate if (COLT45_TESTPAT != 3) begin:BYPASS_FIFO
     pixel_fifo pf_fifo (
         .rst(cpu_rst_g), //Internal cross-clock sync
         //WRITE: CPU clock domain
@@ -135,11 +135,12 @@ module PixelFeeder #(
         .empty(feeder_empty),   // output
         .rd_en(video_ready && isRunning), // input
         .dout(feeder_raw),      // output  NOTE: First-word-fallthrough but no "valid" signal avail!
+        .valid( ),              // output  NOTE: Why is this unused????
         // NEW UNKNOWN SIGNALS
-        .wr_rst_busy( /*wr_rst_busy*/ ),    // output wire wr_rst_busy
-        .rd_rst_busy( /*rd_rst_busy*/ )     // output wire rd_rst_busy
+        .wr_rst_busy( ),        // wr_rst_busy : output wire wr_rst_busy
+        .rd_rst_busy( )         // rd_rst_busy : output wire rd_rst_busy
     );
-
+end endgenerate
 
 //FAULT and ACTVE detection
     reg  video_fault_dvi, video_fault_cpu, video_fault, video_active;
@@ -280,8 +281,8 @@ end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
             sweep_RGB <= 16'hE2A2;
             sweep_cnt <= 0;
         end else if (feeder_wren) begin
-            sweep_RGB <= sweep_RGB+5;
-            sweep_cnt <= sweep_cnt+1; //Sent another 4 pixels
+            sweep_RGB <= sweep_RGB + 5;
+            sweep_cnt <= sweep_cnt + 1; //Sent another 4 pixels
         end
     end
 
@@ -301,7 +302,7 @@ end else if (COLT45_TESTPAT == 2) begin:DIRECT_SWEEP
     assign video_valid = 1'b1;
     always @(posedge dvi_clk_g) begin
         if (dvi_rst_r) sweep_RGB <= 16'hE2A2;
-        else if (video_valid && video_ready) sweep_RGB <= sweep_RGB+5;
+        else if (video_valid && video_ready) sweep_RGB <= sweep_RGB + 5;
     end
 
 

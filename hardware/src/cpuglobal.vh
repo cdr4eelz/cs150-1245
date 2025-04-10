@@ -17,4 +17,6 @@
 `define UNKNOWN(WxW)            ( {WxW{ (`UNCLEBIT) }} )
 `define UNKWIFN(VxV,WxW,BxB)    ( ((BxB)||`NOUNKLE) ? (VxV) : `UNKNOWN(WxW) )
 
+`default_nettype none
+
 `endif //CPUGLOBAL_VH

@@ -28,54 +28,54 @@
 
 
 module RequestController(
-    input           clk,
-    input           rst,
+    input  wire         clk,
+    input  wire         rst,
 
     // DDR3 FIFOs (inputs);         [Master access]
-    input           caf_full,
-    input           wdf_full,
-    input           rdf_wren,
+    input  wire         caf_full,
+    input  wire         wdf_full,
+    input  wire         rdf_wren,
 
     // Inst-cache (inputs);         [Read/Write/Stall]
-    input           inst_caf_wren,
-    input [ 30:0]   inst_caf_cadr, // {cmd-3,addr-28} WAS: [33:0]
-    input           inst_wdf_wren,
-    input [143:0]   inst_wdf_mdat, // {mask-16,data-128}
-    input           inst_rdf_rden,
-    input           inst_stall,
+    input  wire         inst_caf_wren,
+    input  wire[ 30:0]  inst_caf_cadr, // {cmd-3,addr-28} WAS: [33:0]
+    input  wire         inst_wdf_wren,
+    input  wire[143:0]  inst_wdf_mdat, // {mask-16,data-128}
+    input  wire         inst_rdf_rden,
+    input  wire         inst_stall,
     // Data-cache (inputs);         [Read/Write/Stall]
-    input           data_caf_wren,
-    input [ 30:0]   data_caf_cadr, // {cmd-3,addr-28} WAS: [33:0]
-    input           data_wdf_wren,
-    input [143:0]   data_wdf_mdat, // {mask-16,data-128}
-    input           data_rdf_rden,
-    input           data_stall,
+    input  wire         data_caf_wren,
+    input  wire[ 30:0]  data_caf_cadr, // {cmd-3,addr-28} WAS: [33:0]
+    input  wire         data_wdf_wren,
+    input  wire[143:0]  data_wdf_mdat, // {mask-16,data-128}
+    input  wire         data_rdf_rden,
+    input  wire         data_stall,
 
     // GraphicsProcessor (inputs);  [Read-only]
-    input           gcmd_raf_wren,
-    input [ 27:0]   gcmd_raf_addr, //WAS: [30:0]
-    input           gcmd_rdf_rden,
+    input  wire         gcmd_raf_wren,
+    input  wire[ 27:0]  gcmd_raf_addr, //WAS: [30:0]
+    input  wire         gcmd_rdf_rden,
     // PixelFeeder (inputs);        [Read-only]
-    input           pixf_raf_wren,
-    input [ 27:0]   pixf_raf_addr, //WAS: [30:0]
-    input           pixf_rdf_rden,
+    input  wire         pixf_raf_wren,
+    input  wire[ 27:0]  pixf_raf_addr, //WAS: [30:0]
+    input  wire         pixf_rdf_rden,
 //NOTE:Read-only interface uses only subset of fifo signals
 
     // FrameFiller (inputs);        [Write-only]
-    input           fill_waf_wren,
-    input [ 27:0]   fill_waf_addr, //WAS [30:0]
-    input           fill_wdf_wren,
-    input [143:0]   fill_wdf_mdat,
+    input  wire         fill_waf_wren,
+    input  wire[ 27:0]  fill_waf_addr, //WAS [30:0]
+    input  wire         fill_wdf_wren,
+    input  wire[143:0]  fill_wdf_mdat,
     // LineEngine (inputs);         [Write-only]
-    input           line_waf_wren,
-    input [ 27:0]   line_waf_addr, //WAS [30:0]
-    input           line_wdf_wren,
-    input [143:0]   line_wdf_mdat,
+    input  wire         line_waf_wren,
+    input  wire[ 27:0]  line_waf_addr, //WAS [30:0]
+    input  wire         line_wdf_wren,
+    input  wire[143:0]  line_wdf_mdat,
     // Bypass (inputs);             [Write-only]
-    input           bpas_waf_wren,
-    input [ 27:0]   bpas_waf_addr, //WAS [30:0]
-    input           bpas_wdf_wren,
-    input [143:0]   bpas_wdf_mdat,
+    input  wire         bpas_waf_wren,
+    input  wire[ 27:0]  bpas_waf_addr, //WAS [30:0]
+    input  wire         bpas_wdf_wren,
+    input  wire[143:0]  bpas_wdf_mdat,
 //NOTE:Write-only interface uses only subset of fifo signals
 
     // To DDR3 FIFOs (outputs);     [Master access]
@@ -83,33 +83,33 @@ module RequestController(
     output reg [ 30:0]  caf_cadr, // {cmd-3,addr-28} WAS: [33:0]
     output reg          wdf_wren,
     output reg [143:0]  wdf_mdat,
-    output              rdf_rden,
+    output wire         rdf_rden,
 
     // Inst-cache (outputs);        [Read/Write/Stall]
-    output          inst_caf_full,
-    output          inst_wdf_full,
-    output          inst_rdf_wren,
+    output wire         inst_caf_full,
+    output wire         inst_wdf_full,
+    output wire         inst_rdf_wren,
     // Data-cache (outputs);        [Read/Write/Stall]
-    output          data_caf_full,
-    output          data_wdf_full,
-    output          data_rdf_wren,
+    output wire         data_caf_full,
+    output wire         data_wdf_full,
+    output wire         data_rdf_wren,
 
     // GraphicsProcessor (outputs); [Read-only]
-    output          gcmd_raf_full,
-    output          gcmd_rdf_wren,
+    output wire         gcmd_raf_full,
+    output wire         gcmd_rdf_wren,
     // PixelFeeder (outputs);       [Read-only]
-    output          pixf_raf_full,
-    output          pixf_rdf_wren,
+    output wire         pixf_raf_full,
+    output wire         pixf_rdf_wren,
 
     // FrameFiller (outputs);       [Write-only]
-    output          fill_waf_full,
-    output          fill_wdf_full,
+    output wire         fill_waf_full,
+    output wire         fill_wdf_full,
     // LineEngine (outputs);        [Write-only]
-    output          line_waf_full,
-    output          line_wdf_full,
+    output wire         line_waf_full,
+    output wire         line_wdf_full,
     // Bypass (outputs);            [Write-only]
-    output          bpas_waf_full,
-    output          bpas_wdf_full
+    output wire         bpas_waf_full,
+    output wire         bpas_wdf_full
 );
 
 

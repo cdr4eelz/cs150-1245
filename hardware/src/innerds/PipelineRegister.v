@@ -9,9 +9,9 @@ module PipelineRegister #(
     parameter Width=0, //Instantiated module had best override this! :)
     ResetValue={Width{1'b0}}
 )(
-    input clk, rst, stall,
-    input  [Width-1:0] In,
-    output [Width-1:0] Out
+    input  wire clk, rst, stall,
+    input  wire[Width-1:0] In,
+    output wire[Width-1:0] Out
 );
 
     reg [Width-1:0] pipereg = ResetValue;

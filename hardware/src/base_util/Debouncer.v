@@ -82,10 +82,10 @@ module	Debouncer(Clock, Reset, Enable, In, Out, Half);
 	//--------------------------------------------------------------------------
 	//	I/O
 	//--------------------------------------------------------------------------
-	input					Clock, Reset, Enable;
-	input					In;
-	output					Out;
-	output					Half;
+	input  wire				Clock, Reset, Enable;
+	input  wire				In;
+	output wire				Out;
+	output wire				Half;
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------

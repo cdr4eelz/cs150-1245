@@ -2,29 +2,29 @@
 module ElipseEngine #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600
 )(
-    input           clk, rst,
+    input  wire         clk, rst,
 
 //Elipse control <=> GPU:
-    output          EL_ready, //Can start issuing values/trigger
-    input           EL_color_valid, //EL_color capture
-    input   [ 31:0] EL_color,   //8-zeros, 3 x 8-bit R/G/B
-    input           EL_xc_valid,//EL_point captured into xc, and/or...
-    input           EL_yc_valid,//  ... yc
-    input           EL_a_valid, //  ... a
-    input           EL_b_valid, //  ... b
-    input   [  9:0] EL_point,   //Point data with each EL_[xc,yc,a,b]_valid
-    input           EL_trigger, //Trigger drawing (EL_frame captured)
-    input   [ 31:0] EL_frame,   //Frame-base (modulo 0x0040_0000)
+    output wire         EL_ready, //Can start issuing values/trigger
+    input  wire         EL_color_valid, //EL_color capture
+    input  wire [ 31:0] EL_color,   //8-zeros, 3 x 8-bit R/G/B
+    input  wire         EL_xc_valid,//EL_point captured into xc, and/or...
+    input  wire         EL_yc_valid,//  ... yc
+    input  wire         EL_a_valid, //  ... a
+    input  wire         EL_b_valid, //  ... b
+    input  wire [  9:0] EL_point,   //Point data with each EL_[xc,yc,a,b]_valid
+    input  wire         EL_trigger, //Trigger drawing (EL_frame captured)
+    input  wire [ 31:0] EL_frame,   //Frame-base (modulo 0x0040_0000)
 
 //SLR control (write-only):
-    input           SLR_ready,
-    output          SLR_valid,
-    output  [ 31:0] SLR_frame,
-    output  [ 31:0] SLR_color_edge,
-    output  [ 31:0] SLR_color_fill,
-    output  [  9:0] SLR_row,
-    output  [  9:0] SLR_col_start,
-    output  [  9:0] SLR_col_finish
+    input  wire         SLR_ready,
+    output wire         SLR_valid,
+    output wire[ 31:0]  SLR_frame,
+    output wire[ 31:0]  SLR_color_edge,
+    output wire[ 31:0]  SLR_color_fill,
+    output wire[  9:0]  SLR_row,
+    output wire[  9:0]  SLR_col_start,
+    output wire[  9:0]  SLR_col_finish
 );
 
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE",

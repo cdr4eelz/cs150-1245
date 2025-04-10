@@ -3,32 +3,32 @@ module FrameFiller #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
     parameter SCANLINERUNNER=0
 )(
-    input           clk, rst,
+    input  wire         clk, rst,
 
 //Fill control <=> GPU:
-    output          FF_ready, //Can start issuing values/trigger
-    input           FF_valid,   //Trigger drawing (FF_frame & FF_color captured)
-    input  [ 31:0]  FF_color,   //8-zeros, 3 x 8-bit R/G/B
-    input  [ 31:0]  FF_frame,   //Frame-base (modulo 0x0040_0000)
+    output wire         FF_ready, //Can start issuing values/trigger
+    input  wire         FF_valid,   //Trigger drawing (FF_frame & FF_color captured)
+    input  wire[ 31:0]  FF_color,   //8-zeros, 3 x 8-bit R/G/B
+    input  wire[ 31:0]  FF_frame,   //Frame-base (modulo 0x0040_0000)
 
 //DDR FIFOs (write-only): [if !SCANLINERUNNER]
-    input           caf_full,
-    input           wdf_full,
-    output          caf_wren,
-    output [ 27:0]  caf_addr,
-    output          wdf_wren,
-    output [ 15:0]  wdf_mask,
-    output [127:0]  wdf_data,
+    input  wire         caf_full,
+    input  wire         wdf_full,
+    output wire         caf_wren,
+    output wire[ 27:0]  caf_addr,
+    output wire         wdf_wren,
+    output wire[ 15:0]  wdf_mask,
+    output wire[127:0]  wdf_data,
 
 //SLR control (write-only): [if SCANLINERUNNER]
-    input           SLR_ready,
-    output          SLR_valid,
-    output  [ 31:0] SLR_frame,
-    output  [ 31:0] SLR_color_edge,
-    output  [ 31:0] SLR_color_fill,
-    output  [  9:0] SLR_row,
-    output  [  9:0] SLR_col_start,
-    output  [  9:0] SLR_col_finish
+    input  wire         SLR_ready,
+    output wire         SLR_valid,
+    output wire[ 31:0]  SLR_frame,
+    output wire[ 31:0]  SLR_color_edge,
+    output wire[ 31:0]  SLR_color_fill,
+    output wire[  9:0]  SLR_row,
+    output wire[  9:0]  SLR_col_start,
+    output wire[  9:0]  SLR_col_finish
 );
 
 //Your code goes here. GL HF DD DS

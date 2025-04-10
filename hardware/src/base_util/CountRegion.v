@@ -81,12 +81,12 @@ module	CountRegion(Clock, Reset, Enable, Count, Max, Output);
 	//--------------------------------------------------------------------------
 	//	I/O
 	//--------------------------------------------------------------------------
-	input					Clock, Reset;
+	input  wire					Clock, Reset;
 	
-	input					Enable;
-	input	[Width-1:0]		Count;
-	input					Max;
-	output					Output;
+	input  wire					Enable;
+	input  wire	[Width-1:0]		Count;
+	input  wire					Max;
+	output wire					Output;
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------

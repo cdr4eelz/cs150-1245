@@ -26,34 +26,36 @@
 //----------------------------------------------------------------------------
 `include "cache.vh"
 
+//`default_nettype none
+
 module Cache #(
     parameter LITTLEWORDIAN=0 //Order of 32-bit words in each 256-bit DDR block (not byte order)
 )(
-    input           clk,
-    input           rst,
-    input [31:0]    addr,
-    input [31:0]    din,
-    input [3:0]     we,
-    input           re,
+    input wire          clk,
+    input wire          rst,
+    input wire[31:0]    addr,
+    input wire[31:0]    din,
+    input wire[3:0]     we,
+    input wire          re,
 //DDR-FIFO inputs:
-    input           caf_full,
-    input           wdf_full,
-    input           rdf_wren,
-    input [127:0]   rdf_data,
+    input wire          caf_full,
+    input wire          wdf_full,
+    input wire          rdf_wren,
+    input wire[127:0]   rdf_data,
 //DDR-FIFO outputs:
-    output          rdf_rden,
-    output [30:0]   caf_cadr, //{cmd-3,addr-28}  WAS: [33:0]
-    output          caf_wren,
-    output [143:0]  wdf_mdat, //{mask-16,data-128}
-    output          wdf_wren,
+    output wire         rdf_rden,
+    output wire[30:0]   caf_cadr, //{cmd-3,addr-28}  WAS: [33:0]
+    output wire         caf_wren,
+    output wire[143:0]  wdf_mdat, //{mask-16,data-128}
+    output wire         wdf_wren,
 // Control/Result signals:
-    output          stall,
-    output [31:0]   dout,
+    output wire         stall,
+    output wire[31:0]   dout,
 // Needed for set-associative cache
-    output          tag_hit,
-    output          tag_valid,
+    output wire         tag_hit,
+    output wire         tag_valid,
 // Debug state machine current-state:
-    output [3:0]    DBG_cache_cs
+    output wire[3:0]    DBG_cache_cs
 );
 
     // State declarations:
@@ -69,6 +71,7 @@ module Cache #(
     //registers:
     // state for DDR3 FSM
     (* mark_debug = "true" *) reg [2:0] current_state, next_state;
+    (* mark_debug = "true" *) wire isWriting, isFetching, isReading, isSecond;
 
     // register to hold first 128-bits read back
     // from DDR3
@@ -228,12 +231,12 @@ module Cache #(
         end
     end
 
-    (* mark_debug = "true" *) wire    isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
-    (* mark_debug = "true" *) wire    isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
-    (* mark_debug = "true" *) wire    isReading   = (current_state == READ1 ) || (current_state == READ2 );
-    (* mark_debug = "true" *) wire    isSecond    = (current_state == WRITE2)
+    assign  isWriting   = (current_state == WRITE1) || (current_state == WRITE2);
+    assign  isFetching  = (current_state == FETCH1) || (current_state == FETCH2);
+    assign  isReading   = (current_state == READ1 ) || (current_state == READ2 );
+    assign  isSecond    = ((current_state == WRITE2)
                             || (current_state == FETCH2)
-                            || (current_state == READ2);
+                            || (current_state == READ2));
 
     // FIFO output partial values:
     (* mark_debug = "true" *) wire [  2:0]  f_cmd;

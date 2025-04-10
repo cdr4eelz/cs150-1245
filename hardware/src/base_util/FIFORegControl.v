@@ -89,27 +89,27 @@ module	FIFORegControl(
 	//--------------------------------------------------------------------------
 	//	System I/O
 	//--------------------------------------------------------------------------
-	input					Clock, Reset;
+	input  wire					Clock, Reset;
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------
 	//	Input Interface
 	//--------------------------------------------------------------------------
-	input					InValid;
-	output					InAccept;				// Must not be a function of InValid, may actually be InReady, depending on the BWLatency parameter
+	input  wire					InValid;
+	output wire					InAccept;				// Must not be a function of InValid, may actually be InReady, depending on the BWLatency parameter
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------
 	//	Output Interface
 	//--------------------------------------------------------------------------
-	output					OutSend;				// Must not be a function of OutReady, may actually be OutValid, depending on the FWLatency parameter
-	input					OutReady;
+	output wire					OutSend;				// Must not be a function of OutReady, may actually be OutValid, depending on the FWLatency parameter
+	input  wire					OutReady;
 	//--------------------------------------------------------------------------
 	
 	//--------------------------------------------------------------------------
 	//	State Outputs
 	//--------------------------------------------------------------------------
-	output					Full;
+	output wire					Full;
 	//--------------------------------------------------------------------------
 
 	//--------------------------------------------------------------------------

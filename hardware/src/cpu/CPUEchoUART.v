@@ -2,11 +2,11 @@ module CPUEchoUART #(
     parameter CPU_FREQ  = 50_000_000,
     parameter BAUD_RATE =    115_200
 )(
-    input clk, rst, stall,
+    input  wire clk, rst, stall,
 
     // Serial
-    input  SerialRX,
-    output SerialTX
+    input  wire SerialRX,
+    output wire SerialTX
 );
 
     wire [7:0] DataInTX;

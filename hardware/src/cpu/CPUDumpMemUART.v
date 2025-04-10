@@ -7,13 +7,13 @@ module CPUDumpMemUART #(
     parameter DD=`COLT45_DD,
     parameter COLT45_STEPMAX=9
 )(
-    input clk,
-    input rst,
-    input stall,
+    input  wire clk,
+    input  wire rst,
+    input  wire stall,
 
     // Serial
-    input SerialRX,
-    output SerialTX
+    input  wire SerialRX,
+    output wire SerialTX
 );
 
     wire [13: 0]    ADDR, ADDR_NEXT;

@@ -4,14 +4,14 @@
 `include "../base_util/const.vh"
 
 module UAReceive(
-  input   Clock,
-  input   Reset,
+  input  wire         Clock,
+  input  wire         Reset,
 
-  output  [7:0] DataOut,
-  output        DataOutValid,
-  input         DataOutReady,
+  output wire[7:0]    DataOut,
+  output wire         DataOutValid,
+  input  wire         DataOutReady,
 
-  input         SIn
+  input  wire         SIn
 );
 //// for log2 function
 //`include "../base_util/util.vh"
@@ -33,7 +33,7 @@ module UAReceive(
   wire                            Start;
   wire                            RXRunning;
 
-  reg     [9:0]                   RXShift = 10'b00_0000_0000;;
+  reg     [9:0]                   RXShift = 10'b00_0000_0000;
   reg     [3:0]                   BitCounter = 4'd0;
   reg     [ClockCounterWidth-1:0] ClockCounter = 0;
   reg                             HasByte = 1'b0;

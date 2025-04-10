@@ -9,22 +9,22 @@ module StageF #(
     parameter PC_BOOT=32'h4000_0000, PC_ISR=32'hC000_0180,
     parameter PCWIDTH=32, INSTWIDTH=32, COUNTERWIDTH=32
 )(
-    input clk, rst, stall,
+    input  wire clk, rst, stall,
 
     //Branch/Exception control to deviate from PC+4
-    input  _DoBranch, _DoISR,
-    input  [  (PCWIDTH-1):0] _PCBranch,
+    input  wire _DoBranch, _DoISR,
+    input  wire[  (PCWIDTH-1):0] _PCBranch,
 
     //Outputs
-    output [  (PCWIDTH-1):0] PC_, PCNEXT_,
-    output [(INSTWIDTH-1):0] INST_,
+    output wire[  (PCWIDTH-1):0] PC_, PCNEXT_,
+    output wire[(INSTWIDTH-1):0] INST_,
 
     //Instruction memory taps
-    output [  (PCWIDTH-1):0] IMEM_ADDR,
-    input  [(INSTWIDTH-1):0] IMEM_Data,
+    output wire[  (PCWIDTH-1):0] IMEM_ADDR,
+    input  wire[(INSTWIDTH-1):0] IMEM_Data,
 
     //Instruction related counters & reset (synchronous)
-    input _ResetCounters,
+    input  wire _ResetCounters,
     output reg [(COUNTERWIDTH-1):0] CNT_CYCLE, CNT_INST, CNT_STALL, CNT_BRANCH, CNT_ISR,
     output reg WAS_RUNNING, WAS_INST, WAS_STALL, WAS_BRANCH, WAS_ISR
 );
