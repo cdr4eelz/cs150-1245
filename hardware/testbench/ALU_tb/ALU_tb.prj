@@ -1,0 +1,4 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  ALU_tb.v \
+  ../../src/innerds/ALUdec.v \
+  ../../src/innerds/ALU.v

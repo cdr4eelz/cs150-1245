@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="xil_defaultlib.ALU_tb.wdb" id="1">
+         <top_modules>
+            <top_module name="ALU_tb" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="144855888fs"></ZoomStartTime>
+      <ZoomEndTime time="885428823fs"></ZoomEndTime>
+      <Cursor1Time time="762000000fs"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="175"></NameColumnWidth>
+      <ValueColumnWidth column_width="142"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="28" />
+   <wvobject type="logic" fp_name="/ALU_tb/Clock">
+      <obj_property name="ElementShortName">Clock</obj_property>
+      <obj_property name="ObjectShortName">Clock</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider28" type="divider">
+      <obj_property name="label">ALU_tb</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/funct">
+      <obj_property name="ElementShortName">funct[5:0]</obj_property>
+      <obj_property name="ObjectShortName">funct[5:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/opcode">
+      <obj_property name="ElementShortName">opcode[5:0]</obj_property>
+      <obj_property name="ObjectShortName">opcode[5:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/A">
+      <obj_property name="ElementShortName">A[31:0]</obj_property>
+      <obj_property name="ObjectShortName">A[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/B">
+      <obj_property name="ElementShortName">B[31:0]</obj_property>
+      <obj_property name="ObjectShortName">B[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/DUTout">
+      <obj_property name="ElementShortName">DUTout[31:0]</obj_property>
+      <obj_property name="ObjectShortName">DUTout[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/REFout">
+      <obj_property name="ElementShortName">REFout[31:0]</obj_property>
+      <obj_property name="ObjectShortName">REFout[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/ALUop">
+      <obj_property name="ElementShortName">ALUop[3:0]</obj_property>
+      <obj_property name="ObjectShortName">ALUop[3:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/rand_31">
+      <obj_property name="ElementShortName">rand_31[30:0]</obj_property>
+      <obj_property name="ObjectShortName">rand_31[30:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/rand_15">
+      <obj_property name="ElementShortName">rand_15[14:0]</obj_property>
+      <obj_property name="ObjectShortName">rand_15[14:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/B_signed">
+      <obj_property name="ElementShortName">B_signed[31:0]</obj_property>
+      <obj_property name="ObjectShortName">B_signed[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/ALU_tb/signed_comp">
+      <obj_property name="ElementShortName">signed_comp</obj_property>
+      <obj_property name="ObjectShortName">signed_comp</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/ALU_tb/unsigned_comp">
+      <obj_property name="ElementShortName">unsigned_comp</obj_property>
+      <obj_property name="ObjectShortName">unsigned_comp</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/i">
+      <obj_property name="ElementShortName">i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/Halfcycle">
+      <obj_property name="ElementShortName">Halfcycle[31:0]</obj_property>
+      <obj_property name="ObjectShortName">Halfcycle[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/Cycle">
+      <obj_property name="ElementShortName">Cycle[31:0]</obj_property>
+      <obj_property name="ObjectShortName">Cycle[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/loops">
+      <obj_property name="ElementShortName">loops[31:0]</obj_property>
+      <obj_property name="ObjectShortName">loops[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider22" type="divider">
+      <obj_property name="label">ALU</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/DUT2/A">
+      <obj_property name="ElementShortName">A[31:0]</obj_property>
+      <obj_property name="ObjectShortName">A[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/DUT2/B">
+      <obj_property name="ElementShortName">B[31:0]</obj_property>
+      <obj_property name="ObjectShortName">B[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/DUT2/ALUop">
+      <obj_property name="ElementShortName">ALUop[3:0]</obj_property>
+      <obj_property name="ObjectShortName">ALUop[3:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/DUT2/Out">
+      <obj_property name="ElementShortName">Out[31:0]</obj_property>
+      <obj_property name="ObjectShortName">Out[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/DUT2/shamt">
+      <obj_property name="ElementShortName">shamt[4:0]</obj_property>
+      <obj_property name="ObjectShortName">shamt[4:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider18" type="divider">
+      <obj_property name="label">ALUdec</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/DUT1/funct">
+      <obj_property name="ElementShortName">funct[5:0]</obj_property>
+      <obj_property name="ObjectShortName">funct[5:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/DUT1/opcode">
+      <obj_property name="ElementShortName">opcode[5:0]</obj_property>
+      <obj_property name="ObjectShortName">opcode[5:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/ALU_tb/DUT1/ALUop">
+      <obj_property name="ElementShortName">ALUop[3:0]</obj_property>
+      <obj_property name="ObjectShortName">ALUop[3:0]</obj_property>
+   </wvobject>
+</wave_config>
