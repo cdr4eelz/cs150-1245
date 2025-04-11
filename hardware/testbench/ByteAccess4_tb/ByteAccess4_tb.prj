@@ -1,0 +1,3 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  ByteAccess4_tb.v \
+  ../../src/innerds/ByteAccess4.v

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="xil_defaultlib.Echo_tb.wdb" id="1">
+         <top_modules>
+            <top_module name="Echo_tb" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="0fs"></ZoomStartTime>
+      <ZoomEndTime time="5211fs"></ZoomEndTime>
+      <Cursor1Time time="0fs"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="175"></NameColumnWidth>
+      <ValueColumnWidth column_width="134"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="34" />
+   <wvobject type="logic" fp_name="/Echo_tb/Clock">
+      <obj_property name="ElementShortName">Clock</obj_property>
+      <obj_property name="ObjectShortName">Clock</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/Reset">
+      <obj_property name="ElementShortName">Reset</obj_property>
+      <obj_property name="ObjectShortName">Reset</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/Stall">
+      <obj_property name="ElementShortName">Stall</obj_property>
+      <obj_property name="ObjectShortName">Stall</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/FPGA_SERIAL_RX">
+      <obj_property name="ElementShortName">FPGA_SERIAL_RX</obj_property>
+      <obj_property name="ObjectShortName">FPGA_SERIAL_RX</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/FPGA_SERIAL_TX">
+      <obj_property name="ElementShortName">FPGA_SERIAL_TX</obj_property>
+      <obj_property name="ObjectShortName">FPGA_SERIAL_TX</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/StallRing">
+      <obj_property name="ElementShortName">StallRing[2:0]</obj_property>
+      <obj_property name="ObjectShortName">StallRing[2:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/StallReg">
+      <obj_property name="ElementShortName">StallReg</obj_property>
+      <obj_property name="ObjectShortName">StallReg</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/StallClock">
+      <obj_property name="ElementShortName">StallClock</obj_property>
+      <obj_property name="ObjectShortName">StallClock</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/Check1">
+      <obj_property name="ElementShortName">Check1[7:0]</obj_property>
+      <obj_property name="ObjectShortName">Check1[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/Check2">
+      <obj_property name="ElementShortName">Check2[7:0]</obj_property>
+      <obj_property name="ObjectShortName">Check2[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/Check3">
+      <obj_property name="ElementShortName">Check3[7:0]</obj_property>
+      <obj_property name="ObjectShortName">Check3[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/Check4">
+      <obj_property name="ElementShortName">Check4[7:0]</obj_property>
+      <obj_property name="ObjectShortName">Check4[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/Check5">
+      <obj_property name="ElementShortName">Check5[7:0]</obj_property>
+      <obj_property name="ObjectShortName">Check5[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/Check6">
+      <obj_property name="ElementShortName">Check6[7:0]</obj_property>
+      <obj_property name="ObjectShortName">Check6[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/Check7">
+      <obj_property name="ElementShortName">Check7[7:0]</obj_property>
+      <obj_property name="ObjectShortName">Check7[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/CheckNext">
+      <obj_property name="ElementShortName">CheckNext</obj_property>
+      <obj_property name="ObjectShortName">CheckNext</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/DataIn">
+      <obj_property name="ElementShortName">DataIn[7:0]</obj_property>
+      <obj_property name="ObjectShortName">DataIn[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/DataInValid">
+      <obj_property name="ElementShortName">DataInValid</obj_property>
+      <obj_property name="ObjectShortName">DataInValid</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/DataInReady">
+      <obj_property name="ElementShortName">DataInReady</obj_property>
+      <obj_property name="ObjectShortName">DataInReady</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/DataOut">
+      <obj_property name="ElementShortName">DataOut[7:0]</obj_property>
+      <obj_property name="ObjectShortName">DataOut[7:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/DataOutValid">
+      <obj_property name="ElementShortName">DataOutValid</obj_property>
+      <obj_property name="ObjectShortName">DataOutValid</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/Echo_tb/DataOutReady">
+      <obj_property name="ElementShortName">DataOutReady</obj_property>
+      <obj_property name="ObjectShortName">DataOutReady</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/countIN">
+      <obj_property name="ElementShortName">countIN[31:0]</obj_property>
+      <obj_property name="ObjectShortName">countIN[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/maxchars">
+      <obj_property name="ElementShortName">maxchars[31:0]</obj_property>
+      <obj_property name="ObjectShortName">maxchars[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/countOUT">
+      <obj_property name="ElementShortName">countOUT[31:0]</obj_property>
+      <obj_property name="ObjectShortName">countOUT[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/StallCounter">
+      <obj_property name="ElementShortName">StallCounter[31:0]</obj_property>
+      <obj_property name="ObjectShortName">StallCounter[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/HalfCycle">
+      <obj_property name="ElementShortName">HalfCycle[31:0]</obj_property>
+      <obj_property name="ObjectShortName">HalfCycle[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/Cycle">
+      <obj_property name="ElementShortName">Cycle[31:0]</obj_property>
+      <obj_property name="ObjectShortName">Cycle[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/CPU_FREQ">
+      <obj_property name="ElementShortName">CPU_FREQ[31:0]</obj_property>
+      <obj_property name="ObjectShortName">CPU_FREQ[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/StallRingSize">
+      <obj_property name="ElementShortName">StallRingSize[31:0]</obj_property>
+      <obj_property name="ObjectShortName">StallRingSize[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/StallRingInit">
+      <obj_property name="ElementShortName">StallRingInit[31:0]</obj_property>
+      <obj_property name="ObjectShortName">StallRingInit[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/StallFreq">
+      <obj_property name="ElementShortName">StallFreq[31:0]</obj_property>
+      <obj_property name="ObjectShortName">StallFreq[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/XMIT_DELAY_TICKS">
+      <obj_property name="ElementShortName">XMIT_DELAY_TICKS[31:0]</obj_property>
+      <obj_property name="ObjectShortName">XMIT_DELAY_TICKS[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/Echo_tb/XMIT_STALL_CYCLES">
+      <obj_property name="ElementShortName">XMIT_STALL_CYCLES[31:0]</obj_property>
+      <obj_property name="ObjectShortName">XMIT_STALL_CYCLES[31:0]</obj_property>
+   </wvobject>
+</wave_config>

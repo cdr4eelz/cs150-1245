@@ -56,8 +56,8 @@ module Echo_tb;
     // to the UART we use for testing
     MIPS150 #(.CPU_FREQ(CPU_FREQ)) DUT
     (   .clk(Clock), .rst(Reset), .stall( (1) ? Stall : 1'b0 ),
-        .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
-        .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
+        .SerialRX(FPGA_SERIAL_RX),
+        .SerialTX(FPGA_SERIAL_TX),
 // CP2+
         .dcache_addr(),      .icache_addr(),
         .dcache_we  (),      .icache_we  (),
@@ -99,14 +99,17 @@ module Echo_tb;
     wire        DataOutValid;
     reg         DataOutReady;
 
-    UART #( .ClockFreq(CPU_FREQ) ) uart
-    ( .Clock(Clock), .Reset(Reset),
-//      .SIn( (1) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx ),
-        .SIn(FPGA_SERIAL_TX), .DataOut(DataOut),
-        .DataOutReady(DataOutReady), .DataOutValid(DataOutValid),
-        .DataInReady (DataInReady ), .DataInValid (DataInValid ),
-        .DataIn(DataIn), .SOut(FPGA_SERIAL_RX)
+    UART #(
+        .CLOCK_FREQ(CPU_FREQ),
+        .BAUD_RATE(115_200)
+    ) uart (
+        .Clock(Clock), .Reset(Reset),
+        .SInRX(FPGA_SERIAL_TX), .SOutTX(FPGA_SERIAL_RX),
+        .DataInReadyTX(DataInReady), .DataOutReadyRX(DataOutReady),
+        .DataInValidTX(DataInValid), .DataOutValidRX(DataOutValid),
+        .DataInTX     (DataIn     ), .DataOutRX     (DataOut)
     );
+//      .SIn( (1) ? FPGA_SERIAL_TX : xFPGA_SERIAL_TXx ),
 
 integer countIN = 0, maxchars = 45;
 event now_listening;
