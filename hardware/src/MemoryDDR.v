@@ -478,7 +478,7 @@ module MemoryDDR #(
     PixelFeeder #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .DVI_CLOCK_HZ(40_000_000), .LITTLEWORDIAN(LITTLEWORDIAN),
-.COLT45_TESTPAT(3)  //TEMP: Focus on video feed first
+.COLT45_TESTPAT(0)  //TEMP
     ) pf (
         .cpu_clk_g(clk_cpu),
         .cpu_rst_g(rst_cpu_bus),
@@ -567,8 +567,8 @@ module MemoryDDR #(
 */
     assign  pixf_raf_full   = rcon_caf_full,
             //data_wdf_full   = rcon_wdf_full,
-            data_rdf_wren   = rcon_rdf_wren;
-    assign  rcon_rdf_rden   = pixf_rdf_wren,
+            pixf_rdf_wren   = rcon_rdf_wren;
+    assign  rcon_rdf_rden   = pixf_rdf_rden,
             rcon_caf_wren   = pixf_raf_wren,
             rcon_caf_cadr   = {3'b001, pixf_raf_addr}, //READ command
             rcon_wdf_wren   = 0,

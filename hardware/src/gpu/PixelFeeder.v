@@ -35,8 +35,7 @@ module PixelFeeder #(
 );
 
     // Hint: States
-    localparam IDLE = 1'b0;
-    localparam FETCH = 1'b1;
+    localparam IDLE = 1'b0, FETCH = 1'b1;
 
     (* SHREG_EXTRACT="NO", EQUIVALENT_REGISTER_REMOVAL="OFF", KEEP="TRUE", S="TRUE" *)
     reg  cpu_rst_r, dvi_rst_r; //Release synchronously to our clock
@@ -65,7 +64,8 @@ module PixelFeeder #(
     reg chunk_inc_clkCPU, chunk_ack_clkDVI, fifo_start_clkDVI;
 
     always @(posedge dvi_clk_g) begin //Synchronize to DVI-clock
-        {chunk_ack_clkDVI, fifo_start_clkDVI} <= {chunk_ack, fifo_start};
+        chunk_ack_clkDVI    <= chunk_ack;
+        fifo_start_clkDVI   <= fifo_start;
     end
 
     always @(posedge cpu_clk_g) begin //Synchronize to CPU-clock
@@ -80,7 +80,7 @@ module PixelFeeder #(
     reg  [ 3:0] count_dviread; //Rolls over on every 16 pixel "read-chunk"
 
     wire video_adv = (video_valid && video_ready); //reset will trump this
-    wire rollCOL = (curCOL >= SCREEN_WIDTH - 1); //Could use fast-counter/pixelrange
+    wire rollCOL = (curCOL >= SCREEN_WIDTH  - 1);//***TEMP*** //Could use fast-counter/pixelrange
     wire rollROW = (curROW >= SCREEN_HEIGHT - 1);
 
     always @(posedge dvi_clk_g) begin
@@ -99,10 +99,13 @@ module PixelFeeder #(
                 case ({rollROW, rollCOL}) //Manage our col/row/frame/scene business
                     (2'b11): begin
                         curFRAME <= curFRAME + 1;
-                        {curCOL,curROW} <= {32'd0, 32'd0};
+                        {curCOL, curROW} <= {32'd0, 32'd0};
                         if (fifo_start_clkDVI) isRunning <= 1'b1; //Switch to FIFO on frame boundary
                     end
-                    (2'b01): {curCOL,curROW} <= {32'd0, curROW + 1};
+                    (2'b01): begin
+                        curCOL  <= 32'd0;
+                        curROW  <= curROW + 1;
+                    end
                     //2'b10 just means we're ON last row but not yet at end
                     default: curCOL <= curCOL + 1;
                 endcase
@@ -118,11 +121,17 @@ module PixelFeeder #(
     wire         feeder_wren, feeder_full, feeder_empty;
     wire [ 31:0] ignore_pixel = {curFRAME[14:0],1'b0, curROW[9:2], curCOL[9:2]};
 
-    assign feeder_dout = feeder_raw; //(isRunning) ? feeder_raw : ignore_pixel;
+    wire fakeALL = (curCOL == curROW);
+    wire [  7:0] fakeR = (fakeALL || (curCOL % 80 == 0) || (curCOL % 80 == 1) || (curCOL % 80 == 2)) ? 8'hFF : 8'h00;
+    wire [  7:0] fakeG = (fakeALL || (curCOL % 80 == 2) || (curCOL % 80 == 3) || (curCOL % 80 == 4)) ? 8'hFF : 8'h00;
+    wire [  7:0] fakeB = (fakeALL || (curCOL % 77 == 0) || (curCOL % 77 == 1) || (curCOL % 77 == 2)) ? 8'hFF : 8'h00;
+
+    assign feeder_dout = (isRunning) ? {8'd0, fakeR, fakeG, fakeB} : ignore_pixel;
+//  assign feeder_dout = (isRunning) ? {8'd0, feeder_raw[23:16], bandComponent, feeder_raw[7:0]} : ignore_pixel;
     assign rdf_rden    = 1'b1; //Always ready to read (want to fill up)!
 
 //TODO:Insert DDRStage before pixel_fifo to allow LITTLEWORDIAN flip
-generate if (COLT45_TESTPAT != 3) begin:BYPASS_FIFO
+generate if (COLT45_TESTPAT != 3) begin:WITH_FIFO
     pixel_fifo pf_fifo (
         .rst(cpu_rst_g), //Internal cross-clock sync
         //WRITE: CPU clock domain
@@ -131,14 +140,11 @@ generate if (COLT45_TESTPAT != 3) begin:BYPASS_FIFO
         .wr_en(feeder_wren),    //input              rdf_wren
         .din(feeder_data),      // input wire [127:0]  rdf_data
         //READ: DVI clock domain
-        .rd_clk(dvi_clk_g),     // input
+        .rd_clk(dvi_clk_g),     // inputfeeder_raw
         .empty(feeder_empty),   // output
         .rd_en(video_ready && isRunning), // input
         .dout(feeder_raw),      // output  NOTE: First-word-fallthrough but no "valid" signal avail!
-        .valid( ),              // output  NOTE: Why is this unused????
-        // NEW UNKNOWN SIGNALS
-        .wr_rst_busy( ),        // wr_rst_busy : output wire wr_rst_busy
-        .rd_rst_busy( )         // rd_rst_busy : output wire rd_rst_busy
+        .valid( )               // output  NOTE: Why is this unused???? Forced to read regardless!
     );
 end endgenerate
 
@@ -186,14 +192,15 @@ generate if (COLT45_TESTPAT == 0) begin:PIXFO_DDREAD
     reg fr, fr_r, interrupt_r, state;
     reg [ 5:0] framebits, framebits_r, frame_next=0; // 0=test-pattern, 1=0x1040_0000, 2=0x1080_0000, etc.
 
-    wire [31:0] head_addr = {4'h1, framebits, head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
+    wire [31:0] head_addr = {4'b0001, framebits[5:0], head_y[9:0], head_x[9:0], 2'b00}; //"Byte" address
     wire last_x = (head_x >= (((800/8)-1) * 8));
     wire last_y = (head_y >= (600-1));
+    //TODO: Adjust so that 4 mig_af requests bring 4 mig_rdf responses ... or 2 for 2
     //1 chunk is 16 separate 32-bit fifo reads (4 mig_rdf responses, initiated by 2 mig_af requests)
     wire chunk_edge = chunk_inc_clkCPU && !chunk_ack; //Both are regs under our control
     wire raf_advance = raf_wren && !raf_full; //NOTE: Always raf_full until we assert raf_wren first!
 
-    assign raf_addr  = {3'b000, head_addr[27:3]}; //Turn into 31-bit "DoubleWord" or DDR-address
+    assign raf_addr  = head_addr[27:0]; //WAS: {3'b, [27:3]} ...Turn into 31-bit "DoubleWord" or DDR-address
     assign raf_wren  = (state == FETCH); //Declare when FETCH addr ready (but might not happen)
     assign irq_frame = interrupt_r;
     assign pf_status = {
@@ -271,7 +278,7 @@ end
 end else if (COLT45_TESTPAT == 1) begin:PIXFO_SWEEP
 // *** Simple test pattern output through the FIFO ***
 
-    assign video_valid = feeder_valid, video = feeder_dout[23:0];
+    assign video_valid = feeder_valid, video = {8'h0, feeder_dout[23:0]};
     assign raf_wren = 1'b0;
 
     reg [15:0] sweep_RGB;

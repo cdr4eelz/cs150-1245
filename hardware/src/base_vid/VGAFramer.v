@@ -38,7 +38,7 @@ module VGAFramer (
     parameter V_FP         =    1; // V front porch width (lines)
     parameter V_PW         =    4; // V sync pulse width (lines)
     parameter V_MAX        =  628; // V total period (lines)
-    parameter H_POL = 0, V_POL = 1; // H & V polarity
+    parameter H_POL = 1, V_POL = 1; // H & V polarity
 
     wire active;
 
@@ -56,9 +56,17 @@ module VGAFramer (
 
     assign video_ready = !rst_pix;
     wire liveActive = video_ready && active;
-    wire [3:0] vga_red   = (liveActive) ? video[ 7: 4] : 4'h0;
-    wire [3:0] vga_green = (liveActive) ? video[15:12] : 4'h0;
-    wire [3:0] vga_blue  = (liveActive) ? video[23:20] : 4'h0;
+    //wire [3:0] vga_red   = (liveActive) ? video[ 7: 4] : 4'h0;
+    //wire [3:0] vga_green = (liveActive) ? video[15:12] : 4'h0;
+    //wire [3:0] vga_blue  = (liveActive) ? video[23:20] : 4'h0;
+    wire T_ALL = (h_cntr_reg <= v_cntr_reg);
+    wire [3:0] T_R = (T_ALL || (h_cntr_reg %  25 == 0)) ? 4'hF : (v_cntr_reg[3:0]);
+    wire [3:0] T_G = (T_ALL || (h_cntr_reg %  50 == 0)) ? 4'hF : (v_cntr_reg[5:2]);
+    wire [3:0] T_B = (T_ALL || (h_cntr_reg % 100 == 0)) ? 4'hF : (v_cntr_reg[7:4]);
+    wire [3:0] vga_red   = (liveActive) ? T_R : 4'h0;
+    wire [3:0] vga_green = (liveActive) ? T_G : 4'h0;
+    wire [3:0] vga_blue  = (liveActive) ? T_B : 4'h0;
+
 
     //CLOCK IS RESPONSIBILTY OF THE ENCOMPASING MODULE
 
