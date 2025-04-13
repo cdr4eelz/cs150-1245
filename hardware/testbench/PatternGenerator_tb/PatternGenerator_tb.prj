@@ -1,0 +1,5 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  PatternGenerator_tb.v \
+  ../../src/cross/PatternGenerator.v \
+
+

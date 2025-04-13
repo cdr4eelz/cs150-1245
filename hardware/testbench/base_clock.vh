@@ -1,26 +1,26 @@
 
-    // Reference Clock (100MHz) & board reset (elimated)
+    // Reference Clock (100MHz) & board reset
 
-    wire CLK_100MHz;  // Board clock for Arty-A7
-    //wire CLK_125MHz;  // Board clock for PYNQ
-    wire CK_RST_N  // "ChipKit Reset" (Active LOW)
+    reg BOARD_CLK_100MHz; // Board clock for Arty-A7
+    //reg CLK_125MHz;  // Board clock for PYNQ
+    reg BOARD_RST_N;      // "ChipKit Reset" (Active LOW)
 
-    initial CLK_100MHz = 0;
-    always #(HalfCycle) CLK_100MHz = ~CLK_100MHz;
+    initial BOARD_CLK_100MHz = 0;
+    always #(HalfCycle) BOARD_CLK_100MHz = ~BOARD_CLK_100MHz;
 
-    //wire reset_top_clocks = !CK_RST_N;
+    //wire reset_top_clocks = !BOARD_RST_N;
     wire reset_top_clocks;
     ButtonClean #( .Width(1) ) clean_rst_top (
-        .Inputs(!CK_RST_N),
-        .Clock(clk_in_100MHz), .Reset(1'b0),
+        .Inputs(!BOARD_RST_N),
+        .Clock(BOARD_CLK_100MHz), .Reset(1'b0),
         .Outputs(reset_top_clocks)
-    );  //assign reset_top_clocks = !CK_RST_N;  // Top CLocks are first to come out of reset
+    );  //assign reset_top_clocks = !BOARD_RST_N;  // Top CLocks are first to come out of reset
 
     wire locked_top_clocks;  // Participate in startup sequence
     wire clk_mig_sys, clk_mig_ref, clk_cpu, clk_pix;
     clk_wiz_0 top_clocks (  // Generate various clocks for components
     // Clock in ports
-        .clk_in_100MHz(CLK_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
+        .clk_in_100MHz(BOARD_CLK_100MHz), //WAS: clk_in_100MHz_g),  // INPUT for Arty-A7 or PYNQ CPU
         //.clk_in_125MHz(CLK_125MHz),  // INPUT for PYNQ (from board)
     // Clock out ports (rebuild clk_wiz if needs change)
         .clk_mig_100MHz     (clk_mig_sys),  // output MIG primary clk
@@ -45,9 +45,9 @@
 task BaseClockReset;
 begin
     $display("Resetting clocks...");
-    CK_RST_N = 0; //Active-LOW
-    repeat (3) @( posedge CLK_100MHz ) ;
-    CK_RST_N = 1;
+    BOARD_RST_N = 0; //Active-LOW
+    repeat (3) @( posedge BOARD_CLK_100MHz ) ;
+    BOARD_RST_N = 1;
     wait ( locked_top_clocks ) ; // wait for pll to lock
     repeat (10) @( posedge cpu_clk_g ) ; // reset for 10 cc
     rst_cpu_mem = 0;

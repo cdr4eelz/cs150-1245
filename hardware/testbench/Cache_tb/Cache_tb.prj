@@ -1,0 +1,4 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  Cache_tb.v \
+  ../../src/base_util/Synchronizer.v \
+  ../../src/base_util/Debouncer.v

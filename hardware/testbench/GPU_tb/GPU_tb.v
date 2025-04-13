@@ -2,7 +2,7 @@
 
 `include "../src/gpu/gpcommands.vh"
 
-module GPUTestbench;
+module GPU_tb;
 
 `include "util_elog.vh"
 
@@ -30,7 +30,7 @@ module GPUTestbench;
     // Graphics Command Processor <=> RequestController wires:
     reg          gcmd_raf_full;
     wire         gcmd_raf_wren;
-    wire [ 30:0] gcmd_raf_addr;
+    wire [ 27:0] gcmd_raf_addr; // Was [30:0]
     wire         gcmd_rdf_rden;
     reg          gcmd_rdf_wren;
     reg  [127:0] rdf_data;
@@ -38,7 +38,7 @@ module GPUTestbench;
     // Bypass/ScanLineRunner <=> RequestController wires:
     reg          bpas_waf_full;
     wire         bpas_waf_wren;
-    wire [ 30:0] bpas_waf_addr;
+    wire [ 27:0] bpas_waf_addr; // Was [30:0]
     reg          bpas_wdf_full;
     wire         bpas_wdf_wren;
     wire [ 15:0] bpas_wdf_mask;

@@ -1,0 +1,12 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  GPU_tb.v \
+  ../../src/gpu/GPU.v \
+  ../../src/gpu/ElipseEngine.v \
+  ../../src/gpu/FrameFiller.v \
+  ../../src/gpu/gpcommands.vh \
+  ../../src/gpu/GraphicsProcessor.v \
+  ../../src/gpu/LineEngine.v \
+  ../../src/gpu/PixelFeeder.v \
+  ../../src/gpu/ScanLineRunner.v \
+  ../../src/base_mem/DDRStage.v \
+

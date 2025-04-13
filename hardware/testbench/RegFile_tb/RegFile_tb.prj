@@ -1,0 +1,5 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  RegFile_tb.v \
+  ../../src/innerds/RegFile.v \
+
+

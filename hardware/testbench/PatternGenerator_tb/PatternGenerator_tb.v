@@ -1,6 +1,6 @@
 `timescale 1ns/1ns //Modest precision (maybe longer duration more convenient)
 
-module PatternGeneratorTestbench;
+module PatternGenerator_tb;
 
     parameter CLK_PERIOD = 20; // 20 * 1ns timescale
     parameter CLK_HI = (CLK_PERIOD / 2.0); //Watchout for divisibility & precision

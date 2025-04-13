@@ -1,0 +1,4 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  PipelineBorder_tb.v \
+  ../../src/cross/PipelineBorder.v
+

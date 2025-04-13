@@ -4,3 +4,4 @@ xsim.dir
 *.jou
 *.pb
 *.wdb
+vivado_pid*.str

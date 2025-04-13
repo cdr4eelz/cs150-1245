@@ -1,0 +1,3 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  LineEngine_tb.v \
+  ../../src/gpu/LineEngine.v \

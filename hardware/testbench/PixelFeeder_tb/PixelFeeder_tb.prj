@@ -1,0 +1,5 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  PixelFeeder_tb.v \
+  ../../src/gpu/PixelFeeder.v \
+
+

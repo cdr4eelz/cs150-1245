@@ -1,0 +1,4 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  FrameFiller_tb.v \
+  ../../src/gpu/FrameFiller.v \
+

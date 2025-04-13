@@ -6,8 +6,8 @@ module PipelineBorder #(
     parameter Mode=0 /*0-3=(Reg,LatchieMUX,PassReset,PassThru)*/, 
     parameter Width=0, ResetValue={Width{1'b0}}
 )(
-    input clk, rst, stall,
-    input  [Width-1:0] In,
+    input wire clk, rst, stall,
+    input wire [Width-1:0] In,
     output reg [Width-1:0] Out
 );
 

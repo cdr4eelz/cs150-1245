@@ -1,0 +1,6 @@
+verilog xil_defaultlib --include "../../../ipstatic" \
+  GraphicsProcessor_tb.v \
+  ../../src/gpu/GraphicsProcessor.v \
+  ../../src/base_mem/DDRStage.v \
+
+

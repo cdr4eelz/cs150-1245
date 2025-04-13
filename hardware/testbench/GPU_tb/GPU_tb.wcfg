@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="xil_defaultlib.GPU_tb.wdb" id="1">
+         <top_modules>
+            <top_module name="GPU_tb" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="0fs"></ZoomStartTime>
+      <ZoomEndTime time="5291fs"></ZoomEndTime>
+      <Cursor1Time time="0fs"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="175"></NameColumnWidth>
+      <ValueColumnWidth column_width="126"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="36" />
+   <wvobject type="logic" fp_name="/GPU_tb/ELOG_errors">
+      <obj_property name="ElementShortName">ELOG_errors</obj_property>
+      <obj_property name="ObjectShortName">ELOG_errors</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/cpu_clk_g">
+      <obj_property name="ElementShortName">cpu_clk_g</obj_property>
+      <obj_property name="ObjectShortName">cpu_clk_g</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/rst_cpu_bus">
+      <obj_property name="ElementShortName">rst_cpu_bus</obj_property>
+      <obj_property name="ObjectShortName">rst_cpu_bus</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/gp_vcode">
+      <obj_property name="ElementShortName">gp_vcode</obj_property>
+      <obj_property name="ObjectShortName">gp_vcode</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/gp_vframe">
+      <obj_property name="ElementShortName">gp_vframe</obj_property>
+      <obj_property name="ObjectShortName">gp_vframe</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/gp_wcode">
+      <obj_property name="ElementShortName">gp_wcode[31:0]</obj_property>
+      <obj_property name="ObjectShortName">gp_wcode[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/gp_wframe">
+      <obj_property name="ElementShortName">gp_wframe[31:0]</obj_property>
+      <obj_property name="ObjectShortName">gp_wframe[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/gp_rcode">
+      <obj_property name="ElementShortName">gp_rcode[31:0]</obj_property>
+      <obj_property name="ObjectShortName">gp_rcode[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/gp_status">
+      <obj_property name="ElementShortName">gp_status[15:0]</obj_property>
+      <obj_property name="ObjectShortName">gp_status[15:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/gp_fault">
+      <obj_property name="ElementShortName">gp_fault</obj_property>
+      <obj_property name="ObjectShortName">gp_fault</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/gp_rframe">
+      <obj_property name="ElementShortName">gp_rframe[5:0]</obj_property>
+      <obj_property name="ObjectShortName">gp_rframe[5:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/ENGINES_ready">
+      <obj_property name="ElementShortName">ENGINES_ready</obj_property>
+      <obj_property name="ObjectShortName">ENGINES_ready</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/gp_ready">
+      <obj_property name="ElementShortName">gp_ready</obj_property>
+      <obj_property name="ObjectShortName">gp_ready</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/irq_gp_done">
+      <obj_property name="ElementShortName">irq_gp_done</obj_property>
+      <obj_property name="ObjectShortName">irq_gp_done</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/gcmd_raf_full">
+      <obj_property name="ElementShortName">gcmd_raf_full</obj_property>
+      <obj_property name="ObjectShortName">gcmd_raf_full</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/gcmd_raf_wren">
+      <obj_property name="ElementShortName">gcmd_raf_wren</obj_property>
+      <obj_property name="ObjectShortName">gcmd_raf_wren</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/gcmd_raf_addr">
+      <obj_property name="ElementShortName">gcmd_raf_addr[27:0]</obj_property>
+      <obj_property name="ObjectShortName">gcmd_raf_addr[27:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/gcmd_rdf_rden">
+      <obj_property name="ElementShortName">gcmd_rdf_rden</obj_property>
+      <obj_property name="ObjectShortName">gcmd_rdf_rden</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/gcmd_rdf_wren">
+      <obj_property name="ElementShortName">gcmd_rdf_wren</obj_property>
+      <obj_property name="ObjectShortName">gcmd_rdf_wren</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/rdf_data">
+      <obj_property name="ElementShortName">rdf_data[127:0]</obj_property>
+      <obj_property name="ObjectShortName">rdf_data[127:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/bpas_waf_full">
+      <obj_property name="ElementShortName">bpas_waf_full</obj_property>
+      <obj_property name="ObjectShortName">bpas_waf_full</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/bpas_waf_wren">
+      <obj_property name="ElementShortName">bpas_waf_wren</obj_property>
+      <obj_property name="ObjectShortName">bpas_waf_wren</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/bpas_waf_addr">
+      <obj_property name="ElementShortName">bpas_waf_addr[27:0]</obj_property>
+      <obj_property name="ObjectShortName">bpas_waf_addr[27:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/bpas_wdf_full">
+      <obj_property name="ElementShortName">bpas_wdf_full</obj_property>
+      <obj_property name="ObjectShortName">bpas_wdf_full</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GPU_tb/bpas_wdf_wren">
+      <obj_property name="ElementShortName">bpas_wdf_wren</obj_property>
+      <obj_property name="ObjectShortName">bpas_wdf_wren</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/bpas_wdf_mask">
+      <obj_property name="ElementShortName">bpas_wdf_mask[15:0]</obj_property>
+      <obj_property name="ObjectShortName">bpas_wdf_mask[15:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/bpas_wdf_data">
+      <obj_property name="ElementShortName">bpas_wdf_data[127:0]</obj_property>
+      <obj_property name="ObjectShortName">bpas_wdf_data[127:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/bpas_wdf_mdat">
+      <obj_property name="ElementShortName">bpas_wdf_mdat[127:0]</obj_property>
+      <obj_property name="ObjectShortName">bpas_wdf_mdat[127:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/DDR2MEM">
+      <obj_property name="ElementShortName">DDR2MEM[0:1023]</obj_property>
+      <obj_property name="ObjectShortName">DDR2MEM[0:1023]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/GPCODE_SAMPLE2">
+      <obj_property name="ElementShortName">GPCODE_SAMPLE2[0:1023]</obj_property>
+      <obj_property name="ObjectShortName">GPCODE_SAMPLE2[0:1023]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/GPCODE_SAMPLE3">
+      <obj_property name="ElementShortName">GPCODE_SAMPLE3[0:1023]</obj_property>
+      <obj_property name="ObjectShortName">GPCODE_SAMPLE3[0:1023]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/CNT_waf">
+      <obj_property name="ElementShortName">CNT_waf[31:0]</obj_property>
+      <obj_property name="ObjectShortName">CNT_waf[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/CNT_wdf">
+      <obj_property name="ElementShortName">CNT_wdf[31:0]</obj_property>
+      <obj_property name="ObjectShortName">CNT_wdf[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/mem_ns">
+      <obj_property name="ElementShortName">mem_ns[1:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_ns[1:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/mem_cs">
+      <obj_property name="ElementShortName">mem_cs[1:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_cs[1:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GPU_tb/mem_offset">
+      <obj_property name="ElementShortName">mem_offset[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_offset[31:0]</obj_property>
+   </wvobject>
+</wave_config>

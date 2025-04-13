@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="xil_defaultlib.GraphicsProcessor_tb.wdb" id="1">
+         <top_modules>
+            <top_module name="GraphicsProcessor_tb" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="0fs"></ZoomStartTime>
+      <ZoomEndTime time="5291fs"></ZoomEndTime>
+      <Cursor1Time time="0fs"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="175"></NameColumnWidth>
+      <ValueColumnWidth column_width="126"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="68" />
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/cpu_clk_g">
+      <obj_property name="ElementShortName">cpu_clk_g</obj_property>
+      <obj_property name="ObjectShortName">cpu_clk_g</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/rst_cpu_bus">
+      <obj_property name="ElementShortName">rst_cpu_bus</obj_property>
+      <obj_property name="ObjectShortName">rst_cpu_bus</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/GP_ready">
+      <obj_property name="ElementShortName">GP_ready</obj_property>
+      <obj_property name="ObjectShortName">GP_ready</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/GP_fault">
+      <obj_property name="ElementShortName">GP_fault</obj_property>
+      <obj_property name="ObjectShortName">GP_fault</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/GP_vcode">
+      <obj_property name="ElementShortName">GP_vcode</obj_property>
+      <obj_property name="ObjectShortName">GP_vcode</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/GP_wcode">
+      <obj_property name="ElementShortName">GP_wcode[31:0]</obj_property>
+      <obj_property name="ObjectShortName">GP_wcode[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/GP_wframe">
+      <obj_property name="ElementShortName">GP_wframe[31:0]</obj_property>
+      <obj_property name="ObjectShortName">GP_wframe[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/GP_rcode">
+      <obj_property name="ElementShortName">GP_rcode[31:0]</obj_property>
+      <obj_property name="ObjectShortName">GP_rcode[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/GP_rframe">
+      <obj_property name="ElementShortName">GP_rframe[5:0]</obj_property>
+      <obj_property name="ObjectShortName">GP_rframe[5:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/raf_full">
+      <obj_property name="ElementShortName">raf_full</obj_property>
+      <obj_property name="ObjectShortName">raf_full</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/raf_wren">
+      <obj_property name="ElementShortName">raf_wren</obj_property>
+      <obj_property name="ObjectShortName">raf_wren</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/raf_addr">
+      <obj_property name="ElementShortName">raf_addr[30:0]</obj_property>
+      <obj_property name="ObjectShortName">raf_addr[30:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/rdf_rden">
+      <obj_property name="ElementShortName">rdf_rden</obj_property>
+      <obj_property name="ObjectShortName">rdf_rden</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/rdf_wren">
+      <obj_property name="ElementShortName">rdf_wren</obj_property>
+      <obj_property name="ObjectShortName">rdf_wren</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/rdf_data">
+      <obj_property name="ElementShortName">rdf_data[127:0]</obj_property>
+      <obj_property name="ObjectShortName">rdf_data[127:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/FF_ready">
+      <obj_property name="ElementShortName">FF_ready</obj_property>
+      <obj_property name="ObjectShortName">FF_ready</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/FF_valid">
+      <obj_property name="ElementShortName">FF_valid</obj_property>
+      <obj_property name="ObjectShortName">FF_valid</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/FF_color">
+      <obj_property name="ElementShortName">FF_color[31:0]</obj_property>
+      <obj_property name="ObjectShortName">FF_color[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/FF_frame">
+      <obj_property name="ElementShortName">FF_frame[31:0]</obj_property>
+      <obj_property name="ObjectShortName">FF_frame[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/LE_ready">
+      <obj_property name="ElementShortName">LE_ready</obj_property>
+      <obj_property name="ObjectShortName">LE_ready</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/LE_color_valid">
+      <obj_property name="ElementShortName">LE_color_valid</obj_property>
+      <obj_property name="ObjectShortName">LE_color_valid</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE_color">
+      <obj_property name="ElementShortName">LE_color[31:0]</obj_property>
+      <obj_property name="ObjectShortName">LE_color[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/LE_x0_valid">
+      <obj_property name="ElementShortName">LE_x0_valid</obj_property>
+      <obj_property name="ObjectShortName">LE_x0_valid</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/LE_y0_valid">
+      <obj_property name="ElementShortName">LE_y0_valid</obj_property>
+      <obj_property name="ObjectShortName">LE_y0_valid</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/LE_x1_valid">
+      <obj_property name="ElementShortName">LE_x1_valid</obj_property>
+      <obj_property name="ObjectShortName">LE_x1_valid</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/LE_y1_valid">
+      <obj_property name="ElementShortName">LE_y1_valid</obj_property>
+      <obj_property name="ObjectShortName">LE_y1_valid</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE_point">
+      <obj_property name="ElementShortName">LE_point[9:0]</obj_property>
+      <obj_property name="ObjectShortName">LE_point[9:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/LE_trigger">
+      <obj_property name="ElementShortName">LE_trigger</obj_property>
+      <obj_property name="ObjectShortName">LE_trigger</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE_frame">
+      <obj_property name="ElementShortName">LE_frame[31:0]</obj_property>
+      <obj_property name="ObjectShortName">LE_frame[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/EL_ready">
+      <obj_property name="ElementShortName">EL_ready</obj_property>
+      <obj_property name="ObjectShortName">EL_ready</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/EL_color_valid">
+      <obj_property name="ElementShortName">EL_color_valid</obj_property>
+      <obj_property name="ObjectShortName">EL_color_valid</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL_color">
+      <obj_property name="ElementShortName">EL_color[31:0]</obj_property>
+      <obj_property name="ObjectShortName">EL_color[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/EL_xc_valid">
+      <obj_property name="ElementShortName">EL_xc_valid</obj_property>
+      <obj_property name="ObjectShortName">EL_xc_valid</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/EL_yc_valid">
+      <obj_property name="ElementShortName">EL_yc_valid</obj_property>
+      <obj_property name="ObjectShortName">EL_yc_valid</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/EL_a_valid">
+      <obj_property name="ElementShortName">EL_a_valid</obj_property>
+      <obj_property name="ObjectShortName">EL_a_valid</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/EL_b_valid">
+      <obj_property name="ElementShortName">EL_b_valid</obj_property>
+      <obj_property name="ObjectShortName">EL_b_valid</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL_point">
+      <obj_property name="ElementShortName">EL_point[9:0]</obj_property>
+      <obj_property name="ObjectShortName">EL_point[9:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/EL_trigger">
+      <obj_property name="ElementShortName">EL_trigger</obj_property>
+      <obj_property name="ObjectShortName">EL_trigger</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL_frame">
+      <obj_property name="ElementShortName">EL_frame[31:0]</obj_property>
+      <obj_property name="ObjectShortName">EL_frame[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/ELOG_errors">
+      <obj_property name="ElementShortName">ELOG_errors</obj_property>
+      <obj_property name="ObjectShortName">ELOG_errors</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/GraphicsProcessor_tb/ENGINES_ready">
+      <obj_property name="ElementShortName">ENGINES_ready</obj_property>
+      <obj_property name="ObjectShortName">ENGINES_ready</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/GPCODE_SAMPLE1">
+      <obj_property name="ElementShortName">GPCODE_SAMPLE1[0:1023]</obj_property>
+      <obj_property name="ObjectShortName">GPCODE_SAMPLE1[0:1023]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/GPCODE">
+      <obj_property name="ElementShortName">GPCODE[0:1023]</obj_property>
+      <obj_property name="ObjectShortName">GPCODE[0:1023]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/mem_ns">
+      <obj_property name="ElementShortName">mem_ns[1:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_ns[1:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/mem_cs">
+      <obj_property name="ElementShortName">mem_cs[1:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_cs[1:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/mem_offset">
+      <obj_property name="ElementShortName">mem_offset[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_offset[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/FF__countdown">
+      <obj_property name="ElementShortName">FF__countdown[31:0]</obj_property>
+      <obj_property name="ObjectShortName">FF__countdown[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE__countdown">
+      <obj_property name="ElementShortName">LE__countdown[31:0]</obj_property>
+      <obj_property name="ObjectShortName">LE__countdown[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL__countdown">
+      <obj_property name="ElementShortName">EL__countdown[31:0]</obj_property>
+      <obj_property name="ObjectShortName">EL__countdown[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE__frame">
+      <obj_property name="ElementShortName">LE__frame[31:0]</obj_property>
+      <obj_property name="ObjectShortName">LE__frame[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE__color">
+      <obj_property name="ElementShortName">LE__color[31:0]</obj_property>
+      <obj_property name="ObjectShortName">LE__color[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE__x0">
+      <obj_property name="ElementShortName">LE__x0[31:0]</obj_property>
+      <obj_property name="ObjectShortName">LE__x0[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE__y0">
+      <obj_property name="ElementShortName">LE__y0[31:0]</obj_property>
+      <obj_property name="ObjectShortName">LE__y0[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE__x1">
+      <obj_property name="ElementShortName">LE__x1[31:0]</obj_property>
+      <obj_property name="ObjectShortName">LE__x1[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/LE__y1">
+      <obj_property name="ElementShortName">LE__y1[31:0]</obj_property>
+      <obj_property name="ObjectShortName">LE__y1[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL__frame">
+      <obj_property name="ElementShortName">EL__frame[31:0]</obj_property>
+      <obj_property name="ObjectShortName">EL__frame[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL__color">
+      <obj_property name="ElementShortName">EL__color[31:0]</obj_property>
+      <obj_property name="ObjectShortName">EL__color[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL__x0">
+      <obj_property name="ElementShortName">EL__x0[31:0]</obj_property>
+      <obj_property name="ObjectShortName">EL__x0[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL__y0">
+      <obj_property name="ElementShortName">EL__y0[31:0]</obj_property>
+      <obj_property name="ObjectShortName">EL__y0[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL__x1">
+      <obj_property name="ElementShortName">EL__x1[31:0]</obj_property>
+      <obj_property name="ObjectShortName">EL__x1[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/EL__y1">
+      <obj_property name="ElementShortName">EL__y1[31:0]</obj_property>
+      <obj_property name="ObjectShortName">EL__y1[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/ClockFreq">
+      <obj_property name="ElementShortName">ClockFreq[31:0]</obj_property>
+      <obj_property name="ObjectShortName">ClockFreq[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/HalfCycle">
+      <obj_property name="ElementShortName">HalfCycle[31:0]</obj_property>
+      <obj_property name="ObjectShortName">HalfCycle[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/Cycle">
+      <obj_property name="ElementShortName">Cycle[31:0]</obj_property>
+      <obj_property name="ObjectShortName">Cycle[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/MS_DEAD">
+      <obj_property name="ElementShortName">MS_DEAD[31:0]</obj_property>
+      <obj_property name="ObjectShortName">MS_DEAD[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/MS_IDLE">
+      <obj_property name="ElementShortName">MS_IDLE[31:0]</obj_property>
+      <obj_property name="ObjectShortName">MS_IDLE[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/MS_OFFER1">
+      <obj_property name="ElementShortName">MS_OFFER1[31:0]</obj_property>
+      <obj_property name="ObjectShortName">MS_OFFER1[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/GraphicsProcessor_tb/MS_OFFER2">
+      <obj_property name="ElementShortName">MS_OFFER2[31:0]</obj_property>
+      <obj_property name="ObjectShortName">MS_OFFER2[31:0]</obj_property>
+   </wvobject>
+</wave_config>
