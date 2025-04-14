@@ -25,6 +25,7 @@ module VGAFramer (
     output wire [3:0] VGA_G,
     output wire [3:0] VGA_B
 );
+    parameter GEN_PATTERN = 0;
 
     // See the end of this file for settings for other resolutions.
     //   *** BE SURE TO ADJUST THE CLOCK-WIZARD OUTPUT FREQ ***
@@ -56,16 +57,25 @@ module VGAFramer (
 
     assign video_ready = !rst_pix;
     wire liveActive = video_ready && active;
-    //wire [3:0] vga_red   = (liveActive) ? video[ 7: 4] : 4'h0;
-    //wire [3:0] vga_green = (liveActive) ? video[15:12] : 4'h0;
-    //wire [3:0] vga_blue  = (liveActive) ? video[23:20] : 4'h0;
-    wire T_ALL = (h_cntr_reg <= v_cntr_reg);
-    wire [3:0] T_R = (T_ALL || (h_cntr_reg %  25 == 0)) ? 4'hF : (v_cntr_reg[3:0]);
-    wire [3:0] T_G = (T_ALL || (h_cntr_reg %  50 == 0)) ? 4'hF : (v_cntr_reg[5:2]);
-    wire [3:0] T_B = (T_ALL || (h_cntr_reg % 100 == 0)) ? 4'hF : (v_cntr_reg[7:4]);
-    wire [3:0] vga_red   = (liveActive) ? T_R : 4'h0;
-    wire [3:0] vga_green = (liveActive) ? T_G : 4'h0;
-    wire [3:0] vga_blue  = (liveActive) ? T_B : 4'h0;
+    wire [3:0] vga_red, vga_green, vga_blue;
+    generate if (GEN_PATTERN == 1) begin:PAT_GEN1
+        wire TT_R = (h_cntr_reg <= (v_cntr_reg +  89)),
+             TT_G = (h_cntr_reg <= (v_cntr_reg -   0)),
+             TT_B = (h_cntr_reg <= (v_cntr_reg - 130));
+        wire XY_R = (h_cntr_reg %  33 == 0) && (h_cntr_reg %  33 == 1),
+             XY_G = (h_cntr_reg %  50 == 0) && (h_cntr_reg %  50 == 2),
+             XY_B = (h_cntr_reg % 100 == 1) && (h_cntr_reg % 100 == 5);
+        wire [3:0]  T_R = (TT_R || XY_R) ? 4'hF : (v_cntr_reg[3:0]),
+                    T_G = (TT_G || XY_G) ? 4'hF : (v_cntr_reg[5:2]),
+                    T_B = (TT_B || XY_B) ? 4'hF : (v_cntr_reg[7:4]);
+        assign  vga_red     = (liveActive) ? T_R : 4'h0;
+        assign  vga_green   = (liveActive) ? T_G : 4'h0;
+        assign  vga_blue    = (liveActive) ? T_B : 4'h0;
+    end else begin:PASS_THRU_VID
+        assign  vga_red     = (liveActive) ? video[ 7: 4] : 4'h0;
+        assign  vga_green   = (liveActive) ? video[15:12] : 4'h0;
+        assign  vga_blue    = (liveActive) ? video[23:20] : 4'h0;
+    end endgenerate
 
 
     //CLOCK IS RESPONSIBILTY OF THE ENCOMPASING MODULE

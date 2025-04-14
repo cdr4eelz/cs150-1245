@@ -264,7 +264,9 @@ module ArtyA7top #(
         );
         (* mark_debug = "true" *) wire DBG_STUCK_MIG = DBG_dcache_MIG[3];
 
-        VGAFramer VGA (
+        VGAFramer #(
+            .GEN_PATTERN(1)
+        ) VGA (
             .clk_pix(clk_pix), // input
 
             .video(video),  // input [31:0]
