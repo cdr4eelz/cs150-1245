@@ -130,6 +130,14 @@ uint32_t store_xor(uint32_t* const pDST, uint32_t const numBytes)
     return result;
 }
 
+/* .....
+const uint32_t* dump_ascii(const uint32_t* const pSRC, uint8_t const numWords)
+{
+    const ...`
+    const uint8_t* p = (void *)pSRC;
+    ch = p*;
+} ..... */
+
 const uint32_t* dump_block(const uint32_t* const pSRC, uint8_t const numWords)
 {
     const uint32_t *p = (void *)(((uint32_t)pSRC) & 0xFFFFFFFC);
