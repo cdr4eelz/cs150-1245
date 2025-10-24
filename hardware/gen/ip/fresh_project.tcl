@@ -1,6 +1,8 @@
 ###source ../target.tcl
 set VERBOSE -verbose
 
+set_param project.defaultIPCacheSetting none
+
 create_project ${VERBOSE} -ip -part "xc7a100tcsg324-1" "ip_manage"
 set project_obj [get_projects "ip_manage"]
 set_property "part"               "xc7a100tcsg324-1"                      $project_obj
@@ -11,6 +13,7 @@ set_property "target_language"    "Verilog"                               $proje
 # CORE CONTAINERS hold generated IP files in zip archive. Difficult outside Vivado.
 set_property coreContainer.enable 0                                       $project_obj
 set_property DESIGN_MODE RTL [current_fileset]
+
 
 #read_ip ${VERBOSE} ...
 #set_property GENERATE_SYNTH_CHECKPOINT 1 [get_files ...hardware/src/ip/clk_wiz_0/clk_wiz_0/clk_wiz_0.xci]
