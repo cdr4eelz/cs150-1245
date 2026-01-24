@@ -34,10 +34,11 @@ bcmdspec_t* token_cmdspec(const int8_t* bufptr);
 void bufw_cmdspec( void );
 
 uint32_t store_xor(uint32_t *pDST, uint32_t numBytes);
-const uint32_t* dump_block(const uint32_t* pSRC, uint8_t numWords);
 uint32_t copy_xor(const uint32_t* pSRC, uint32_t numBytes,
                   uint32_t* pDST); //NULL to xor without copy
 
+const uint32_t* dump_block(const uint32_t* pSRC, uint8_t numWords,
+                           uint8_t advance_ptr);
 
 void* tok_addr( void* *stash_addr ); //NULL for unused stash_addr
 

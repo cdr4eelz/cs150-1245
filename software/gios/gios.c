@@ -45,7 +45,7 @@ int main( void )
         }
 
         if ((cmd==BC_BLANK) && (last_bcs) && (last_bcs->cmd==BC_DUMP)) {
-            stash_address = (void*)dump_block(stash_address, 16);
+            stash_address = (void*)dump_block(stash_address, 16, last_bcs->flags & 0x01);
             continue;
         }
 
@@ -103,7 +103,7 @@ int main( void )
             } break;
 
             case BC_DUMP: {
-                stash_address = (void*)dump_block(tok_addr(&stash_address), 16);
+                stash_address = (void*)dump_block(tok_addr(&stash_address), 16, last_bcs->flags & 0x01);
             } break;
 
             case BC_COPY: {

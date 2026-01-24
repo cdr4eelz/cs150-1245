@@ -16,7 +16,8 @@ bcmdspec_t const bcmd_table[] = {
     {"s" "h",        BC_STORE,    RZ_HEX16},    // "ha"
     {"s" "b",        BC_STORE,     RZ_HEX8},    // "ba"
 
-    {"dump",        BC_DUMP,      0},           // "aw"
+    {"dump",        BC_DUMP,      1},           // "aw"
+    {"dumpsame",    BC_DUMP,      0},           // "aw"
     {"copy",        BC_COPY,      0},           // "aaw"
     {"",            BC_BLANK,     0},           // ""
     {"help",        BC_HELP,      0},           // ""
@@ -138,7 +139,8 @@ const uint32_t* dump_ascii(const uint32_t* const pSRC, uint8_t const numWords)
     ch = p*;
 } ..... */
 
-const uint32_t* dump_block(const uint32_t* const pSRC, uint8_t const numWords)
+const uint32_t* dump_block(const uint32_t* const pSRC, uint8_t const numWords,
+                            uint8_t const advance_ptr) //=advance ptr PAST output
 {
     const uint32_t *p = (void *)(((uint32_t)pSRC) & 0xFFFFFFFC);
 
@@ -157,7 +159,7 @@ const uint32_t* dump_block(const uint32_t* const pSRC, uint8_t const numWords)
         }
     }
     bufw_newline();
-    return p;
+    return (advance_ptr) ? p : pSRC;
 }
 
 uint32_t copy_xor(const uint32_t* const pSRC, uint32_t const numBytes,
