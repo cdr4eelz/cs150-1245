@@ -55,7 +55,7 @@ const int8_t const DEF_DELIMS[]   = " \x0d",
 
 bcmdspec_t* token_cmdspec(const int8_t* const input)
 {
-    //TODO:Filter odd chars (whitespace)???
+    //TODO: Filter odd chars (whitespace)???
     bcmdspec_t *bcs;
 
     for (bcs = bcmd_table ; (bcs->flags != FLAG_EOT) ; bcs++) {
@@ -149,7 +149,7 @@ const uint32_t* dump_block(const uint32_t* const pSRC, uint8_t const numWords)
             if ((i%4)==0) {
                 bufw_newline();
                 bufw_hex32u((uint32_t) p);
-                uwrite_int8(':');
+                uwrite_int8(':'); uwrite_int8(' ');
             } else {
                 uwrite_int8(' ');
             }
@@ -212,7 +212,7 @@ uint32_t tok_radnum(radixize_t const rz)
         negative = TRUE;
     } else negative = FALSE;
 
-    switch (rz) { //NOTE:Compiler tends to need a GOT when doing optimized switch!
+    switch (rz) { //NOTE: Compiler tends to need a GOT when doing optimized switch!
         case RZ_HEX32:
             val = ascii_hex_to_uint32(localbuf);
             break;

@@ -57,6 +57,8 @@ int main( void )
             case BC_JAL: {
                 entry_t start = (entry_t)(uint32_t)tok_addr(&stash_address);
                 start(); //The double-cast above avoids a "pedantic" warning
+//void *ptr = (void *)0x1234567; Use this to for true jump rather than call...
+//goto *ptr; // This is a GNU C extension, not standard C.
             } break;
 
             case BC_LOAD: {
@@ -72,7 +74,7 @@ int main( void )
                 }
 
                 bufw_hex32u((uint32_t)p);
-                uwrite_int8(':');
+                uwrite_int8(':'); uwrite_int8(' ');
                 bufw_radnum(rz, u32);
                 bufw_newline();
             } break;
