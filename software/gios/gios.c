@@ -45,7 +45,7 @@ int main( void )
         }
 
         if ((cmd==BC_BLANK) && (last_bcs) && (last_bcs->cmd==BC_DUMP)) {
-            stash_address = (void*)dump_block(stash_address, 16, last_bcs->flags & 0x01);
+            stash_address = (void*)dump_block(stash_address, 16, TRUE);
             continue;
         }
 
@@ -103,7 +103,7 @@ int main( void )
             } break;
 
             case BC_DUMP: {
-                stash_address = (void*)dump_block(tok_addr(&stash_address), 16, last_bcs->flags & 0x01);
+                stash_address = (void*)dump_block(tok_addr(&stash_address), 16, TRUE);
             } break;
 
             case BC_COPY: {
@@ -116,6 +116,8 @@ int main( void )
                 bufw_hex32u(last_result);
                 bufw_newline();
             } break;
+
+//TODO: case BC_FILL: { ..... } break;
 
         //Graphics commands:
             case BC_GSTAT: {

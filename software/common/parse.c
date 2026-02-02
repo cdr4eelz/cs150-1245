@@ -16,8 +16,7 @@ bcmdspec_t const bcmd_table[] = {
     {"s" "h",        BC_STORE,    RZ_HEX16},    // "ha"
     {"s" "b",        BC_STORE,     RZ_HEX8},    // "ba"
 
-    {"dump",        BC_DUMP,      1},           // "aw"
-    {"dumpsame",    BC_DUMP,      0},           // "aw"
+    {"dump",        BC_DUMP,      0},           // "aw"
     {"copy",        BC_COPY,      0},           // "aaw"
     {"",            BC_BLANK,     0},           // ""
     {"help",        BC_HELP,      0},           // ""
