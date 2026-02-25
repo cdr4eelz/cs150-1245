@@ -1,0 +1,53 @@
+*** High level overview ***
+Interrupt traps keys (sends any queued response)
+  Translate to simple flags (synchronized somehow?)
+Interrupt notes completion of drawing "sequence"
+  Notes page flips
+
+
+
+*** Handoffs ***
+
+
+*** Tradeoffs ***
+
+-Software-
+* Convenience​
+  - Existing Company-X codebase/libraries​
+  - Rapid & familiar development "flow"​
+* Optimization Impacts​
+  - Non-intuitive/fragile code tricks​
+  - Distract from primary focus​
+  - Complicate validation tests​
+* Timeslicing to address Latency​
+  - Inherently complex​
+  - Overhead (context switching)​
+  - Difficult to guarantee (non RTOS)​
+
+-Hardware-
+* Performance​
+  - Dramatic boosts possible​
+  - CPU offload/parallelism ​
+* Design/Test Effort​
+  - Offload to perf/parallel specialists​
+  - Modular separation possible​
+
+
+
+Reaching limits of Software-only design...​
+  Brute-force effort (increase CPU speed):​
+    Capped by part cost, cascades to support hardware & revalidation, power consumption​
+  Multi-core CPU:​
+    Shared bottlenecks remain: memory/cache/bus​
+    Cache contention/fouling almost inevitable​
+    Generalized CPU cores not optimized for our specific bottlenecks​
+​
+Key bottlenecks or impediments:​
+    CPU wasted on trivial or unsuited activities​
+    Needless fouling of I-cache & D-cache​
+    Memory & cache contention​
+​
+Target approach:​
+    Establish convenient border between CPU & coprocessor.​
+    ​
+    Separate (write-only) GPU memory!​

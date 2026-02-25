@@ -1,0 +1,36 @@
+(list the 5's...)
+FW / DX / M 
+
+We figured the big three Mem, ALU & Regfile.  Mem is two synchronous elements that in theory could act in parallel but is too convoluted to do without going beyond 3 stages.  Each async elemement like (ALU, control-unit, branch-address-calculation, etc.) can slide "earlier" in pipeline stages, up against whatever synchronous element they source from...and "later" up until whatever synchronous elements they drive.
+
+FW == Instruction Fetch concurrently with the write-back (if active) from the prior instruction.
+DX == Decode of instruction into control-lines, register reads, and ALU operations, miscelaneous sign-extensions, branch-address-calculation.
+M  == Data memory / Memory-mapped IO (Either Read xor Write).
+
+We had to deal with data hazards, load and branch/jump-delay slots allow us to avoid handling.
+
+(Include our 3 ASM programs & diagrams)
+
+To deal with hazards, we have a hazard-control unit which compares the.
+
+If Read-After-Write data-hazard then some mux's "substitute" forwarded values headed from reg-file toward ALU/execute operations, as appropriate.  
+
+Potential Read-After-Write from a load, but load-delay-slot covers us, provided we simply ensure old values are used for succeeding operation (which happens naturally in our pipeline).
+
+Potential Control hazards: Branch/Jump might have been a problem but is covered by "always execute instruction following" rule.
+
+Hazard logic: Zero case is special (don't false positive on zero register). Dest register address of the next stage is the same as the source register address actively being read from the reg file.
+HForward1 = (DestRegM == SrcReg1 && DestRegM != 0)
+HForward2 = (DestRegM == SrcReg2 && DestRegM != 0)
+
+For any instruction not writing to a register, DestRegM will have a value of zero.
+
+
+Stalling: Stalling is implemented by utilizing "enable" inputs, which is available on most of our modules.  For example, block-memory has "ena", reg-file file has "write enable", etc.  Those get pulled low when stall is high.  Obviously, the program counter should be disabled so it doesn't change!
+
+Strategically, flushing the pipeline is a potential option but can be slower due to latency of "refilling the pipeline" compared to just stalling the entire CPU.  It also entails complication of killing partial instructions (at least those you aren't 100% certain can proceed without influencing subsequent instructions).
+
+RegDst: (
+
+
+Avoid mux on ALU data path by have dedicated adder for branches.
