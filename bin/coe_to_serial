@@ -1,76 +1,90 @@
 #!/bin/bash -eu
+
 # author: jamesparker@berkeley.edu
 # tweaks: ejrogers@berkeley.edu
 
-if [ "${1-x}" == "x" ]; then
-    echo "usage: $0 <coe_file> <address>" >&2
+echo "BASH OPTIONS: ${-}" >&2 #Echo the bash options for debugging
+
+if [ "${1-x}" == "x" ]; then #Only the first argument is required
+    echo "usage: $0 <coe_file> [<address> [<serial_tty> [<log_output>]]]" >&2
     exit 1
 fi
 
 FILE="$1"
-ADDRESS="${2:-30000000}"
-LOGO=/dev/null #"_coe_out.log"
-LOGI=/dev/null #"_coe_in.log"
+ADDRESS="${2:-30000000}" #Default to DDR memory with both inst/data caches
+#Use TTY specified in the 3rd argument, or use env value
+TTY="${3:-$SERIALTTY}"
+#TODO: Test if TTY is a character device (e.g. /dev/ttyUSB0) and exit if not
+#Use 4th argument inside log file names if set, otherwise logging turned OFF
+if [ "${4-x}" != "x" ]; then #Is the 4th argument set?
+    LOGO="_coe_${4}_out.log"
+    LOGI="_coe_${4}_in.log"
+    echo "Logging output to '${LOGO}' and input to '${LOGI}'" >&2
+else
+    echo "Logging OFF" >&2
+    LOGO=/dev/null
+    LOGI=/dev/null
+fi
+# Clear logs & add header (note the ">" rather than ">>")
+echo "coe_to_serial OUTPUT:" &>"${LOGO}"
+echo "coe_to_serial INPUT:" &>"${LOGI}"
+
+#OLD STUFF FOR STUPID "JAL" OPTION... Only interesting for use of "bc"
 ###JALADDR="$(( ( 0x$ADDRESS ) & 0x1FFFFFFF ))"
 ###JALADDR=`echo "obase=16; ${JALADDR}" |bc`
-
+#^^^ Should use "printf" instead of "bc" above (see printf below) ^^^
 
 # check if the file exists & get its byte size as extra info
 if [ -f "$FILE" ]; then
-    SIZE_BYTES=$(stat -c%s "${FILE}") #NOTE: -c%s is size in bytes
-    echo -e "\nFILE=${FILE} ADDRESS=${ADDRESS} SIZE_BYTES=${SIZE_BYTES}" >&2
+    SIZE_BYTES="$(stat -c%s "${FILE}")" #NOTE: -c%s is size in bytes
+    echo -e "\nFILE=${FILE} ADDRESS=${ADDRESS} TTY=${TTY}" >&2
+    echo -e "    SIZE_BYTES=${SIZE_BYTES}" >&2
 else
     echo -e "\nFile ${FILE} does not exist" >&2
     exit 1
 fi
 
 # Send one character (safe to do slowly)
-function send_ch {
-    echo -ne "$1" |tee --append "${LOGO}" >"${SERIALTTY}"
+function send_ch_slow {
+    echo -ne "$1" |tee --append "${LOGO}" >"${TTY}"
+    sleep 0.005 #Presumes that bash "sleep" accepts fractional seconds!
 }
 
-# Send the command one char at a time (avoid swamping)
-function send_str {
+# Send the command one char at a time with short delay (avoid swamping)
+function send_str_slow {
     local STR="$1"
-    local j=-1 #Dumb but need to start at -1 given the next loop!
+    local j=-1 #Dumb but need to start at -1 given the pre-increment!
     while (( ++j < ${#STR} )); do
-        send_ch "${STR:j:1}"
+        send_ch_slow "${STR:j:1}"
     done
 }
 
 
-# count the bytes to send
+# Count the bytes to send by examining the COE file's actual data lines
 declare COUNT=0
 while read LINE; do
     if [[ "${LINE}" =~ ^[0-9a-f] ]]; then
-        COUNT=$[$COUNT+4]
+        COUNT=$[$COUNT+4] #Advance by a 32-bit word
     fi
-done < "${FILE}"
+done < "${FILE}" #Pre-scan the entire file by line
 
 echo -e "\n${COUNT} bytes will be sent" >&2
 
-# Clear the logs and add a header line to each
-echo "coe_to_serial OUTPUT:" &>"${LOGO}"
-echo "coe_to_serial INPUT:" &>"${LOGI}"
-sleep 1
-
 WATCH_PID=
-trap '[[ $WATCH_PID ]] && kill -HUP $WATCH_PID >&2' EXIT
-sleep 10000 & pid=$!
-(cat "${SERIALTTY}" &>>"${LOGI}") & WATCH_PID=$!
+trap '[[ ${WATCH_PID} ]] && kill -HUP ${WATCH_PID} >&2' EXIT
+sleep 10000 & pid=$! #Wait very long time in background, WHY???
+(cat "${TTY}" &>>"${LOGI}") & WATCH_PID=$! #Read TTY echoes in bkgnd
 echo "BASH-PID=${BASHPID} SHELL-PID=${$} WATCH-PID=${WATCH_PID}" >&2
 
 #write several spaces & newline to consume any prior operand expectations
-send_ch "      \x0d"
-sleep 1
-COMMAND="file ${ADDRESS} ${COUNT}"
-send_str "${COMMAND} " #NOTE: Trailing space is important to trigger the command
+COMMAND="   file ${ADDRESS} ${COUNT}"
+send_str_slow "${COMMAND} " #NOTE: Trailing space is important to trigger the command
 echo -e "\nIssued command: '${COMMAND}'" >&2
 
 # Write the file out one character at a time
 # We should be able to just cat the bin file, but it doesn't seem to work
 # so the script sends the characters one at a time. Maybe echo off would help?
-echo -e "\nWriting ${COUNT} bytes..." |tee --append "${LOGO}" >&2
+echo -e "\nWriting ${COUNT} bytes...\n" |tee --append "${LOGO}" >&2
 SENT=0
 XOR=0
 WORDVAL=0
@@ -82,15 +96,21 @@ while read LINE; do
         WORDVAL=$(( 0x${WORD} ))
         #XOR new word with running "XOR" value for a simple checksum
         XOR=$(( XOR ^ WORDVAL ))
-        send_str "${WORD}"
+        send_str_slow "${WORD}"
         SENT=$[$SENT+4]
+        #NOTE: Trailing \r allows overwrite of the line rather than scrolling
         echo -ne "Sent ${SENT}/${COUNT}\r" >&2
     fi
 done < "${FILE}"
+sleep 1
 
-echo -ne " \x0d " |tee --append "${LOGO}" >"${SERIALTTY}"
+send_str_slow " result "
 sleep 1
 
 XOR_HEX="$(printf "%08X\n" ${XOR})"
+SENT_HEX="$(printf "%08X\n" ${SENT})"
+COUNT_HEX="$(printf "%08X\n" ${COUNT})"
+
+echo -e "\nSent ${SENT_HEX}/${COUNT_HEX} (${SENT}/${COUNT})" |tee --append "${LOGO}" >&2
 
 echo -e  "\n\nFile written. XOR: 0x${XOR_HEX} (${XOR})" |tee --append "${LOGO}" >&2

@@ -1,5 +1,6 @@
 TARGET ?= simplesend
-LDSTYLE ?= as_bioscache
+LDSTYLE ?= as_bioscratch
+#LDSTYLE ?= as_bioscache
 SSRCS := 
 
 include ../makefile.pre

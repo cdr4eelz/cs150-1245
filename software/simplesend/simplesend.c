@@ -5,7 +5,8 @@
 void _start(void) // Could ahve _start pass some basic info
 {
 	L_FOREVER:
-		while (!TRAN_CTRL); TRAN_DATA = '.';
 		while (!TRAN_CTRL); TRAN_DATA = '[';
+		while (!TRAN_CTRL); TRAN_DATA = '.';
+		while (!TRAN_CTRL); TRAN_DATA = ']';
 	goto L_FOREVER;
 }

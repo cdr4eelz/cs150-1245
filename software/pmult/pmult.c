@@ -38,7 +38,9 @@ typedef void (*entry_t)(void);
 
 int32_t countup0(void)
 {
-    int32_t sum = 0;
+    //NOTE: Using "volatile" to prevent optimization of returning a compile-time constant!
+    volatile int32_t sum = 0;
+    //int32_t sum = 0;
     for (uint32_t i = 0; i < CNTUP; i++) {
         sum += i;
     }
@@ -84,11 +86,15 @@ int main(int argc, char**argv) {
     uint32_t result, time, instructions;
 
 if (1) {
+    // Not sure what this little preamble is for!!!
+    //     Maybe just indicating that the code ran
+    //     before doing the real job?
     uwrite_int8('=');
     uwrite_int8s("][= ");
 
     uwrite_int8('0');
-//  uwrite_int8s("\r\nCount0...\r\n");
+    uwrite_int8s("\r\n\r\n");
+    //uwrite_int8s("\r\nCount0...\r\n");
 }
     COUNTER_RST = 0;
     result = countup0();
