@@ -10,7 +10,8 @@ SCOES := $(SELFS:%.elf=%.coe) $(SELFS:%.elf=%.data.coe)
 SVEES := $(SELFS:%.elf=%.v)   $(SELFS:%.elf=%.data.v)
 DUMPS := $(SELFS:%.elf=%.dump)
 
-PRE ?= mips-linux-gnu
+#PRE ?= mips-linux-gnu
+PRE ?= mips-unknown-elf
 
 default: mifs coes
 
@@ -42,7 +43,8 @@ multi: objs
 	bin2rom $(TARGET) 0 < $< > $@
 
 %.elf: %.ld %.s.o
-	$(PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T  $^ -o $@  ## Had $< $^ -o $@
+	$(PRE)-ld -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T  $^ -o $@  ## Had $< $^ -o $@
+	#$(PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T  $^ -o $@  ## Had $< $^ -o $@
 
 %.s.o: %.s
 	$(PRE)-as $(ASMOPTS) $< -o $<.o

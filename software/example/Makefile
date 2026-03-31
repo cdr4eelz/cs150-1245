@@ -15,7 +15,8 @@ TARGET_ALL ?= $(TARGET_KEY) $(TARGET).v $(TARGET).hak $(TARGET).mem \
 default: $(TARGET_KEY)
 all: $(TARGET_ALL)
 
-PRE ?= mips-linux-gnu
+#PRE ?= mips-linux-gnu
+PRE ?= mips-unknown-elf
 
 $(TARGET).elf: $(COBJS) $(SOBJS)
 	$(PRE)-gcc -mips1 -march=mips1 -mno-abicalls -fno-exceptions \
