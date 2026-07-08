@@ -1,7 +1,7 @@
 ##############################################################
 #
-# Xilinx Core Generator version 14.6
-# Date: Thu Mar 27 04:41:55 2014
+# Xilinx Core Generator version 14.7
+# Date: Wed Jul  8 05:46:54 2026
 #
 ##############################################################
 #
@@ -18,7 +18,7 @@
 #
 # BEGIN Project Options
 SET addpads = false
-SET asysymbol = false
+SET asysymbol = true
 SET busformat = BusFormatSquareBracketNotRipped
 SET createndf = false
 SET designentry = Verilog
@@ -55,7 +55,7 @@ CSET sclr=true
 CSET sclr_ce_priority=SCLR_overrides_CE
 # END Parameters
 # BEGIN Extra information
-MISC pkg_timestamp=2013-06-08T23:00:50Z
+MISC pkg_timestamp=2013-10-13T18:46:09Z
 # END Extra information
 GENERATE
-# CRC: bc1f666b
+# CRC: 472c8a15

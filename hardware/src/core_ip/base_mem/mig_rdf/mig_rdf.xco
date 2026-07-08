@@ -1,7 +1,7 @@
 ##############################################################
 #
-# Xilinx Core Generator version 14.6
-# Date: Mon Jun 19 08:14:28 2017
+# Xilinx Core Generator version 14.7
+# Date: Wed Jul  8 02:47:10 2026
 #
 ##############################################################
 #
@@ -18,7 +18,7 @@
 #
 # BEGIN Project Options
 SET addpads = false
-SET asysymbol = false
+SET asysymbol = true
 SET busformat = BusFormatSquareBracketNotRipped
 SET createndf = false
 SET designentry = Verilog
@@ -30,7 +30,7 @@ SET foundationsym = false
 SET implementationfiletype = Ngc
 SET package = ff1136
 SET removerpms = false
-SET simulationfiles = Structural
+SET simulationfiles = Behavioral
 SET speedgrade = -1
 SET verilogsim = true
 SET vhdlsim = false
@@ -210,4 +210,4 @@ CSET wuser_width=1
 MISC pkg_timestamp=2012-11-19T12:39:56Z
 # END Extra information
 GENERATE
-# CRC: c6a6fc3f
+# CRC: 50fd3947

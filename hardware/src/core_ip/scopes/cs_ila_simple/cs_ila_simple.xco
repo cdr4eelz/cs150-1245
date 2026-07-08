@@ -1,7 +1,7 @@
 ##############################################################
 #
-# Xilinx Core Generator version 14.6
-# Date: Thu Mar 27 04:47:27 2014
+# Xilinx Core Generator version 14.7
+# Date: Wed Jul  8 06:02:06 2026
 #
 ##############################################################
 #
@@ -30,7 +30,7 @@ SET foundationsym = false
 SET implementationfiletype = Ngc
 SET package = ff1136
 SET removerpms = false
-SET simulationfiles = Structural
+SET simulationfiles = Behavioral
 SET speedgrade = -1
 SET verilogsim = true
 SET vhdlsim = false
@@ -135,7 +135,7 @@ CSET trigger_port_width_9=8
 CSET use_rpms=false
 # END Parameters
 # BEGIN Extra information
-MISC pkg_timestamp=2013-06-08T17:29:07Z
+MISC pkg_timestamp=2013-10-13T14:13:15Z
 # END Extra information
 GENERATE
-# CRC: bab7ff72
+# CRC: 6266a6be
