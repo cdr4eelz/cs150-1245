@@ -1,3 +1,4 @@
+`timescale 1 ns/1 ps
 
 module ElipseEngine #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600

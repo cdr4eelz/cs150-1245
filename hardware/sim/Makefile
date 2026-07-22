@@ -10,7 +10,9 @@ INC := $(shell find $(SRCDIR) -type d -exec echo -n '+incdir+'{} \;)
 STATUS := build/.status
 XILINX_LIBS := unisims_ver unimacro_ver xilinxcorelib_ver secureip
 XILINX_LIB_INC := $(foreach lib,$(XILINX_LIBS),$(addprefix -L ,$(lib)))
-XILINX_LIBS_MAP := $(wildcard $(XILINX)/verilog/mti_se/10.2b/lin64/*)
+#XILINX_LIBS_MAP := $(wildcard $(XILINX)/verilog/mti_se/10.2b/lin64/*)
+XILINX_LIBS_MAP := $(wildcard /opt/intelFPGA/xlib_14.7_10.1d/*)
+#XILINX_LIBS_MAP := $(wildcard /opt/intelFPGA/xlib_14.7_10.5b/*)
 
 all: $(TRANSCRIPT)
 

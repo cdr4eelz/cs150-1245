@@ -38,6 +38,7 @@ module LineEngineTestbench;
     ) DUT (
         .clk(Clock),
         .rst(rst),
+
         .caf_full(caf_full),
         .wdf_full(wdf_full),
         .caf_addr(caf_addr),
@@ -45,16 +46,18 @@ module LineEngineTestbench;
         .wdf_data(wdf_data),
         .wdf_mask(wdf_mask),
         .wdf_wren(wdf_wren),
-        .LE_ready(LE_ready),
+
+        .LE_ready(      LE_ready),
         .LE_color_valid(LE_color_valid),
-        .LE_color(LE_color),
-        .LE_x0_valid(LE_x0_valid),
-        .LE_y0_valid(LE_y0_valid),
-        .LE_x1_valid(LE_x1_valid),
-        .LE_y1_valid(LE_y1_valid),
-        .LE_point(LE_point),
-        .LE_trigger(LE_trigger),
-        .LE_frame(LE_frame),
+        .LE_color(      LE_color),
+        .LE_x0_valid(   LE_x0_valid),
+        .LE_y0_valid(   LE_y0_valid),
+        .LE_x1_valid(   LE_x1_valid),
+        .LE_y1_valid(   LE_y1_valid),
+        .LE_point(      LE_point),
+        .LE_trigger(    LE_trigger),
+        .LE_frame(      LE_frame),
+    
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_LE]                    ),
         .SLR_valid(SLRs_valid           [SLR_LE]                    ),
