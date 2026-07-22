@@ -7,7 +7,7 @@
 
 #define BUFFER_LEN (0x00000080) //128-bytes
 
-#define VERSION_I 1
+#define VERSION_I 2
 #define VERSION_C ('0' + VERSION_I) //Turn into '<version>' char
 #define VERSION_S STIFIE(VERSION_I) //Turn into "<version>" const string
 #define STIFIE(Z) STIFIY(Z) //Stringify expanded macro value of Z
