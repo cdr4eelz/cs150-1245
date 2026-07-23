@@ -269,7 +269,7 @@ wire DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!
 
     // The RequestController gives each cache the illusion of having
     //   exclusive DDR2 Access:
-    RequestController rcon (
+    RequestController req_con (
         .clk(cpu_clk_g),
         .rst(rst_cpu_bus),
     // Master/RequestController interface:
