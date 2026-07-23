@@ -33,14 +33,15 @@ M_ARCH ?= mips
 M_TRI  ?= $(M_ARCH)-unknown-elf #The compiler is actually mips-linux-gnu
 M_DIR  ?=
 #M_PRE  ?= $(M_DIR)$(M_ARCH)-
-M_PRE  ?= mips-linux-gnu-
+#M_PRE  ?= mips-linux-gnu-
+M_PRE  ?= mips64-linux-gnu
 
-PGCC   ?= $(M_PRE)gcc
-PGAS   ?= $(M_PRE)as
-PSTRIP ?= $(M_PRE)strip
-PSIZE  ?= $(M_PRE)size
-PDUMP  ?= $(M_PRE)objdump
-PCOPY  ?= $(M_PRE)objcopy
+PGCC   ?= $(M_PRE)-gcc
+PGAS   ?= $(M_PRE)-as
+PSTRIP ?= $(M_PRE)-strip
+PSIZE  ?= $(M_PRE)-size
+PDUMP  ?= $(M_PRE)-objdump
+PCOPY  ?= $(M_PRE)-objcopy
 
 ASOPTS ?= -mips1 -march=mips1 -mabi=32 --no-break --no-trap  -mno-pdr -non_shared -mno-shared -R -g2
 # -O0
