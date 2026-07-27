@@ -127,7 +127,7 @@ module ElipseEngine #(
             MS_PRa3: begin
                 AAy     <= AAB;             //(y==b)
                 dd      <= dd - AAB;
-$display("%d ELIPSE-TB: [CONST] AA=%0d BB=%0d AABB=%0d stopper=", $time, AA, BB, AABB, stopper);
+$display("%d ELIPSE-TB: [CONST] AA=%0d BB=%0d AABB=%0d stopper=%0d", $time, AA, BB, AABB, stopper);
             end
             MS_SLa1: if (advSLR) begin
 $display("%8d ELIPSE-TB: dd=%0d AAy=%0d BBx=%0d", $time, dd, AAy, BBx);
