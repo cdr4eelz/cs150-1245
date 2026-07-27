@@ -31,9 +31,13 @@
     end
     assign x = {caf_addr[8:2], mask};
     assign y = caf_addr[18:9];
-    always @(posedge Clock) begin:_WATCH_MASK_
-        if (wdf_wren && (wdf_mask != 16'hFFFF)) begin
-            $display("%d %s-TB: %4d %4d", $time, WATCH_NAME, x, y);
+    always @(posedge Clock) begin:_WATCH_MASK_ //Only triggered if NOT SLR active???
+        if (wdf_wren) begin //TODO: NEED TO watch "valid" too?
+            if (wdf_mask != 16'hFFFF) begin
+                $display("%d %s-TB: %4d %4d  |%h", $time, WATCH_NAME, x, y, wdf_mask);
+            end else begin
+                $display("%d %s-TB: %4d %4d  |MASKED", $time, WATCH_NAME, x, y);
+            end
         end
     end
 

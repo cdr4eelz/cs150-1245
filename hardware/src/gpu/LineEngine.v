@@ -2,7 +2,7 @@
 
 module LineEngine #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter SCANLINERUNNER=0, LITTLEWORDIAN=1
+    parameter SCANLINERUNNER=1, LITTLEWORDIAN=1
 )(
     input           clk, rst,
 

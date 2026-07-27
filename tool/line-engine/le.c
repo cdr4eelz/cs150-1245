@@ -21,7 +21,7 @@ typedef void (*line_FUNC)(gframe_pv, uint32_t,
                           uint16_t, uint16_t,
                           uint16_t, uint16_t);
 
-static void swpixel(
+static void swpixl(
     gframe_pv const fp, uint32_t const color,
     uint16_t const x, uint16_t const y)
 {
@@ -29,7 +29,7 @@ static void swpixel(
     printf("%4d %4d\n", x,y);
 }
 
-static void swpixel_4way(
+static void swpixl_4way(
     gframe_pv const fp, uint32_t const color,
     uint16_t const xc, uint16_t const yc,
     uint16_t const ox, uint16_t const oy)
@@ -38,11 +38,12 @@ static void swpixel_4way(
 //  *PIX_PTR(fp, xc + ox, yc - oy) = color;
 //  *PIX_PTR(fp, xc - ox, yc + oy) = color;
 //  *PIX_PTR(fp, xc + ox, yc + oy) = color;
-    printf("(+/-) %3d %3d @(%4d,%4d)\n", ox,oy, xc,yc);
-//    swpixel(fp,color, xc - ox, yc - oy);
- //   swpixel(fp,color, xc + ox, yc - oy);
-  //  swpixel(fp,color, xc - ox, yc + oy);
-   // swpixel(fp,color, xc + ox, yc + oy);
+    printf("(+/-) %4d,%4d @(%4d,%4d)  row=%4d s=%4d f=%4d\n", ox,oy, xc,yc, yc-oy, xc-ox, xc+ox);
+    printf("(+/-) %4d,%4d @(%4d,%4d)  row=%4d s=%4d f=%4d\n", ox,oy, xc,yc, yc+oy, xc-ox, xc+ox);
+//    swpixl(fp,color, xc - ox, yc - oy);
+ //   swpixl(fp,color, xc + ox, yc - oy);
+  //  swpixl(fp,color, xc - ox, yc + oy);
+   // swpixl(fp,color, xc + ox, yc + oy);
 }
 
 
@@ -58,43 +59,56 @@ static inline uint32_t sqr32(uint32_t const n)
     mul32(n,n);
 }
 
-void swelipse(
+void swelip(
     gframe_pv const fp, uint32_t const color,
     uint16_t const xc, uint16_t const yc,
     uint16_t const a, uint16_t const b)
 {
-    uint16_t x = 0, y = b; //theta=90 @origin (offset pixels later)
+    uint16_t x = 0, y = b; //theta=90 @origin (offset pixels in 4way)
     uint32_t const AA = sqr32(a), BB = sqr32(b);
     uint32_t const AABB = mul32(AA,BB);
-    int32_t dd; //dd
+    int32_t const stopper = (AA>>1)+BB;
 
-    dd = BB - mul32(AA,(b  )) + (AA>>2);
-    swpixel_4way(fp,color, xc,yc, x,y);
+    //Helper values to pre-compute multiplied values then adjust with addition
+    uint32_t AAy    = mul32(AA,y);
+    uint32_t BBx    = 0; //(x==0): mul32(BB,x);
+    uint32_t BB2xp3 = /*(mul32(BB,x)<<1) +*/ (BB<<1) + BB; //(x==0)
+    //uint32_t AA2y   = (AAy<<1); //(mul32(AA,y)<<1);
 
-    while ( (mul32(AA,y   )-(AA>>1)) > (mul32(BB,x   )+BB) ) {
+    int32_t dd      = BB - mul32(AA,b) + (AA>>2);
+
+    //TODO: Add a counter to tag each iteration of the loop
+printf("CONST: AA=%0d BB=%0d AABB=%0d stopper=%0d\n", AA, BB, AABB, stopper);
+
+printf("    ELIPSE-TB: dd=%0d AAy=%0d BBx=%0d\n", dd, AAy, BBx);
+printf("             : x=%0d y=%0d BB2xp3=%0d\n", x, y, BB2xp3);
+    swpixl_4way(fp,color, xc,yc, x,y);
+    while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
         if (dd >= 0) {
-            dd += (AA<<1)-mul32(AA,y<<1);
-            --y;
+            dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
+            y--; AAy -= AA; //AA2y -= (AA<<1);
         }
-        dd += mul32(BB,(x<<1)+3);
-        ++x;
-        swpixel_4way(fp,color, xc,yc, x,y);
+        dd += BB2xp3; //mul32(BB,(x<<1)+3);
+        x++; BBx += BB; BB2xp3 += (BB<<1);
+printf("    ELIPSE-TB: dd=%0d AAy=%0d BBx=%0d\n", dd, AAy, BBx);
+printf("             : x=%0d y=%0d BB2xp3=%0d\n", x, y, BB2xp3);
+        swpixl_4way(fp,color, xc,yc, x,y);
     }
-//return;
 printf("\\\\\\\n");
+return;
     //Transition at slope=1, whatever theta happens to be; Reverse x&y roles
-    dd = mul32(BB,sqr32(x   )+x)+(BB>>2) + mul32(AA,sqr32((y   )-1)) - AABB;
+    uint32_t BB2xp2 = BB2xp3 - BB; //mul32(BB,(x<<1)+2);
+    dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
     while (y > 0) {
         if (dd < 0) {
-            dd += mul32(BB,(x<<1)+2);
-            ++x;
+            dd += BB2xp2; //mul32(BB,(x<<1)+2);
+            x++; BB2xp2 += (BB<<1);
         }
-        dd += (AA<<1)+AA-mul32(AA,y<<1);
-        --y;
-        swpixel_4way(fp,color, xc,yc, x,y);
+        dd += (AA<<1)+AA - (AAy<<1); //mul32(AA,y<<1);
+        y--; AAy -= AA; //AA2y -= (AA<<1);
+        swpixl_4way(fp,color, xc,yc, x,y);
     }
 }
-
 
 // LINE implementations
 
@@ -146,7 +160,7 @@ static void swline(
         uint32_t const errorB = error + negB;
         uint16_t x = ((spin) ? b : a);
         uint16_t y = ((spin) ? a : b);
-        swpixel(fp,color, x,y);
+        swpixl(fp,color, x,y);
         //JOIN:iter-1
         //FORK:iter-2
         a     = nextA;
@@ -175,7 +189,7 @@ static void line_UI32(
         uint32_t const errorA = error + negY;
         uint32_t const errorB = error + posX;
         uint32_t const nextX = x + 1;
-        swpixel(fp,color, x,y);
+        swpixl(fp,color, x,y);
         //JOIN
         //FORK (parallel)
         error = (errorA & 0x80000000) ? errorB : errorA;
@@ -204,7 +218,7 @@ static void line_MINI(
         int32_t const errorA = error + negY;
         int32_t const errorB = error + posX;
         int32_t const nextX = x + 1;
-        swpixel(fp,color, x,y);
+        swpixl(fp,color, x,y);
         //JOIN
         //FORK (parallel)
         error = (errorA < 0) ? errorB : errorA;
@@ -221,7 +235,7 @@ static void line_FLAT(
 {
     uint16_t x = x0, y = y0;
     while (x <= x1) {
-        swpixel(fp,color, x,y);
+        swpixl(fp,color, x,y);
         x++;
     }
 }
@@ -254,7 +268,7 @@ static void line_FULL(
     int32_t error = (int32_t)(deltax >> 1); //deltax / 2
     uint16_t x = a0, y = b0;
     while (x <= a1) {
-        swpixel(fp,color, ((steep) ? y : x),((steep) ? x : y));
+        swpixl(fp,color, ((steep) ? y : x),((steep) ? x : y));
         error = error - deltay;
         if (error < 0) {
             error += deltax;
@@ -295,9 +309,9 @@ static void line_ORIG(
     ystep = (y0 < y1) ? 1 : -1;
     for ( x = x0; x <= x1; x++ ) {
         if (steep)
-            swpixel(fp,color, y,x);
+            swpixl(fp,color, y,x);
         else
-            swpixel(fp,color, x,y);
+            swpixl(fp,color, x,y);
         error = error - deltay;
         if( error < 0 ) {
             y += ystep;
@@ -344,7 +358,7 @@ int main(int argc, char** argv) {
         case 4: { style_name="FLAT";  style_ptr=&line_FLAT; } break;
         case 5: { style_name="FULL";  style_ptr=&line_FULL; } break;
         case 6: { style_name="ORIG";  style_ptr=&line_ORIG; } break;
-        case 10: { style_name="ELIP";  style_ptr=&swelipse; } break;
+        case 10: { style_name="ELIP";  style_ptr=&swelip; } break;
         default: {
             printf("\nUnrecognized style#%d.\n", style_num);
         } //Fallthrough

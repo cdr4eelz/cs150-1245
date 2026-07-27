@@ -72,26 +72,30 @@ module ElipseEngine #(
         MH_PRE3     = 4, //Prep/Normalize                                     \
         MH_PRE4     = 5, //Prep/Normalize                                     |
         MH_RUN1     = 6, //1st-half DDR-write; next-iteration work-ahead <-=\?/
-        MH_RUN2     = 7; //2nd-half DDR-write; iteration finalize/advance ->_/
-    localparam MH__LAST = MH_RUN2;
+        MH_RUN2     = 7, //2nd-half DDR-write; iteration finalize/advance ->_/
+        MH_ADa1     = 8; //Conditional "advance" of loop adjusted vars
+    localparam MH__LAST = MH_ADa1;
     localparam [MH__LAST:0] MS__DEAD = 0, //Initial or fault (requires reset)
         MS_RSET = (1<<MH_RSET), MS_IDLE = (1<<MH_IDLE),
         MS_PRa1 = (1<<MH_PRE1), MS_PRa2 = (1<<MH_PRE2),
         MS_PRa3 = (1<<MH_PRE3),
-        MS_SLa1 = (1<<MH_RUN1), MS_SLa2 = (1<<MH_RUN2);
+        MS_SLa1 = (1<<MH_RUN1), MS_SLa2 = (1<<MH_RUN2),
+        MS_ADa1 = (1<<MH_ADa1);
 
 //Key State Registers
     reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
-    reg  [ 9:0] x,y;
-    reg  [15:0] AA, BB, AAB, AABB, BBphaa;
-    reg  signed [15:0] dd; //signed; like "error" in line algorithm
+    reg  [ 9:0] x, y, y_next;
+    reg  [31:0] AA, BB, AABB; // These stay constant
+    reg  [15:0] AAB; //, BBphaa becomes "stopper"
+    reg  signed [31:0] dd, dd_next, stopper; //signed; like "error" in line algorithm
 
 //Iteration adjusted values
-    reg  [15:0] AAy, BBx, BB2xp3;   //Phase 1
-    reg  [15:0] BB2xp2;             //Phase 2 (== BB2xp3 - BB)
+    reg  [31:0] AAy, AAy_next, BBx, BB2xp3;   //Phase 1
+    reg  [31:0] BB2xp2;             //Phase 2 (== BB2xp3 - BB)
+    //reg  [31:0] AA2y, AA2y_next;
 
 //Key Live-Wires & Assigns
-    wire advSLR, finishingA, finishingB;
+    wire advSLR, continueA, continueB;
     wire [ 9:0] xL,xR, yT,yB;
 
 //Synchronous transistions & data-path
@@ -113,26 +117,71 @@ module ElipseEngine #(
                 BB      <= b_r * b_r;
             end
             MS_PRa2: begin
+                AABB    <= AA * BB;
                 AAB     <= AA * b_r;
                 BB2xp3  <= (BB<<1) + BB;    //(x==0)
                 dd      <= BB + (AA>>2); //PARTIAL
+                //AA2y    <= (AA * y)<<1; //(mul32(AA,y)<<1);
+                stopper <= (AA>>1) + BB;    //end of first loop
             end
             MS_PRa3: begin
                 AAy     <= AAB;             //(y==b)
                 dd      <= dd - AAB;
-                BBphaa  <= BB + (AA>>1);
+$display("%d ELIPSE-TB: [CONST] AA=%0d BB=%0d AABB=%0d stopper=", $time, AA, BB, AABB, stopper);
             end
             MS_SLa1: if (advSLR) begin
+$display("%8d ELIPSE-TB: dd=%0d AAy=%0d BBx=%0d", $time, dd, AAy, BBx);
+$display("%8d          : x=%0d y=%0d BB2xp3=%0d", $time, x, y, BB2xp3);
+                if (dd >= 0) begin
+                    //dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
+                    dd_next <= dd + (AA<<1) - (AAy<<1); //mul32(AA,y<<1)???
+                    //dd_next <= dd + (AA<<1) - AA2y; //mul32(AA,y<<1)???
+                    y_next <= y - 1;
+                    AAy_next <= AAy - AA;
+                    //AA2y_next <= AA2y - (AA<<1);
+                end else begin
+                    dd_next <= dd;
+                    y_next <= y;
+                    AAy_next <= AAy;
+                    //AA2y_next <= AA2y;                    
+                end
             end
             MS_SLa2: if (advSLR) begin
+                if (continueA) begin
+                    dd <= dd_next + BB2xp3; //mul32(BB,(x<<1)+3)
+                    y <= y_next;
+                    AAy <= AAy_next;
+                    //AA2y <= AA2y_next;
+                    x <= x + 1;
+                    BBx <= BBx + BB;
+                    BB2xp3 <= BB2xp3 + (BB<<1);
+                end
             end
+            MS_ADa1: begin //TODO: Define state ADa1!
+                //Advance variables that change inside loop
+                //  New values mostly pre-computed during SLa1 & SLa2
+                //TODO: Advance variables prior to next SLR outputs
+            end
+            //TODO: Create "b" series of states like PRb1 to implement second loop
         endcase
 
     end
 
+/*  TOP LOOP...
+    while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
+        if (dd >= 0) {
+            dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
+            y--; AAy -= AA; //AA2y -= (AA<<1);
+        }
+        dd += BB2xp3; //mul32(BB,(x<<1)+3);
+        x++; BBx += BB; BB2xp3 += (BB<<1);
+        swpixl_4way(fp,color, xc,yc, x,y);
+    }
+*/
+
     assign EL_ready = (cs_M[MH_IDLE]);
     assign {xL,xR, yT,yB} = {(xc-x),(xc+x), (yc-y),(yc+y)};
-    assign finishingA = (AAy - BBx) > BBphaa; //Slope == -1
+    assign continueA = (AAy - BBx) > stopper; //Slope == -1; ((AAy-BBx) > stopper) // (AAy-(AA>>1)) > (BBx+BB) //BBphaa
 
 //Next-State
     always @(*) begin
@@ -144,7 +193,8 @@ module ElipseEngine #(
             MS_PRa2: ns_M = MS_PRa3;
             MS_PRa3: ns_M = MS_SLa1;
             MS_SLa1: if (advSLR) ns_M = MS_SLa2;
-            MS_SLa2: if (advSLR) ns_M = (finishingA) ? MS_RSET : MS_SLa1;
+            MS_SLa2: if (advSLR) ns_M = (continueA) ? MS_SLa1 : MS_ADa1;
+            MS_ADa1: ns_M = MS_RSET;
             default: ns_M = MS__DEAD;
         endcase
     end
@@ -169,8 +219,8 @@ module ElipseEngine #(
     always @(posedge clk) begin
         if (EL_ready && EL_trigger) begin
             #1;
-            $display("[=ELIP=]: frame=%h color=%h (%0d,%0d,%0d)", framebits,
-                     color, color[23:16], color[15:8], color[7:0]);
+            $display("[=ELIP=]: frame=%h color=%h %0d(%0d,%0d,%0d)", framebits,
+                     color, color[31:24], color[23:16], color[15:8], color[7:0]);
             $display("        : (%4d,%4d)=>(%4d,%4d)  (%h,%h)=>(%h,%h)",
                      xc,yc, a,b,  xc,yc, a,b);
         end
@@ -181,7 +231,7 @@ endmodule
 
 /** ALORGITHM CORE ("c" model code) **
 
-void swelipse(
+void swelip(
     gframe_pv const fp, uint32_t const color,
     uint16_t const xc, uint16_t const yc,
     uint16_t const a, uint16_t const b)
@@ -192,23 +242,22 @@ void swelipse(
 
     //Helper values to pre-compute multiplied values then adjust with addition
     uint32_t AAy    = mul32(AA,y);
-    uint32_t BBx    = mul32(BB,x);
-    uint32_t BB2xp3 = (mul32(BB,x)<<1) + (BB<<1) + BB;
-    uint32_t AA2y   = (mul32(AA,y)<<1);
+    uint32_t BBx    = 0; //(x==0): mul32(BB,x);
+    uint32_t BB2xp3 = (BB<<1) + BB; //(x==0), //(mul32(BB,x)<<1) +
+    //uint32_t AA2y   = (AAy<<1); //(mul32(AA,y)<<1);
 
-    int32_t dd; //dd
+    int32_t stopper = (AA>>1)+BB;
+    int32_t dd      = BB - mul32(AA,b) + (AA>>2);
 
-    dd = BB - mul32(AA,b) + (AA>>2);
-    swpixel_4way(fp,color, xc,yc, x,y);
-
-    while ( (AAy-(AA>>1)) > (BBx+BB) ) {
+    swpixl_4way(fp,color, xc,yc, x,y);
+    while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
         if (dd >= 0) {
-            dd += (AA<<1) - AA2y; //mul32(AA,y<<1);
-            y--; AAy -= AA; AA2y -= (AA<<1);
+            dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
+            y--; AAy -= AA; //AA2y -= (AA<<1);
         }
         dd += BB2xp3; //mul32(BB,(x<<1)+3);
         x++; BBx += BB; BB2xp3 += (BB<<1);
-        swpixel_4way(fp,color, xc,yc, x,y);
+        swpixl_4way(fp,color, xc,yc, x,y);
     }
 //return;
 //printf("\\\\\\\n");
@@ -220,8 +269,8 @@ void swelipse(
             dd += BB2xp2; //mul32(BB,(x<<1)+2);
             x++; BB2xp2 += (BB<<1);
         }
-        dd += (AA<<1)+AA - AA2y; //mul32(AA,y<<1);
-        y--; AA2y -= (AA<<1);
-        swpixel_4way(fp,color, xc,yc, x,y);
+        dd += (AA<<1)+AA - (AAy<<1); //mul32(AA,y<<1);
+        y--; AAy -= AA; //AA2y -= (AA<<1);
+        swpixl_4way(fp,color, xc,yc, x,y);
     }
 } */
