@@ -67,7 +67,7 @@ void swelip(
     uint16_t x = 0, y = b; //theta=90 @origin (offset pixels in 4way)
     uint32_t const AA = sqr32(a), BB = sqr32(b);
     uint32_t const AABB = mul32(AA,BB);
-    int32_t const stopper = (AA>>1)+BB;
+    uint32_t const stopper = (AA>>1)+BB;
 
     //Helper values to pre-compute multiplied values then adjust with addition
     uint32_t AAy    = mul32(AA,y);
@@ -95,10 +95,18 @@ printf("             : x=%0d y=%0d BB2xp3=%0d\n", x, y, BB2xp3);
         swpixl_4way(fp,color, xc,yc, x,y);
     }
 printf("\\\\\\\n");
-return;
+//return;
     //Transition at slope=1, whatever theta happens to be; Reverse x&y roles
+    uint32_t temp_XX = sqr32(x);
+    uint32_t temp_YM1YM1 = sqr32(y-1);
+printf("PREP1: temp_XX=%0d temp_YM1YM1=%0d\n", temp_XX, temp_YM1YM1);
+    uint32_t temp_BBTX = mul32(BB,temp_XX+x);
+    uint32_t temp_AAYZ = mul32(AA,temp_YM1YM1);
+printf("PREP2: temp_BBTX=%0d temp_AAYZ=%0d\n", temp_BBTX, temp_AAYZ);
     uint32_t BB2xp2 = BB2xp3 - BB; //mul32(BB,(x<<1)+2);
-    dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
+    dd = temp_BBTX + (BB>>2) + temp_AAYZ - AABB;
+printf("PREP3: prep_dd_B=%0d BB2xp2=%0d\n", dd, BB2xp2);
+return;
     while (y > 0) {
         if (dd < 0) {
             dd += BB2xp2; //mul32(BB,(x<<1)+2);
@@ -106,6 +114,8 @@ return;
         }
         dd += (AA<<1)+AA - (AAy<<1); //mul32(AA,y<<1);
         y--; AAy -= AA; //AA2y -= (AA<<1);
+printf("    ELIPSE-TB: dd=%0d AAy=%0d BB2xp2=%0d\n", dd, AAy, BB2xp2);
+printf("             : x=%0d y=%0d\n", x, y);
         swpixl_4way(fp,color, xc,yc, x,y);
     }
 }

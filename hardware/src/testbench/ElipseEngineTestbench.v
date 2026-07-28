@@ -87,9 +87,10 @@ module ElipseEngineTestbench;
 $display("ElipseEngine: Fake memory/SLR...");
         //drawElipse(  10,  10,     5,   5,  32'h00_7F_00_00);
         //drawElipse( 200, 200,    20,  20,  32'h00_7F_00_00);
-        drawElipse( 200, 500,    40,  20,  32'h00_7F_00_00);
+        //drawElipse( 200, 500,    40,  20,  32'h00_7F_00_00);
         //drawElipse( 125, 125,    20,   5,  32'h22_7F_00_00);
         //drawElipse( 400, 400,    40,  20,  32'h33_7F_00_00); // Odd shape
+        drawElipse( 400, 400,    10,  20,  32'h44_7F_00_00);
         //drawElipse( 200, 300,   100, 100,  32'h55_7F_00_00);
 
         #(10*Cycle);

@@ -65,22 +65,25 @@ module ElipseEngine #(
 
 //Master-state Hotbit-index (as opposed to full Master-State register value)
     localparam
-        MH_RSET     = 0, //Performing or coming out of reset          <=-._
-        MH_IDLE     = 1, //Ready for initiation                            \
-        MH_PRE1     = 2, //Prep/Normalize ...                               \
-        MH_PRE2     = 3, //Prep/Normalize                                    \
-        MH_PRE3     = 4, //Prep/Normalize                                     \
-        MH_PRE4     = 5, //Prep/Normalize                                     |
-        MH_RUN1     = 6, //1st-half DDR-write; next-iteration work-ahead <-=\?/
-        MH_RUN2     = 7, //2nd-half DDR-write; iteration finalize/advance ->_/
-        MH_ADa1     = 8; //Conditional "advance" of loop adjusted vars
-    localparam MH__LAST = MH_ADa1;
+        MH_RSET     = 0,  //Performing or coming out of reset
+        MH_IDLE     = 1,  //Ready for initiation
+        MH_PRa1     = 2,  //Prep/Normalize
+        MH_PRa2     = 3,  //Prep/Normalize
+        MH_PRa3     = 4,  //Prep/Normalize
+        MH_SLa1     = 5,  //top-half SLR-write; next-iteration work-ahead
+        MH_SLa2     = 6,  //bot-half SLR-write; iteration finalize/advance
+        MH_PRb1     = 7,  //Prep for "B"
+        MH_PRb2     = 8,  //Prep for "B"
+        MH_PRb3     = 9,  //Prep for "B"
+        MH_SLb1     = 10, //top-half SLR-write; next-iteration work-ahead
+        MH_SLb2     = 11; //bot-half SLR-write; iteration finalize/advance
+    localparam MH__LAST = MH_SLb2;
     localparam [MH__LAST:0] MS__DEAD = 0, //Initial or fault (requires reset)
         MS_RSET = (1<<MH_RSET), MS_IDLE = (1<<MH_IDLE),
-        MS_PRa1 = (1<<MH_PRE1), MS_PRa2 = (1<<MH_PRE2),
-        MS_PRa3 = (1<<MH_PRE3),
-        MS_SLa1 = (1<<MH_RUN1), MS_SLa2 = (1<<MH_RUN2),
-        MS_ADa1 = (1<<MH_ADa1);
+        MS_PRa1 = (1<<MH_PRa1), MS_PRa2 = (1<<MH_PRa2), MS_PRa3 = (1<<MH_PRa3),
+        MS_SLa1 = (1<<MH_SLa1), MS_SLa2 = (1<<MH_SLa2),
+        MS_PRb1 = (1<<MH_PRb1), MS_PRb2 = (1<<MH_PRb2), MS_PRb3 = (1<<MH_PRb3),
+        MS_SLb1 = (1<<MH_SLb1), MS_SLb2 = (1<<MH_SLb2);
 
 //Key State Registers
     reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
@@ -90,9 +93,13 @@ module ElipseEngine #(
     reg  signed [31:0] dd, dd_next, stopper; //signed; like "error" in line algorithm
 
 //Iteration adjusted values
-    reg  [31:0] AAy, AAy_next, BBx, BB2xp3;   //Phase 1
-    reg  [31:0] BB2xp2;             //Phase 2 (== BB2xp3 - BB)
+    reg  [31:0] AAy, AAy_next, BBx, BB2xp3;
+    reg  [31:0] BB2xp2;             //Phase B (== BB2xp3 - BB)
+    reg  [31:0] temp_XX, temp_YM1YM1; //Intermediary values for Phase B
+    reg  [31:0] temp_BBTX, temp_AAYZ; //Intermediary values for Phase B
     //reg  [31:0] AA2y, AA2y_next;
+    wire signed [31:0] prep_dd_B = temp_BBTX + (BB>>2) + temp_AAYZ - AABB;
+
 
 //Key Live-Wires & Assigns
     wire advSLR, continueA, continueB;
@@ -127,11 +134,14 @@ module ElipseEngine #(
             MS_PRa3: begin
                 AAy     <= AAB;             //(y==b)
                 dd      <= dd - AAB;
-$display("%d ELIPSE-TB: [CONST] AA=%0d BB=%0d AABB=%0d stopper=%0d", $time, AA, BB, AABB, stopper);
+$display("%d ELIPSE-TB: [CONST] AA=%0d BB=%0d AABB=%0d stopper=%0d",
+        $time, AA, BB, AABB, stopper);
             end
             MS_SLa1: if (advSLR) begin
-$display("%8d ELIPSE-TB: dd=%0d AAy=%0d BBx=%0d", $time, dd, AAy, BBx);
-$display("%8d          : x=%0d y=%0d BB2xp3=%0d", $time, x, y, BB2xp3);
+$display("%8d ELIPSE-TB: dd=%0d AAy=%0d BBx=%0d",
+        $time, dd, AAy, BBx);
+$display("%8d          : x=%0d y=%0d BB2xp3=%0d",
+        $time, x, y, BB2xp3);
                 if (dd >= 0) begin
                     //dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
                     dd_next <= dd + (AA<<1) - (AAy<<1); //mul32(AA,y<<1)???
@@ -157,17 +167,30 @@ $display("%8d          : x=%0d y=%0d BB2xp3=%0d", $time, x, y, BB2xp3);
                     BB2xp3 <= BB2xp3 + (BB<<1);
                 end
             end
-            MS_ADa1: begin //TODO: Define state ADa1!
-                //Advance variables that change inside loop
-                //  New values mostly pre-computed during SLa1 & SLa2
-                //TODO: Advance variables prior to next SLR outputs
+            MS_PRb1: begin
+                //PARTIAL: dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
+                temp_XX <= x * x;
+                temp_YM1YM1 <= (y-1) * (y-1);
             end
-            //TODO: Create "b" series of states like PRb1 to implement second loop
+            MS_PRb2: begin
+$display("%8d ELIPSE-TB: temp_XX=%0d temp_YM1YM1=%0d",
+        $time, temp_XX, temp_YM1YM1);
+                temp_BBTX <= BB * (temp_XX+x);
+                temp_AAYZ <= AA * temp_YM1YM1;
+            end
+            MS_PRb3: begin
+$display("%8d ELIPSE-TB: temp_BBTX=%0d temp_AAYZ=%0d",
+        $time, temp_BBTX, temp_AAYZ);
+                BB2xp2 <= BB2xp3 - BB; //mul32(BB,(x<<1)+2);
+                dd <= prep_dd_B; //temp_BBTX + (BB>>2) + temp_AAYZ - AABB;
+$display("%8d ELIPSE-TB: prep_dd_B=%0d BB2xp2=%0d",
+        $time, prep_dd_B, BB2xp3 - BB); //Show "future" value since happens simultaneously
+            end
         endcase
 
     end
 
-/*  TOP LOOP...
+/*  *** FIRST LOOP "A" ***
     while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
         if (dd >= 0) {
             dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
@@ -177,11 +200,28 @@ $display("%8d          : x=%0d y=%0d BB2xp3=%0d", $time, x, y, BB2xp3);
         x++; BBx += BB; BB2xp3 += (BB<<1);
         swpixl_4way(fp,color, xc,yc, x,y);
     }
+    *** SECOND LOOP "B" ***
+    uint32_t BB2xp2 = BB2xp3 - BB; //mul32(BB,(x<<1)+2);
+    dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
+    while (y > 0) {
+        if (dd < 0) {
+            dd += BB2xp2; //mul32(BB,(x<<1)+2);
+            x++; BB2xp2 += (BB<<1);
+        }
+        dd += (AA<<1)+AA - (AAy<<1); //mul32(AA,y<<1);
+        y--; AAy -= AA; //AA2y -= (AA<<1);
+        swpixl_4way(fp,color, xc,yc, x,y);
+    }
 */
 
     assign EL_ready = (cs_M[MH_IDLE]);
-    assign {xL,xR, yT,yB} = {(xc-x),(xc+x), (yc-y),(yc+y)};
-    assign continueA = (AAy - BBx) > stopper; //Slope == -1; ((AAy-BBx) > stopper) // (AAy-(AA>>1)) > (BBx+BB) //BBphaa
+    assign xL = (xc-x);
+    assign xR = (xc+x);
+    assign yT = (yc-y);
+    assign yB = (yc+y);
+    assign continueA = (AAy - BBx) > stopper; //Slope == -1;
+            //((AAy-BBx) > stopper) // (AAy-(AA>>1)) > (BBx+BB) //BBphaa
+    assign continueB = (y > 0);
 
 //Next-State
     always @(*) begin
@@ -193,15 +233,18 @@ $display("%8d          : x=%0d y=%0d BB2xp3=%0d", $time, x, y, BB2xp3);
             MS_PRa2: ns_M = MS_PRa3;
             MS_PRa3: ns_M = MS_SLa1;
             MS_SLa1: if (advSLR) ns_M = MS_SLa2;
-            MS_SLa2: if (advSLR) ns_M = (continueA) ? MS_SLa1 : MS_ADa1;
-            MS_ADa1: ns_M = MS_RSET;
+            MS_SLa2: if (advSLR) ns_M = (continueA) ? MS_SLa1 : MS_PRb1;
+            MS_PRb1: ns_M = MS_PRb2;
+            MS_PRb2: ns_M = MS_PRb3;
+            MS_PRb3: ns_M = MS_IDLE;
             default: ns_M = MS__DEAD;
         endcase
     end
 
 
 //Write "run" of pixels via ScanLineRunner module
-    assign SLR_valid        = (cs_M[MH_RUN1] || cs_M[MH_RUN2]),
+    assign SLR_valid        = (cs_M[MH_SLa1] || cs_M[MH_SLa2] ||
+                               cs_M[MH_SLb1] || cs_M[MH_SLb2]),
             SLR_frame       = {4'h1, framebits[5:0], 22'b0},
             SLR_color_edge  = color_r,
             SLR_color_fill  = { color_r[31:24], //Left/Right 1-pixel
@@ -210,9 +253,9 @@ $display("%8d          : x=%0d y=%0d BB2xp3=%0d", $time, x, y, BB2xp3);
                                 color_r[ 7: 0] },
             SLR_col_start   = xL,
             SLR_col_finish  = xR,
-            SLR_row         = (cs_M[MH_RUN1]) ? yT : yB;
+            SLR_row         = (cs_M[MH_SLa1] || cs_M[MH_SLb1]) ? yT : yB;
 
-    assign advSLR = SLR_ready; //Used iif MH_RUNx implying SLR_valid
+    assign advSLR = SLR_ready && SLR_valid; //Used iif MH_SLax implying SLR_valid
 
 
 //synthesis translate_off
