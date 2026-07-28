@@ -75,19 +75,20 @@ module ElipseEngine #(
         MH_PRb1     = 7,  //Prep for "B"
         MH_PRb2     = 8,  //Prep for "B"
         MH_PRb3     = 9,  //Prep for "B"
-        MH_SLb1     = 10, //top-half SLR-write; next-iteration work-ahead
-        MH_SLb2     = 11; //bot-half SLR-write; iteration finalize/advance
+        MH_LLb1     = 10, //Adjust vals during loop
+        MH_SLb1     = 11, //top-half SLR-write
+        MH_SLb2     = 12; //bot-half SLR-write; iteration/done
     localparam MH__LAST = MH_SLb2;
     localparam [MH__LAST:0] MS__DEAD = 0, //Initial or fault (requires reset)
         MS_RSET = (1<<MH_RSET), MS_IDLE = (1<<MH_IDLE),
         MS_PRa1 = (1<<MH_PRa1), MS_PRa2 = (1<<MH_PRa2), MS_PRa3 = (1<<MH_PRa3),
         MS_SLa1 = (1<<MH_SLa1), MS_SLa2 = (1<<MH_SLa2),
         MS_PRb1 = (1<<MH_PRb1), MS_PRb2 = (1<<MH_PRb2), MS_PRb3 = (1<<MH_PRb3),
-        MS_SLb1 = (1<<MH_SLb1), MS_SLb2 = (1<<MH_SLb2);
+        MS_LLb1 = (1<<MH_LLb1), MS_SLb1 = (1<<MH_SLb1), MS_SLb2 = (1<<MH_SLb2);
 
 //Key State Registers
     reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
-    reg  [ 9:0] x, y, y_next;
+    reg  [ 9:0] x, y, xy_next; // xy_next shared between phase A & B
     reg  [31:0] AA, BB, AABB; // These stay constant
     reg  [15:0] AAB; //, BBphaa becomes "stopper"
     reg  signed [31:0] dd, dd_next, stopper; //signed; like "error" in line algorithm
@@ -146,12 +147,12 @@ $display("%8d          : x=%0d y=%0d BB2xp3=%0d",
                     //dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
                     dd_next <= dd + (AA<<1) - (AAy<<1); //mul32(AA,y<<1)???
                     //dd_next <= dd + (AA<<1) - AA2y; //mul32(AA,y<<1)???
-                    y_next <= y - 1;
+                    xy_next <= y - 1;
                     AAy_next <= AAy - AA;
                     //AA2y_next <= AA2y - (AA<<1);
                 end else begin
                     dd_next <= dd;
-                    y_next <= y;
+                    xy_next <= y;
                     AAy_next <= AAy;
                     //AA2y_next <= AA2y;                    
                 end
@@ -159,7 +160,7 @@ $display("%8d          : x=%0d y=%0d BB2xp3=%0d",
             MS_SLa2: if (advSLR) begin
                 if (continueA) begin
                     dd <= dd_next + BB2xp3; //mul32(BB,(x<<1)+3)
-                    y <= y_next;
+                    y <= xy_next;
                     AAy <= AAy_next;
                     //AA2y <= AA2y_next;
                     x <= x + 1;
@@ -168,29 +169,49 @@ $display("%8d          : x=%0d y=%0d BB2xp3=%0d",
                 end
             end
             MS_PRb1: begin
+$display("/// NEXT LOOP ///");
                 //PARTIAL: dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
                 temp_XX <= x * x;
                 temp_YM1YM1 <= (y-1) * (y-1);
             end
             MS_PRb2: begin
-$display("%8d ELIPSE-TB: temp_XX=%0d temp_YM1YM1=%0d",
+$display("%8d ELIPSE-PREP1: temp_XX=%0d temp_YM1YM1=%0d",
         $time, temp_XX, temp_YM1YM1);
                 temp_BBTX <= BB * (temp_XX+x);
                 temp_AAYZ <= AA * temp_YM1YM1;
             end
             MS_PRb3: begin
-$display("%8d ELIPSE-TB: temp_BBTX=%0d temp_AAYZ=%0d",
+$display("%8d ELIPSE-PREP2: temp_BBTX=%0d temp_AAYZ=%0d",
         $time, temp_BBTX, temp_AAYZ);
                 BB2xp2 <= BB2xp3 - BB; //mul32(BB,(x<<1)+2);
                 dd <= prep_dd_B; //temp_BBTX + (BB>>2) + temp_AAYZ - AABB;
-$display("%8d ELIPSE-TB: prep_dd_B=%0d BB2xp2=%0d",
+$display("%8d ELIPSE-PREP3: prep_dd_B=%0d BB2xp2=%0d",
         $time, prep_dd_B, BB2xp3 - BB); //Show "future" value since happens simultaneously
+            end
+            MS_LLb1: begin
+                if (dd < 0) begin
+                    x <= x+1; // x++
+                    BB2xp2 <= BB2xp2 + (BB<<1); //BB2xp2 += (BB<<1);
+                end
+                //dd += (AA<<1)+AA - (AAy<<1); //mul32(AA,y<<1);
+                dd <= dd + ((dd < 0)?BB2xp2:0) + (AA<<1)+AA - (AAy<<1);
+                y <= y - 1; //y--;
+                AAy <= AAy - AA; //AAy -= AA; //AA2y -= (AA<<1);
+            end
+            MS_SLb1: if (advSLR) begin
+$display("%8d ELIPSE-TB: dd=%0d AAy=%0d BB2xp2=%0d",
+        $time, dd, AAy, BB2xp2);
+$display("%8d          : x=%0d y=%0d",
+        $time, x, y);
+            end
+            MS_SLb2: if (advSLR) begin
             end
         endcase
 
     end
 
-/*  *** FIRST LOOP "A" ***
+/*
+*** FIRST LOOP "A" ***
     while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
         if (dd >= 0) {
             dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
@@ -200,7 +221,7 @@ $display("%8d ELIPSE-TB: prep_dd_B=%0d BB2xp2=%0d",
         x++; BBx += BB; BB2xp3 += (BB<<1);
         swpixl_4way(fp,color, xc,yc, x,y);
     }
-    *** SECOND LOOP "B" ***
+*** SECOND LOOP "B" ***
     uint32_t BB2xp2 = BB2xp3 - BB; //mul32(BB,(x<<1)+2);
     dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
     while (y > 0) {
@@ -236,7 +257,10 @@ $display("%8d ELIPSE-TB: prep_dd_B=%0d BB2xp2=%0d",
             MS_SLa2: if (advSLR) ns_M = (continueA) ? MS_SLa1 : MS_PRb1;
             MS_PRb1: ns_M = MS_PRb2;
             MS_PRb2: ns_M = MS_PRb3;
-            MS_PRb3: ns_M = MS_IDLE;
+            MS_PRb3: ns_M = (continueB) ? MS_LLb1 : MS_IDLE;
+            MS_LLb1: ns_M = MS_SLb1;
+            MS_SLb1: if (advSLR) ns_M = MS_SLb2;
+            MS_SLb2: if (advSLR) ns_M = (continueB) ? MS_LLb1 : MS_IDLE;
             default: ns_M = MS__DEAD;
         endcase
     end

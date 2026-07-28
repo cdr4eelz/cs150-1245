@@ -106,7 +106,7 @@ printf("PREP2: temp_BBTX=%0d temp_AAYZ=%0d\n", temp_BBTX, temp_AAYZ);
     uint32_t BB2xp2 = BB2xp3 - BB; //mul32(BB,(x<<1)+2);
     dd = temp_BBTX + (BB>>2) + temp_AAYZ - AABB;
 printf("PREP3: prep_dd_B=%0d BB2xp2=%0d\n", dd, BB2xp2);
-return;
+//return;
     while (y > 0) {
         if (dd < 0) {
             dd += BB2xp2; //mul32(BB,(x<<1)+2);
