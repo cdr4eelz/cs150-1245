@@ -93,6 +93,7 @@ module ElipseEngine #(
     reg  signed [31:0] dd, dd_next, stopper; //signed; like "error" in line algorithm
 
 //Iteration adjusted values
+    reg  [31:0] CountA, CountB; // For debug and/or termination of runaway loops
     reg  [31:0] AAy, AAy_next, BBx, BB2xp3;
     reg  [31:0] BB2xp2;             //Phase B (== BB2xp3 - BB)
     reg  [31:0] temp_XX, temp_YM1YM1; //Intermediary values for Phase B
@@ -117,6 +118,7 @@ module ElipseEngine #(
                 x       <= 0;               //Start at theta=90 with
                 y       <= b;               //  (xc,yc) translated to (0,0)
                 BBx     <= 0; //BB * x;     //(x==0)
+                CountA <= 1; CountB <= 0; //The "A" phase ALWAYS at least 1
             end
         //From MS_PRa1 onward, use registered parameters directly "_r"
             MS_PRa1: begin
@@ -137,8 +139,8 @@ $display("%d ELIPSE-TB: [CONST] AA=%0d BB=%0d AABB=%0d stopper=%0d",
         $time, AA, BB, AABB, stopper);
             end
             MS_SLa1: if (advSLR) begin
-$display("%8d ELIPSE-TB: dd=%0d AAy=%0d BBx=%0d",
-        $time, dd, AAy, BBx);
+$display("%8d ELIPSE-TB: CountA=%0d dd=%0d AAy=%0d BBx=%0d",
+        $time, CountA, dd, AAy, BBx);
 $display("%8d          : x=%0d y=%0d BB2xp3=%0d",
         $time, x, y, BB2xp3);
                 if (dd >= 0) begin
@@ -157,6 +159,7 @@ $display("%8d          : x=%0d y=%0d BB2xp3=%0d",
             end
             MS_SLa2: if (advSLR) begin
                 if (continueA) begin
+                    CountA <= CountA + 1; //Count each loop around
                     dd <= dd_next + BB2xp3; //mul32(BB,(x<<1)+3)
                     y <= xy_next;
                     AAy <= AAy_next;
@@ -167,6 +170,8 @@ $display("%8d          : x=%0d y=%0d BB2xp3=%0d",
                 end
             end
             MS_PRb1: begin
+$display("%8d    --- LAST CountA=%0d",
+        $time, CountA);
 $display("/// NEXT LOOP ///");
                 //PARTIAL: dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
                 temp_XX <= x * x;
@@ -187,6 +192,7 @@ $display("%8d ELIPSE-PREP3: prep_dd_B=%0d BB2xp2=%0d",
         $time, prep_dd_B, BB2xp3 - BB); //Show "future" value since happens simultaneously
             end
             MS_LLb1: begin
+                CountB <= CountB + 1;
                 if (dd < 0) begin
                     x <= x+1; // x++
                     BB2xp2 <= BB2xp2 + (BB<<1); //BB2xp2 += (BB<<1);
@@ -197,12 +203,16 @@ $display("%8d ELIPSE-PREP3: prep_dd_B=%0d BB2xp2=%0d",
                 AAy <= AAy - AA; //AAy -= AA; //AA2y -= (AA<<1);
             end
             MS_SLb1: if (advSLR) begin
-$display("%8d ELIPSE-TB: dd=%0d AAy=%0d BB2xp2=%0d",
-        $time, dd, AAy, BB2xp2);
+$display("%8d ELIPSE-TB: CountB=%0d dd=%0d AAy=%0d BB2xp2=%0d",
+        $time, CountB, dd, AAy, BB2xp2);
 $display("%8d          : x=%0d y=%0d",
         $time, x, y);
             end
             MS_SLb2: if (advSLR) begin
+                if (!continueB) begin
+#1 $display("%8d    --- LAST CountA=%0d CountB=%0d",
+        $time, CountA, CountB);                    
+                end
             end
         endcase
 

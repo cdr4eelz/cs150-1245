@@ -69,6 +69,9 @@ void swelip(
     uint32_t const AABB = mul32(AA,BB);
     uint32_t const stopper = (AA>>1)+BB;
 
+    //Counters for debug and termination of runaway loops
+    uint32_t CountA = 0, CountB = 0;
+
     //Helper values to pre-compute multiplied values then adjust with addition
     uint32_t AAy    = mul32(AA,y);
     uint32_t BBx    = 0; //(x==0): mul32(BB,x);
@@ -80,20 +83,23 @@ void swelip(
     //TODO: Add a counter to tag each iteration of the loop
 printf("CONST: AA=%0u BB=%0u AABB=%0u stopper=%0u\n", AA, BB, AABB, stopper);
 
-printf("    ELIPSE-TB: dd=%0d AAy=%0u BBx=%0u\n", dd, AAy, BBx); //dd is signed
+    CountA++; //First output always happens
+printf("    ELIPSE-TB: CountA=%0u dd=%0d AAy=%0u BBx=%0u\n", CountA, dd, AAy, BBx); //dd is signed
 printf("             : x=%0u y=%0u BB2xp3=%0u\n", x, y, BB2xp3);
     swpixl_4way(fp,color, xc,yc, x,y);
     while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
+        CountA++;
         if (dd >= 0) {
             dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
             y--; AAy -= AA; //AA2y -= (AA<<1);
         }
         dd += BB2xp3; //mul32(BB,(x<<1)+3);
         x++; BBx += BB; BB2xp3 += (BB<<1);
-printf("    ELIPSE-TB: dd=%0d AAy=%0u BBx=%0u\n", dd, AAy, BBx); //dd is signed
+printf("    ELIPSE-TB: CountA=%0u dd=%0d AAy=%0u BBx=%0u\n", CountA, dd, AAy, BBx); //dd is signed
 printf("             : x=%0u y=%0u BB2xp3=%0u\n", x, y, BB2xp3);
         swpixl_4way(fp,color, xc,yc, x,y);
     }
+printf("   LAST CountA=%0u\n", CountA);
 printf("/// NEXT LOOP ///\n");
 //return;
     //Transition at slope=1, whatever theta happens to be; Reverse x&y roles
@@ -108,16 +114,18 @@ printf("PREP2: temp_BBTX=%0u temp_AAYZ=%0u\n", temp_BBTX, temp_AAYZ);
 printf("PREP3: prep_dd_B=%0d BB2xp2=%0u\n", dd, BB2xp2); //prep_dd_B is signed
 //return;
     while (y > 0) {
+        CountB++;
         if (dd < 0) {
             dd += BB2xp2; //mul32(BB,(x<<1)+2);
             x++; BB2xp2 += (BB<<1);
         }
         dd += (AA<<1)+AA - (AAy<<1); //mul32(AA,y<<1);
         y--; AAy -= AA; //AA2y -= (AA<<1);
-printf("    ELIPSE-TB: dd=%0d AAy=%0u BB2xp2=%0u\n", dd, AAy, BB2xp2); //dd is signed
+printf("    ELIPSE-TB: CountB=%0u dd=%0d AAy=%0u BB2xp2=%0u\n", CountB, dd, AAy, BB2xp2); //dd is signed
 printf("             : x=%0u y=%0u\n", x, y);
         swpixl_4way(fp,color, xc,yc, x,y);
     }
+printf("   LAST CountA=%0u CountB=%0u\n", CountA, CountB);
 }
 
 // LINE implementations
