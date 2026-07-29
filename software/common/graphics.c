@@ -163,7 +163,7 @@ void swelip(
     int32_t dd      = BB - mul32(AA,b) + (AA>>2);
 
     swpixl_4way(fp,color, xc,yc, x,y);
-    while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
+    while (((AAy-BBx) > stopper) && (y > 0)) { // (AAy-(AA>>1)) > (BBx+BB)
         if (dd >= 0) {
             dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
             y--; AAy -= AA; //AA2y -= (AA<<1);

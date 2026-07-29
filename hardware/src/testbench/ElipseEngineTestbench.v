@@ -85,9 +85,14 @@ module ElipseEngineTestbench;
         #(Cycle);
 //      $monitor("R:%b T:%b (%0d,%0d) W:%b.%b", EL_ready, EL_trigger, x,y, caf_wren,wdf_wren);
 $display("ElipseEngine: Fake memory/SLR...");
-        //drawElipse( 200, 200,    25,   2,  32'h00_7F_00_00); // SW- HW- ***
-        drawElipse( 125, 125,    20,   5,  32'h22_7F_00_00); // SW- HW- ***
+        //drawElipse(  10,  10,     5,   2,  32'h00_7F_00_00); // SW+ HW+
+        //drawElipse(  10,  10,     2,   5,  32'h00_7F_00_00); // SW+ HW+
 
+        // These two were "FIXED" by checking y>0
+        //drawElipse( 200, 200,    25,   2,  32'h00_7F_00_00); // SW+ HW+
+        drawElipse( 125, 125,    20,   5,  32'h22_7F_00_00); // SW+ HW
+
+        //drawElipse( 125, 125,     5,  20,  32'h22_7F_00_00); // SW+ HW+
         //drawElipse(  10,  10,     5,   5,  32'h00_7F_00_00); // SW+ HW+
         //drawElipse( 100, 100,    50,  50,  32'h00_7F_00_00); // SW+ HW+
         //drawElipse( 200, 200,    20,  40,  32'h00_7F_00_00); // SW+ HW+

@@ -67,7 +67,7 @@ void swelip(
     uint16_t x = 0, y = b; //theta=90 @origin (offset pixels in 4way)
     uint32_t const AA = sqr32(a), BB = sqr32(b);
     uint32_t const AABB = mul32(AA,BB);
-    uint32_t const stopper = (AA>>1)+BB;
+    uint32_t const stopper = (AA>>1)+BB; // Approx 1/2 AA + BB ???
 
     //Counters for debug and termination of runaway loops
     uint32_t CountA = 0, CountB = 0;
@@ -87,7 +87,7 @@ printf("CONST: AA=%0u BB=%0u AABB=%0u stopper=%0u\n", AA, BB, AABB, stopper);
 printf("    ELIPSE-TB: CountA=%0u dd=%0d AAy=%0u BBx=%0u\n", CountA, dd, AAy, BBx); //dd is signed
 printf("             : x=%0u y=%0u BB2xp3=%0u\n", x, y, BB2xp3);
     swpixl_4way(fp,color, xc,yc, x,y);
-    while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
+    while (((AAy-BBx) > stopper) && (y > 0)) { // (AAy-(AA>>1)) > (BBx+BB)
         CountA++;
         if (dd >= 0) {
             dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
