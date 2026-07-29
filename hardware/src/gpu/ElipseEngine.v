@@ -90,7 +90,6 @@ module ElipseEngine #(
     reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
     reg  [ 9:0] x, y, xy_next; // xy_next shared between phase A & B
     reg  [31:0] AA, BB, AABB; // These stay constant
-    reg  [15:0] AAB; //, BBphaa becomes "stopper"
     reg  signed [31:0] dd, dd_next, stopper; //signed; like "error" in line algorithm
 
 //Iteration adjusted values
@@ -126,15 +125,14 @@ module ElipseEngine #(
             end
             MS_PRa2: begin
                 AABB    <= AA * BB;
-                AAB     <= AA * b_r;
+                AAy     <= AA * b_r; //(y==b)
                 BB2xp3  <= (BB<<1) + BB;    //(x==0)
                 dd      <= BB + (AA>>2); //PARTIAL
                 //AA2y    <= (AA * y)<<1; //(mul32(AA,y)<<1);
                 stopper <= (AA>>1) + BB;    //end of first loop
             end
             MS_PRa3: begin
-                AAy     <= AAB;             //(y==b)
-                dd      <= dd - AAB;
+                dd      <= dd - AAy; //(y==b) and AAy==AAB
 $display("%d ELIPSE-TB: [CONST] AA=%0d BB=%0d AABB=%0d stopper=%0d",
         $time, AA, BB, AABB, stopper);
             end
