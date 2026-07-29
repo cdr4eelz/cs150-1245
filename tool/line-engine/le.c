@@ -26,7 +26,7 @@ static void swpixl(
     uint16_t const x, uint16_t const y)
 {
 //  *PIX_PTR(fp, x, y) = color;
-    printf("%4d %4d\n", x,y);
+    printf("%4u %4u\n", x,y);
 }
 
 static void swpixl_4way(
@@ -38,8 +38,8 @@ static void swpixl_4way(
 //  *PIX_PTR(fp, xc + ox, yc - oy) = color;
 //  *PIX_PTR(fp, xc - ox, yc + oy) = color;
 //  *PIX_PTR(fp, xc + ox, yc + oy) = color;
-    printf("(+/-) %4d,%4d @(%4d,%4d)  row=%4d s=%4d f=%4d\n", ox,oy, xc,yc, yc-oy, xc-ox, xc+ox);
-    printf("(+/-) %4d,%4d @(%4d,%4d)  row=%4d s=%4d f=%4d\n", ox,oy, xc,yc, yc+oy, xc-ox, xc+ox);
+    printf("(+/-) %4u,%4u @(%4u,%4u)  row=%4u s=%4u f=%4u\n", ox,oy, xc,yc, yc-oy, xc-ox, xc+ox);
+    printf("(+/-) %4u,%4u @(%4u,%4u)  row=%4u s=%4u f=%4u\n", ox,oy, xc,yc, yc+oy, xc-ox, xc+ox);
 //    swpixl(fp,color, xc - ox, yc - oy);
  //   swpixl(fp,color, xc + ox, yc - oy);
   //  swpixl(fp,color, xc - ox, yc + oy);
@@ -78,10 +78,10 @@ void swelip(
     int32_t dd      = BB - mul32(AA,b) + (AA>>2);
 
     //TODO: Add a counter to tag each iteration of the loop
-printf("CONST: AA=%0d BB=%0d AABB=%0d stopper=%0d\n", AA, BB, AABB, stopper);
+printf("CONST: AA=%0u BB=%0u AABB=%0u stopper=%0u\n", AA, BB, AABB, stopper);
 
-printf("    ELIPSE-TB: dd=%0d AAy=%0d BBx=%0d\n", dd, AAy, BBx);
-printf("             : x=%0d y=%0d BB2xp3=%0d\n", x, y, BB2xp3);
+printf("    ELIPSE-TB: dd=%0d AAy=%0u BBx=%0u\n", dd, AAy, BBx); //dd is signed
+printf("             : x=%0u y=%0u BB2xp3=%0u\n", x, y, BB2xp3);
     swpixl_4way(fp,color, xc,yc, x,y);
     while ((AAy-BBx) > stopper) { // (AAy-(AA>>1)) > (BBx+BB)
         if (dd >= 0) {
@@ -90,22 +90,22 @@ printf("             : x=%0d y=%0d BB2xp3=%0d\n", x, y, BB2xp3);
         }
         dd += BB2xp3; //mul32(BB,(x<<1)+3);
         x++; BBx += BB; BB2xp3 += (BB<<1);
-printf("    ELIPSE-TB: dd=%0d AAy=%0d BBx=%0d\n", dd, AAy, BBx);
-printf("             : x=%0d y=%0d BB2xp3=%0d\n", x, y, BB2xp3);
+printf("    ELIPSE-TB: dd=%0d AAy=%0u BBx=%0u\n", dd, AAy, BBx); //dd is signed
+printf("             : x=%0u y=%0u BB2xp3=%0u\n", x, y, BB2xp3);
         swpixl_4way(fp,color, xc,yc, x,y);
     }
-printf("\\\\\\\n");
+printf("/// NEXT LOOP ///\n");
 //return;
     //Transition at slope=1, whatever theta happens to be; Reverse x&y roles
     uint32_t temp_XX = sqr32(x);
     uint32_t temp_YM1YM1 = sqr32(y-1);
-printf("PREP1: temp_XX=%0d temp_YM1YM1=%0d\n", temp_XX, temp_YM1YM1);
+printf("PREP1: temp_XX=%0u temp_YM1YM1=%0u\n", temp_XX, temp_YM1YM1);
     uint32_t temp_BBTX = mul32(BB,temp_XX+x);
     uint32_t temp_AAYZ = mul32(AA,temp_YM1YM1);
-printf("PREP2: temp_BBTX=%0d temp_AAYZ=%0d\n", temp_BBTX, temp_AAYZ);
+printf("PREP2: temp_BBTX=%0u temp_AAYZ=%0u\n", temp_BBTX, temp_AAYZ);
     uint32_t BB2xp2 = BB2xp3 - BB; //mul32(BB,(x<<1)+2);
     dd = temp_BBTX + (BB>>2) + temp_AAYZ - AABB;
-printf("PREP3: prep_dd_B=%0d BB2xp2=%0d\n", dd, BB2xp2);
+printf("PREP3: prep_dd_B=%0d BB2xp2=%0u\n", dd, BB2xp2); //prep_dd_B is signed
 //return;
     while (y > 0) {
         if (dd < 0) {
@@ -114,8 +114,8 @@ printf("PREP3: prep_dd_B=%0d BB2xp2=%0d\n", dd, BB2xp2);
         }
         dd += (AA<<1)+AA - (AAy<<1); //mul32(AA,y<<1);
         y--; AAy -= AA; //AA2y -= (AA<<1);
-printf("    ELIPSE-TB: dd=%0d AAy=%0d BB2xp2=%0d\n", dd, AAy, BB2xp2);
-printf("             : x=%0d y=%0d\n", x, y);
+printf("    ELIPSE-TB: dd=%0d AAy=%0u BB2xp2=%0u\n", dd, AAy, BB2xp2); //dd is signed
+printf("             : x=%0u y=%0u\n", x, y);
         swpixl_4way(fp,color, xc,yc, x,y);
     }
 }
@@ -377,7 +377,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    printf("\n%s#%d: (%4d,%4d) => (%4d,%4d)\n",
+    printf("\n%s#%d: (%4u,%4u) => (%4u,%4u)\n",
            style_name,style_num, x0,y0, x1,y1);
     (*style_ptr)(0,style_num, x0, y0, x1, y1);
 
