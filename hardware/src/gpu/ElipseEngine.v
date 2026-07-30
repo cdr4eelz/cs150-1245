@@ -248,7 +248,7 @@ $display("%8d          : x=%0d y=%0d",
     assign xR = (xc+x);
     assign yT = (yc-y);
     assign yB = (yc+y);
-    assign continueA = (y > 0) && (AAy - BBx) > stopper; //Slope == -1;
+    assign continueA = (y > 0) && (x <= a) && (AAy - BBx) > stopper; //Slope == -1;
             //((AAy-BBx) > stopper) // (AAy-(AA>>1)) > (BBx+BB) //BBphaa
     assign continueB = (y > 0);
 

@@ -78,7 +78,7 @@ void swelip(
     uint32_t BB2xp3 = /*(mul32(BB,x)<<1) +*/ (BB<<1) + BB; //(x==0)
     //uint32_t AA2y   = (AAy<<1); //(mul32(AA,y)<<1);
 
-    int32_t dd      = BB - mul32(AA,b) + (AA>>2);
+    int32_t dd      = BB - AAy + (AA>>2); //AAy == mul32(AA,b) since y==b
 
     //TODO: Add a counter to tag each iteration of the loop
 printf("CONST: AA=%0u BB=%0u AABB=%0u stopper=%0u\n", AA, BB, AABB, stopper);
@@ -87,7 +87,7 @@ printf("CONST: AA=%0u BB=%0u AABB=%0u stopper=%0u\n", AA, BB, AABB, stopper);
 printf("    ELIPSE-TB: CountA=%0u dd=%0d AAy=%0u BBx=%0u\n", CountA, dd, AAy, BBx); //dd is signed
 printf("             : x=%0u y=%0u BB2xp3=%0u\n", x, y, BB2xp3);
     swpixl_4way(fp,color, xc,yc, x,y);
-    while (((AAy-BBx) > stopper) && (y > 0)) { // (AAy-(AA>>1)) > (BBx+BB)
+    while (((AAy-BBx) > stopper) && (y > 0) && (x <= a)) { // (AAy-(AA>>1)) > (BBx+BB)
         CountA++;
         if (dd >= 0) {
             dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
