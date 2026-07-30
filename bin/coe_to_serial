@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash
 # author: jamesparker@berkeley.edu
 
 if [ "${1-x}" == "x" ]; then
@@ -27,6 +27,7 @@ fi
 # Send one character (safe to do slowly)
 function send_ch {
     echo -ne "$1" |tee $SERIALTTY &>>"${LOGO}"
+    sleep 0.01
 }
 
 # Send the command one char at a time (avoid swamping)
@@ -86,13 +87,17 @@ sleep 1
 
 echo -e  "\n\nFile written." >&2
 
-select yn in "jal" "nah"; do
-    if [ "$yn" == "jal" ]; then
-        send_str "jal ${JALADDR} "
-        echo "sent:jal ${JALADDR}" >&2
-        sleep 1
-        break
-    else
-        break
-    fi
-done
+#select yn in "jal" "nah"; do
+#   if [ "$yn" == "jal" ]; then
+#       send_str "jal ${JALADDR} "
+#       echo "sent:jal ${JALADDR}" >&2
+#
+#
+#      sleep 1
+#       break
+#   else
+#       break
+#   fi
+#done
+
+
