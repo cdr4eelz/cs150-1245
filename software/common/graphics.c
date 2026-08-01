@@ -177,7 +177,7 @@ void swelip(
     //Transition at slope=1, whatever theta happens to be; Reverse x&y roles
     uint32_t BB2xp2 = BB2xp3 - BB; //mul32(BB,(x<<1)+2);
     dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
-    while (y > 0) {
+    while ((y > 0) && (x <= a)) {
         if (dd < 0) {
             dd += BB2xp2; //mul32(BB,(x<<1)+2);
             x++; BB2xp2 += (BB<<1);
