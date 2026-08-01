@@ -1,33 +1,45 @@
 #!/bin/bash
 # author: jamesparker@berkeley.edu
 
+#set -eu
+
 if [ "${1-x}" == "x" ]; then
-    echo "usage: $0 <coe_file> <address>" >&2
+    echo "usage: $0 <coe_file> <address> <socket>" >&2
     exit 1
 fi
 
-FILE=$1
-ADDRESS=${2:-30000000}
-SIZE="0"
+FILE="$1"
+ADDRESS="${2:-30000000}"
+STTY=${3:-${SERIALTTY:-/dev/ttyUSB0}}
+export STTY
+
 LOGO="_coe_out.log"
 LOGI="_coe_in.log"
-JALADDR="$(( ( 0x$ADDRESS ) & 0x1FFFFFFF ))"
-JALADDR=`echo "obase=16; ${JALADDR}" |bc`
+#JALADDR="$(( ( 0x$ADDRESS ) & 0x1FFFFFFF ))"
+#JALADDR=`echo "obase=16; ${JALADDR}" |bc`
 
+# check if TTY looks valid (character-special file type)
+if [ -c "${STTY}" ]; then
+    echo -e "\nTTY=${STTY}" >&2
+else
+    echo -e "\nTTY ${STTY} not found or not appropriate char device" >&2
+    exit 1
+fi
 
 # check if the file exists
-if [ -f "$FILE" ]; then
-    SIZE=$(stat -c%s $FILE)
-    echo -e "\nFILE=${FILE} ADDRESS=${ADDRESS} SIZE=${SIZE} JALADDR=${JALADDR}" >&2
+if [ -f "${FILE}" ]; then
+    FILESIZE=$(stat -c%s "${FILE}")
+    echo -e "FILE=${FILE} ADDRESS=${ADDRESS} FILESIZE=${FILESIZE}" >&2
 else
-    echo -e "\nFile $FILE does not exist" >&2
+    echo -e "\nFile ${FILE} does not exist" >&2
     exit 1
 fi
 
 # Send one character (safe to do slowly)
 function send_ch {
-    echo -ne "$1" |tee $SERIALTTY &>>"${LOGO}"
-    sleep 0.01
+    #echo -n "."
+    echo -ne "$1" |tee "${STTY}" &>>"${LOGO}"
+    sleep 0.001
 }
 
 # Send the command one char at a time (avoid swamping)
@@ -39,26 +51,31 @@ function send_str {
     done
 }
 
-
-# count the bytes to semd
+# Count the bytes to send & accumulate XOR along the way
 COUNT=0
+XOR=0
 while read LINE; do
-    if [[ $LINE =~ ^[0-9a-f] ]]; then
+    if [[ "${LINE}" =~ ^[0-9a-f] ]]; then
         COUNT=$[$COUNT+4]
+        #Old Bash version gives error if "^" args are quoted
+        XOR=$(( ${XOR} ^ 0x${LINE:0:8} )) # Use arithmetic mode
     fi
-done < $FILE
+done < "${FILE}"
 
-echo -e "\n$COUNT bytes will be sent" >&2
+echo -e "\n${COUNT} bytes will be sent" >&2
+echo -en "XOR of input 32-bit words: ${XOR} " >&2
+printf '0x%x\n\n' "${XOR}" >&2 # Print as hexidecimal
 
 echo "coetoserial OUTPUT:" &>"${LOGO}"
 echo "coetoserial INPUT:" &>"${LOGI}"
 sleep 1
 
-WATCH_PID=
-trap '[[ $WATCH_PID ]] && kill -HUP $WATCH_PID >&2' EXIT
-sleep 10000 & pid=$!
-(cat $SERIALTTY &>>"${LOGI}") & WATCH_PID=$!
-echo "BASH-PID=${BASHPID} SHELL-PID=${$} WATCH-PID=${WATCH_PID}" >&2
+WATCH_PID=0
+SLEEP_PID=0
+trap '[[ $WATCH_PID ]] && kill -HUP $WATCH_PID || true >&2' EXIT
+sleep 10000 & SLEEP_PID=$! ###??? WHY THIS BACKGROUND SLEEP???
+(cat "${STTY}" &>>"${LOGI}") & WATCH_PID=$!
+echo "BASH-PID=${BASHPID} SHELL-PID=${$} SLEEP-PID=${SLEEP_PID} WATCH-PID=${WATCH_PID}" >&2
 
 #write a newline to clear any input tokens
 send_ch " \x0d"
@@ -72,32 +89,14 @@ echo -e "\nIssued command: $COMMAND" >&2
 echo -e "\nWriting $COUNT bytes..." >&2
 SENT=0
 while read LINE; do
-    if [[ $LINE =~ ^[0-9a-f] ]]; then
+    if [[ "${LINE}" =~ ^[0-9a-f] ]]; then
         send_str "${LINE:0:8}"
-        #for i in {0..7}; do
-        #    echo -n "${LINE:i:1}" |tee $SERIALTTY &>>"${LOGO}"
-        #done
         SENT=$[$SENT+4]
         echo -ne "Sent $SENT/$COUNT\r" >&2
     fi
-done < $FILE
+done < "${FILE}"
 
-echo -ne " \x0d " |tee $SERIALTTY &>>"${LOGO}"
+echo -ne " \x0d " |tee "${STTY}" &>>"${LOGO}"
 sleep 1
 
 echo -e  "\n\nFile written." >&2
-
-#select yn in "jal" "nah"; do
-#   if [ "$yn" == "jal" ]; then
-#       send_str "jal ${JALADDR} "
-#       echo "sent:jal ${JALADDR}" >&2
-#
-#
-#      sleep 1
-#       break
-#   else
-#       break
-#   fi
-#done
-
-
