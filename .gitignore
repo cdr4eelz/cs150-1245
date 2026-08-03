@@ -5,3 +5,4 @@
 *.xxx
 *.log
 _*
+.DS_Store
