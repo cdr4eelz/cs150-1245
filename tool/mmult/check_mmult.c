@@ -1,12 +1,18 @@
-#include "types.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+/*
 #include "benchmark.h"
 #include "ascii.h"
 #include "uart.h"
+*/
 
 #define N 6
 #define DIM_SIZE (1 << N)
 #define M_SIZE (1 << (N << 1))
-#define DATA (int32_t *) 0x10018000
+
+//#define DATA ((uint32_t *) 0x10018000)
+int32_t* DATA;
 
 /* Computes S = AB where A, B, and S are all of 2^N x 2^N matrices. A, B, and S
  * are stored sequentially in row-major order beginning at DATA. Prints the sum
@@ -47,7 +53,7 @@ uint32_t mmult() {
                 int32_t a = *(A + (i << N) + k);
                 int32_t b = *(B + (k << N) + j);
                 int32_t prod = times(a, b);
-                *s = *s + times(a, b);
+                *s = *s + prod;
             }
             sum += *s;
         }
@@ -72,32 +78,43 @@ void generate_matrices() {
     }
 }
 
-void print_matrix(int32_t* base) {
-    int8_t buffer[128]; // Buffer on stack for ascii conversions
+void print_matrix(char *label, int32_t* base) {
+    //int8_t buffer[128]; // Buffer on stack for ascii conversions
     int32_t i, j, *it;
+    printf("\nMATRIX %s\n", label);
     it = base;
     for (i = 0; i < DIM_SIZE; i++) {
         for (j = 0; j < DIM_SIZE; j++) {
-            uwrite_int8s(uint32_to_ascii_hex(*it++, buffer, 128));
-            uwrite_int8(' ');
+            printf("%3x ", *it++);
+            //uwrite_int8s(uint32_to_ascii_hex(*it++, buffer, 128));
+            //uwrite_int8(' ');
         }
-        uwrite_int8s("\r\n");
+        printf("\n");
+        //uwrite_int8s("\r\n");
     }
 }
 
-typedef void (*entry_t)(void);
+//typedef void (*entry_t)(void);
 
 int main(int argc, char**argv) {
+    DATA = malloc(M_SIZE * 3); // A,B,C
+
     generate_matrices();
-    run_and_time(&mmult);
-    print_matrix(DATA);
-    print_matrix(DATA + M_SIZE);
-    print_matrix(DATA + M_SIZE + M_SIZE);
+    
+    //run_and_time(&mmult);
+    uint32_t result = mmult();
+    printf("\nResult: 0x%x (%d)\n", result, result);
+
+    print_matrix("A", DATA); // A matrix
+    print_matrix("B", DATA + M_SIZE); // B matrix
+    print_matrix("C", DATA + M_SIZE + M_SIZE); // C matrix
+
     // go back to the bios - using this function causes a jr to the addr,
     // the compiler "jals" otherwise and then cannot set PC[31:28]
     //uint32_t bios = ascii_hex_to_uint32("40000000");
-    uint32_t bios = 0x40000000;
-    entry_t start = (entry_t) (bios);
-    start();
+    //entry_t start = (entry_t) (bios);
+    //start();
+    //free(DATA);
+
     return 0;
 }

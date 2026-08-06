@@ -1,0 +1,6 @@
+> jal 10000000
+Result: 0001f800
+Cycle Count: 02584bd3
+Instruction Count: 01e12224
+
+
