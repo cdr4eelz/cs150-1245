@@ -1,0 +1,548 @@
+<head>
+<title>MIPS Quick Reference</title>
+</head>
+
+<body>
+
+<p>
+<center>
+<h1>
+MIPS Architecture and Assembly Language<br>
+</h1>
+</center>
+<p>
+<hr>
+<p>
+
+
+<h2>Architecture Overview</h2>
+
+<h3>Data Types and Literals</h3>
+<p>
+Data types:
+<ul>
+	<li>byte, halfword (2 bytes), word (4 bytes)
+	<li>a character requires 1 byte of storage
+	<li>an integer requires 1 word (4 bytes) of storage
+</ul>
+<p>
+Literals:
+<ul>
+	<li>numbers entered as is		<u>ex</u>   4
+	<li>characters enclosed in single quotes	<u>ex</u>   'b'
+	<li>strings enclosed in double quotes	<u>ex</u>   "A string"
+</ul>
+<p>
+<h3>Registers</h3>
+<p>
+<ul>
+<li>32 general-purpose registers
+<li>register preceded by  $  in assembly language instruction<br>
+	two formats for addressing:
+	<ul>
+		<li>using register number	<u>ex</u>   $0 through $31
+		<li>using equivalent names	<u>ex</u>   $t1, $sp
+
+	</ul>
+<li>register use conventions
+	<ul>
+	<li>$t0 - $t9   ( =  $8 - $15, $24, $25)   are general use registers; need not be preserved across procedure calls
+	<li>$s0 - $s7   ( =  $16 - $23)   are general use registers; should be preserved across procedure calls
+	<li>$sp  ( =  $29)   is stack pointer
+	<li>$fp  ( =  $30)   is frame pointer
+	<li>$ra  ( =  $31)   is return address storage for subroutine call
+	<li>$a0 - $a3   ( =  $4 - $7)   are used to pass arguments to subroutines
+	<li>$v0, $v1   ( =  $2, $3)   are used to hold return values from subroutine
+	</ul>
+<li>special registers Lo and Hi used to store result of multiplication and division
+	<ul>
+	<li>not directly addressable; contents accessed with special instruction mfhi ("move from Hi") and mflo ("move from Lo")
+	</ul>
+
+<li>stack grows from high memory to low memory
+</ul>
+
+<p>
+<hr>
+<p>
+	
+
+
+<h2>MIPS Assembly Language Program Structure</h2>
+<p>
+<ul>
+<li>just plain text file with data declarations, program code
+(name of file should end in suffix .s to be used with SPIM simulator)
+<li>data declaration section followed by program code section
+</ul>
+<p>
+
+<h3>Data Declarations</h3>
+<ul>
+<li>placed in section of program identified with assembler directive  <b>.data</b>
+<li>declares variable names used in program; storage allocated in main memory (RAM)
+</ul>
+<p>
+
+
+<h3>Code</h3>
+<ul>
+<li>placed in section of text identified with assembler directive  <b>.text</b>
+<li>contains program code (instructions)
+<li>starting point for code execution given label   <b>main:</b>
+<li>ending point of main code should use exit system call (see below under System Calls)
+</ul>
+
+
+<h3>Comments</h3>
+<ul>
+<li>anything following  #  on a line<br>
+ # This stuff would be considered a comment
+</ul>
+
+<pre>
+ex:		A template for a MIPS assembly language program
+
+
+# Comment giving name of program and description of function
+# Template.s
+# Bare-bones outline of MIPS assembly language program
+
+
+	.data
+# variable declarations here
+# ...
+
+
+	.text
+
+main:			# indicates start of code (first instruction to execute)
+# remainder of program code here
+# ...
+# ...
+</pre>
+
+
+<p>
+<hr>
+<p>
+
+
+<h2>Data Declarations</h2>
+<p>
+
+format for declarations:
+<pre>
+name:	storage_type	value(s)	
+</pre>
+<ul>
+	<li>create storage for variable of specified type with given name and specified value
+	<li>value(s) usually gives initial value(s); for storage type .space, gives number of spaces to be allocated
+</ul>
+Note:	labels always followed by colon ( : )
+<p>
+<p>
+
+<pre>
+example
+
+var1:		.word	3		# create a single integer variable with initial value 3
+array1:		.byte	'a','b'		# create a 2-element character array with elements initialized
+					#   to  a  and  b
+array2:		.space	40		# allocate 40 consecutive bytes, with storage uninitialized
+					#   could be used as a 40-element character array, or a
+					#   10-element integer array; a comment should indicate which!
+</pre>
+
+<p>
+<hr>
+<p>
+
+
+<h2>Instructions</h2>
+<p>
+<h3>Load / Store Instructions</h3>
+<p>
+<ul>
+<li>RAM access only allowed with load and store instructions
+<li>all other instructions use register operands
+</ul>
+<p>
+<u>load:</u>
+<ul>
+<pre>
+	lw	register_destination, RAM_source
+</pre>
+	<li>copy word (4 bytes) at source RAM location to destination register
+<pre>
+	lb	register_destination, RAM_source
+</pre>
+	<li>copy byte at source RAM location to low-order byte of destination register, and sign-extend to higher-order bytes
+</ul>
+
+<u>store word:</u>
+<ul>
+<pre>
+	sw	register_source, RAM_destination
+</pre>
+	<li>store word in source register into RAM destination
+<pre>
+	sb	register_source, RAM_destination
+</pre>
+	<li>store byte (low-order) in source register into RAM destination
+
+</ul>
+<u>load immediate:</u>
+<ul>
+<pre>
+	li	register_destination, value
+</pre>
+	<li>load immediate value into destination register
+</ul>
+<p>
+<pre>
+example
+
+		.data
+var1:		.word	23		# declare storage for var1; initial value is 23
+
+		.text
+__start:
+		lw	$t0, var1	# load contents of RAM location into register $t0:  $t0 = var1
+		li	$t1, 5		#  $t1 = 5   ("load immediate")
+		sw	$t1, var1	# store contents of register $t1 into RAM:  var1 = $t1
+		done
+</pre>
+<p>
+<hr>
+<p>
+
+<h3>Indirect and Based Addressing</h3>
+<p>
+<ul>
+<li>used only with load and store instructions
+</ul>
+<p>
+
+<u>load address:</u>
+<ul>
+<pre>
+	la	$t0, var1
+</pre>
+	<li>copy RAM address of var1 (presumably a label defined in the program) into register $t0
+</ul>
+<p>
+<u>indirect addressing:</u>
+<ul>
+<pre>
+	lw	$t2, ($t0)
+</pre>
+	<li>load word at RAM address contained in $t0 into $t2
+
+<pre>
+	sw	$t2, ($t0)
+</pre>
+	<li>store word in register $t2 into RAM at address contained in $t0
+</ul>
+<p>
+<u>based or indexed addressing:</u>
+<ul>
+<pre>
+	lw	$t2, 4($t0)
+</pre>
+	<li>load word at RAM address  ($t0+4)  into register $t2
+	<li>"4" gives offset from address in register $t0
+
+<pre>
+	sw	$t2, -12($t0)
+</pre>
+	<li>store word in register $t2 into RAM at address ($t0 - 12)
+	<li>negative offsets are fine
+</ul>
+<p>
+<ul>
+Note:	based addressing is especially useful for:
+		<li>arrays; access elements as offset from base address
+		<li>stacks; easy to access elements at offset from stack pointer or frame pointer
+</ul>
+<p>
+<pre>
+example
+
+		.data
+array1:		.space	12		#  declare 12 bytes of storage to hold array of 3 integers
+
+		.text
+__start:	la	$t0, array1	#  load base address of array into register $t0
+		li	$t1, 5		#  $t1 = 5   ("load immediate")
+		sw	$t1, ($t0)	#  first array element set to 5; indirect addressing
+		li	$t1, 13		#   $t1 = 13
+		sw	$t1, 4($t0)	#  second array element set to 13
+		li	$t1, -7		#   $t1 = -7
+		sw	$t1, 8($t0)	#  third array element set to -7
+		done
+</pre>
+<p>
+<hr>
+<p>
+
+
+<h3>Arithmetic Instructions</h3>
+<p>
+<ul>
+<li>most use 3 operands
+<li>all operands are registers; no RAM or indirect addressing
+<li>operand size is word (4 bytes)
+</ul>
+<p>
+<pre>
+		add	$t0,$t1,$t2	#  $t0 = $t1 + $t2;   add as signed (2's complement) integers
+		sub	$t2,$t3,$t4	#  $t2 = $t3 Ð $t4
+		addi	$t2,$t3, 5	#  $t2 = $t3 + 5;   "add immediate" (no sub immediate)
+		addu	$t1,$t6,$t7	#  $t1 = $t6 + $t7;   add as unsigned integers
+		subu	$t1,$t6,$t7	#  $t1 = $t6 + $t7;   subtract as unsigned integers
+
+		mult	$t3,$t4		#  multiply 32-bit quantities in $t3 and $t4, and store 64-bit
+					#  result in special registers Lo and Hi:  (Hi,Lo) = $t3 * $t4
+		div	$t5,$t6		#  Lo = $t5 / $t6   (integer quotient)
+					#  Hi = $t5 mod $t6   (remainder)
+		mfhi	$t0		#  move quantity in special register Hi to $t0:   $t0 = Hi
+		mflo	$t1		#  move quantity in special register Lo to $t1:   $t1 = Lo
+					#  used to get at result of product or quotient
+
+		move	$t2,$t3		#  $t2 = $t3
+</pre>
+<p>
+<hr>
+<p>
+	
+
+
+<h3>Control Flow Instructions</h3>
+<p>
+<u>Branches</u>
+<ul>
+<li>comparison for conditional branches is built into instruction
+</ul>
+<pre>
+		b	target			#  unconditional branch to program label target
+		beq	$t0,$t1,target		#  branch to target if  $t0 = $t1
+		blt	$t0,$t1,target		#  branch to target if  $t0 < $t1
+		ble	$t0,$t1,target		#  branch to target if  $t0 <= $t1
+		bgt	$t0,$t1,target		#  branch to target if  $t0 > $t1
+		bge	$t0,$t1,target		#  branch to target if  $t0 >= $t1
+		bne	$t0,$t1,target		#  branch to target if  $t0 <> $t1
+</pre>
+<p>
+<u>Jumps</u>
+<pre>
+		j	target		#  unconditional jump to program label target
+		jr	$t3		#  jump to address contained in $t3 ("jump register")
+</pre>
+<p>
+<u>Subroutine Calls</u>
+<p>
+subroutine call:  "jump and link" instruction
+<pre>
+	jal	sub_label	#  "jump and link"
+</pre>
+<ul>
+	<li>copy program counter (return address) to register $ra (return address register)
+	<li>jump to program statement at sub_label
+</ul>
+subroutine return:  "jump register" instruction
+<pre>
+	jr	$ra	#  "jump register"
+</pre>
+<ul>
+	<li>jump to return address in $ra (stored by jal instruction)
+</ul>
+<p>
+Note:	return address stored in register $ra; if subroutine will call other subroutines, or is recursive, return address should be copied from $ra onto stack to preserve it, since jal always places return address in this register and hence will overwrite previous value
+<p>
+<hr>
+<p>
+
+
+
+
+
+<h3>System Calls and I/O (SPIM Simulator)</h3>
+<p>
+<ul>
+<li>used to read or print values or strings from input/output window, and indicate program end
+<li>use <b>syscall</b> operating system routine call
+<ul>
+<li>first supply appropriate values in registers $v0 and $a0-$a1
+<li>result value (if any) returned in register $v0
+</ul>
+</ul>
+<p>
+<pre>
+
+ex   Print out integer value contained in register $t2
+		li	$v0, 1		# load appropriate system call code into register $v0;
+					# code for printing integer is 1
+		move	$a0, $t2	# move integer to be printed into $a0:  $a0 = $t2
+		syscall			# call operating system to perform operation
+
+ex   Read integer value, store in RAM location with label int_value (presumably declared in data section)
+		li	$v0, 5		# load appropriate system call code into register $v0;
+					# code for reading integer is 5
+		syscall			# call operating system to perform operation
+		sw	$v0, int_value	# value read from keyboard returned in register $v0;
+					# store this in desired location
+
+ex   Print out string (useful for prompts)
+
+		.data
+string1		.asciiz	"Print this.\n"	# declaration for string variable
+
+		.text
+main:		li	$v0, 4		# load appropriate system call code into register $v0;
+					# code for printing string is 4
+		la	$a0, string1	# load address of string to be printed into $a0
+		syscall			# call operating system to perform print operation
+	
+
+</pre>
+<u>Note:</u>
+<ul>
+	<li>string must be implemented as array of characters, terminated by null (\0)
+	<li>data type declaration  .asciiz  automatically null-terminates string
+</ul>
+<p>
+<u>Note:</u> To indicate end of program, use <b>exit</b> system call; thus last lines of program should be:
+<p>
+<pre>
+		li	$v0, 10		# system call code for exit = 10
+		syscall			# call operating system
+</pre>
+<p>
+Table of System Call Codes and Arguments<br>(from <u>SPIM S20: A MIPS R2000 Simulator</u>, James J. Larus, University of Wisconsin-Madison)
+<p>
+<table align = center border = 10>
+<tr>
+<td><b>Service</b></td>
+<td><b>System Call Code</b></td>
+<td><b>Arguments</b></td>
+<td><b>Result</b></td>
+</tr>
+<tr>
+<td>print integer</td>
+<td align = center>1</td>
+<td>$a0 = value</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>print float</td>
+<td align = center>2</td>
+<td>$f12 = float value</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>print double</td>
+<td align = center>3</td>
+<td>$f12 = double value</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>print string</td>
+<td align = center>4</td>
+<td>$a0 = address of string</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>read integer</td>
+<td align = center>5</td>
+<td>(none)</td>
+<td>$v0 = value read</td>
+</tr>
+<tr>
+<td>read float</td>
+<td align = center>6</td>
+<td>(none)</td>
+<td>$f0 = value read</td>
+</tr>
+<tr>
+<td>read double</td>
+<td align = center>7</td>
+<td>(none)</td>
+<td>$f0 = value read</td>
+</tr>
+<tr>
+<td>read string</td>
+<td align = center>8</td>
+<td>$a0 = address where string to be stored<br>
+$a1 = number of characters to read + 1</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>memory allocation</td>
+<td align = center>9</td>
+<td>$a0 = number of bytes of storage desired</td>
+<td>$v0 = address of block</td>
+</tr>
+<tr>
+<td>exit (end of program)</td>
+<td align = center>10</td>
+<td>(none)</td>
+<td>(none)</td>
+</tr>
+</table>
+<p>
+<hr>
+<p>
+<h2>Example</h2>
+<p>
+<br>
+
+<pre>
+# Compute the value of the sum     1*2 + 2*3 + 3*4 + ... + 10*11,   and store in register $t1
+
+		.data				# variable declaration section
+
+out_string:	.asciiz	"The result is:\n"	# declares a null-terminated string, to "prettify" output
+
+		.text	
+	
+main:						# indicates start of code
+		li	$t0, 1			# $t0 will be a counter; initialize to 1
+		li	$t1, 0			# $t1 will hold the sum
+		li	$t2, 10			# $t2 will hold loop limit
+
+loop_top:	bgt	$t0,$t2,loop_end	# exit loop if  $t0 > 10
+		addi	$t3,$t0,1		# $t3 = $t0 + 1
+		mult	$t0,$t3			# special register  Lo = $t0 * $t3
+						#  (don't need Hi since values are small)
+		mflo	$t3			# $t3 = Lo (= $t0 * $t3)
+		add	$t1,$t1,$t3		# $t1 = $t1 + $t3
+		addi	$t0, 1			# increment counter
+		b	loop_top		# branch to loop_top
+	
+loop_end:	# print out the result string
+		li	$v0, 4			# system call code for printing string = 4
+		la	$a0, out_string		# load address of string to be printed into $a0
+		syscall				# call operating system to perform print operation
+
+		# print out integer value in $t1
+		li	$v0, 1			# system call code for printing integer = 1
+		move	$a0, $t1		# move integer to be printed into $a0:  $a0 = $t1
+		syscall				# call operating system to perform print
+		
+		# exit program
+		li	$v0, 10			# system call code for exit = 10
+		syscall				# call operating system
+
+		# blank line at end to keep SPIM happy!
+</pre>
+
+
+<HR>
+Any concern about the goals, questions, or wording of this document,
+please send a message to <a href="mailto:jorgev@cs.jhu.edu">Jorge
+Vasconcelos</a>. 
+</BODY> 
+<hr> <a href="http://courses.isi.jhu.edu/csf">
+Return to the CSF Homepage</a> 
+</HTML>
