@@ -150,39 +150,41 @@ void swelip(
     uint16_t const a, uint16_t const b)
 {
     uint16_t x = 0, y = b; //theta=90 @origin (offset pixels in 4way)
-    uint32_t const AA = sqr32(a), BB = sqr32(b);
-    uint32_t const AABB = mul32(AA,BB);
+    uint32_t const AA = sqr32u(a), BB = sqr32u(b); // 16u in, 32u out
+    uint32_t const AABB = mul32u(AA,BB);
 
     //Helper values to pre-compute multiplied values then adjust with addition
-    uint32_t AAy    = mul32(AA,y);
-    uint32_t BBx    = 0; //(x==0): mul32(BB,x);
-    uint32_t BB2xp3 = /*(mul32(BB,x)<<1) +*/ (BB<<1) + BB; //(x==0)
-    //uint32_t AA2y   = (AAy<<1); //(mul32(AA,y)<<1);
+    uint32_t AAy    = mul32u(AA,y); //NOTE: INITIALLY AAy == AAb (since y==b INITIALLY)
+    uint32_t BBx    = 0; //(x==0): mul32u(BB,x);
+    uint32_t BB2xp3 = /*(mul32u(BB,x)<<1) +*/ (BB<<1) + BB; //(x==0)
+    //uint32_t AA2y   = (AAy<<1); //(mul32u(AA,y)<<1);
 
-    int32_t stopper = (AA>>1)+BB;
-    int32_t dd      = BB - AAy + (AA>>2); //AAy==mul32(AA,b) since y==b
+    // NOTE: "dd" and "stopper" are signed, unlike other vars
+    int32_t stopper = (AA>>1)+BB; // Always positive but signed to help compare below
+    int32_t dd      = BB - AAy + (AA>>2); //AAy==mul32u(AA,b) since y==b
 
+    //TODO: Need to manage signed/unsigned value comparisons better (more explicitly)
     swpixl_4way(fp,color, xc,yc, x,y);
     while (((AAy-BBx) > stopper) && (y > 0) && (x <= a)) { // (AAy-(AA>>1)) > (BBx+BB)
         if (dd >= 0) {
-            dd += (AA<<1) - (AAy<<1); //mul32(AA,y<<1);
+            dd += (AA<<1) - (AAy<<1); //mul32u(AA,y<<1);
             y--; AAy -= AA; //AA2y -= (AA<<1);
         }
-        dd += BB2xp3; //mul32(BB,(x<<1)+3);
+        dd += BB2xp3; //mul32u(BB,(x<<1)+3);
         x++; BBx += BB; BB2xp3 += (BB<<1);
         swpixl_4way(fp,color, xc,yc, x,y);
     }
 //return;
 //printf("\\\\\\\n");
     //Transition at slope=1, whatever theta happens to be; Reverse x&y roles
-    uint32_t BB2xp2 = BB2xp3 - BB; //mul32(BB,(x<<1)+2);
-    dd = mul32(BB,sqr32(x)+x)+(BB>>2) + mul32(AA,sqr32(y-1)) - AABB;
+    uint32_t BB2xp2 = BB2xp3 - BB; //mul32u(BB,(x<<1)+2);
+    dd = mul32u(BB,sqr32u(x)+x)+(BB>>2) + mul32u(AA,sqr32u(y-1)) - AABB;
     while ((y > 0) && (x <= a)) {
         if (dd < 0) {
-            dd += BB2xp2; //mul32(BB,(x<<1)+2);
+            dd += BB2xp2; //mul32u(BB,(x<<1)+2);
             x++; BB2xp2 += (BB<<1);
         }
-        dd += (AA<<1)+AA - (AAy<<1); //mul32(AA,y<<1);
+        dd += (AA<<1)+AA - (AAy<<1); //mul32u(AA,y<<1);
         y--; AAy -= AA; //AA2y -= (AA<<1);
         swpixl_4way(fp,color, xc,yc, x,y);
     }

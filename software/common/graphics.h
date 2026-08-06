@@ -10,6 +10,7 @@
 #define GP_STATE  (*((gstate_pv           )0x8000005C)) //READ:Status of PIX,GP,etc.
 
 //MEMORY FIXED GLOBAL TEMPORARIES
+//TODO: Allow dynamic location/size for temp GP commands (or map into BRAM, not DDR memory)
 #define GPTEMP_PTR    ((gpcode_p)0x10003000) //FIXED location "global"
 #define GPTEMP_SZW    (0x00000020)          //  32-words is...
 #define GPTEMP_SZB    ((GPTEMP_SZW) << 2)  //  128-bytes
