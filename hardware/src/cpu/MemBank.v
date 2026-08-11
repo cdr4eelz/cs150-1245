@@ -4,7 +4,7 @@
 module MemBank #(
     parameter CPU_FREQ = 50_000_000,
     parameter [31:0] DEAD_DMEM = 32'd0, DEAD_IMEM = 32'd0,
-    parameter XTRA_IMEM = 0, XTRA_DMEM = 0, //Scratchpad extra block-rams
+    parameter BRAM_XTRA = 0, //Scratchpad EXTRA block-rams
     parameter DD=`COLT45_DD,
     parameter COLT45_SCRATCH=0, COLT45_MEMWRITE=0
 )(
@@ -40,37 +40,44 @@ module MemBank #(
 
 //TODO: Ideally generate "isRead/isWrite" signals WHILE generating _WriteMask
 
-    reg  [3:0] hoti_;
-    always @(*) begin:_MUX_HOTI_ //Drive appropriate "activate" line for instruction fetch
+//TODO: Why is hoti_XYZ_ unlike _hot_XYZ???
+
+    reg hoti_ISR_, hoti_BR_, hoti_IC_;
+    reg hoti_X6_, hoti_X5_; //TODO: Conditional on BRAM_XTRA parameter?
+    always @(*) begin:_MUX_HOTI_ //Drive appropriate "activate" line for INSTRUCTION fetch
+        {hoti_ISR_, hoti_BR_, hoti_IC_} = 0;
+        {hoti_X6_, hoti_X5_} = 0; //TODO: Conditional?
         case (IMEM_ADDR[31:28])
-            4'b1100: hoti_ = 4'b1000;       //0xC => ISR
-            4'b0100: hoti_ = 4'b0100;       //0x4 => BR
-            4'b0001: hoti_ = 4'b0010;       //0x1 => IC
-            4'b0110: hoti_ = (XTRA_IMEM)?4'b0001:0; //XTRA: 0x6 => IB (Scratch-IMEM)
-            default: hoti_ = 0;
+            4'b1100: hoti_ISR_ = 1'b1;      //0xC => ISR
+            // No hoti_IO_ can't execute IO!  0x8 IO map
+            4'b0110: hoti_X6_ = BRAM_XTRA;  //0x6 => X6 (WAS IMEM)
+            4'b0101: hoti_X5_ = BRAM_XTRA;  //0x5 => X5 (WAS DMEM)
+            4'b0100: hoti_BR_ = 1'b1;       //0x4 => BR
+            4'b0011: hoti_IC_ = 1'b1;       //0x3 => IC
+            4'b0010: hoti_IC_ = 1'b1;       //0x2 => IC
+            4'b0001: hoti_IC_ = 1'b1;       //0x1 => IC
         endcase
     end
-    //Not all instruction-fetch "drives" usable by memories (several are always enabled)
-    wire hoti_BR_  = hoti_[2]; //TODO: Consider this for PCinBIOS test
-    wire hoti_IC_  = hoti_[1];
 
-    reg _hot_IO, _hot_BR, _hot_DC, _hot_IC, _hot_ISR;
-    reg _hot_IB, _hot_DB;
+    reg _hot_ISR, _hot_IO, _hot_BR, _hot_IC, _hot_DC;
+    reg _hot_X6, _hot_X5; //TODO: Conditional on BRAM_XTRA parameter?
     always @(*) begin
-        {_hot_IO,_hot_BR,_hot_DC,_hot_IB,_hot_DB,_hot_IC,_hot_ISR} = 0;
+        //NOTE: Ensure case assignments have a default value
+        {_hot_ISR, _hot_IO, _hot_BR, _hot_IC, _hot_DC} = 0;
+        {_hot_X6, _hot_X5} = 0; //TODO: Conditional?
         if (MemToRegDX_ || MemWriteDX_) begin
-            case (DMEM_ADDR[31:28])
-                4'b1000: _hot_IO = 1'b1;                        //  0x8
-                4'b0100: _hot_BR = !MemWriteDX_;        //Read-only 0x4
-                4'b0011: begin                                  //  0x3
-                        _hot_DC = 1'b1;
-                        _hot_IC = MemWriteDX_ && PCinBIOSDX_;
-                    end
-                4'b0010: _hot_IC = MemWriteDX_ && PCinBIOSDX_;  //  0x2
-                4'b0001: _hot_DC = 1'b1;                        //  0x1
-                4'b0110: _hot_IB = XTRA_IMEM && MemWriteDX_; //XTRA:Scratch-IMEM 0x6
-                4'b0101: _hot_DB = XTRA_IMEM && 1'b1;        //XTRA:Scratch-DMEM 0x5
-                4'b1100: _hot_ISR = MemWriteDX_; //ISR//
+            case (DMEM_ADDR[31:28]) //TODO: Just use hexadecimal nibble, not binary!
+                4'b1100: _hot_ISR = 1'b1;                      //ISR  0xC
+                4'b1000: _hot_IO = 1'b1;                       //IO   0x8
+                4'b0110: _hot_X6 = BRAM_XTRA && 1'b1;          //X6   0x6 WAS IMEM
+                4'b0101: _hot_X5 = BRAM_XTRA && 1'b1;          //X5   0x5 WAS DMEM
+                4'b0100: _hot_BR = !MemWriteDX_;               //BIOS 0x4 Read-Only
+                4'b0011: begin                                 //DDR  0x3 Both I & D
+                        _hot_IC = MemWriteDX_ && PCinBIOSDX_;  // INST CACHE from BIOS
+                        _hot_DC = 1'b1;                        // DATA CACHE
+                    end                                        // 
+                4'b0010: _hot_IC = MemWriteDX_ && PCinBIOSDX_; //INST 0x2
+                4'b0001: _hot_DC = 1'b1;                       //DATA 0x1
             endcase
         end
     end
@@ -78,41 +85,49 @@ module MemBank #(
 
     reg         P_dcache_re;
     reg  [31:0] P_dcache_addr;
-    reg  [ 3:0] P_hoti;
-    reg  [ 3:0] P_selD;
+    reg  [ 3:0] P_selI, P_selD;
     always @(posedge clk) begin:_REG_PRIOR_
         P_dcache_re <= dcache_re;
         P_dcache_addr <= dcache_addr;
-        if (!stall) begin
-            P_hoti <= hoti_;
+        if (!stall) begin  //High nibble identifies which memory
+            P_selI <= IMEM_ADDR[31:28];
             P_selD <= DMEM_ADDR[31:28];
         end
     end
 
 
-    wire [31: 0] INST_ISR, INST_BR, INST_IC, INST_IB;
+    wire [31: 0] RINST_ISR, RINST_BR, RINST_IC;
+    wire [31: 0] RINST_X6, RINST_X5;
     reg  [31: 0] MUX_IMEM;
     always @(*) begin:_MUX_IMEM_ //Drive instruction from appropriate memory component
-        case (P_hoti)
-            4'b1000: MUX_IMEM = INST_ISR;       //0xC => ISR
-            4'b0100: MUX_IMEM = INST_BR;        //0x4 => BR
-            4'b0010: MUX_IMEM = INST_IC;        //0x1 => IC
-            4'b0001: MUX_IMEM = (XTRA_IMEM)?INST_IB:DEAD_IMEM;//XTRA:  0x6 => IB (Scratch-IMEM)
-            default: MUX_IMEM = DEAD_IMEM; //TODO: Make "HALT" instruction rather than "NOP"
+        case (P_selI)
+            4'b1100: MUX_IMEM = RINST_ISR;                      // 0xC ISR
+            4'b1000: MUX_IMEM = DEAD_IMEM;                      // 0x8 Can't execute IO!
+            4'b0110: MUX_IMEM = (BRAM_XTRA)?RINST_X6:DEAD_IMEM; // 0x6 X6
+            4'b0101: MUX_IMEM = (BRAM_XTRA)?RINST_X5:DEAD_IMEM; // 0x5 X5
+            4'b0100: MUX_IMEM = RINST_BR;                       // 0x4 BIOS
+            4'b0011: MUX_IMEM = RINST_IC;                       // 0x3 INST-only
+            4'b0010: MUX_IMEM = RINST_IC;                       // 0x2 INST
+            4'b0001: MUX_IMEM = RINST_IC;                       // 0x1 Use INST
+            default: MUX_IMEM = DEAD_IMEM;
         endcase
     end
     assign IMEM_DATA = MUX_IMEM;
 
 
-    wire [31: 0] RData_IO, RData_BR, RData_DC, RData_DB;
+    wire [31: 0] RDATA_ISR, RDATA_IO, RDATA_BR, RDATA_DC;
+    wire [31: 0] RDATA_X6, RDATA_X5;
     reg  [31: 0] MUX_DMEM;
     always @(*) begin:_MUX_DMEM_
         case (P_selD)
-            4'b1000: MUX_DMEM = RData_IO;                       //  0x8
-            4'b0100: MUX_DMEM = RData_BR;                       //  0x4
-            4'b0011: MUX_DMEM = RData_DC;                       //  0x3
-            4'b0001: MUX_DMEM = RData_DC;                       //  0x1
-            4'b0101: MUX_DMEM = (XTRA_DMEM)?RData_DB:DEAD_DMEM;//XTRA: Scratchpad-DMEM  0x5
+            4'b1100: MUX_DMEM = RDATA_ISR;                      // 0xC ISR
+            4'b1000: MUX_DMEM = RDATA_IO;                       // 0x8 IO
+            4'b0110: MUX_DMEM = (BRAM_XTRA)?RDATA_X6:DEAD_DMEM; // 0x6 XTRA X6
+            4'b0101: MUX_DMEM = (BRAM_XTRA)?RDATA_X5:DEAD_DMEM; // 0x5 XTRA X5
+            4'b0100: MUX_DMEM = RDATA_BR;                       // 0x4 BIOS
+            4'b0011: MUX_DMEM = RDATA_DC;                       // 0x3 DATA-only
+            4'b0010: MUX_DMEM = RDATA_DC;                       // 0x2 Use DATA
+            4'b0001: MUX_DMEM = RDATA_DC;                       // 0x1 DATA
             default: MUX_DMEM = DEAD_DMEM;
         endcase // CAUTIOUS trapping of EVERY case
     end
@@ -126,8 +141,8 @@ module MemBank #(
         dcache_we   = (!stall && _hot_DC) ? (_WriteMask) : 4'b0000,
         dcache_din  = _WDataMasked,
         dcache_re   = (stall) ? P_dcache_re : (/*!stall &&*/ _hot_DC) && (_WriteMask == 4'b0000),
-        RData_DC    = dcache_dout;
-//    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RData_DC=32'd0;
+        RDATA_DC    = dcache_dout;
+//    assign dcache_addr=32'd0, dcache_we=4'b0000, dcache_re=1'b0, dcache_din=32'd0, RDATA_DC=32'd0;
 
     //NOTE: Both _hot_DC && _hot_IC ARE allowed to be active simultaneously for WRITE
     //      but writability rules prevent INST-read & DATA-write collision
@@ -135,47 +150,57 @@ module MemBank #(
         icache_we   = (!stall && !hoti_IC_ && _hot_IC) ? (_WriteMask) : 4'b0000,
         icache_din  = _WDataMasked,
         icache_re   = (!stall && hoti_IC_),
-        INST_IC     = icache_dout;
-//    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, INST_IC=32'd0;
+        RINST_IC     = icache_dout;
+//    assign icache_addr=32'd0, icache_we=4'b0000, icache_re=1'b0, icache_din=32'd0, RINST_IC=32'd0;
 
-    isr_mem bram_isr
-    ( .clka(clk), .ena(!stall && _hot_ISR),
-        .addra(DMEM_ADDR[13:2]),
-      /*.douta(RData_IB),//OUT-32*/
-        .wea(_WriteMask), .dina(_WDataMasked),
-
-    // INSTRUCTION Fletch (sic :)
-      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-      /*.enb(1'b1)*/ .doutb(INST_ISR) //No use for hoti_ISR_
-    ) /* synthesis syn_noprune=1 */;
-
+    // BIOS is read-only "ROM"
     bios_mem bram_bios
     ( .clka(clk), .ena(!stall && _hot_BR),
         .addra(DMEM_ADDR[13:2]),
-        .douta(RData_BR),//OUT-32
-      /*.wea(_WriteMask), .dina(_WDataMasked),*/
+        .douta(RDATA_BR),//OUT-32
 
     // Instruction reading port (b)
       .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-        .enb(hoti_BR_), .doutb(INST_BR)
+        .enb(hoti_BR_), .doutb(RINST_BR)
     ) /* synthesis syn_noprune=1 */;
 
-    dmem_blk_ram bram_dmem
-    ( .clka(clk), .ena(!stall && _hot_DB),
+    // Using "True Dual Port RAM"
+    isr_mem bram_isr
+    ( .clka(clk), .ena(!stall && _hot_ISR),
         .addra(DMEM_ADDR[13:2]),
-        .douta(RData_DB),//OUT-32
-        .wea(_WriteMask), .dina(_WDataMasked)
-    ) /* synthesis syn_noprune=1 */;
-
-    imem_blk_ram bram_imem
-    ( .clka(clk), .ena(!stall && _hot_IB),
-        .addra(DMEM_ADDR[13:2]),
-      /*.douta(RData_IB),//OUT-32*/
+        .douta(RDATA_ISR),//OUT-32*/
         .wea(_WriteMask), .dina(_WDataMasked),
 
-    // INSTRUCTION Fletch (sic :)
+    // INSTRUCTION Fetch
       .clkb(clk), .addrb(IMEM_ADDR[13:2]),
-      /*.enb(1'b1)*/ .doutb(INST_IB) //No use for hoti_IB_
+        .enb(hoti_ISR_), .doutb(RINST_ISR),
+        .web(4'b0000), .dinb(32'h0)
+    ) /* synthesis syn_noprune=1 */;
+
+    // Using "True Dual Port RAM"
+    dmem_blk_ram bram_dmem
+    ( .clka(clk), .ena(!stall && _hot_X5),
+        .addra(DMEM_ADDR[13:2]),
+        .douta(RDATA_X5),//OUT-32
+        .wea(_WriteMask), .dina(_WDataMasked),
+
+    // INSTRUCTION Fetch
+      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
+        .enb(hoti_X5_), .doutb(RINST_X5),
+        .web(4'b0000), .dinb(32'h0)
+    ) /* synthesis syn_noprune=1 */;
+
+    // Using "True Dual Port RAM"
+    imem_blk_ram bram_imem
+    ( .clka(clk), .ena(!stall && _hot_X6),
+        .addra(DMEM_ADDR[13:2]),
+        .douta(RDATA_X6),//OUT-32
+        .wea(_WriteMask), .dina(_WDataMasked),
+
+    // INSTRUCTION Fetch
+      .clkb(clk), .addrb(IMEM_ADDR[13:2]),
+        .enb(hoti_X6_), .doutb(RINST_X6),
+        .web(4'b0000), .dinb(32'h0)
     ) /* synthesis syn_noprune=1 */;
 
     `BUS_RVA_type(8) UATX, UARX; //UART is RVA SHAKE. Could easily go to FIFO, FSL, etc. for fun!
@@ -183,7 +208,7 @@ module MemBank #(
     ( .clk(clk), .rst(rst), .stall(stall),
         .ena(!stall && _hot_IO), //NOTE: Manage "ena" like a memory
         .addra(DMEM_ADDR[13:2]),
-        .douta(RData_IO),//OUT-32
+        .douta(RDATA_IO),//OUT-32
         .wea(_WriteMask), .dina(_WDataMasked),
     //RVAs
         .RVa_RX(UARX), .RVa_TX(UATX),
@@ -213,24 +238,24 @@ generate if (COLT45_MEMWRITE) begin:_MEMWRITE_
         // Plan to log these into a sequential list of critical actions (for stricter testing)
         $display("** [%h,%d] <= %h(%d) {%b}",
             DMEM_ADDR, DMEM_ADDR, _WDataMasked, _WDataMasked, _WriteMask);
-        $display("** TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b IB=%b DB=%b",
-            DMEM_ADDR[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
+        $display("** TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b X6=%b X5=%b",
+            DMEM_ADDR[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_X6, _hot_X5);
     end
 end endgenerate
 
 generate if (COLT45_SCRATCH) begin:_SCRATCH_
-    always@(posedge clk) if (!stall && _hot_DB) begin
+    always@(posedge clk) if (!stall && _hot_X5) begin
         $display("\n=============");
         DUMP_PC();
-        $display("TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b IB=%b DB=%b",
-            DMEM_ADDR[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_IB, _hot_DB);
+        $display("TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b X6=%b X5=%b",
+            DMEM_ADDR[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_X6, _hot_X5);
         if (|_WriteMask) begin
             regfile.DUMP();
             $display("[%h,%d] <<= %h(%d) {%b}",
                 DMEM_ADDR, DMEM_ADDR, _WDataMasked, _WDataMasked, _WriteMask);
         end else begin
             $display("[%h,%d] ==> %h(%d)",
-                DMEM_ADDR, DMEM_ADDR, RData_DB, RData_DB);
+                DMEM_ADDR, DMEM_ADDR, RDATA_X5, RDATA_X5);
         end
         $display("=============\n");
     end

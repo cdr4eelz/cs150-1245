@@ -81,7 +81,7 @@ end else begin:MEMS //"MIPS" & any others wanting MemBank
 
     // Memory Bank & Memory Mapped I/O
     MemBank #(
-        .CPU_FREQ(CPU_FREQ)
+        .CPU_FREQ(CPU_FREQ), .BRAM_XTRA(1) // Enable X5 & X6 memories
     ) bank (
         .clk(clk), .rst(rst), .stall(stall),
     // Memory/IO <==> CPU-CORE
