@@ -1,10 +1,13 @@
 #include "mutmath.h"
 
+/*
 uint32_t mul32u(uint16_t n, uint16_t m)
 __attribute__ ((weak, alias ("mut_mul32u_branchless") ));
 
 uint32_t sqr32u(uint16_t n)
 __attribute__ ((weak, alias ("mut_sqr32u_branchless") ));
+*/
+
 
 
 uint32_t mut_mul32u_naive(uint16_t n, uint16_t m)
@@ -71,10 +74,10 @@ uint32_t mut_mul32u_branchless(uint16_t m1, uint16_t m2) {
  * @brief Computes the absolute value of a 16-bit signed integer branchlessly.
  * @note Optimized for architectures like MIPS I.
  */
-/* static inline uint32_t mut_abs16s_ext32(int16_t x) {
+   static inline uint32_t mut_abs16s_ext32(int16_t x) {
     uint32_t mask = x >> 15; // 0x00000000 if positive, 0xFFFFFFFF if negative
     return (x + mask) ^ mask; // Branchless
-} */
+}
 
 /**
  * @brief Multiplies two signed 16-bit integers without a hardware multiplier.
@@ -83,7 +86,7 @@ uint32_t mut_mul32u_branchless(uint16_t m1, uint16_t m2) {
  * @param m2 Second signed 16-bit operand.
  * @return The signed 32-bit result (m1 * m2).
  */
-/* int32_t mut_mul32s_branchless(int16_t m1, int16_t m2) {
+int32_t mut_mul32s_branchless(int16_t m1, int16_t m2) {
     // 1. Determine the sign of the final result using XOR
     // If signs differ, sign_mask becomes 0xFFFFFFFF. If they match, 0x00000000.
     int32_t sign_mask = (m1 ^ m2) >> 15;
@@ -117,14 +120,14 @@ uint32_t mut_mul32u_branchless(uint16_t m1, uint16_t m2) {
     // If sign_mask is 0xFFFFFFFF, this computes: (r ^ 0xFFFFFFFF) + 1, which is -r.
     // If sign_mask is 0x00000000, it computes: (r ^ 0) + 0, which keeps r positive.
     return (uint32_t)((r ^ sign_mask) - sign_mask);
-} */
+}
 
 
 // SQUARE (n * n) functions:
 
 uint32_t mut_sqr32u_naive(uint16_t n)
 {
-    mul32u(n,n); // Use whicever multiplication function is active
+    return mut_mul32s_branchless(n,n); // Use whicever multiplication function is active
 }
 
 /**

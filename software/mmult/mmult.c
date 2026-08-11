@@ -75,6 +75,7 @@ void generate_matrices() {
 void print_matrix(int32_t* base) {
     int8_t buffer[128]; // Buffer on stack for ascii conversions
     int32_t i, j, *it;
+
     it = base;
     for (i = 0; i < DIM_SIZE; i++) {
         for (j = 0; j < DIM_SIZE; j++) {
