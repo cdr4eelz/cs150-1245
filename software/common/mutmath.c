@@ -7,6 +7,7 @@ uint32_t sqr32u(uint16_t n)
 __attribute__ ((weak, alias ("mut_sqr32u_branchless") ));
 
 
+/*
 uint32_t mut_mul32u_naive(uint16_t n, uint16_t m)
 {
 //  return n*m;
@@ -19,19 +20,22 @@ uint32_t mut_mul32u_naive(uint16_t n, uint16_t m)
     }
     return prod;
 }
+*/
 
-/* Russian Peasant / Binary Long Multiplication algorithm */
+/*
+// Russian Peasant / Binary Long Multiplication algorithm
 uint32_t mut_mul32u_quick(uint16_t a, uint16_t b) {
-    uint32_t result = 0;
-    while (b > 0) {
-        if (b & 1) {
-            result += a;
+    uint32_t aa = a, bb = b, result = 0;
+    while (bb) {
+        if (bb & 1) {
+            result += aa;
         }
-        a <<= 1;
-        b >>= 1;
+        aa <<= 1;
+        bb >>= 1;
     }
     return result;
 }
+*/
 
 /**
  * @brief Product of two unsigned 16-bit integers as 32-bit .
@@ -83,7 +87,8 @@ uint32_t mut_mul32u_branchless(uint16_t m1, uint16_t m2) {
  * @param m2 Second signed 16-bit operand.
  * @return The signed 32-bit result (m1 * m2).
  */
-/* int32_t mut_mul32s_branchless(int16_t m1, int16_t m2) {
+/*
+int32_t mut_mul32s_branchless(int16_t m1, int16_t m2) {
     // 1. Determine the sign of the final result using XOR
     // If signs differ, sign_mask becomes 0xFFFFFFFF. If they match, 0x00000000.
     int32_t sign_mask = (m1 ^ m2) >> 15;
@@ -117,74 +122,42 @@ uint32_t mut_mul32u_branchless(uint16_t m1, uint16_t m2) {
     // If sign_mask is 0xFFFFFFFF, this computes: (r ^ 0xFFFFFFFF) + 1, which is -r.
     // If sign_mask is 0x00000000, it computes: (r ^ 0) + 0, which keeps r positive.
     return (uint32_t)((r ^ sign_mask) - sign_mask);
-} */
+}
+*/
 
 
 // SQUARE (n * n) functions:
 
-uint32_t mut_sqr32u_naive(uint16_t n)
+/*
+uint32_t mut_sqr32u_mul(uint16_t n)
 {
     mul32u(n,n); // Use whicever multiplication function is active
 }
+*/
 
-/**
- * @brief Square of 16-bit unsigned integer as 32-bit unsigned.
- * @note Optimized for MIPS I. Completely branchless and unrolled.
- *       Guarantees execution in a fixed, ultra-low number of clock cycles.
- * @param x The 16-bit unsigned integer to square (0 to 65535).
- * @return The 32-bit unsigned squared result (x^2).
- */
+// Branchless 16-bit squaring for MIPS-I (No multiplication)
 uint32_t mut_sqr32u_branchless(uint16_t x) {
-    uint32_t r = 0;
-    uint32_t a = x;
+    uint32_t res = 0;
+    uint32_t accum = x;
 
-    // Bit 0
-    r += a & -(uint32_t)(a & 1);
-    a <<= 1;
-    // Bit 1
-    r += a & -(uint32_t)((a >> 1) & 1);
-    a <<= 1;
-    // Bit 2
-    r += a & -(uint32_t)((a >> 2) & 1);
-    a <<= 1;
-    // Bit 3
-    r += a & -(uint32_t)((a >> 3) & 1);
-    a <<= 1;
-    // Bit 4
-    r += a & -(uint32_t)((a >> 4) & 1);
-    a <<= 1;
-    // Bit 5
-    r += a & -(uint32_t)((a >> 5) & 1);
-    a <<= 1;
-    // Bit 6
-    r += a & -(uint32_t)((a >> 6) & 1);
-    a <<= 1;
-    // Bit 7
-    r += a & -(uint32_t)((a >> 7) & 1);
-    a <<= 1;
-    // Bit 8
-    r += a & -(uint32_t)((a >> 8) & 1);
-    a <<= 1;
-    // Bit 9
-    r += a & -(uint32_t)((a >> 9) & 1);
-    a <<= 1;
-    // Bit 10
-    r += a & -(uint32_t)((a >> 10) & 1);
-    a <<= 1;
-    // Bit 11
-    r += a & -(uint32_t)((a >> 11) & 1);
-    a <<= 1;
-    // Bit 12
-    r += a & -(uint32_t)((a >> 12) & 1);
-    a <<= 1;
-    // Bit 13
-    r += a & -(uint32_t)((a >> 13) & 1);
-    a <<= 1;
-    // Bit 14
-    r += a & -(uint32_t)((a >> 14) & 1);
-    a <<= 1;
-    // Bit 15
-    r += a & -(uint32_t)((a >> 15) & 1);
+    // Unrolled, branchless bit-testing and addition
+    // The mask (x & (1 << N)) turns into a conditional mask via arithmetic shift
+    res += accum & (-((int32_t)(x & (1 << 0)) >> 0));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 1)) >> 1));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 2)) >> 2));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 3)) >> 3));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 4)) >> 4));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 5)) >> 5));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 6)) >> 6));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 7)) >> 7));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 8)) >> 8));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 9)) >> 9));   accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 10)) >> 10)); accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 11)) >> 11)); accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 12)) >> 12)); accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 13)) >> 13)); accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 14)) >> 14)); accum <<= 1;
+    res += accum & (-((int32_t)(x & (1 << 15)) >> 15));
 
-    return r;
+    return res;
 }
