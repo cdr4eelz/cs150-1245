@@ -60,3 +60,64 @@ int8_t* type##_to_ascii_hex(type##_t const x, int8_t* const buffer, \
 DEFINE_TO_ASCII_HEX(uint8)
 DEFINE_TO_ASCII_HEX(uint16)
 DEFINE_TO_ASCII_HEX(uint32)
+
+
+/*
+ * Convert uint32_t to decimal string without using the division (/) or
+ * modulo (%) operators.
+ *
+ * Method:
+ *   Pre-compute the powers of ten (10^9 … 10^0).
+ *   For each power, count how many times it fits into the remaining
+ *   value by repeated subtraction.  That count becomes the digit.
+ *   Leading zeros are suppressed.
+ *
+ * Buffer must be at least 11 bytes.
+ */
+int8_t* uint32_to_ascii_dec(uint32_t const x, int8_t* const buffer,
+                            uint32_t const n)
+{
+    uint32_t value = x;
+    if (value == 0) {
+        buffer[0] = '0';
+        buffer[1] = '\0';
+        return buffer;
+    }
+
+    /* 10^9 down to 10^0 */
+    static const uint32_t powers[10] = {
+        1000000000U,
+         100000000U,
+          10000000U,
+           1000000U,
+            100000U,
+             10000U,
+              1000U,
+               100U,
+                10U,
+                 1U
+    };
+
+    char *p = buffer;
+    int   started = 0;          /* have we written a non-zero digit yet? */
+
+    for (int i = 0; i < 10; ++i) {
+        uint32_t power = powers[i];
+        char     digit = '0';
+
+        /* repeated subtraction replaces division */
+        while (value >= power) {
+            value -= power;
+            ++digit;
+        }
+
+        /* suppress leading zeros, but always emit the units digit */
+        if (digit != '0' || started || i == 9) {
+            *p++ = digit;
+            started = 1;
+        }
+    }
+
+    *p = '\0';
+    return buffer;
+}

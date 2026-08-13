@@ -24,4 +24,7 @@ DECLARE_TO_ASCII_HEX(uint8)
 DECLARE_TO_ASCII_HEX(uint16)
 DECLARE_TO_ASCII_HEX(uint32)
 
+int8_t* uint32_to_ascii_dec(uint32_t const x, int8_t* const buffer,
+                            uint32_t const n);
+
 #endif
