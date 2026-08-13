@@ -130,7 +130,7 @@ void outs(const int8_t *s) {
 DEFINE_TO_ASCII_HEX(uint32)
 
 void r100m() {
-    volatile uint32_t i = 0, t = 10^7;
+    volatile uint32_t i = 0, t = 10000000U; //10^7
     while (i < t) i++;
 }
 void r100f() {r100m();r100m();}
