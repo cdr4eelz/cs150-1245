@@ -55,6 +55,6 @@ CCMIPS ?= -mips1 -march=mips1 -mabi=32 -mno-abicalls -msoft-float -mno-dsp -mno-
 
 # -pedantic
 PCLANG ?= $(CLANG) -cc1 -triple=$(M_TRI) -target-cpu mips1 -target-abi o32 -mrelocation-model static
-LIBOPTS ?= -nostartfiles -nostdlib -nodefaultlibs -static
+LIBOPTS ?= -nostartfiles -nostdlib -nodefaultlibs -static  -Wl,--build-id=none
 PLLC   ?= $(LLC) -march=$(M_ARCH) -relocation-model=static
 

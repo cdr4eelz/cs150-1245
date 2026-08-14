@@ -1,7 +1,7 @@
 DUMPOPTS ?= -xsD
 # --disassembler-options=reg-names=numeric,no-aliases
 
-ASMOPTS = --warn -g -ahlsgm=$(patsubst %.s,%.list,$<)
+ASMOPTS = --warn -g -ahlsgmd=$(patsubst %.s,%.list,$<)
 
 SSRCS := $(wildcard *.s)
 SOBJS := $(SSRCS:%.s=%.s.o)
@@ -36,7 +36,8 @@ all: objs elfs mifs coes vees dumps
 	bin2rom $(TARGET) 0 < $< > $@
 
 %.elf: %.ld %.s.o
-	$(PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $^ -o $@ #HAD $< $^
+###	$(PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T $^ -o $@ #HAD $< $^
+	$(PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -Wl,--build-id=none -T $^ -o $@ #HAD $< $^
 
 %.s.o: %.s
 	$(PRE)-as $(ASMOPTS) $< -o $<.o
