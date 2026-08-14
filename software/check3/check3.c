@@ -1,7 +1,10 @@
 #include "types.h"
-#include "ascii_defs.h"
 #include "uart.h"
-//#include "stdio.h"
+
+// Only declare ASCII function(s) as needed
+#undef ASCII_WANT_DEC
+#include "ascii_defs.inc"
+DEFINE_TO_ASCII_HEX(uint32)
 
 // COP0 interrupt MASKs
 #define B_GLOBAL        0
@@ -127,7 +130,6 @@ void outs(const int8_t *s) {
     }
 }
 
-DEFINE_TO_ASCII_HEX(uint32)
 
 void r100m() {
     volatile uint32_t i = 0, t = 10000000U; //10^7

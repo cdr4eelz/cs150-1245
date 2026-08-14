@@ -3,6 +3,11 @@
 
 #include "types.h"
 
+//TODO: Declare INLINE variants that call a shared function
+
+
+//DECLARATION macros and headers
+
 #define DECLARE_FROM_ASCII_HEX(type) \
 type##_t ascii_hex_to_##type(const char* s);
 
@@ -27,4 +32,4 @@ DECLARE_TO_ASCII_HEX(uint32)
 int8_t* uint32_to_ascii_dec(uint32_t const x, int8_t* const buffer,
                             uint32_t const n);
 
-#endif
+#endif //ASCII_H_
