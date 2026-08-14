@@ -3,7 +3,11 @@
 #include "ascii.h"
 #include "uart.h"
 
-#define N 6
+#define ASCII_WANT_DEC
+#include "ascii_defs.inc"
+DEFINE_TO_ASCII_HEX(uint32);
+
+#define N 2
 #define DIM_SIZE (1 << N)
 #define M_SIZE (1 << (N << 1))
 #define DATA (int32_t *) 0x10018000
@@ -72,6 +76,11 @@ void generate_matrices() {
     }
 }
 
+void print_N(uint32_t n) {
+    int8_t buffer[128]; // Buffer on stack for ascii conversions
+    uwrite_int8s(uint32_to_ascii_dec(n, buffer, 128));
+}
+
 void print_matrix(int32_t* base) {
     int8_t buffer[128]; // Buffer on stack for ascii conversions
     int32_t i, j, *it;
@@ -90,10 +99,17 @@ typedef void (*entry_t)(void);
 
 int main(int argc, char**argv) {
     generate_matrices();
+    uwrite_int8s("\r\n");
     run_and_time(&mmult);
+    uwrite_int8s("\r\nN = ");
+    print_N(N);
+    uwrite_int8s("\r\n");
     print_matrix(DATA);
+    uwrite_int8s("\r\n");
     print_matrix(DATA + M_SIZE);
+    uwrite_int8s("\r\n");
     print_matrix(DATA + M_SIZE + M_SIZE);
+    uwrite_int8s("\r\n");
     // go back to the bios - using this function causes a jr to the addr,
     // the compiler "jals" otherwise and then cannot set PC[31:28]
     //uint32_t bios = ascii_hex_to_uint32("40000000");
