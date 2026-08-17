@@ -28,7 +28,7 @@ module MIPS150 #(
     input           irq_pf_frame, irq_gp_done
 );
 
-    wire irq_uart0, irq_uart1;
+    wire irq_UARX, irq_UATX;
 
     wire [ 4: 0] REGFILE_ra1, REGFILE_ra2, REGFILE_wa;
     wire [31: 0] REGFILE_rd1, REGFILE_rd2, REGFILE_wd;
@@ -61,7 +61,7 @@ module MIPS150 #(
         .intr_handled(intr_handled),    //IN  (Acknowledge ISR is happening)
         .intr_request(intr_request),    //OUT (Like branch to fixed address)
     // Interrupt Requests <==> Devices
-        .irq_uart0(irq_uart0), .irq_uart1(irq_uart1),
+        .irq_UARX(irq_UARX), .irq_UATX(irq_UATX),
         .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done)
     );
 
@@ -94,7 +94,7 @@ end else begin:MEMS //"MIPS" & any others wanting MemBank
         ._WDataMasked(_WDataMasked),
         ._WriteMask(_WriteMask),
     // Interrupts <==> COP0150
-        .irq_uart0(irq_uart0), .irq_uart1(irq_uart1),
+        .irq_UARX(irq_UARX), .irq_UATX(irq_UATX),
 
     // Serial (UART):
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX), .FPGA_SERIAL_TX(FPGA_SERIAL_TX),

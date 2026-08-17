@@ -14,8 +14,8 @@ module COP0150(
     input               intr_handled, //InterruptHandled
     output              intr_request, //InterruptRequest
 
-    input               irq_uart0, //UART0Request
-    input               irq_uart1, //UART1Request
+    input               irq_UARX, //UART0Request
+    input               irq_UATX, //UART1Request
     input               irq_pf_frame, //PixelFeederRequest
     input               irq_gp_done //GraphicsProcessorRequest
 );
@@ -39,7 +39,7 @@ module COP0150(
     assign firertc      = (count == 32'hFFFF_FFFF); //TODO: Pick better compare value???
     // Interrupts received as input (from CPU):
     assign interrupts   = {firetimer, firertc, irq_pf_frame,
-                            irq_gp_done, irq_uart1, irq_uart0};
+                            irq_gp_done, irq_UATX, irq_UARX};
 
     assign ip           = cause[15:10];     // Current "active" interrupt mask
     assign im           = status[15:10];    // Enabled interrupts mask

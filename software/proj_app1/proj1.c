@@ -7,7 +7,7 @@
 DEFINE_TO_ASCII_HEX(uint32)
 
 //TODO: Move COP constants to shared header (plus asm version)
-//{firetimer, firertc, irq_pf_frame, irq_gp_done, irq_uart1, irq_uart0};
+//{firetimer, firertc, irq_pf_frame, irq_gp_done, irq_UATX, irq_UARX};
 // COP0 interrupt BIT-offsets
 #define IB_GLOBAL   0
 #define IB_UARX     10

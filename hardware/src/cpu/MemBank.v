@@ -20,7 +20,7 @@ module MemBank #(
     input  [ 3: 0]  _WriteMask,
 
 // Interrupts:
-    output irq_uart0, irq_uart1,
+    output irq_UARX, irq_UATX,
 
 // Serial (UART):
     input   FPGA_SERIAL_RX,
@@ -223,8 +223,8 @@ module MemBank #(
 
     UARTRVA #(.ClockFreq(CPU_FREQ)) uartrva
     ( .Clock(clk), .Reset(rst),
-        .SIn(FPGA_SERIAL_RX),  .UARX(UARX),   .IRQ_RX(irq_uart0), //Receiver
-        .UATX(UATX),  .SOut(FPGA_SERIAL_TX),  .IRQ_TX(irq_uart1) //Transmitter
+        .SIn(FPGA_SERIAL_RX),  .UARX(UARX),   .IRQ_RX(irq_UARX), //Receiver
+        .UATX(UATX),  .SOut(FPGA_SERIAL_TX),  .IRQ_TX(irq_UATX) //Transmitter
     ) /* synthesis syn_noprune=1 */;
 
 
