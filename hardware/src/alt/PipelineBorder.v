@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 
 /*
 **  Abstraction of inter-stage register'd or latch'd value at pipeline stage borders

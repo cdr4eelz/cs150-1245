@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 `ifndef MACROSAFE
 `define MACROSAFE
 `endif // required to get this to compile...

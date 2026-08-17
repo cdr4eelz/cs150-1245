@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module SramArbiter #(
   parameter SIMPLE_ROBIN=0,
   parameter FAULT_LINES=0, BADWORD=32'h8BADBEEF

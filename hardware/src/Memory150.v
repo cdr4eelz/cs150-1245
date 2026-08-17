@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 //----------------------------------------------------------------------
 // Module: Memory.v
 // Authors: James Parker, Daiwei Li

@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module SRAM #(
   parameter LOGIC_CLK_FEEDBACK=0, SRAM_CLK_FEEDBACK=0,
               SRAM_CLK_ODDR=1 //Clock-Forwarding via ODDR (Xilinx-recommended)

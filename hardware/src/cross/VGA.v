@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 /*           PIX-MHz | hSTRT    hTOT  |vSTRT    vTOT |   hFP hBP |   vFP vBP |   hSP |   vSP
   640x480@60: 25.175 |H          800  |V         525 |H   16  48 |V   11  31 |H   96 |V    2
   640x480@72: 31.500 |H               |V             |H   24 128 |V    9  28 |H   40 |V    3

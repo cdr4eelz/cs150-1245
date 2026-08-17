@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 
 /*          Fetch/Read/Write table (blended with old Partition Table)

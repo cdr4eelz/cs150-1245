@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 //-----------------------------------------------------------------------------
 //  Module: RegFile
 //  Desc: An array of 32 32-bit registers

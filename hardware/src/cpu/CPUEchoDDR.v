@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module CPUEchoDDR #(
     parameter CPU_FREQ = 50_000_000,
     parameter COLT45_SCOPE=0

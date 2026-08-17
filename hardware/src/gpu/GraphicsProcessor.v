@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 //TODO:GP kill current work & start new GP_CODE
 //TODO:Read-back GP_CODE address...chunk-address
 

@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 `include "../cpuglobal.vh"
 
 //TODO: Check for misalignment (PC-FAULT) or just formally eliminate lower 2 bits

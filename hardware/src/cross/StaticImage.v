@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 //`define MACROSAFE // required to get this to compile in MODELSIM...
 //`include "Const.v"
 `ifndef max

@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module PatternGenerator #(
   parameter CLOCK_HZ = 50_000_000,
   parameter SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600,

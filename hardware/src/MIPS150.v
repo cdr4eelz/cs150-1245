@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 // Simple adapter to house MemoryBank <=> MIPS150 interface
 
 module MIPS150 #(

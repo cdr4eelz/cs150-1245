@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module ByteAccess4 #(
     parameter BigEndian = 1 //NOTE: Endianess option UNIMPLEMENTED (always BIG)!!!
 ) (

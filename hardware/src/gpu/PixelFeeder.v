@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 /* This module keeps a FIFO filled that then outputs to the DVI module. */
 
 `include "gpcommands.vh"
