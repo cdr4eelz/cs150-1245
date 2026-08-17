@@ -32,24 +32,24 @@ module COP0150(
 
     assign firetimer    = (count == compare);
     assign firertc      = (count == 32'hFFFF_FFFF);
-    //assign interrupts = {firetimer, firertc, 2'b00, irq_uart1, irq_uart0};
-    assign interrupts   = {firetimer, firertc, irq_pf_frame, irq_gp_done,
-                            irq_uart1, irq_uart0};
+    assign interrupts   = {firetimer, firertc, irq_pf_frame,
+                            irq_gp_done, irq_uart1, irq_uart0};
 
     assign ip           = cause[15:10];
     assign im           = status[15:10];
     assign ie           = status[0];
 
-    assign next_ip      = ip | interrupts;
+    //Ignore masked off interupts but leave if in prior "cause"
+    assign next_ip      = ip | (interrupts & im); 
 
     always@(*) begin
         case(COP0_ra)
-            5'hE:       dataout_r <= epc;
             5'h9:       dataout_r <= count;
             5'hB:       dataout_r <= compare;
             5'hC:       dataout_r <= status;
             5'hD:       dataout_r <= cause;
-            default:    dataout_r <= 32'bx;
+            5'hE:       dataout_r <= epc;
+            default:    dataout_r <= 0; //32'bx if simulation
         endcase
     end
 
@@ -67,14 +67,17 @@ module COP0150(
                     count   <= (COP0_ra == 5'h9) ? COP0_wd : (count + 1);
                     compare <= (COP0_ra == 5'hB) ? COP0_wd : compare;
                     status  <= (COP0_ra == 5'hC) ? COP0_wd : status;
+                    // "cause" is overcomplicated. Plain write is MASKed by "next_ip", a write to
+                    //    "compare" (0xB) register (above) ALSO resets timer "cause" bit, and
+                    //    finally, "cause" is otherwise updated with "next_ip" here & elsewhere.
                     cause   <= (COP0_ra == 5'hD) ? {COP0_wd[31:16], next_ip & COP0_wd[15:10], COP0_wd[9:0]}
                              : (COP0_ra == 5'hB) ? {cause[31:16], 1'b0, next_ip[4:0], cause[9:0]}
-                             :                       {cause[31:16], next_ip, cause[9:0]};
+                             :                     {cause[31:16], next_ip, cause[9:0]};
                 end else if(intr_handled) begin
                     epc     <= intr_pc;
                     count   <= count + 1;
                     compare <= compare;
-                    status  <= {status[31:1], 1'b0};
+                    status  <= {status[31:1], 1'b0}; // Disable GLOBAL upon ISR entry
                     cause   <= {cause[31:16], next_ip, cause[9:0]};
                 end else begin
                     epc     <= epc;
