@@ -112,7 +112,7 @@ void main() {
     while (!UTRAN_CTRL) { }
     UTRAN_DATA = '2';
     while ((share->stash0 == -1u) && (share->stash1 == -1u)) { }
-    //ISR_STATUS(0x00000000, 0x00000000);
+    ISR_STATUS(0x00000000, 0x00000000);
     while (!UTRAN_CTRL) { }
     UTRAN_DATA = 'b';
     while (!UTRAN_CTRL) { }
@@ -134,3 +134,17 @@ void main() {
 
     return;
 }
+
+/* Resulting output..
+> jal 10000000
+PROJ2...
+1a2#b
+stash0: 00000800
+stash1: 00000c00
+3c
+[screen is terminating]
+
+Note that one "#" squeaks through (from UATX interrupt) since
+    interrupts are turned off immediately after the setting of
+    the "stash" values is detected (by the UATX ISR handler).
+*/

@@ -1,4 +1,4 @@
-TARGET := check3
+TARGET := proj3
 LDSTYLE := inject_cache
 #SSRCS := start.s
 #LIBOPTS ?= -nostartfiles -nodefaultlibs

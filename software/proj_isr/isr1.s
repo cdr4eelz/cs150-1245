@@ -162,7 +162,7 @@ ISR_UATX:
     la      $k1, SM_stash1
     sw      $k0, 0($k1)  # Store Status
 
-###TEMP: Try send char on ANY interrupt!
+###TEMP: Try send char on during interrupt
     ori     $k0, $zero, '#'
     la      $k1, MM_UATX_DATA
     sw      $k0, 0($k1)  #Send character
