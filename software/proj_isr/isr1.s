@@ -154,7 +154,7 @@ ISR_UARX:
     addi    $k1, $zero, !IM_UARX
 
 ISR_UATX:
-###TEMP: Stash stuff into stashes
+###TEMP: Stash state stuff into stashes
     mfc0    $k0, Cause
     la      $k1, SM_stash0
     sw      $k0, 0($k1)  # Store Cause
@@ -162,21 +162,17 @@ ISR_UATX:
     la      $k1, SM_stash1
     sw      $k0, 0($k1)  # Store Status
 
-###TEMP: Try send char on during interrupt
+###TEMP: Try send char DURING interrupt
     ori     $k0, $zero, '#'
     la      $k1, MM_UATX_DATA
     sw      $k0, 0($k1)  #Send character
-    j       done_cause
-    addi    $k1, $zero, !IM_UATX
-#    j       done_temp
-#    nop
 
 #TEMP: Disable IM_UATX interrupt
 done_temp:
     mfc0    $k1, Status
     andi    $k1, $k1, !IM_UATX
     mtc0    $k1, Status
-
+#Fallthrough to standard ISR return here...
     j       done_cause
     addi    $k1, $zero, !IM_UATX
 

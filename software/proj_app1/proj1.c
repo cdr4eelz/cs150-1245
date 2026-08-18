@@ -56,7 +56,8 @@ struct SM_DATA {
         : "i" (KEEP), "i" (SET)                 \
         : "t0","t1","t2" )
 
-//TODO: Make INLINE?
+//TODO: Fix this function. Fails for unknown reason...
+/*
 uint32_t maskStatus(const uint32_t keep, const uint32_t set) {
     uint32_t prior;
     asm (
@@ -69,6 +70,7 @@ uint32_t maskStatus(const uint32_t keep, const uint32_t set) {
         : "t0"); //$t0==$8
     return prior;
 }
+*/
 
 //TODO: Put in simple string library (perhaps as INLINE)
 int8_t* copy_string(int8_t* dst, int8_t* src) {
@@ -94,7 +96,7 @@ void main() {
     //TODO: Clear "Cause" register
     ISR_STATUS(0x00000000, 0x00000000);
 
-    uwrite_int8s("\r\n\r\nPROJ2...\r\n"); //Output without interrupts
+    uwrite_int8s("\r\n\r\nPROJ1...\r\n"); //Output without interrupts
     if (share->stash0 != -1u) { return; }
     while (!UTRAN_CTRL) { }
     UTRAN_DATA = '1';
@@ -104,22 +106,20 @@ void main() {
     while (!UTRAN_CTRL) { }
 
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UARX | IM_UATX);
-    //if (share->stash0 == -1u) { return; }
-//    while ((share->stash0 == -1u) && (share->stash1 == -1u)) { }
-//    ISR_STATUS(0x00000000, 0x00000000);
     if ((share->stash0 != -1u) || (share->stash1 != -1u)) { return; }
 
     while (!UTRAN_CTRL) { }
-    UTRAN_DATA = '2';
+    UTRAN_DATA = '2'; // This should trigger a subsequent UATX interrupt
+    // The UATX handler stashes CAUSE & STATUS in stash0/1
+    // The UATX outputs one '#' and leaves UATX interrupt DISABLED
+    //     so no more UATX chars sent and the "b" below is sent...
     while ((share->stash0 == -1u) && (share->stash1 == -1u)) { }
-    ISR_STATUS(0x00000000, 0x00000000);
+    //ISR_STATUS(0x00000000, 0x00000000);
     while (!UTRAN_CTRL) { }
     UTRAN_DATA = 'b';
     while (!UTRAN_CTRL) { }
 
     ISR_STATUS(0x00000000, 0x00000000);
-
-    //if ((share->stash0 != 0) || (share->stash1 != 0)) { return; }
 
     uwrite_int8s("\n\rstash0: ");
     uwrite_int8s(uint32_to_ascii_hex(share->stash0, tbuff, TBUF_SIZE));
@@ -137,14 +137,15 @@ void main() {
 
 /* Resulting output..
 > jal 10000000
-PROJ2...
+
+
+PROJ1...
 1a2#b
 stash0: 00000800
 stash1: 00000c00
 3c
-[screen is terminating]
 
-Note that one "#" squeaks through (from UATX interrupt) since
-    interrupts are turned off immediately after the setting of
-    the "stash" values is detected (by the UATX ISR handler).
+[Golt45.2.2]
+...
+[screen is terminating]
 */
