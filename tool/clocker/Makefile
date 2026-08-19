@@ -1,19 +1,17 @@
 TARGET ?= clocker
-CSRCS ?= $(wildcard *.c)
+CSRCS ?= $(TARGET).c
+#$(wildcard *.c)
 
-all: $(TARGET)
+all: $(TARGET) clock_hand.c
 
 $(TARGET): $(CSRCS)
 	gcc -std=gnu99 -Wall $^ -o $@ -lm
 
-%.c.llvm.s: %.c
-	clang -cc1 -mrelocation-model static -S -o $@ $<
-
-%.s.o: %.s
-	as $< -o $<.o
+clock_hand.c: $(TARGET)
+	./$(TARGET) |tee clock_hand.c
 
 clean:
-	rm -f *.o *.llvm *.dump *.llvm.s *.log $(TARGET)
+	rm -f *.o *.dump *.log $(TARGET) clock_hand.*
 
 .PHONY: clean
 
