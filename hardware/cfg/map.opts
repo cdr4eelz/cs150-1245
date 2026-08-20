@@ -4,7 +4,7 @@
 -t 1
 -register_duplication off
 -global_opt off
--mt off
+-mt 4
 -cm area
 -ir off
 -pr off

@@ -13,6 +13,7 @@ $(TARGETS): $(MAKEFILE)
 
 $(MAKEFILE): cfg/Makefile
 	mkdir -p build/$(TOP)
+	data2mem -pp cfg/mem.bmm -o p $(BUILDDIR)/$(TOP).bmm #preproocess & cleanup bmm
 	cp $< $@
 
 clean:

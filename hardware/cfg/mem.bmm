@@ -5,13 +5,16 @@
 // In each BRAM, each lane is 4K (5120 w/parity) for total 16K (20480 w/parity)
 
 // Note the difference in paths between the lanes (also different for CoreGen versions):
-// MEMS.bank/brom_bios           vs. MEMS.bank/bram_dmem      vs. MEMS.bank/bram_imem
+// MEMS.bank/bram_bios           vs. MEMS.bank/bram_dmem      vs. MEMS.bank/bram_imem
 // TRUE_DP.SINGLE_PRIM36.TDP   vs. SP.SINGLE_PRIM36.SP    vs. SDP.SINGLE_PRIM36.TDP
+// *****
+// Note, however, that all 4 BRAMS have been switched to TRUE_DP...TDP for simplicity.
+// *****
 
 ADDRESS_MAP MIPSY PPC405 0
 
-// BIOS ROM:
-    ADDRESS_SPACE BROM_BIOS RAMB36 WORD_ADDRESSING [0x40000000:0x40003FFF]
+// BIOS "ROM" implemented as TRUE_DP RAM:
+    ADDRESS_SPACE BRAM_BIOS RAMB36 WORD_ADDRESSING [0x40000000:0x40003FFF]
         BUS_BLOCK
             CPU/MEMS.bank/bram_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [35:27] OUTPUT = BMEM3.mem ;
             CPU/MEMS.bank/bram_bios/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [26:18] OUTPUT = BMEM2.mem ;
@@ -25,10 +28,10 @@ ADDRESS_MAP MIPSY PPC405 0
 //  ADDRESS_RANGE RAMB36
     ADDRESS_SPACE BRAM_DMEM RAMB36 WORD_ADDRESSING [0x50000000:0x50003FFF]
         BUS_BLOCK
-            CPU/MEMS.bank/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [35:27] OUTPUT = DMEM3.mem ;
-            CPU/MEMS.bank/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [26:18] OUTPUT = DMEM2.mem ;
-            CPU/MEMS.bank/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP [17:9]  OUTPUT = DMEM1.mem ;
-            CPU/MEMS.bank/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP  [8:0]  OUTPUT = DMEM0.mem ;
+            CPU/MEMS.bank/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [35:27] OUTPUT = DMEM3.mem ;
+            CPU/MEMS.bank/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [26:18] OUTPUT = DMEM2.mem ;
+            CPU/MEMS.bank/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = DMEM1.mem ;
+            CPU/MEMS.bank/bram_dmem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = DMEM0.mem ;
         END_BUS_BLOCK;
     END_ADDRESS_SPACE;
 //  END_ADDRESS_RANGE;
@@ -36,10 +39,10 @@ ADDRESS_MAP MIPSY PPC405 0
 //  ADDRESS_RANGE RAMB36
     ADDRESS_SPACE BRAM_IMEM RAMB36 WORD_ADDRESSING [0x60000000:0x60003FFF]
         BUS_BLOCK
-            CPU/MEMS.bank/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [35:27] OUTPUT = IMEM3.mem ;
-            CPU/MEMS.bank/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [26:18] OUTPUT = IMEM2.mem ;
-            CPU/MEMS.bank/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = IMEM1.mem ;
-            CPU/MEMS.bank/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = IMEM0.mem ;
+            CPU/MEMS.bank/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [35:27] OUTPUT = IMEM3.mem ;
+            CPU/MEMS.bank/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [26:18] OUTPUT = IMEM2.mem ;
+            CPU/MEMS.bank/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = IMEM1.mem ;
+            CPU/MEMS.bank/bram_imem/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = IMEM0.mem ;
         END_BUS_BLOCK;
     END_ADDRESS_SPACE;
 //  END_ADDRESS_RANGE;
@@ -48,10 +51,10 @@ ADDRESS_MAP MIPSY PPC405 0
 // ISR RAM:
     ADDRESS_SPACE BRAM_ISR RAMB36 WORD_ADDRESSING [0xC0000000:0xC0003FFF]
         BUS_BLOCK
-            CPU/MEMS.bank/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [35:27] OUTPUT = ISRM3.mem ;
-            CPU/MEMS.bank/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [26:18] OUTPUT = ISRM2.mem ;
-            CPU/MEMS.bank/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = ISRM1.mem ;
-            CPU/MEMS.bank/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = ISRM0.mem ;
+            CPU/MEMS.bank/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[3].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [35:27] OUTPUT = ISRM3.mem ;
+            CPU/MEMS.bank/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[2].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [26:18] OUTPUT = ISRM2.mem ;
+            CPU/MEMS.bank/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP [17:9]  OUTPUT = ISRM1.mem ;
+            CPU/MEMS.bank/bram_isr/U0/xst_blk_mem_generator/gnativebmg.native_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v5_init.ram/TRUE_DP.SINGLE_PRIM36.TDP  [8:0]  OUTPUT = ISRM0.mem ;
         END_BUS_BLOCK;
     END_ADDRESS_SPACE;
 

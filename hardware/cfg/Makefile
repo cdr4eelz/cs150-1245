@@ -35,7 +35,7 @@ UCF_FLAG := $(if $(UCF),-uc $(UCF))
 NGC_DIRS := $(shell find $(SRC) -type d -exec echo -n "-sd {} " \;)
 
 $(NGDBUILD_OUT): $(XST_OUT) $(UCF)
-	ngdbuild -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) $(XST_OUT) $@
+	ngdbuild -dd _ngo $(NGC_DIRS) -nt timestamp $(UCF_FLAG) -p $(PART) -bm $(TOP).bmm $(XST_OUT) $@
 
 
 
@@ -52,7 +52,7 @@ map: $(MAP_OUT)
 PAR_OUT := $(TOP).ncd
 
 $(PAR_OUT): $(MAP_OUT)
-	par -w -ol high -mt off $(MAP_OUT) $@ $(TOP).pcf
+	par -w -ol high -mt 4 $(MAP_OUT) $@ $(TOP).pcf
 
 par: $(PAR_OUT)
 
