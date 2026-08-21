@@ -162,23 +162,27 @@ ISR_UATX:
 ###TEMP: Check if offset == size as temporary "done" indicator
 #    la      $k1, SM_DATA
     lw      $t0, SMO_buff_offset($k1)
-    ###lw      $t1, SMO_buff_size($k1)
-    li      $t1, 64
-    beq     $t0, $t1, UATX_ALL_SENT     ###UATX_DONE
+    lw      $t1, SMO_buff_size($k1)
+    nop     #Delay Slot: Ensure $t1 has new value
+    ###li      $t1, 64
+    beq     $t0, $t1, UATX_ALL_SENT
     nop
 
 #    la      $k1, SM_DATA
 #    lw      $t0, SMO_buff_offset($k1)
+#    nop     #Delay Slot
     addu    $k0, $k1, $t0               # Pre-index from base...
     lbu     $k0, SMO_buff_data($k0)     # ...then furthur offset.
-    #andi    $k0, $k0, 0x00FF
+    nop     #Delay Slot: Ensure value is available in $k0
+    #Unnecessary: andi    $k0, $k0, 0x00FF
     bne     $k0, $zero, UATX_NOT_NULL
     nop
 
+UATX_NULL:
     sw      $t1, SMO_buff_offset($k1)   # Store buff_size when done
-    ori     $k0, $zero, '='
-    la      $k1, MMIO_BASE              # Memory mapped XMIT char
-    sw      $k0, OW_UATX_DATA($k1)      # Send character
+    ###ori     $k0, $zero, '='
+    ###la      $k1, MMIO_BASE              # Memory mapped XMIT char
+    ###sw      $k0, OW_UATX_DATA($k1)      # Send character
     j       UATX_DONE
     nop
 
