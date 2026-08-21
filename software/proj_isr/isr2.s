@@ -6,22 +6,35 @@
 
 .include "mmio_intr_cop0.s.inc"
 
-# SHARED memory locations
+
+# SHARED memory locations between app and isr handler
+#define SM_BASE ((struct SM_DATA *) 0x50000000u)
+#define K_BUFSIZEB 0x0100
+.equiv K_BUFSIZEB, 0x0100
 #struct SM_DATA {
-#    uint32_t stash0, stash1;
-#    uint32_t buff_size;
-#    uint32_t buff_offset;
+#    volatile uint32_t stash0;
+#    volatile uint32_t stash1;
+#    volatile uint32_t buff_size;
+#    volatile uint32_t buff_offset;
 #    int8_t buff_data[K_BUFSIZEB];
 #};
-.equiv  SM_BASE,    0x50000000  #Some agreed upon spot in memory
-.equiv  SM_stash0,      SM_BASE + 0x0000
-.equiv  SM_stash1,      SM_BASE + 0x0004
-.equiv  SM_buff_size,   SM_BASE + 0x0008
-.equiv  SM_buff_offset, SM_BASE + 0x000C
-.equiv  SM_buff_data,   SM_BASE + 0x0010
+.equiv  SM_DATA,        0x50000000  #Some agreed upon spot in memory
+# Offsets from base address as in SMO_xyz($SM_DATA)
+.equiv  SMO_stash0,         0x0000
+.equiv  SMO_stash1,         0x0004
+.equiv  SMO_buff_size,      0x0008
+.equiv  SMO_buff_offset,    0x000C
+.equiv  SMO_buff_data,      0x0010
+# Direct addresses of shared structure members
+.equiv  SMA_stash0,         (SM_DATA + SMO_stash0)
+.equiv  SMA_stash1,         (SM_DATA + SMO_stash1)
+.equiv  SMA_buff_size,      (SM_DATA + SMO_buff_size)
+.equiv  SMA_buff_offset,    (SM_DATA + SMO_buff_offset)
+.equiv  SMA_buff_data,      (SM_DATA + SMO_buff_data)
 
 
-# A simple jump-table for JALing in from BIOS
+# A simple jump-table for JALing in...
+# ...from BIOS to utility functions
 .=0x0000
 _entry:
     j       DISPATCH
@@ -59,8 +72,10 @@ _entry:
 DISPATCH:
     ori     $t0, $zero, 0x0000
     beq     $t0, $a0, DO_ENABLE
+    nop
     ori     $t0, $zero, 0x0001
     beq     $t0, $a0, DO_DISABLE
+    nop
     ori     $t0, $zero, 0x0002
     jr      $ra
     nop
@@ -69,76 +84,128 @@ DISPATCH:
 # ISR starts at 0xC000180
 .=0x0180
 _isr:
+# Stash $t0 & $t1 on behalf of all handlers for convenience
+    la      $k1, SM_DATA            # Point at base of shared data
+    sw      $t0, SMO_stash0($k1)    # Stash $t0
+    sw      $t1, SMO_stash1($k1)    # Stash $t1
+
     mfc0    $k0, COP0_Cause
     mfc0    $k1, COP0_Status
     andi    $k1, $k1, 0xFF00
     and     $k0, $k0, $k1
+
     andi    $k1, $k0, IM_TIMER
     bne     $k1, $zero, ISR_TIMER
     nop
+
     andi    $k1, $k0, IM_RTC
     bne     $k1, $zero, ISR_RTC
     nop
+
     andi    $k1, $k0, IM_UARX
     bne     $k1, $zero, ISR_UARX
     nop
+
     andi    $k1, $k0, IM_UATX
     bne     $k1, $zero, ISR_UATX
     nop
-#...none active & enabled & implemented...
-    j       done_status
-    nop
 
-done_cause: #Set $k1 to BITS-TO-KEEP mask for Cause
+#...none active & enabled & implemented...
+    j       done_stash
+    nop
+   
+
+# Each handler returns here to clear related Cause bit
+done_cause:     # Set $k1 to BITS-TO-KEEP mask for Cause
     mfc0    $k0, COP0_Cause
     and     $k0, $k0, $k1
     mtc0    $k0, COP0_Cause
-done_status:
+# Drop-thru
+
+done_stash:     # Return from handler to here to restore stashed vals
+    la      $t1, SM_DATA
+    lw      $t0, SMO_stash0($t1)
+    lw      $t1, SMO_stash1($t1)
+# Drop-thru
+
+#done_status:   # Never return here, always restore stash above!
     mfc0    $k1, COP0_Status
-    ori     $k1, $k1, IM_GLOBAL
-    mfc0    $k0, COP0_EPC
-    jr      $k0
-    mtc0    $k1, COP0_Status
+    ori     $k1, $k1, IM_GLOBAL # Re-enable global interrupt flag
+    mfc0    $k0, COP0_EPC       # Resume at instruction that was...
+    jr      $k0                 # ...interrupted and re-enable...
+    mtc0    $k1, COP0_Status    # ...interrupts "during" jump.
 
 
 
+# Triggered when cpu-clock counter reaches desired "compare" value:
 ISR_TIMER:
     j       done_cause
-    addi    $k1, $zero, !IM_TIMER
+    addi    $k1, $zero, (~IM_TIMER & 0x0000FFFF)
 
+
+# Triggered when cpu-clock counter rolls over from "-1":
 ISR_RTC:
     j       done_cause
-    addi    $k1, $zero, !IM_RTC
+    addi    $k1, $zero, (~IM_RTC & 0x0000FFFF)
 
+
+# Triggered when UART Character has arrived and is readable:
 ISR_UARX:
     j       done_cause
-    addi    $k1, $zero, !IM_UARX
+    addi    $k1, $zero, (~IM_UARX & 0x0000FFFF)
 
+
+# Triggered when UART Transmit transitions from busy to available:
 ISR_UATX:
-###TEMP: Stash state stuff into stashes
-    mfc0    $k0, COP0_Cause
-    la      $k1, SM_stash0
-    sw      $k0, 0($k1)  # Store Cause
-    mfc0    $k0, COP0_Status
-    la      $k1, SM_stash1
-    sw      $k0, 0($k1)  # Store Status
+    la      $k1, SM_DATA
 
-###TEMP: Try send char DURING interrupt
-    ori     $k0, $zero, '#'
-    la      $k1, MM_UATX_DATA
-    sw      $k0, 0($k1)  #Send character
+###TEMP: Check if offset == size as temporary "done" indicator
+#    la      $k1, SM_DATA
+    lw      $t0, SMO_buff_offset($k1)
+    ###lw      $t1, SMO_buff_size($k1)
+    li      $t1, 64
+    beq     $t0, $t1, UATX_ALL_SENT     ###UATX_DONE
+    nop
 
-#TEMP: Disable IM_UATX interrupt
-done_temp:
-    mfc0    $k1, COP0_Status
-    andi    $k1, $k1, !IM_UATX
-    mtc0    $k1, COP0_Status
-#Fallthrough to standard ISR return here...
+#    la      $k1, SM_DATA
+#    lw      $t0, SMO_buff_offset($k1)
+    addu    $k0, $k1, $t0               # Pre-index from base...
+    lbu     $k0, SMO_buff_data($k0)     # ...then furthur offset.
+    #andi    $k0, $k0, 0x00FF
+    bne     $k0, $zero, UATX_NOT_NULL
+    nop
+
+    sw      $t1, SMO_buff_offset($k1)   # Store buff_size when done
+    ori     $k0, $zero, '='
+    la      $k1, MMIO_BASE              # Memory mapped XMIT char
+    sw      $k0, OW_UATX_DATA($k1)      # Send character
+    j       UATX_DONE
+    nop
+
+UATX_NOT_NULL:
+    addi    $t0, $t0, 1                 # Advance to next char
+    sw      $t0, SMO_buff_offset($k1)   # Store new offset
+    ###ori     $k0, $zero, '+'
+    la      $k1, MMIO_BASE              # Memory mapped XMIT char
+    sw      $k0, OW_UATX_DATA($k1)      # Send character
+    j       UATX_DONE
+    nop
+
+UATX_ALL_SENT:
+    la      $k1, SM_DATA
+    li      $k0, K_BUFSIZEB
+    sw      $k0, SMO_buff_offset($k1)
+#    ori     $k0, $zero, '@'
+#    la      $k1, MMIO_BASE              # Memory mapped XMIT char
+#    sw      $k0, OW_UATX_DATA($k1)      # Send character
+
+# ISR return here (restore stashed vals & reset cause)...
+UATX_DONE:
     j       done_cause
-    addi    $k1, $zero, !IM_UATX
+    addi    $k1, $zero, (~IM_UATX & 0x0000FFFF)
 
 
-
+# Various utility functions reachable by "vector" jump-table above
 DO_ENABLE:
     ori     $k1, $zero, (IM_UARX | IM_GLOBAL)
     jr      $ra
