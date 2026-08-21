@@ -1,19 +1,11 @@
-// #define RECV_CTRL (*((volatile unsigned int*)0x80000004) & 0x01)
-// #define RECV_DATA (*((volatile unsigned int*)0x8000000C) & 0xFF)
+#include "types.h"
+#include "uart.h"
+#include "mmio_intr_cop0.h"
 
-#define TRAN_CTRL (*((volatile unsigned int*)0x80000000) & 0x01)
-#define _tran_wait \
-	{ while (!TRAN_CTRL); }
-//First version writing 4-bytes (hw uses only low byte)
-#define TRAN_DATA (*((volatile unsigned int*)0x80000008))
-#define _tran_out(CH) \
-	{ TRAN_DATA = ((unsigned int)CH); }
-#define _tran_ch(CH) \
-	{ _tran_wait; _tran_out(CH); }
 //Second version writing only the low byte (no difference expected)
-#define TRAN_DATA2 (*((volatile unsigned char*)0x8000000B))
+#define TRAN_DATA2 (*((volatile int8_t*)(MMIO_BASE + OB_UATX_DATA))) //LVALUE
 #define _tran_out2(CH) \
-	{ TRAN_DATA2 = ((unsigned char)CH); }
+	{ TRAN_DATA2 = ((int8_t)(CH)); } //Signed byte
 #define _tran_ch2(CH) \
 	{ _tran_wait; _tran_out2(CH); }
 
@@ -26,7 +18,7 @@ const char rodata[] = "ReaDoNLy: Simple test. Memory contents are echoed to UART
 //      which helps confirm simple serial link operation (rather than memory testing).
 
 
-void send_ch(char ch) { _tran_ch(ch & 0x000000FF); }
+void send_ch(char ch) { _tran_ch(ch & MM_UART_DATA_BYTE); }
 
 void send8(char *sp) { //KISS Version
 	_tran_ch(*sp++); _tran_ch(*sp++);

@@ -1,5 +1,6 @@
 #include "types.h"
 #include "uart.h"
+#include "benchmark.h"
 
 #define DATA (int32_t *) 0x10018000
 
@@ -23,11 +24,6 @@ int8_t* type##_to_ascii_hex(type##_t x, int8_t* buffer, uint32_t n) \
     return buffer; \
 }
 DEFINE_TO_ASCII_HEX(uint32)
-
-// Subset of benchmark.c
-#define COUNTER_RST (*((volatile uint32_t*) 0x80000018))
-#define CYCLE_COUNTER (*((volatile uint32_t*)0x80000010))
-#define INSTRUCTION_COUNTER (*((volatile uint32_t*)0x80000014))
 
 
 // Minimal software tests as bios rom

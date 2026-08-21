@@ -1,6 +1,7 @@
 #include "types.h"
 #include "uart.h"
 #include "ascii.h"
+#include "benchmark.h"
 
 #define DATA (uint32_t *) 0x10018000
 
@@ -8,12 +9,6 @@
 #define ASCII_WANT_DEC
 #include "ascii_defs.inc"
 DEFINE_TO_ASCII_HEX(uint32)
-
-// Subset of benchmark.c
-
-#define COUNTER_RST (*((volatile uint32_t*) 0x80000018))
-#define CYCLE_COUNTER (*((volatile uint32_t*)0x80000010))
-#define INSTRUCTION_COUNTER (*((volatile uint32_t*)0x80000014))
 
 
 // Minimal activities of mmult

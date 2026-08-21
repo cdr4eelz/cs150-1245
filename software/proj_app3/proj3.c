@@ -1,22 +1,11 @@
 #include "types.h"
 #include "uart.h"
+#include "mmio_intr_cop0.h"
 
 // Only declare ASCII function(s) as needed
 #undef ASCII_WANT_DEC
 #include "ascii_defs.inc"
 DEFINE_TO_ASCII_HEX(uint32)
-
-// COP0 interrupt MASKs
-#define B_GLOBAL        0
-#define B_UARX          10
-#define B_UATX          11
-#define B_RTC           14
-#define B_TIMER         15
-#define M_GLOBAL        (1 << B_GLOBAL)
-#define M_UARX          (1 << B_UARX)
-#define M_UATX          (1 << B_UATX)
-#define M_RTC           (1 << B_RTC)
-#define M_TIMER         (1 << B_TIMER)
 
 #define SM_BASE ((struct SM_DATA_S *) 0x10010000)
 #define K_BUFSIZEB 0x20
@@ -44,6 +33,7 @@ struct SM_DATA_S {
   CALLEE preserves: s0-s7,gp,sp,fp,ra
 */
 
+//Calls a "dispatch" function in isr3.s
 #define ISR_INIT                                \
     asm (                                       \
         "la     $t0,0xC0000000\n\t"             \
@@ -53,30 +43,7 @@ struct SM_DATA_S {
         : /* No args expected */                \
         : "t0","t1","a0","ra","memory" )
 
-#define ISR_STATUS(KEEP, SET)                   \
-    asm (                                       \
-        "li     $t0,%0\n\t"                     \
-        "li     $t1,%1\n\t"                     \
-        "mfc0   $t2,$12\n\t"                    \
-        "and    $t2,$t2,$t0\n\t"                \
-        "or     $t2,$t2,$t1\n\t"                \
-        "mtc0   $t2,$12\n\t"                    \
-        :                                       \
-        : "i" (KEEP), "i" (SET)                 \
-        : "t0","t1","t2" )
-
-uint32_t maskStatus(const uint32_t keep, const uint32_t set) {
-    uint32_t prior;
-    asm (
-        "mfc0   %0,$12\n\t"
-        "and    $t0,%0,%1\n\t"
-        "or     $t0,$t0,%2\n\t"
-        "mtc0   $t0,$12\n\t"
-        : "=&r" (prior)
-        : "r" (keep), "r" (set)
-        : "t0"); //$t0==$8
-    return prior;
-}
+        //Calls a "dispatch" function in isr3.s
 
 #define OUTC(CH)                                \
     asm (                                       \
@@ -100,17 +67,17 @@ void outc(const uint8_t c) {
     volatile uint8_t *hp, *hpnext;
 
     //Eliminate contention for a short while...
-    ISR_STATUS(~M_GLOBAL, 0x00000000);
+    ISR_STATUS(~IM_GLOBAL, 0x00000000);
 
 //  while (1) { //TODO: Give up after a while
         if (UTRAN_CTRL) { //UART available immediately?
             UTRAN_DATA = c; //Send directly (should trigger TX IRQ when done)
 //          break;
         } else {
-//          ISR_STATUS(0xFFFFFFFF, M_UATX | M_GLOBAL);
+//          ISR_STATUS(0xFFFFFFFF, IM_UATX | IM_GLOBAL);
             hp = pDATA->head;
             hpnext = (hp >= hplast) ? buf : (hp+1);
-//          ISR_STATUS(~M_GLOBAL, 0x00000000);
+//          ISR_STATUS(~IM_GLOBAL, 0x00000000);
             if (hpnext == pDATA->tail) { //Is queue full?
                 //give up & lose character; break;
             } else {
@@ -120,7 +87,7 @@ void outc(const uint8_t c) {
         }
 //  }
     //...restore global interrupts & ensure TX enabled
-    ISR_STATUS(0xFFFFFFFF, M_GLOBAL | M_UATX);
+    ISR_STATUS(0xFFFFFFFF, IM_GLOBAL | IM_UATX);
 }
 
 void outs(const int8_t *s) {
@@ -172,7 +139,7 @@ int main() {
     struct SM_DATA_S *pDATA = SM_BASE;
 //    uint32_t tHead = offsetof(struct SM_DATA_S, head);
 
-    ISR_STATUS(~M_GLOBAL, 0x00000000);
+    ISR_STATUS(~IM_GLOBAL, 0x00000000);
     uwrite_int8s("\r\n\r\nWelcome...");
 //    uwrite_int8s(uint32_to_ascii_hex(tHead, BUF, BUF_LEN));
 
@@ -183,7 +150,7 @@ int main() {
 //    uwrite_int8s(uint32_to_ascii_hex(tHead, BUF, BUF_LEN));
 
 //    uwrite_int8('!');
-    ISR_STATUS(0xFFFFFFFF, M_GLOBAL|M_UARX|M_UATX|M_RTC|M_TIMER);
+    ISR_STATUS(0xFFFFFFFF, IM_GLOBAL|IM_UARX|IM_UATX|IM_RTC|IM_TIMER);
     outs(" bench:\r\n");
 //    uwrite_int8('@');
 
@@ -212,7 +179,7 @@ int main() {
                 break;
         }
     }
-    ISR_STATUS(~M_GLOBAL, 0x00000000);
+    ISR_STATUS(~IM_GLOBAL, 0x00000000);
     uwrite_int8s("\r\n\r\n***DONE.\r\n");
 }
 

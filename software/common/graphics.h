@@ -2,12 +2,13 @@
 #define GRAPHICS_H_
 
 #include "types.h"
+#include "mmio_intr_cop0.h"
 
-//MEMORY MAPPED CONTROLS
-#define PF_FRAME  (*((gframe_pv volatile *)0x80000050)) //WRITE:PixelFeeder source frame addr/num
-#define GP_FRAME  (*((gframe_pv volatile *)0x80000054)) //WRITE:GraphicsProcessor frame addr/num
-#define GP_GCODE  (*((gpcode_p  volatile *)0x80000058)) //WRITE:Set code-addr, trigger GP now!
-#define GP_STATE  (*((gstate_pv           )0x8000005C)) //READ:Status of PIX,GP,etc.
+//MEMORY MAPPED CONTROLS (defined here because structs are unique to graphics.h)
+#define PF_FRAME  (*((gframe_pv volatile *)MM_PF_FRAME)) //WRITE:PixelFeeder source frame addr/num
+#define GP_FRAME  (*((gframe_pv volatile *)MM_GP_FRAME)) //WRITE:GraphicsProcessor frame addr/num
+#define GP_GCODE  (*((gpcode_p  volatile *)MM_GP_GCODE)) //WRITE:Set code-addr, trigger GP now!
+#define GP_STATE  (*((gstate_pv           )MM_GP_STATE)) //READ:Status of PIX,GP,etc.
 
 //MEMORY FIXED GLOBAL TEMPORARIES
 //TODO: Allow dynamic location/size for temp GP commands (or map into BRAM, not DDR memory)

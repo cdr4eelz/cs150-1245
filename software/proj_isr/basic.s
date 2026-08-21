@@ -4,28 +4,7 @@
 # The location of these entries is forced below
 .global     _entry, _dispatch, _isr
 
-
-# COP0 register names (also c0_sr, c0_cause, etc.)
-.equiv Count,       $9
-.equiv Compare,     $11
-.equiv Status,      $12
-.equiv Cause,       $13
-.equiv EPC,         $14
-
-# COP0 interrupt BIT-offsets
-.equiv B_GLOBAL,    0
-.equiv B_UARX,      10
-.equiv B_UATX,      11
-.equiv B_RTC,       14
-.equiv B_TIMER,     15
-
-# COP0 interrupt MASKs
-.equiv M_GLOBAL,    (1 << B_GLOBAL)
-.equiv M_UARX,      (1 << B_UARX)
-.equiv M_UATX,      (1 << B_UATX)
-.equiv M_RTC,       (1 << B_RTC)
-.equiv M_TIMER,     (1 << B_TIMER)
-
+.include "mmio_intr_cop0.s.inc"
 
 
 # A simple jump-table for JALing in from BIOS
@@ -76,59 +55,59 @@ DISPATCH:
 # ISR starts at 0xC000180
 .=0x0180
 _isr:
-    mfc0    $k0, Cause
-    mfc0    $k1, Status
+    mfc0    $k0, COP0_Cause
+    mfc0    $k1, COP0_Status
     andi    $k1, $k1, 0xFF00
     and     $k0, $k0, $k1
-    andi    $k1, $k0, M_TIMER
+    andi    $k1, $k0, IM_TIMER
     bne     $k1, $zero, ISR_TIMER
-    andi    $k1, $k0, M_RTC
+    andi    $k1, $k0, IM_RTC
     bne     $k1, $zero, ISR_RTC
-    andi    $k1, $k0, M_UARX
+    andi    $k1, $k0, IM_UARX
     bne     $k1, $zero, ISR_UARX
-    andi    $k1, $k0, M_UATX
+    andi    $k1, $k0, IM_UATX
     bne     $k1, $zero, ISR_UATX
 #...none active & enabled & implemented...
     j       done_status
     nop
 
 done_cause: #Set $k1 to BITS-TO-KEEP mask for Cause
-    mfc0    $k0, Cause
+    mfc0    $k0, COP0_Cause
     and     $k0, $k0, $k1
-    mtc0    $k0, Cause
+    mtc0    $k0, COP0_Cause
 done_status:
-    mfc0    $k1, Status
-    ori     $k1, $k1, M_GLOBAL
-    mfc0    $k0, EPC
+    mfc0    $k1, COP0_Status
+    ori     $k1, $k1, IM_GLOBAL
+    mfc0    $k0, COP0_EPC
     jr      $k0
-    mtc0    $k1, Status
+    mtc0    $k1, COP0_Status
 
 
 
 ISR_TIMER:
     j       done_cause
-    addi    $k1, $zero, !M_TIMER
+    addi    $k1, $zero, !IM_TIMER
 
 ISR_RTC:
     j       done_cause
     nop
-    addi    $k1, $zero, !M_RTC
+    addi    $k1, $zero, !IM_RTC
 
 ISR_UARX:
     j       done_cause
-    addi    $k1, $zero, !M_UARX
+    addi    $k1, $zero, !IM_UARX
 
 ISR_UATX:
     j       done_cause
-    addi    $k1, $zero, !M_UATX
+    addi    $k1, $zero, !IM_UATX
 
 
 
 DO_ENABLE:
-    ori     $k1, $zero, (M_UARX | M_GLOBAL)
+    ori     $k1, $zero, (IM_UARX | IM_GLOBAL)
     jr      $ra
-    mtc0    $k1, Status
+    mtc0    $k1, COP0_Status
 
 DO_DISABLE:
     jr      $ra
-    mtc0    $zero, Status
+    mtc0    $zero, COP0_Status

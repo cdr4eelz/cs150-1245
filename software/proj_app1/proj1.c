@@ -1,29 +1,12 @@
 #include "types.h"
 #include "uart.h"
+#include "mmio_intr_cop0.h"
 
 // Only declare ASCII function(s) as needed
 #undef ASCII_WANT_DEC
 #include "ascii_defs.inc"
 DEFINE_TO_ASCII_HEX(uint32)
 
-//TODO: Move COP constants to shared header (plus asm version)
-//{firetimer, firertc, irq_pf_frame, irq_gp_done, irq_UATX, irq_UARX};
-// COP0 interrupt BIT-offsets
-#define IB_GLOBAL   0
-#define IB_UARX     10
-#define IB_UATX     11
-#define IB_GPU      12
-#define IB_FRAME    13
-#define IB_RTC      14
-#define IB_TIMER    15
-// COP0 interrupt MASKs
-#define IM_GLOBAL       (1 << IB_GLOBAL)
-#define IM_UARX         (1 << IB_UARX)
-#define IM_UATX         (1 << IB_UATX)
-#define IM_GPU          (1 << IB_GPU)
-#define IM_FRAME        (1 << IB_FRAME)
-#define IM_RTC          (1 << IB_RTC)
-#define IM_TIMER        (1 << IB_TIMER)
 
 #define SM_BASE ((struct SM_DATA *) 0x50000000u)
 #define K_BUFSIZEB 0x0100
@@ -44,33 +27,6 @@ struct SM_DATA {
   CALLEE preserves: s0-s7,gp,sp,fp,ra
 */
 
-#define ISR_STATUS(KEEP, SET)                   \
-    asm (                                       \
-        "li     $t0,%0\n\t"                     \
-        "li     $t1,%1\n\t"                     \
-        "mfc0   $t2,$12\n\t"                    \
-        "and    $t2,$t2,$t0\n\t"                \
-        "or     $t2,$t2,$t1\n\t"                \
-        "mtc0   $t2,$12\n\t"                    \
-        :                                       \
-        : "i" (KEEP), "i" (SET)                 \
-        : "t0","t1","t2" )
-
-//TODO: Fix this function. Fails for unknown reason...
-/*
-uint32_t maskStatus(const uint32_t keep, const uint32_t set) {
-    uint32_t prior;
-    asm (
-        "mfc0   %0,$12\n\t"
-        "and    $t0,%0,%1\n\t"
-        "or     $t0,$t0,%2\n\t"
-        "mtc0   $t0,$12\n\t"
-        : "=&r" (prior)
-        : "r" (keep), "r" (set)
-        : "t0"); //$t0==$8
-    return prior;
-}
-*/
 
 //TODO: Put in simple string library (perhaps as INLINE)
 int8_t* copy_string(int8_t* dst, int8_t* src) {

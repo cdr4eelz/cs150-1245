@@ -4,47 +4,13 @@
 # The location of these entries is forced below
 .global ENTRY10X10, ISR0180
 
+.include "mmio_intr_cop0.s.inc"
+
 # Misc constants
 .equiv  K_MAGICW,       0xE3BEEF10      #Arbitrary indicator value
 .equiv  K_CPU_HZ,       (50000000)      #50 MHz
 .equiv  K_TIMER_HZ,     (1)             # 1 Hz
 .equiv  K_TIMER_CYC,    (K_TIMER_HZ * K_CPU_HZ)
-
-# COP0 register names (also c0_sr, c0_cause, etc.)
-.equiv  Count,          $9
-.equiv  Compare,        $11
-.equiv  Status,         $12
-.equiv  Cause,          $13
-.equiv  EPC,            $14
-
-# COP0 interrupt BIT-offsets
-.equiv  B_GLOBAL,       0
-.equiv  B_UARX,         10
-.equiv  B_UATX,         11
-.equiv  B_RTC,          14
-.equiv  B_TIMER,        15              #WARN: High bit of a short
-
-# COP0 interrupt MASKs
-.equiv  M_GLOBAL,       (1 << B_GLOBAL)
-.equiv  M_UARX,         (1 << B_UARX)
-.equiv  M_UATX,         (1 << B_UATX)
-.equiv  M_RTC,          (1 << B_RTC)
-.equiv  M_TIMER,        (1 << B_TIMER)  #WARN: If using "andi" trick !M_TIMER won't sign extend
-.equiv  M_POSSIBLE,     0xFC00
-
-# MEMORY-MAPPED IO locations
-.equiv  MM_BASE,    0x80000000
-.equiv  OW_UATX_READY,  0x0000
-.equiv  OW_UARX_VALID,  0x0004
-.equiv  OW_UATX_DATA,   0x0008
-.equiv   OB_UATX_DATA,   (OW_UATX_DATA+3)
-.equiv  OW_UARX_DATA,   0x000C
-.equiv   OB_UARX_DATA,   (OW_UARX_DATA+3)
-.equiv  OW_CNT_CYCLE,   0x0010
-.equiv  OW_CNT_INST,    0x0014
-.equiv  OW_CNT_RESET,   0x0018
-.equiv  M_RVA_BIT,      0x0001
-.equiv  M_DATA_BYTE,    0x000F
 
 # SHARED memory locations
 .equiv  SM_BASE,    0x10010000  #Some agreed upon spot in memory
@@ -78,23 +44,23 @@ ENTRY10X10:
 
 .=0x0010
 DO_ENABLE_MOST: #Squeeze entry!
-    ori     $t0, $zero, (M_TIMER | M_RTC | M_UATX | M_GLOBAL)  #Enable ALL but RX
-    mfc0    $v0, Status             #Return replaced status
+    ori     $t0, $zero, (IM_TIMER | IM_RTC | IM_UATX | IM_GLOBAL)  #Enable ALL but RX
+    mfc0    $v0, COP0_Status        #Return replaced status
     jr      $ra
-    mtc0    $t0, Status             #D;
+    mtc0    $t0, COP0_Status        #D;
 
 .=0x0020
 DO_ENABLE_ALL:  #Squeeze entry!
-    ori     $t0, $zero, (M_TIMER | M_RTC | M_UATX | M_UARX | M_GLOBAL)  #Enable ALL we know
-    mfc0    $v0, Status             #Return replaced status
+    ori     $t0, $zero, (IM_TIMER | IM_RTC | IM_UATX | IM_UARX | IM_GLOBAL)  #Enable ALL we know
+    mfc0    $v0, COP0_Status        #Return replaced status
     jr      $ra
-    mtc0    $t0, Status             #D;
+    mtc0    $t0, COP0_Status        #D;
 
 .=0x0030
 DO_DISABLE:     #Squeeze entry!
-    mfc0    $v0, Status             #Return replaced status
+    mfc0    $v0, COP0_Status        #Return replaced status
     jr      $ra
-    mtc0    $zero, Status           #D; #Disable absolutely everything!
+    mtc0    $zero, COP0_Status      #D; #Disable absolutely everything!
 
 .=0x0040
 DO_SEND:        #Squeeze entry!
@@ -112,8 +78,8 @@ DO_INIT:
 #    addiu   $sp, $sp, -8
 #    sw      $ra, 4($sp)
 #Body
-    mtc0    $zero, Status           #Totally disabled
-    mtc0    $zero, Cause            #Zero any existing interrupts (is this OK?)
+    mtc0    $zero, COP0_Status      #Totally disabled
+    mtc0    $zero, COP0_Cause       #Zero any existing interrupts (is this OK?)
     la      $t0, SM_BASE            #Blank shared memory
     sw      $zero, OW_MAGIC($t0)
     sw      $zero, 0x0004($t0)      #(flags, minute, second, state)
@@ -126,34 +92,34 @@ DO_INIT:
     sw      $t1, OW_TAIL($t0)
     li      $t1, K_MAGICW           #Set magic value last
     sw      $t1, OW_MAGIC($t0)
-    mtc0    $zero, Count            #Count from zero
+    mtc0    $zero, COP0_Count       #Count from zero
     li      $t1, K_TIMER_CYC        #...up to first timer interval
-    mtc0    $t1, Compare
-    ori     $t1, $zero, (M_TIMER | M_RTC | M_UATX | M_GLOBAL)  #Enable ALL but M_UARX
+    mtc0    $t1, COP0_Compare
+    ori     $t1, $zero, (IM_TIMER | IM_RTC | IM_UATX | IM_GLOBAL)  #Enable ALL but IM_UARX
 ##Epilogue
 #    lw      $ra, 4($sp)
-#    nop                             #D;
-#    addiu   $sp, $sp, 8             #D;
+#    nop                            #D;
+#    addiu   $sp, $sp, 8            #D;
     jr      $ra
-    mtc0    $t1, Status             #D;
+    mtc0    $t1, COP0_Status        #D;
 
 
 
 # ISR starts at 0xC000180
 .=0x0180
 ISR0180:            #ISR entry (hardware turns off global interrupt enable flag & stashes EPC for us):
-    mfc0    $k0, Cause      #Grab the Cause & Status ASAP if not sooner.
-    mfc0    $k1, Status     #NOTE: k0/k1 are OURS alone; No conflict! Must save EVERYTHING else tho.
-    andi    $k1, $k1, M_POSSIBLE    #Mask current Status (enabled bits) with possible flags...
+    mfc0    $k0, COP0_Cause     #Grab the Cause & Status ASAP if not sooner.
+    mfc0    $k1, COP0_Status    #NOTE: k0/k1 are OURS alone; No conflict! Must save EVERYTHING else tho.
+    andi    $k1, $k1, IM_POSSIBLE    #Mask current Status (enabled bits) with possible flags...
     and     $k0, $k0, $k1           #...and with Cause (IP flags/interrupts triggered) into $k0.
 #Dispatch to routine for ONE active interrupt (prioritized check, hardware re-fires as necessary):
-    andi    $k1, $k0, M_TIMER
+    andi    $k1, $k0, IM_TIMER
     bne     $k1, $zero, ISR_TIMER
-    andi    $k1, $k0, M_RTC         #D;
+    andi    $k1, $k0, IM_RTC         #D;
     bne     $k1, $zero, ISR_RTC
-    andi    $k1, $k0, M_UARX        #D;
+    andi    $k1, $k0, IM_UARX        #D;
     bne     $k1, $zero, ISR_UARX
-    andi    $k1, $k0, M_UATX        #D;
+    andi    $k1, $k0, IM_UATX        #D;
     bne     $k1, $zero, ISR_UATX
 #NONE active & enabled & implemented...lets clear the unknown interrupt...
     addiu   $k1, $zero, 0xFFFF      #D; #Sign extended into all ones to invert...
@@ -161,30 +127,30 @@ ISR0180:            #ISR entry (hardware turns off global interrupt enable flag 
 #FALLTHROUGH...with $k1 as mask out of mysterious flags
 
 isr_ret_cause:      #EXPECT: $k1 == BITS-TO-KEEP mask; #Clear some Cause bits then isr_ret_enable...
-    mfc0    $k0, Cause
+    mfc0    $k0, COP0_Cause
     and     $k0, $k0, $k1
-    mtc0    $k0, Cause
+    mtc0    $k0, COP0_Cause
 #FALLTHROUGH...
 
 isr_ret_enable:     #Re-enable global interrupts (global Status bit) then isr_ret...
-    mfc0    $k1, Status             #Grab current enable flags...
-    ori     $k1, $k1, M_GLOBAL      #...and get $k1 ready
+    mfc0    $k1, COP0_Status        #Grab current enable flags...
+    ori     $k1, $k1, IM_GLOBAL     #...and get $k1 ready
 #FALLTHROUGH...with $k1 as new Status
 
 isr_ret:            #EXPECT: $k1 == new Status; #Set Status then return to EPC
-    mfc0    $k0, EPC                #EPC holds the PC we stepped in front of...
+    mfc0    $k0, COP0_EPC           #EPC holds the PC we stepped in front of...
     jr      $k0                     #...so we jump to it as if it were $ra.
-    mtc0    $k1, Status             #D; #Re-enable global-interrupt flag while returning.
+    mtc0    $k1, COP0_Status        #D; #Re-enable global-interrupt flag while returning.
 
 #END: ISR.
 
 
 ISR_TIMER:
-    mfc0    $k0, Compare
+    mfc0    $k0, COP0_Compare
     li      $k1, K_TIMER_CYC
-    addu    $k0, $k0, $k1          #Advance to next compare value on which to fire...
-    mfc0    $k1, Count              #LO-word of cycles-since-start (grab early)
-    mtc0    $k0, Compare            #...without adjusting Count (avoid skewing things).
+    addu    $k0, $k0, $k1           #Advance to next compare value on which to fire...
+    mfc0    $k1, COP0_Count         #LO-word of cycles-since-start (grab early)
+    mtc0    $k0, COP0_Compare       #...without adjusting Count (avoid skewing things).
     la      $k0, SM_BASE
     sw      $ra, OW_STASH1($k0)     #$ra=>STASH1
     sw      $k1, OW_COUNT($k0)      #=>SHARED memory
@@ -320,9 +286,9 @@ ISR_TIMER:
 timer_unstash:
     la      $k0, SM_BASE
     lw      $ra, OW_STASH1($k0)     #$ra<=STASH1
-    lui     $k1, 0xFFFF             #D; #NOTE: !M_TIMER won't sign extend with "andi"
+    lui     $k1, 0xFFFF             #D; #NOTE: !IM_TIMER won't sign extend with "andi"
     b       isr_ret_cause
-    ori     $k1, $zero, !M_TIMER    #D;
+    ori     $k1, $zero, !IM_TIMER    #D;
 
 #END: ISR_TIMER.
 
@@ -334,16 +300,16 @@ ISR_RTC:
     addiu   $k0, $k0, 1             #Increment clock
     sw      $k0, OW_RTC($k1)
     b       isr_ret_cause
-    addiu   $k1, $zero, !M_RTC      #D;
+    addiu   $k1, $zero, !IM_RTC      #D;
 
 #END: ISR_RTC.
 
 
 ISR_UARX:
-    la      $k0, MM_BASE
+    la      $k0, MMIO_BASE
     lw      $k1, OW_UARX_VALID($k0) #UART recv truly/still valid?
     nop                             #D;
-    andi    $k1, $k1, M_RVA_BIT
+    andi    $k1, $k1, MM_UART_RVA_BIT
     beq     $k1, $zero, _uarx_done
     nop                             #D;
 #custom search "case" checking (trying to be quick since interrupts disabled)
@@ -382,11 +348,11 @@ _uarx_disable:
 
 _uarx_done:
     b       isr_ret_cause
-    addiu   $k1, $zero, !M_UARX     #D;
+    addiu   $k1, $zero, !IM_UARX     #D;
 
 _uarx_abort:
-    mtc0    $zero, Cause            #blast the Cause register!
-    b       isr_ret   #expects new Status in $k1
+    mtc0    $zero, COP0_Cause       #blast the Cause register!
+    b       isr_ret                 #expects new Status in $k1
     ori     $k1, $zero, 0           #D; #disable everything
 
 #END: ISR_UARX.
@@ -411,15 +377,15 @@ ISR_UATX:
     lw      $s0, OW_TAIL($k0)       #D; #REG: $s0 == TAIL
     sw      $s0, OW_STASH0($k0)     #D; #WARN:LOAD-STORE CROSSOVER; #$s0=>STASH0
     beq     $k1, $s0, _uatx_unstash #if buffer is empty, break
-    la      $k0, MM_BASE            #D;
+    la      $k0, MMIO_BASE           #D;
     lw      $k1, OW_UATX_READY($k0) #UART xmit truly/still ready?
     nop                             #D;
-    andi    $k1, $k1, M_RVA_BIT
+    andi    $k1, $k1, MM_UART_RVA_BIT
     beq     $k1, $zero, _uatx_unstash
     nop                             #D;
     lbu     $k1, 0($s0)             #load next byte to send from buffer
     addiu   $s0, $s0, 1             #D; #post-increment TAIL reg
-    la      $k0, MM_BASE
+    la      $k0, MMIO_BASE
     sb      $k1, OB_UATX_DATA($k0)  #UART xmit byte
     la      $k1, SM_BUFPAST
     sltu    $k1, $s0, $k1           #detect wraparound
@@ -435,7 +401,7 @@ _uatx_unstash:
     lw      $s0, OW_STASH0($k0)     #$s0<=STASH0
 _uatx_done:
     b       isr_ret_cause           #D; (load-delay slot on $s0 when fallthrough)
-    addiu   $k1, $zero, !M_UATX     #D;
+    addiu   $k1, $zero, !IM_UATX     #D;
 
 #END: ISR_UATX.
 
@@ -473,30 +439,30 @@ _less30:
 
 
 USER_SEND:
-    li      $t0, ~M_GLOBAL
-    mfc0    $t1, Status
+    li      $t0, ~IM_GLOBAL
+    mfc0    $t1, COP0_Status
     and     $t0, $t1, $t0
-    mtc0    $t0, Status             #Interrupts disabled, now use $k0/$k1
+    mtc0    $t0, COP0_Status        #Interrupts disabled, now use $k0/$k1
     or      $t0, $zero, $ra         #Stash $ra in $t0
     bal     SEND
     or      $k1, $zero, $a0         #D; $k1 = char-to-send from $a0 of regular function
-#    ori     $t1, $t1, M_GLOBAL
+#    ori     $t1, $t1, IM_GLOBAL
     or      $ra, $zero, $t0         #Restore $ra
     jr      $ra
-    mtc0    $t1, Status             #D;
+    mtc0    $t1, COP0_Status        #D;
 
 #END: USER_SEND.
 
 
 SEND:               #EXPECT: $k1 = char-to-send; #FOUL: $k0, $k1
-    la      $k0, MM_BASE
+    la      $k0, MMIO_BASE
     lw      $k0, OW_UATX_READY($k0)
     nop                             #D;
-    andi    $k0, $k0, M_RVA_BIT
+    andi    $k0, $k0, MM_UART_RVA_BIT
     beq     $k0, $zero, _send_enqueue
-    lui     $k0, %hi(MM_BASE)       #D; #1st half of "la" (used only if branch)
+    lui     $k0, %hi(MMIO_BASE)     #D; #1st half of "la" (used only if branch)
 #TODO: If queue not empty, enqueue new & send HEAD instead
-    ori     $k0, $k0, %lo(MM_BASE)  #2nd half of "la"
+    ori     $k0, $k0, %lo(MMIO_BASE)    #2nd half of "la"
     sb      $k1, OB_UATX_DATA($k0)  #UART xmit, immediately
     jr      $ra
     nop                             #D;

@@ -2,10 +2,13 @@
 #define BENCHMARK_H_
 
 #include "types.h"
+#include "mmio_intr_cop0.h"
 
-#define COUNTER_RST (*((volatile uint32_t*) 0x80000018))
-#define CYCLE_COUNTER (*((volatile uint32_t*)0x80000010))
-#define INSTRUCTION_COUNTER (*((volatile uint32_t*)0x80000014))
+#define CYCLE_COUNTER         (*((volatile uint32_t*)MM_CNT_CYCLE))
+#define INSTRUCTION_COUNTER   (*((volatile uint32_t*)MM_CNT_INST))
+#define COUNTER_RST           (*((volatile uint32_t*)MM_CNT_RESET))
+
 
 void run_and_time(uint32_t (*f)());
+
 #endif
