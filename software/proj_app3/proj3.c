@@ -62,7 +62,7 @@ void main() {
     //TODO: Clear "Cause" register???
     ISR_STATUS(0x00000000, 0x00000000);
 
-    uwrite_int8s("\r\n\r\nPROJ-2:\r\n"); //Output without interrupts
+    uwrite_int8s("\r\n\r\nPROJ-3:\r\n"); //Output without interrupts
     while (!UTRAN_CTRL) { } //Wait until prior send is definitely done
 
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);

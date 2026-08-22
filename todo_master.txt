@@ -1,0 +1,33 @@
+### This is an incomplete list that focuses specifically on completion of the final project:
+
+===========================================================================
+===========================================================================
+
+Improper handling of a data-hazard in the CPU, making a manual "nop" necessary after memory read commands that are followed with an instruction that uses the destination register. Example:
+
+lbu $k0, 0($k1)
+nop #Without this NOP, the fetched byte will not have reached...
+beq $k0, $zero, IS_ZERO #the $k0 register in time for this comparison.
+nop #Note: This is a delay slot, not a data hazard!
+..... Other instructions ...
+IS_ZERO:
+..... More instructions ...
+
+POSSIBLE FIXES:
+    a) Figure out why "data-forwarding" is not handling this hazard.
+        a1) Ideally, simulation can be used to validate a fix.
+    b) Hack CPU to add a "nop" after reads from memory???
+        b1) If no side-effects, this has minimal detrimental impact.
+    c) Workaround is to add "nop" in all hand-written assembly code???
+        c1) This leaves a risk that malfunctioning "C" code will be generated.
+        c2) Hack that examines compiler output of "C" code and adds a "nop"!
+
+===========================================================================
+===========================================================================
+
+Update next proj_isrX and proj_appX to use proper circular buffer for UATX.
+
+===========================================================================
+===========================================================================
+
+

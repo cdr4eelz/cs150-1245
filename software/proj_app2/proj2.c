@@ -92,6 +92,13 @@ void main() {
 
 /* Resulting output..
 
+> jal 60000000
+
+
+PROJ-2:
+{Not a very long string.}
+
+[Golt45.2.3]
 ...
 [screen is terminating]
 */
