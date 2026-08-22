@@ -7,21 +7,15 @@
 #include "ascii_defs.inc"
 DEFINE_TO_ASCII_HEX(uint32)
 
-#define SM_BASE ((struct SM_DATA_S *) 0x10010000)
-#define K_BUFSIZEB 0x20
+#define SM_BASE ((struct SM_DATA *) 0x50000000u)
+#define K_BUFSIZEB 0x0100
 
-//PACKED caused awkward accesses: __attribute__ ((__packed__))
-struct SM_DATA_S {
-    uint32_t            volatile magic;
-    uint32_t            volatile FlagMinSecState; //1-byte each
-    uint32_t            volatile rtc;
-    uint32_t            volatile count;
-    uint32_t stash0, stash1, stash2, stash3;
-    uint32_t            volatile bufsize;
-    volatile uint8_t *  volatile head;
-    volatile uint8_t *  volatile tail;
-    uint32_t fill0;
-    volatile uint8_t    buf[K_BUFSIZEB];
+struct SM_DATA {
+    volatile uint32_t stash0;
+    volatile uint32_t stash1;
+    volatile uint32_t buff_size;
+    volatile uint32_t buff_offset;
+    int8_t buff_data[K_BUFSIZEB];
 };
 
 /*
@@ -33,173 +27,71 @@ struct SM_DATA_S {
   CALLEE preserves: s0-s7,gp,sp,fp,ra
 */
 
-//Calls a "dispatch" function in isr3.s
-#define ISR_INIT                                \
-    asm (                                       \
-        "la     $t0,0xC0000000\n\t"             \
-        "jalr   $t0\n\t"                        \
-        "nop\n\t"                               \
-        : /* No return */                       \
-        : /* No args expected */                \
-        : "t0","t1","a0","ra","memory" )
 
-        //Calls a "dispatch" function in isr3.s
-
-#define OUTC(CH)                                \
-    asm (                                       \
-        "la     $t0,0xC0000040\n\t"             \
-        "jalr   $t0\n\t"                        \
-        "or     $a0,$zero,%0\n\t"               \
-        : /* No return */                       \
-        : "r" (CH)                              \
-        : "t0","t1","a0","ra","memory" )
-
-void outc2(const uint8_t c) {
-    OUTC(c);
+//TODO: Put in simple string library (perhaps as INLINE)
+int8_t* copy_string(int8_t* dst, int8_t* src, uint16_t maxLen) { //Add size check
+    int8_t* base = dst;
+    while ((*dst++ = *src++) && (maxLen--)) { }
+    if (!maxLen) *dst = 0;
+    return base;
 }
 
-void outc(const uint8_t c) {
-    uint32_t priorSTATUS, ignoreSTATUS;
-    struct SM_DATA_S * const pDATA = SM_BASE;
-    volatile uint8_t * const buf = pDATA->buf;
-    uint32_t const bufsize = pDATA->bufsize;
-    volatile uint8_t * const hplast = buf + (bufsize-1);
-    volatile uint8_t *hp, *hpnext;
+#define SHORT_STRING "Not a very long string."
+#define LONG_STRING "A Sample String Output: " \
+            "More and more. " \
+            "The quick brown fox jumped over the lazy barkey log. " \
+            "The chicken rooster clucked instead of " \
+            "making a normal sound." \
+            "This thing just goes on and on and on and on and on and "
+//            "on and on and on and never1234567890123456789"
 
-    //Eliminate contention for a short while...
-    ISR_STATUS(~IM_GLOBAL, 0x00000000);
+#define TBUF_SIZE (256)
 
-//  while (1) { //TODO: Give up after a while
-        if (UTRAN_CTRL) { //UART available immediately?
-            UTRAN_DATA = c; //Send directly (should trigger TX IRQ when done)
-//          break;
-        } else {
-//          ISR_STATUS(0xFFFFFFFF, IM_UATX | IM_GLOBAL);
-            hp = pDATA->head;
-            hpnext = (hp >= hplast) ? buf : (hp+1);
-//          ISR_STATUS(~IM_GLOBAL, 0x00000000);
-            if (hpnext == pDATA->tail) { //Is queue full?
-                //give up & lose character; break;
-            } else {
-                *hp = c; //Enqueue...
-                pDATA->head = hpnext; //...and advance real pointer.
-            }
-        }
-//  }
-    //...restore global interrupts & ensure TX enabled
-    ISR_STATUS(0xFFFFFFFF, IM_GLOBAL | IM_UATX);
-}
+void main() {
+    struct SM_DATA* share = SM_BASE;
+    int8_t tbuff[TBUF_SIZE];
 
-void outs(const int8_t *s) {
-    int8_t c;
-    while ((c = *s++) != '\0') {
-        outc2((uint8_t) c);
-    }
-}
+    // Copy into shared memory (shared with ISR handler)
+    share->stash0 = -1u;
+    share->stash1 = -1u;
+    share->buff_size = K_BUFSIZEB;
+    //copy_string(share->buff_data, "A Sample String Output\r\n");
+    copy_string(share->buff_data, SHORT_STRING, K_BUFSIZEB - 1);
+    share->buff_offset = 0;
 
+    //TODO: Clear "Cause" register???
+    ISR_STATUS(0x00000000, 0x00000000);
 
-void r100m() {
-    volatile uint32_t i = 0, t = 10000000U; //10^7
-    while (i < t) i++;
-}
-void r100f() {r100m();r100m();}
-void v100m() {r100f();r100f();}
-void v100f() {v100m();v100m();}
+    uwrite_int8s("\r\n\r\nPROJ-2:\r\n"); //Output without interrupts
+    while (!UTRAN_CTRL) { } //Wait until prior send is definitely done
 
-void timeit(uint8_t state, void (*f)(), volatile uint32_t *pCOUNT, int8_t *pBUF, uint32_t lBUF) {
-    uint32_t tstart, tend;
+    ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
 
-    pBUF[0]=state; pBUF[1]=':'; pBUF[2]=' '; pBUF[3]='\0';
-    outs(pBUF);
+    // Send a char manually to trigger UATX interrupt sequence
+    while (!UTRAN_CTRL) { } //Wait until prior send is definitely done
+    UTRAN_DATA = '{';
+    //while (!UTRAN_CTRL) { } //Wait until prior send is definitely done
 
-    tstart = *pCOUNT;
-    (*f)();
-    tend = *pCOUNT;
+    // Wait until interrupt based sending is done
+    while (share->buff_offset != K_BUFSIZEB) { }
 
-    outs(uint32_to_ascii_hex(tend-tstart, pBUF, lBUF));
-    outs("\r\n");
-}
+    ISR_STATUS(0x00000000, 0x00000000);
 
-//#define offsetof(type, member)  __builtin_offsetof (type, member)
-
-void setSTATE(struct SM_DATA_S *pDATA, char newState) {
-    pDATA->FlagMinSecState = (pDATA->FlagMinSecState & 0xFFFFFF00) | newState;
-}
-char getSTATE(struct SM_DATA_S *pDATA) {
-    return (char) (pDATA->FlagMinSecState & 0x00FF);
-}
-
-#define BUF_LEN 128
-
-//int main(int argc, char **argv) {
-int main() {
-    int8_t BUF[BUF_LEN];
-    uint32_t ignoreSTATUS;
-    volatile int quit = 0;
-    struct SM_DATA_S *pDATA = SM_BASE;
-//    uint32_t tHead = offsetof(struct SM_DATA_S, head);
-
-    ISR_STATUS(~IM_GLOBAL, 0x00000000);
-    uwrite_int8s("\r\n\r\nWelcome...");
-//    uwrite_int8s(uint32_to_ascii_hex(tHead, BUF, BUF_LEN));
-
-    ISR_INIT; //Just initialize data structure
-    setSTATE(pDATA, 's');
-
-//    tHead = (uint32_t) pDATA->head;
-//    uwrite_int8s(uint32_to_ascii_hex(tHead, BUF, BUF_LEN));
-
-//    uwrite_int8('!');
-    ISR_STATUS(0xFFFFFFFF, IM_GLOBAL|IM_UARX|IM_UATX|IM_RTC|IM_TIMER);
-    outs(" bench:\r\n");
-//    uwrite_int8('@');
-
-    while (!quit) {
-        char lstate = getSTATE(pDATA);
-        switch (lstate) {
-            case 's': // "Silence", not directly user accessible
-                break;
-
-            case 'r': // register variable addi
-                timeit(lstate, &r100m, &pDATA->count, BUF, BUF_LEN);
-                break;
-            case 'R': // register variable, plusone function call
-                timeit(lstate, &r100f, &pDATA->count, BUF, BUF_LEN);
-                break;
-            case 'v': // volatile variable, addi
-                //timeit(lstate, &v100m, &pDATA->count, BUF, BUF_LEN);
-                outc2('-');// uwrite_int8('.');
-                setSTATE(pDATA, 's');
-                break;
-            case 'V': // volatile variable, plusone function call
-                //timeit(lstate, &v100f, &pDATA->count, BUF, BUF_LEN);
-                //break;
-            default: // print error? (optional)
-                quit = 1;
-                break;
-        }
-    }
-    ISR_STATUS(~IM_GLOBAL, 0x00000000);
-    uwrite_int8s("\r\n\r\n***DONE.\r\n");
-}
+    while (!UTRAN_CTRL) { } //Wait until prior send is definitely done
+    UTRAN_DATA = '}';
 
 /*
-//------------------------------------
-r100M:
-addi $t0, $0, 0
-la $t1, 10^7
-loop:
-addi $t0, $t0, 1
-bne $t0, $t1, loop
-nop
-//------------
-lw $t0, b
-nop
-addi $t0, $t0, 1
-sw $t0, b
-//-----------
-addi $a0, $t0, 0
-jal addone
-nop
-addi $t0, $v0, 0
+    uwrite_int8s("\n\rstash0: ");
+    uwrite_int8s(uint32_to_ascii_hex(share->stash0, tbuff, TBUF_SIZE));
+    uwrite_int8s("\n\rstash1: ");
+    uwrite_int8s(uint32_to_ascii_hex(share->stash1, tbuff, TBUF_SIZE));
+    uwrite_int8s("\n\r");
+*/
+    return;
+}
+
+/* Resulting output..
+
+...
+[screen is terminating]
 */

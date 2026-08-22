@@ -1,0 +1,1 @@
+../common/mmio_intr_cop0.h

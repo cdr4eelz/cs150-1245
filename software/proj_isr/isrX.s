@@ -1,0 +1,557 @@
+.set noat
+.set noreorder
+
+# The location of these entries is forced below
+.global ENTRY10X10, ISR0180
+
+.include "mmio_intr_cop0.s.inc"
+
+# Misc constants
+.equiv  K_MAGICW,       0xE3BEEF10      #Arbitrary indicator value
+.equiv  K_CPU_HZ,       (50000000)      #50 MHz
+.equiv  K_TIMER_HZ,     (1)             # 1 Hz
+.equiv  K_TIMER_CYC,    (K_TIMER_HZ * K_CPU_HZ)
+
+# SHARED memory locations
+.equiv  SM_BASE,    0x10010000  #Some agreed upon spot in memory
+.equiv  OW_MAGIC,       0x0000  #4-byte: Arbitrary value for sanity check
+.equiv  OB_FLAGS,       0x0004  #1-byte: flag bitmask
+.equiv   MF_TIMER,        0x01      #TIMER output enabled
+.equiv  OB_MINUTE,      0x0005  #1-byte: Minute BCD (0-60)
+.equiv  OB_SECOND,      0x0006  #1-byte: Second BCD (0-60)
+.equiv  OB_STATE,       0x0007  #1-byte: Application state (character code)
+.equiv  OW_RTC,         0x0008  #4-byte: RTC "clock" (incremented 1 on Count rollover interrupt)
+.equiv  OW_COUNT,       0x000C  #4-byte: COP0 Count register as of last TIMER interrupt
+.equiv  OW_STASH0,      0x0010  #4-byte: ISR reserved (save registers or temps)
+.equiv  OW_STASH1,      0x0014  #4-byte:        "
+.equiv  OW_STASH2,      0x0018  #4-byte:        "
+.equiv  OW_STASH3,      0x001C  #4-byte:        "
+.equiv  OW_BUFSIZE,     0x0020  #4-byte: Size of buffer (just for double-check)
+.equiv  OW_HEAD,        0x0024  #4-byte: Byte-Pointer   (valid from SM_BUFBASE..SM_BUFLAST)
+.equiv  OW_TAIL,        0x0028  #4-byte:        "       (if HEAD==TAIL, then empty)
+# fill 1-word 0x002C
+.equiv  SM_BUFBASE, (SM_BASE+0x0030)    #UART FIFO buffer starts here (inclusive)...
+.equiv  K_BUFSIZEB,     0x0020          #...extending 32-bytes then...
+.equiv  SM_BUFLAST, (SM_BUFBASE+K_BUFSIZEB-1)   #...ends here (inclusive) or just...
+.equiv  SM_BUFPAST, (SM_BUFBASE+K_BUFSIZEB)     #...before here (non-inclusive).
+
+
+# Simple function/jump table for JAL-based callins (like manually from BIOS)
+.=0x0000
+ENTRY10X10:
+    b       DO_INIT
+    li      $a0, 0x0000
+
+.=0x0010
+DO_ENABLE_MOST: #Squeeze entry!
+    ori     $t0, $zero, (IM_TIMER | IM_RTC | IM_UATX | IM_GLOBAL)  #Enable ALL but RX
+    mfc0    $v0, COP0_Status        #Return replaced status
+    jr      $ra
+    mtc0    $t0, COP0_Status        #D;
+
+.=0x0020
+DO_ENABLE_ALL:  #Squeeze entry!
+    ori     $t0, $zero, (IM_TIMER | IM_RTC | IM_UATX | IM_UARX | IM_GLOBAL)  #Enable ALL we know
+    mfc0    $v0, COP0_Status        #Return replaced status
+    jr      $ra
+    mtc0    $t0, COP0_Status        #D;
+
+.=0x0030
+DO_DISABLE:     #Squeeze entry!
+    mfc0    $v0, COP0_Status        #Return replaced status
+    jr      $ra
+    mtc0    $zero, COP0_Status      #D; #Disable absolutely everything!
+
+.=0x0040
+DO_SEND:        #Squeeze entry!
+    b           USER_SEND
+    nop
+
+# Rest of table is one big dummy function returning -1
+.org (0x0100 - 8), 0 #NOPs
+    jr      $ra
+    addiu   $v0, $zero, -1          #D;
+
+
+DO_INIT:
+##Prologue (is a "leaf")
+#    addiu   $sp, $sp, -8
+#    sw      $ra, 4($sp)
+#Body
+    mtc0    $zero, COP0_Status      #Totally disabled
+    mtc0    $zero, COP0_Cause       #Zero any existing interrupts (is this OK?)
+    la      $t0, SM_BASE            #Blank shared memory
+    sw      $zero, OW_MAGIC($t0)
+    sw      $zero, 0x0004($t0)      #(flags, minute, second, state)
+    sw      $zero, OW_RTC($t0)
+    sw      $zero, OW_COUNT($t0)
+    li      $t1, K_BUFSIZEB
+    sw      $t1, OW_BUFSIZE($t0)
+    la      $t1, SM_BUFBASE         #Reset HEAD & TAIL to BASE of buffer
+    sw      $t1, OW_HEAD($t0)
+    sw      $t1, OW_TAIL($t0)
+    li      $t1, K_MAGICW           #Set magic value last
+    sw      $t1, OW_MAGIC($t0)
+    mtc0    $zero, COP0_Count       #Count from zero
+    li      $t1, K_TIMER_CYC        #...up to first timer interval
+    mtc0    $t1, COP0_Compare
+    ori     $t1, $zero, (IM_TIMER | IM_RTC | IM_UATX | IM_GLOBAL)  #Enable ALL but IM_UARX
+##Epilogue
+#    lw      $ra, 4($sp)
+#    nop                             #H; Not a hazard since $ra not used immediately
+#    addiu   $sp, $sp, 8             #H;
+    jr      $ra
+    mtc0    $t1, COP0_Status        #D;
+
+
+
+# ISR starts at 0xC000180
+.=0x0180
+ISR0180:            #ISR entry (hardware turns off global interrupt enable flag & stashes EPC for us):
+    mfc0    $k0, COP0_Cause     #Grab the Cause & Status ASAP if not sooner.
+    mfc0    $k1, COP0_Status    #NOTE: k0/k1 are OURS alone; No conflict! Must save EVERYTHING else tho.
+    andi    $k1, $k1, IM_POSSIBLE    #Mask current Status (enabled bits) with possible flags...
+    and     $k0, $k0, $k1           #...and with Cause (IP flags/interrupts triggered) into $k0.
+#Dispatch to routine for ONE active interrupt (prioritized check, hardware re-fires as necessary):
+    andi    $k1, $k0, IM_TIMER
+    bne     $k1, $zero, ISR_TIMER
+    andi    $k1, $k0, IM_RTC         #D;
+    bne     $k1, $zero, ISR_RTC
+    andi    $k1, $k0, IM_UARX        #D;
+    bne     $k1, $zero, ISR_UARX
+    andi    $k1, $k0, IM_UATX        #D;
+    bne     $k1, $zero, ISR_UATX
+#NONE active & enabled & implemented...lets clear the unknown interrupt...
+    addiu   $k1, $zero, 0xFFFF      #D; #Sign extended into all ones to invert...
+    xor     $k1, $k1, $k0           #...all active flags into zeros to mask them below.
+#FALLTHROUGH...with $k1 as mask out of mysterious flags
+
+isr_ret_cause:      #EXPECT: $k1 == BITS-TO-KEEP mask; #Clear some Cause bits then isr_ret_enable...
+    mfc0    $k0, COP0_Cause
+    and     $k0, $k0, $k1
+    mtc0    $k0, COP0_Cause
+#FALLTHROUGH...
+
+isr_ret_enable:     #Re-enable global interrupts (global Status bit) then isr_ret...
+    mfc0    $k1, COP0_Status        #Grab current enable flags...
+    ori     $k1, $k1, IM_GLOBAL     #...and get $k1 ready
+#FALLTHROUGH...with $k1 as new Status
+
+isr_ret:            #EXPECT: $k1 == new Status; #Set Status then return to EPC
+    mfc0    $k0, COP0_EPC           #EPC holds the PC we stepped in front of...
+    jr      $k0                     #...so we jump to it as if it were $ra.
+    mtc0    $k1, COP0_Status        #D; #Re-enable global-interrupt flag while returning.
+
+#END: ISR.
+
+
+ISR_TIMER:
+    mfc0    $k0, COP0_Compare
+    li      $k1, K_TIMER_CYC
+    addu    $k0, $k0, $k1           #Advance to next compare value on which to fire...
+    mfc0    $k1, COP0_Count         #LO-word of cycles-since-start (grab early)
+    mtc0    $k0, COP0_Compare       #...without adjusting Count (avoid skewing things).
+    la      $k0, SM_BASE
+    sw      $ra, OW_STASH1($k0)     #$ra=>STASH1
+    sw      $k1, OW_COUNT($k0)      #=>SHARED memory
+
+#Constant division tricks & 64-bit pre-truncated HI/LO contributions)!
+.equiv MREMB, 24
+#cdiv /50M /60 ~= *(93825 //2^48) *2^MREMB     (include MREMB-bit remainder)
+#cmul <0+<7+<2-<3-<3+<1+ of lo-contrib, reversed (32-n) >16+>1+>3->3->2+>7+
+    srl     $k1, $k1, (32-MREMB)    #Seed the accumulator (first value added)
+    srl     $k0, $k1, 1             #...keep shifting in $k0...
+    addu    $k1, $k1, $k0           #...and accumulating in $k1...
+    srl     $k0, $k0, 3
+    subu    $k1, $k1, $k0
+    srl     $k0, $k0, 3
+    subu    $k1, $k1, $k0
+    srl     $k0, $k0, 2
+    addu    $k1, $k1, $k0
+    srl     $k0, $k0, 7
+    addu    $k1, $k1, $k0
+    la      $k0, SM_BASE
+#cmul <0+<7+<2-<3-<3+<1+ of hi-contrib
+    lw      $k0, OW_RTC($k0)        #HI-word of cycles-since-start
+    nop                             #H; Hazard below since $k0 loaded above
+    sll     $k0, $k0, (MREMB-16)    #preshift to leave MREMB in remainder
+    addu    $k1, $k1, $k0
+    sll     $k0, $k0, 7
+    addu    $k1, $k1, $k0
+    sll     $k0, $k0, 2
+    subu    $k1, $k1, $k0
+    sll     $k0, $k0, 3
+    subu    $k1, $k1, $k0
+    sll     $k0, $k0, 3
+    addu    $k1, $k1, $k0
+    sll     $k0, $k0, 1
+    addu    $k1, $k1, $k0
+
+#stash fixed-point (32-MREMB).MREMB-bit MINUTES-since-start
+    la      $k0, SM_BASE
+    sw      $k1, OW_STASH0($k0)     #=>STASH0
+
+#truncate & move-HI MINUTE-HAND
+    srl     $k1, $k1, MREMB            #Truncate to integer MINUTE-HAND, into $k1
+    andi    $k1, $k1, 0b00111111    #6-bit value
+    sll     $k1, $k1, 16            #shift into high half
+
+#stash MINUTE-HAND & unstash fixed-point (quick-swap of same memory & same register!)
+    lw      $k1, OW_STASH0($k0)     #<=STASH0 #WARN:MEMORY-REG SWAP
+    nop                             #H; Hazard below since $k1 loaded above
+    sw      $k1, OW_STASH0($k0)     #D; #WARN:LOAD-STORE CROSSOVER; #$s0=>STASH0
+    ### What is above lw then sw doing???
+
+#mask 0x0000FFFF & cmul *60 = <6+<2- = Seconds (fraction-of-minute => SECOND-HAND)
+    li      $k0, ((1 << MREMB)-1)
+    and     $k0, $k1, $k0           #Grab fractional remainder only
+    sll     $k1, $k0, (6-2)         #Seed the accumulator
+;    sll     $k0, $k0, (2-2)         #Re-shift original (avoids sub as accumulator seed if reversed)
+    subu    $k1, $k1, $k0           #Subtract since was a consolidated run-of-ones optimization
+    srl     $k1, $k1, (MREMB-2)        #Truncate to integer SECOND-HAND
+
+#overlay upper & low binary halves
+    la      $k0, SM_BASE
+    lw      $k0, OW_STASH0($k0)     #<=STASH0
+    nop                             #H; Not a hazard since $k0 not used immediately below
+    andi    $k1, $k1, 0xFFFF
+    or      $k1, $k1, $k0
+
+#double-dabble each half simultaneously to BCD (two digits each)
+    jal     ROLL_BCD
+    sll     $k1, $k1, 1             #D; #shift 1/6
+    jal     ROLL_BCD
+    sll     $k1, $k1, 1             #D; #shift 2/6
+    jal     ROLL_BCD
+    sll     $k1, $k1, 1             #D; #shift 3/6
+    jal     ROLL_BCD
+    sll     $k1, $k1, 1             #D; #shift 4/6
+    jal     ROLL_BCD
+    sll     $k1, $k1, 1             #D; #shift 5/6
+#    sll     $k1, $k1, 1             #shift 6/6
+#    srl     $k1, $k1, 6             #align to lower two BCD digits
+    srl     $k1, $k1, (6-1)         #shift 6/6 #align to lower two BCD digits
+    la      $k0, SM_BASE
+    sb      $k1, OB_SECOND($k0)
+    srl     $k1, $k1, 16            #align to upper two BCD digits
+    sb      $k1, OB_MINUTE($k0)     #D;
+
+#check if we skip output
+    la      $k0, SM_BASE
+    lbu     $k1, OB_FLAGS($k0)
+    nop                             #H; Hazard below since $k1 loaded above
+    andi    $k1, $k1, MF_TIMER
+    beq     $k1, $zero, timer_unstash
+    nop                             #D;
+
+#send time as "mm:ss"
+    la      $k0, SM_BASE
+    lbu     $k0, OB_MINUTE($k0)
+    nop                             #H; Hazard below since $k0 loaded above
+    srl     $k0, $k0, 4
+    addiu   $k1, $k0, '0'
+    jal     SEND                    #expects char-to-send in $k1
+    nop                             #D;
+    la      $k0, SM_BASE
+    lbu     $k0, OB_MINUTE($k0)
+    nop                             #H; Hazard below since $k0 loaded above
+    andi    $k0, $k0, 0x000F
+    addiu   $k1, $k0, '0'
+    jal     SEND                    #expects char-to-send in $k1
+    nop                             #D;
+
+    ori     $k1, $zero, ':'
+    jal     SEND                    #expects char-to-send in $k1
+    nop                             #D;
+
+    la      $k0, SM_BASE
+    lbu     $k0, OB_SECOND($k0)
+    nop                             #H; Hazard below since $k1 loaded above
+    srl     $k0, $k0, 4
+    addiu   $k1, $k0, '0'
+    jal     SEND                    #expects char-to-send in $k1
+    nop                             #D;
+    la      $k0, SM_BASE
+    lbu     $k0, OB_SECOND($k0)
+    nop                             #H; Hazard below since $k0 loaded above
+    andi    $k0, $k0, 0x000F
+    addiu   $k1, $k0, '0'
+    jal     SEND                    #expects char-to-send in $k1
+    nop                             #D;
+
+    ori     $k1, $zero, '\r'
+    jal     SEND                    #expects char-to-send in $k1
+    nop                             #D;
+    ori     $k1, $zero, '\n'
+    jal     SEND                    #expects char-to-send in $k1
+    nop                             #D;
+
+timer_unstash:
+    la      $k0, SM_BASE
+    lw      $ra, OW_STASH1($k0)     #$ra<=STASH1
+    lui     $k1, 0xFFFF             #H; #NOTE: !IM_TIMER won't sign extend with "andi"
+    b       isr_ret_cause
+    ori     $k1, $zero, !IM_TIMER    #D;
+
+#END: ISR_TIMER.
+
+
+ISR_RTC:
+    la      $k1, SM_BASE
+    lw      $k0, OW_RTC($k1)
+    nop                             #H; Hazard below since $k0 loaded above
+    addiu   $k0, $k0, 1             #Increment clock
+    sw      $k0, OW_RTC($k1)
+    b       isr_ret_cause
+    addiu   $k1, $zero, !IM_RTC      #D;
+
+#END: ISR_RTC.
+
+
+ISR_UARX:
+    la      $k0, MMIO_BASE
+    lw      $k1, OW_UARX_VALID($k0) #UART recv truly/still valid?
+    nop                             #H; Hazard below since $k1 loaded above
+    andi    $k1, $k1, MM_UART_RVA_BIT
+    beq     $k1, $zero, _uarx_done
+    nop                             #D;
+#custom search "case" checking (trying to be quick since interrupts disabled)
+    lbu     $k1, OB_UARX_DATA($k0)  #UART recv byte
+    ori     $k0, $zero, 0x01        #H; $k1 not used so no hazard; #control-A
+    beq     $k0, $k1, _uarx_abort
+    ori     $k0, $zero, 'd'         #D;
+    beq     $k0, $k1, _uarx_disable
+    ori     $k0, $zero, 'e'         #D;
+    beq     $k0, $k1, _uarx_enable
+    ori     $k0, $k1, 0b00100100    #D; #force don't-cares to 1's
+    xori    $k0, $k0, 0b01110110    #toggle 1's from "match"
+    bne     $k0, $zero, _uarx_done  #covers "RVrv" characters simultaneously!
+    lui     $k0, %hi(SM_BASE)       #D;
+    ori     $k0, $k0, %lo(SM_BASE)  # Is this a read from memory???
+    b       _uarx_done              #H: $k0 not used so no hazard here
+    sb      $k1, OB_STATE($k0)      #D; #store STATE for application to see
+
+_uarx_enable:
+    la      $k0, SM_BASE
+    lbu     $k1, OB_FLAGS($k0)
+    nop                             #H; Hazard below since $k1 loaded above
+    ori     $k1, $k1, MF_TIMER
+    b       _uarx_done
+    sb      $k1, OB_FLAGS($k0)      #D;
+
+_uarx_disable:
+    la      $k0, SM_BASE
+    lbu     $k1, OB_FLAGS($k0)
+    nop                             #H; Hazard below since $k1 loaded above
+    andi    $k1, $k1, !MF_TIMER
+    sb      $k1, OB_FLAGS($k0)
+#    b       _uarx_done
+#    nop                             #D;
+#FALLTHROUGH...
+
+_uarx_done:
+    b       isr_ret_cause
+    addiu   $k1, $zero, !IM_UARX     #D;
+
+_uarx_abort:
+    mtc0    $zero, COP0_Cause       #blast the Cause register!
+    b       isr_ret                 #expects new Status in $k1
+    ori     $k1, $zero, 0           #D; #disable everything
+
+#END: ISR_UARX.
+
+
+/*  BASED ON PLOP CIRCULAR BUFFER CODE FROM PRIOR FIDDLIN'!
+u16 TxFromBuf(u8 *pB, u8 *pW, u8 *pH, u8 **ppT, int u_TX, u8 nl2cr, u16 maxBurst) {
+    u8 *pT = *ppT; // Local temp for tail pointer
+    if (pT == pH) break; // Buffer is empty (no work to do)
+    if (XUartLite_IsTransmitFull(u_TX)) break; // We are behind (but not necessarily in trouble)
+    u8 bX = *pT++; // Fetch from buffer & advance (post-increment)
+    if (nl2cr && (bX == '\n')) bX = '\r'; // Translate nl->cr if requested (outbound)
+    XUartLite_SendByte(u_TX, bX); // Get it closer to hardware ASAP (in case XMIT wasnt busy)
+    if (pT >= pW) pT = pB; // Wrap-around if needed (hopefully never >)
+    *ppT = pT; // Update the real tail pointer
+}
+*/
+
+ISR_UATX:
+    la      $k0, SM_BASE
+    lw      $k1, OW_HEAD($k0)       #Grab HEAD & TAIL
+    nop                             #H; Not a hazard since $k1 NOT used immediately
+    lw      $s0, OW_TAIL($k0)       #D; #REG: $s0 == TAIL
+    nop                             #H; Hazard below since $s0 loaded above
+    sw      $s0, OW_STASH0($k0)     #D; #WARN:LOAD-STORE CROSSOVER; #$s0=>STASH0
+    beq     $k1, $s0, _uatx_unstash #if buffer is empty, break
+    la      $k0, MMIO_BASE           #D;
+    lw      $k1, OW_UATX_READY($k0) #UART xmit truly/still ready?
+    nop                             #H; Hazard below since $k1 loaded above
+    andi    $k1, $k1, MM_UART_RVA_BIT
+    beq     $k1, $zero, _uatx_unstash
+    nop                             #D;
+    lbu     $k1, 0($s0)             #load next byte to send from buffer
+    nop                             #H; No hazard since $k1 NOT used immediately
+    addiu   $s0, $s0, 1             #D; #post-increment TAIL reg
+    la      $k0, MMIO_BASE
+    sb      $k1, OB_UATX_DATA($k0)  #UART xmit byte
+    la      $k1, SM_BUFPAST
+    sltu    $k1, $s0, $k1           #detect wraparound
+    bne     $k1, $zero, _uatx_nowrap
+    lui     $k0, %hi(SM_BASE)       #D; #1st half of "la" (always used)
+    nop                             #H; No hazard since $k0 not used below
+    la      $s0, SM_BUFBASE
+_uatx_nowrap:
+    ori     $k0, $k0, %lo(SM_BASE)  #2nd half of "la" (reached eather way)
+    nop                             #H; Hazard below since $k0 loaded above
+#    la      $k0, SM_BASE
+    sw      $s0, OW_TAIL($k0)       #REG: $s0 free; #update real TAIL pointer (in memory)
+_uatx_unstash:
+    la      $k0, SM_BASE
+    lw      $s0, OW_STASH0($k0)     #$s0<=STASH0
+    nop                             #H; Not a hazard since $s0 not used immediately
+_uatx_done:
+    b       isr_ret_cause           #D; (load-delay slot on $s0 when fallthrough)
+    addiu   $k1, $zero, !IM_UATX    #D;
+
+#END: ISR_UATX.
+
+
+ROLL_BCD:           #EXPECT: $k1 == BCD scratch; #FOUL: $ra, $k0, $k1
+    andi    $k0, $k1, (0xF << 6)
+    sltiu   $k0, $k0, (0x5 << 6)
+    bne     $k0, $zero, _less00
+    andi    $k0, $k1, (0xF << 10)   #D; #needn't include addiu contribution
+    addiu   $k1, $k1, (0x3 << 6)
+_less00:
+    sltiu   $k0, $k0, (0x5 << 10)
+    bne     $k0, $zero, _less10
+    srl     $k0, $k1, (16 + 6)      #D; #needn't include addiu contribution
+    addiu   $k1, $k1, (0x3 << 10)
+_less10:
+    andi    $k0, $k0, 0xF
+    sltiu   $k0, $k0, 0x5
+    bne     $k0, $zero, _less20
+    lui     $k0, (3 << 6)           #D; #only used if no branch
+    addu    $k1, $k1, $k0
+_less20:
+    srl     $k0, $k1, (16 + 10)
+    andi    $k0, $k0, 0xF
+    sltiu   $k0, $k0, 0x5
+    bne     $k0, $zero, _less30
+    lui     $k0, (3 << 10)          #D; #only used if no branch
+    jr      $ra
+    addu    $k1, $k1, $k0           #D;
+_less30:
+    jr      $ra
+    nop
+
+#END: ROLL_BCD.
+
+
+USER_SEND:
+    li      $t0, ~IM_GLOBAL
+    mfc0    $t1, COP0_Status
+    and     $t0, $t1, $t0
+    mtc0    $t0, COP0_Status        #Interrupts disabled, now use $k0/$k1
+    or      $t0, $zero, $ra         #Stash $ra in $t0
+    bal     SEND
+    or      $k1, $zero, $a0         #D; $k1 = char-to-send from $a0 of regular function
+#    ori     $t1, $t1, IM_GLOBAL
+    or      $ra, $zero, $t0         #Restore $ra
+    jr      $ra
+    mtc0    $t1, COP0_Status        #D;
+
+#END: USER_SEND.
+
+
+SEND:               #EXPECT: $k1 = char-to-send; #FOUL: $k0, $k1
+    la      $k0, MMIO_BASE
+    lw      $k0, OW_UATX_READY($k0)
+    nop                             #H; Hazard below since $k0 loaded above
+    andi    $k0, $k0, MM_UART_RVA_BIT
+    beq     $k0, $zero, _send_enqueue
+    lui     $k0, %hi(MMIO_BASE)     #D; #1st half of "la" (used only if branch)
+#TODO: If queue not empty, enqueue new & send HEAD instead
+    ori     $k0, $k0, %lo(MMIO_BASE)    #2nd half of "la"
+    sb      $k1, OB_UATX_DATA($k0)  #UART xmit, immediately
+    jr      $ra
+    nop                             #D;
+
+_send_enqueue:
+    la      $k0, SM_BASE
+    lw      $k0, OW_HEAD($k0)       #grab HEAD
+    nop                             #H; Hazard below since $k0 loaded above
+#TODO: Ensure not full!
+    sb      $k1, 0($k0)             #ensure $k1 safe until this point!
+    addiu   $k1, $k0, 1             #advance HEAD
+    la      $k0, SM_BUFPAST
+    slt     $k0, $k1, $k0
+    bne     $k0, $zero, _no_wrap
+    lui     $k0, %hi(SM_BASE)       #D; #1st half of "la" (always used)
+    la      $k1, SM_BUFBASE
+_no_wrap:
+    ori     $k0, $k0, %lo(SM_BASE)  #2nd half of "la" (reached eather way)
+    nop                             #H; Hazard below since $k0 loaded above
+    sw      $k1, OW_HEAD($k0)       #store HEAD
+    jr      $ra
+    nop                             #D;
+
+#END: SEND.
+
+
+
+
+/*
+::NOTES ON CONSTANT DIVISION/MULTIPLICATION CALCULATIONS::
+
+divide by 50_000_000 = 0x02FAF080 = 0000_0010_1111_1010_1111_0000_1000_0000
+0.00000002 = 21.47483648 / 2^30 ~= 344 / 2^34
+n * 344 / 2^31
+n*344 == n*10101 =(n<<4)+(n<<2)+(n<<0)
+101
+  101
+    101
+     10.1000
+1101011.1000 = 107.5 (5*21.5)
+
+<10 <8 <6 <5 | >>4
+<5+<1+<2+<2 >>4
+------
+/60 = *0.016666667 = *1092/2^16
+0.0000010001000100
+<2 <6 <10 | >>16  (<10 >16 = >6 like /64 with additional fractions)
+<2+<4+<4 >>16 Minutes
+*60 = *111100 = *1000000 - *100
+0x00FF <6-<2 >>16 = Seconds
+------
+Reworked to divide by 60 at same time as 50K (to avoid accumulated precision mistake):
+/50M /60 ~= *93824.9923 /2^48 ; 93825 = 
+1_0110_1110_1000_0001 *(93825)
+1_011+_00-0_+000_000+ *(+2^0+2^7-2^9+2^12...)
++_+00-_00-0_+000_000+ *(+2^0+2^7-2^9-2^12+2^15+2^16) ;Shifts: R0+,R7+,R9-,R12-,R15+,R16+
+Arrange 16.16 fixed-point window on 64-bit result [x16|r16.r16|x16]: >>48 <<16 = >>32
+Lo-result contributions, backwards: R16+,R15+,R12-,R9-,R7+,R0+  ;Relative: R0+
+
+::NOTES ON CASE STATEMENT OPTIMIZATION::
+
+#(ctl-a)RV][derv
+~ 01    00000001
+
+d 64    01100100
+e 65    01100101
+de      0110010x (covered)
+mask    11111110
+force   00000001 0x01 low-bit == enable
+match   01100101 0x65
+srl-1    0110010 0x32
+
+R 52    01010010
+V 56    01010110
+r 72    01110010
+v 76    01110110
+rvRV    01x10x10 (covered)
+mask    11011011 0xDB
+force   00100100 0x24
+match   01110110 0x76
+
+30-39 '0'..'9' Digit: add/or 0x30
+*/
