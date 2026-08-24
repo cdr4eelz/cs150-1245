@@ -8,11 +8,11 @@ add wave EchoTestbenchHybrid/mem_arch/*
 add wave EchoTestbenchHybrid/mem_arch/dcache/*
 add wave EchoTestbenchHybrid/mem_arch/icache/*
 add wave EchoTestbenchHybrid/DUT/*
-add wave EchoTestbenchHybrid/DUT/membank/*
-add wave EchoTestbenchHybrid/DUT/membank/memmap/*
-add wave EchoTestbenchHybrid/DUT/cpu/cop0/*
-add wave EchoTestbenchHybrid/DUT/cpu/regfile/*
-add wave EchoTestbenchHybrid/DUT/cpu/s_F/*
-add wave EchoTestbenchHybrid/DUT/cpu/s_DX/*
-add wave EchoTestbenchHybrid/DUT/cpu/s_MW/*
+add wave EchoTestbenchHybrid/DUT/bank/*
+add wave EchoTestbenchHybrid/DUT/bank/memmap/*
+add wave EchoTestbenchHybrid/DUT/cop0/*
+add wave EchoTestbenchHybrid/DUT/regfile/*
+add wave EchoTestbenchHybrid/DUT/core/s_F/*
+add wave EchoTestbenchHybrid/DUT/core/s_DX/*
+add wave EchoTestbenchHybrid/DUT/core/s_MW/*
 run 50000us
