@@ -1,4 +1,6 @@
-DUMPOPTS ?= -D --disassembler-options=reg-names=numeric,no-aliases
+#DUMPOPTS ?= -D --disassembler-options=reg-names=numeric,no-aliases
+DUMPOPTS ?= -xsD --wide --disassembler-options=reg-names=n32,reg-names=mips32
+#DUMPOPTS ?= -D --wide
 
 ASMOPTS = --warn -g -ahlsgm=$(patsubst %.s,%.list,$<)
 
