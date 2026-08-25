@@ -12,6 +12,7 @@ add wave EchoTestbenchHybrid/DUT/bank/*
 add wave EchoTestbenchHybrid/DUT/bank/memmap/*
 add wave EchoTestbenchHybrid/DUT/cop0/*
 add wave EchoTestbenchHybrid/DUT/regfile/*
+add wave EchoTestbenchHybrid/DUT/core/*
 add wave EchoTestbenchHybrid/DUT/core/s_F/*
 add wave EchoTestbenchHybrid/DUT/core/s_DX/*
 add wave EchoTestbenchHybrid/DUT/core/s_MW/*

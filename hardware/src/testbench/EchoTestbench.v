@@ -54,7 +54,10 @@ module EchoTestbench;
 
     // Instantiate your CPU here and connect the FPGA_SERIAL_TX wires
     // to the UART we use for testing
-    MIPS150 #(.CPU_FREQ(CPU_FREQ)) DUT
+    MIPS150 #(
+        .CPU_FREQ(CPU_FREQ),
+        .PC_BOOT(32'h6000_0000) //NOTE: h6000_0000 for SCRATCH_IMEM
+    ) DUT
     (   .clk(Clock), .rst(Reset), .stall( (1) ? Stall : 1'b0 ),
         .FPGA_SERIAL_RX(FPGA_SERIAL_RX),
         .FPGA_SERIAL_TX(FPGA_SERIAL_TX),
