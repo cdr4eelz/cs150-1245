@@ -1,0 +1,133 @@
+# Circular (ring) buffer demonstration in MIPS-1 assembly
+# Compatible with SPIM / MARS.  Power-of-2 size for efficient wrap-around.
+#
+# Layout:
+#   buffer[0..7]   – 8 word slots
+#   head           – next write index
+#   tail           – next read  index
+# Empty when head == tail
+# Full  when (head+1) mod 8 == tail   (one slot left unused)
+
+        .data
+buffer: .space  32              # 8 words
+head:   .word   0
+tail:   .word   0
+msg_full:   .asciiz "Buffer full – write ignored\n"
+msg_empty:  .asciiz "Buffer empty – nothing to read\n"
+msg_wrote:  .asciiz "Wrote: "
+msg_read:   .asciiz "Read:  "
+newline:    .asciiz "\n"
+
+        .text
+        .globl  main
+main:
+        # ----- Producer: write the values 10,20,30,40,50 -----
+        li      $s0, 10
+write_loop:
+        move    $a0, $s0
+        jal     circ_write
+        # (ignore full condition for this short demo)
+
+        addi    $s0, $s0, 10
+        ble     $s0, 50, write_loop
+
+        # ----- Consumer: read everything that was written -----
+read_loop:
+        jal     circ_read
+        beq     $v1, $zero, done_reading   # v1==0 means empty
+
+        # print the value we just got
+        la      $a0, msg_read
+        li      $v0, 4
+        syscall
+        move    $a0, $v0                   # value returned in $v0
+        li      $v0, 1
+        syscall
+        la      $a0, newline
+        li      $v0, 4
+        syscall
+        j       read_loop
+
+done_reading:
+        # try one more read to show the empty case
+        jal     circ_read
+        # (will print the empty message)
+
+        li      $v0, 10                    # exit
+        syscall
+
+
+#-----------------------------------------------------------------------
+# circ_write
+#   Input : $a0 = value to store
+#   Output: $v0 = 1 on success, 0 if buffer was full
+#-----------------------------------------------------------------------
+circ_write:
+        lw      $t0, head                  # t0 = head
+        lw      $t1, tail                  # t1 = tail
+
+        addi    $t2, $t0, 1                # next = head + 1
+        andi    $t2, $t2, 7                # next = (head+1) mod 8
+
+        beq     $t2, $t1, write_full       # full?
+
+        # compute address: buffer + head*4
+        sll     $t3, $t0, 2
+        la      $t4, buffer
+        addu    $t4, $t4, $t3
+        sw      $a0, 0($t4)                # *head = value
+
+        sw      $t2, head                  # head = next
+
+        # optional debug print
+        la      $a0, msg_wrote
+        li      $v0, 4
+        syscall
+        lw      $a0, 0($t4)                # re-load the value we just wrote
+        li      $v0, 1
+        syscall
+        la      $a0, newline
+        li      $v0, 4
+        syscall
+
+        li      $v0, 1                     # success
+        jr      $ra
+
+write_full:
+        la      $a0, msg_full
+        li      $v0, 4
+        syscall
+        li      $v0, 0                     # failure
+        jr      $ra
+
+
+#-----------------------------------------------------------------------
+# circ_read
+#   Output: $v0 = value read (undefined if empty)
+#           $v1 = 1 on success, 0 if buffer was empty
+#-----------------------------------------------------------------------
+circ_read:
+        lw      $t0, head
+        lw      $t1, tail
+
+        beq     $t0, $t1, read_empty       # empty?
+
+        # compute address: buffer + tail*4
+        sll     $t3, $t1, 2
+        la      $t4, buffer
+        addu    $t4, $t4, $t3
+        lw      $v0, 0($t4)                # value = *tail
+
+        addi    $t2, $t1, 1                # next = tail + 1
+        andi    $t2, $t2, 7                # next = (tail+1) mod 8
+        sw      $t2, tail                  # tail = next
+
+        li      $v1, 1                     # success
+        jr      $ra
+
+read_empty:
+        la      $a0, msg_empty
+        li      $v0, 4
+        syscall
+        li      $v1, 0                     # failure
+        jr      $ra

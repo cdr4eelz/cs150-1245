@@ -1,7 +1,5 @@
 TARGET := proj3
-LDSTYLE := inject_cache
-#SSRCS := start.s
-#LIBOPTS ?= -nostartfiles -nodefaultlibs
+LDSTYLE := as_scratchpair
 
 include ../makefile.pre
 

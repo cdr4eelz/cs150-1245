@@ -7,6 +7,10 @@ all: core
 
 core: $(V_SRC)
 
+touch:
+	git checkout -- $(XCO_SRC)
+	touch $(V_SRC)
+
 %.v: %.xco coregen.cgp
 	coregen $(CG_FLAGS) -p coregen.cgp -b $*.xco
 	#-rm -rf $*/* $*.xci $*_*.tcl $*_*.txt $*.gise *.cgc *.log tmp xlnx*
@@ -19,4 +23,6 @@ tidy: core
 
 clean:
 	find . ! -name '*.xco' -a ! -name 'Makefile' -a ! -name '*.coe' -a ! -name '*.cgp' -a ! -name '.gitignore' -a ! -name 'stash*' -a ! -type l -delete
+
+.PHONY: core tidy clean touch
 

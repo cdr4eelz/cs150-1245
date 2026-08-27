@@ -18,9 +18,9 @@ _start:
     lui     $s7, 0
     lui     $k0, 0
     lui     $k1, 0
-    li 	    $gp, 0x50003000
-    li      $fp, 0x50004000
-    li      $sp, 0x50004000
-    li      $ra, 0x60000000
+    la 	    $gp, _gp #TODO: %hi/lo rather than pseudo-instruction "la"
+    la      $sp, _sp #TODO: Use %hi/lo
+    la      $fp, _fp #TODO: Use %hi/lo
+    li      $ra, 0x40000000 # If ever "returns", launch BIOS fresh
     j       main
     nop
