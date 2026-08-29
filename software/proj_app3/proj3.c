@@ -31,6 +31,31 @@ struct SM_DATA {
   CALLEE preserves: s0-s7,gp,sp,fp,ra
 */
 
+//TODO: Put in UART library but keep it optional somehow
+void uwrite_int8s_ISR(int8_t* src) { //Should use MAX/TIMEOUT?
+    struct SM_DATA* share = SM_BASE;
+    int8_t ch;
+
+    while (ch = *src++) { // Repeat while not NULL
+        if (UTRAN_CTRL) { // We can send directly
+            UTRAN_DATA = ch; // Simple send direct to UART
+        } else { // Utilize ring-buffer
+            uint32_t head = share->buff_head;
+            uint32_t nextHead = (head + 1) & K_BUFROLLOVER;
+            while (nextHead == share->buff_tail) { } //Buffer is full
+            share->buff_data[head] = ch;
+            share->buff_head = nextHead;
+        }
+    }
+}
+
+void uwait_ISR(void) {
+    struct SM_DATA* share = SM_BASE;
+
+    // Wait until interrupt based sending is done
+    while ((share->buff_tail != share->buff_head)
+             || (!UTRAN_CTRL)) { } //Wait on prior send
+}
 
 //TODO: Put in simple string library (perhaps as INLINE)
 int8_t* copy_string(int8_t* dst, int8_t* src, uint16_t maxLen) { //Add size check
@@ -63,24 +88,18 @@ void main() {
     share->stash0 = -1u;
     share->stash1 = -1u;
     share->buff_size = K_BUFSIZEB;
-    share->buff_head = K_BUFSIZEB - 1;
+    share->buff_head = 0;
     share->buff_tail = 0;
-    copy_string(&share->buff_data, LONG_STRING, K_BUFSIZEB - 1);
+//    copy_string(&share->buff_data, LONG_STRING, K_BUFSIZEB - 1);
 
     while (!UTRAN_CTRL) { } //Wait until we can send...
-    uwrite_int8s("\r\n\r\nPROJ-3:\r\n"); //Output without interrupts
+    uwrite_int8s("\r\n\r\nPROJ-3:\r\n{"); //Output without interrupts
     while (!UTRAN_CTRL) { } //Wait until prior send is definitely done
 
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
 
-    // Send a char manually to trigger UATX interrupt sequence
-    while (!UTRAN_CTRL) { } //Wait until prior send is definitely done
-    UTRAN_DATA = '{';
-    //while (!UTRAN_CTRL) { } //Wait until prior send is definitely done
-
-    // Wait until interrupt based sending is done
-    while ((share->buff_tail != share->buff_head)
-             || (!UTRAN_CTRL)) { } //Wait until prior send is definitely done
+    uwrite_int8s_ISR(LONG_STRING);
+    uwait_ISR();
 
     ISR_STATUS(0x00000000, 0x00000000);
 

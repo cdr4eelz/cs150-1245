@@ -10,8 +10,6 @@
 # SHARED memory locations between app and isr handler
 .equiv K_BUFSIZEB,      0x0010
 .equiv K_BUFROLLOVER,   0x000F
-#.equiv K_BUFSIZEB,      0x0100
-#.equiv K_BUFROLLOVER,   0x00FF
 .equiv K_SHARED_MAGIC,  0xFEEDBEEF
 
 #struct SM_DATA {
@@ -180,18 +178,7 @@ ISR_UATX:
     lbu     $k0, SMO_buff_data($k0)     # ...then furthur offset.
     nop     #Delay Slot: Ensure value is available in $k0
     #Unnecessary: andi    $k0, $k0, 0x00FF
-    j       UATX_SEND
-    nop
 
-#UATX_EMPTY:
-###TEMP print char even if buffer is empty
-#    la      $k1, MMIO_BASE
-#    addi    $k0, $zero, '='
-#    sw      $k0, OW_UATX_DATA($k1)
-#    j       UATX_DONE
-#    nop
-
-UATX_SEND:
 ### Consider sanity check regarding OW_UATX_READY(MMIO_BASE)???
     la      $k1, SM_BASE #REDUNDANT
     lw      $t1, SMO_buff_tail($k1) #REDUNDANT
@@ -199,10 +186,6 @@ UATX_SEND:
     andi    $t0, $t0, K_BUFROLLOVER
     sw      $t0, SMO_buff_tail($k1)     # Store new offset
     la      $k1, MMIO_BASE              # Memory mapped XMIT char
-
-###    addi    $k0, $zero, '-'
-    #nop
-
     sw      $k0, OW_UATX_DATA($k1)      # Send character
 #    j       UATX_DONE
 #    nop
