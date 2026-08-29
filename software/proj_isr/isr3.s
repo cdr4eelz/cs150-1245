@@ -8,30 +8,38 @@
 
 
 # SHARED memory locations between app and isr handler
-#define SM_BASE ((struct SM_DATA *) 0x50000000u)
-#define K_BUFSIZEB 0x0100
-.equiv K_BUFSIZEB, 0x0100
-#struct SM_DATA {
-#    volatile uint32_t stash0;
-#    volatile uint32_t stash1;
-#    volatile uint32_t buff_size;
-#    volatile uint32_t buff_offset;
-#    int8_t buff_data[K_BUFSIZEB];
-#};
-.equiv  SM_DATA,        0x50000000  #Some agreed upon spot in memory
-# Offsets from base address as in SMO_xyz($SM_DATA)
-.equiv  SMO_stash0,         0x0000
-.equiv  SMO_stash1,         0x0004
-.equiv  SMO_buff_size,      0x0008
-.equiv  SMO_buff_offset,    0x000C
-.equiv  SMO_buff_data,      0x0010
-# Direct addresses of shared structure members
-.equiv  SMA_stash0,         (SM_DATA + SMO_stash0)
-.equiv  SMA_stash1,         (SM_DATA + SMO_stash1)
-.equiv  SMA_buff_size,      (SM_DATA + SMO_buff_size)
-.equiv  SMA_buff_offset,    (SM_DATA + SMO_buff_offset)
-.equiv  SMA_buff_data,      (SM_DATA + SMO_buff_data)
+.equiv K_BUFSIZEB,      0x0010
+.equiv K_BUFROLLOVER,   0x000F
+#.equiv K_BUFSIZEB,      0x0100
+#.equiv K_BUFROLLOVER,   0x00FF
+.equiv K_SHARED_MAGIC,  0xFEEDBEEF
 
+#struct SM_DATA {
+#    volatile uint32_t magic; // Sanity check after initialization
+#    volatile uint32_t stash0; // Save registers during interrupt
+#    volatile uint32_t stash1; // typically saving $t0 $t1
+#    volatile uint32_t buff_size; // For dbl-check (use K_BUFSIZEB)
+#    volatile uint32_t buff_head; // Offset to circular buffer head
+#    volatile uint32_t buff_tail; // Likewise for tail
+#    int8_t buff_data[K_BUFSIZEB]; // The buffer itself (bytes NOT words)
+#};
+.equiv  SM_BASE,        0x50000000  #Some agreed upon spot in memory
+# Offsets from base address as in SMO_xyz($SM_BASE)
+.equiv  SMO_magic,          0x0000
+.equiv  SMO_stash0,         0x0004
+.equiv  SMO_stash1,         0x0008
+.equiv  SMO_buff_size,      0x000C
+.equiv  SMO_buff_head,      0x0010
+.equiv  SMO_buff_tail,      0x0014
+.equiv  SMO_buff_data,      0x0018      #Start of buffer...
+# Direct addresses of shared structure members
+.equiv  SMA_magic,          (SM_BASE + SMO_magic)
+.equiv  SMA_stash0,         (SM_BASE + SMO_stash0)
+.equiv  SMA_stash1,         (SM_BASE + SMO_stash1)
+.equiv  SMA_buff_size,      (SM_BASE + SMO_buff_size)
+.equiv  SMA_buff_head,      (SM_BASE + SMO_buff_head)
+.equiv  SMA_buff_tail,      (SM_BASE + SMO_buff_tail)
+.equiv  SMA_buff_data,      (SM_BASE + SMO_buff_data)
 
 # A simple jump-table for JALing in...
 # ...from BIOS to utility functions
@@ -85,7 +93,7 @@ DISPATCH:
 .=0x0180
 _isr:
 # Stash $t0 & $t1 on behalf of all handlers for convenience
-    la      $k1, SM_DATA            # Point at base of shared data
+    la      $k1, SM_BASE            # Point at base of shared data
     sw      $t0, SMO_stash0($k1)    # Stash $t0
     sw      $t1, SMO_stash1($k1)    # Stash $t1
 
@@ -123,7 +131,7 @@ done_cause:     # Set $k1 to BITS-TO-KEEP mask for Cause
 # Drop-thru
 
 done_stash:     # Return from handler to here to restore stashed vals
-    la      $t1, SM_DATA
+    la      $t1, SM_BASE
     lw      $t0, SMO_stash0($t1)
     lw      $t1, SMO_stash1($t1)
 # Drop-thru
@@ -157,52 +165,48 @@ ISR_UARX:
 
 # Triggered when UART Transmit transitions from busy to available:
 ISR_UATX:
-    la      $k1, SM_DATA
-
-###TEMP: Check if offset == size as temporary "done" indicator
-#    la      $k1, SM_DATA
-    lw      $t0, SMO_buff_offset($k1)
-    lw      $t1, SMO_buff_size($k1)
-    nop     #Delay Slot: Ensure $t1 has new value
-    ###li      $t1, 64
-    beq     $t0, $t1, UATX_ALL_SENT
+    la      $k1, SM_BASE
+### If head == tail then buffer is empty
+    lw      $t0, SMO_buff_head($k1)
+    lw      $t1, SMO_buff_tail($k1)
+    nop     #Delay Slot: Avoid hazard with $t1 fetch
+    beq     $t0, $t1, UATX_DONE         # Empty buffer
     nop
 
-#    la      $k1, SM_DATA
-#    lw      $t0, SMO_buff_offset($k1)
-#    nop     #Delay Slot
-    addu    $k0, $k1, $t0               # Pre-index from base...
+    la      $k1, SM_BASE #REDUNDANT
+    lw      $t1, SMO_buff_tail($k1) #REDUNDANT
+    nop     #Delay Slot if $t1 used next #REDUNDANT
+    addu    $k0, $k1, $t1               # Pre-index from base...
     lbu     $k0, SMO_buff_data($k0)     # ...then furthur offset.
     nop     #Delay Slot: Ensure value is available in $k0
     #Unnecessary: andi    $k0, $k0, 0x00FF
-    bne     $k0, $zero, UATX_NOT_NULL
+    j       UATX_SEND
     nop
 
-UATX_NULL:
-    sw      $t1, SMO_buff_offset($k1)   # Store buff_size when done
-    ###ori     $k0, $zero, '='
-    ###la      $k1, MMIO_BASE              # Memory mapped XMIT char
-    ###sw      $k0, OW_UATX_DATA($k1)      # Send character
-    j       UATX_DONE
-    nop
+#UATX_EMPTY:
+###TEMP print char even if buffer is empty
+#    la      $k1, MMIO_BASE
+#    addi    $k0, $zero, '='
+#    sw      $k0, OW_UATX_DATA($k1)
+#    j       UATX_DONE
+#    nop
 
-UATX_NOT_NULL:
-    addi    $t0, $t0, 1                 # Advance to next char
-    sw      $t0, SMO_buff_offset($k1)   # Store new offset
-    ###ori     $k0, $zero, '+'
+UATX_SEND:
+### Consider sanity check regarding OW_UATX_READY(MMIO_BASE)???
+    la      $k1, SM_BASE #REDUNDANT
+    lw      $t1, SMO_buff_tail($k1) #REDUNDANT
+    addi    $t0, $t1, 1                 # Advance to next char
+    andi    $t0, $t0, K_BUFROLLOVER
+    sw      $t0, SMO_buff_tail($k1)     # Store new offset
     la      $k1, MMIO_BASE              # Memory mapped XMIT char
+
+###    addi    $k0, $zero, '-'
+    #nop
+
     sw      $k0, OW_UATX_DATA($k1)      # Send character
-    j       UATX_DONE
-    nop
-
-UATX_ALL_SENT:
-    la      $k1, SM_DATA
-    li      $k0, K_BUFSIZEB
-    sw      $k0, SMO_buff_offset($k1)
-#    ori     $k0, $zero, '@'
-#    la      $k1, MMIO_BASE              # Memory mapped XMIT char
-#    sw      $k0, OW_UATX_DATA($k1)      # Send character
-
+#    j       UATX_DONE
+#    nop
+# ...FALLTHROUGH...
 # ISR return here (restore stashed vals & reset cause)...
 UATX_DONE:
     j       done_cause
