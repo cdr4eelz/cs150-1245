@@ -4,5 +4,6 @@
 *.bak
 *.xxx
 *.log
+*.swp
 _*
 .DS_Store

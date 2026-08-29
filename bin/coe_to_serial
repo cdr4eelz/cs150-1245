@@ -13,6 +13,7 @@ ADDRESS="${2:-30000000}"
 STTY=${3:-${SERIALTTY:-/dev/ttyUSB0}}
 export STTY
 
+SLEEP_THROTTLE="0.000001"
 LOGO="_coe_out.log"
 LOGI="_coe_in.log"
 #JALADDR="$(( ( 0x$ADDRESS ) & 0x1FFFFFFF ))"
@@ -39,7 +40,7 @@ fi
 function send_ch {
     #echo -n "."
     echo -ne "$1" |tee "${STTY}" &>>"${LOGO}"
-    sleep 0.001
+    sleep ${SLEEP_THROTTLE}
 }
 
 # Send the command one char at a time (avoid swamping)
@@ -96,7 +97,12 @@ while read LINE; do
     fi
 done < "${FILE}"
 
-echo -ne " \x0d " |tee "${STTY}" &>>"${LOGO}"
+echo -ne "\x0d" |tee "${STTY}" &>>"${LOGO}"
+echo -ne "result\x0d " |tee "${STTY}" &>>"${LOGO}"
 sleep 1
 
-echo -e  "\n\nFile written." >&2
+echo -e  "\n\nFile written..." >&2
+tail -4 "${LOGI}" |head -2
+printf '%x\n' "${XOR}" >&2 # Print as hexidecimal
+
+echo 

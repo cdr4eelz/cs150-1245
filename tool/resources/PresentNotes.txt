@@ -1,0 +1,6 @@
+Demonstrate GPU and comparison with software rendering. Should we count clock cycles and/or elapsed time???
+Demonstrate basics of GIOS (graphics commands added to BIOS), plus a "dump" command and XOR calc while uploading or in block "copy" command!
+
+Show UARX interrupts responding to "keyboard" commands and triggering various benchmarks.
+
+
