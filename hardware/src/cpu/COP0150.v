@@ -41,7 +41,8 @@ module COP0150 (
     wire        ie          = status[0];        // Global interrupt enable flag
     wire [ 5:0] im          = status[15:10];    // Enabled interrupts mask
     wire [ 5:0] ip          = cause[15:10];     // Current "active" interrupts
-    wire [ 5:0] next_ip     = ip | (interrupts & im); // Mask new with active "im" mask
+  //wire [ 5:0] next_ip     = ip | (interrupts & im); // Mask new with active "im" mask
+    wire [ 5:0] next_ip     = ip | interrupts; // Original was NOT masked by active "im"
     wire [31:0] next_cause  = {cause[31:16], next_ip, cause[9:0]};
     wire [31:0] next_count  = count + 1;
 

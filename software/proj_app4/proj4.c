@@ -130,7 +130,7 @@ void main() {
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
     uwait_ISR(); // Get off to a clean start with nobody sending yet
 
-    uwrite_int8s_ISR("\r\n\r\nPROJ-3:\r\n{");
+    uwrite_int8s_ISR("\r\n\r\nPROJ-4:\r\n{");
     uwrite_int8s_ISR(LONG_STRING);
     uwrite_int8s_ISR(SHORT_STRING);
     uwrite_int8s_ISR(LONG_STRING);
@@ -150,7 +150,20 @@ void main() {
 }
 
 /* Resulting output..
+> jal 60000000
 
+
+PROJ-4:
+{A Sample String Output: More and more. The quick brown fox jumped over the lazy barkey log. The chicken rooster clucked instead of making a normal sound. This thing just goes on and on and on and on and on and...on and on and on and never1234567890123456789|Not a very long string|A Sample String Output: More and more. The quick brown fox jumped over the lazy barkey log. The chicken rooster clucked instead of making a normal sound. This thing just goes on and on and on and on and on and...on and on and on and never1234567890123456789}
+
+MAGIC: feedbeef
+Head: 00000027
+Tail: 00000027
+
+
+[Golt45.2.3]
+
+>
 ...
 [screen is terminating]
 */
