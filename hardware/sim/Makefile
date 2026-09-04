@@ -24,8 +24,8 @@ $(STATUS): $(SRCS) | build/Makefile
 
 build/Makefile:
 	mkdir -p /scratch/sim/build
-	ln -sf /scratch/sim/build build
-	ln -sf -T $(realpath $(SRCDIR)) /scratch/sim/src
+	[ -e build ] || ln -sf /scratch/sim/build build
+	[ -e /scratch/sim/src || ln -sf -T $(realpath $(SRCDIR)) /scratch/sim/src
 	(cd build; vlib work; vmap work work)
 	(cd build; for file in $(XILINX_LIBS_MAP); do \
 	vmap $$(basename $$file) $$file || exit 1; done)
@@ -39,13 +39,13 @@ build/Makefile:
 
 results:
 	mkdir -p /scratch/sim/results
-	ln -sf /scratch/sim/results results
-	ln -sf -T $(realpath $(SWDIR)) /scratch/sim/sw
+	[ -e results ] || ln -sf /scratch/sim/results results
+	[ -e /scratch/sim/sw ] || ln -sf -T $(realpath $(SWDIR)) /scratch/sim/sw
 
 $(DOFILES) : build/%.do : tests/%.do
 	mkdir -p /scratch/sim/build
-	ln -sf /scratch/sim/build build
-	ln -sf -T $(realpath $(SRCDIR)) /scratch/sim/src
+	[ -e build ] || ln -sf /scratch/sim/build build
+	[ -e /scratch/sim/src ] || ln -sf -T $(realpath $(SRCDIR)) /scratch/sim/src
 	echo 'proc start {m} {vsim $(XILINX_LIB_INC) work.glbl $$m}' \
 	| cat - $< > $@ 
 

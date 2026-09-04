@@ -5,8 +5,7 @@ if   [[ "$0" == "./m" ]]; then
   D_BLD="build"
 elif [[ "$0" == "./n" ]]; then
   mkdir -p /scratch/syn/build
-  rm -rf build.old
-  [ -d build ] && mv build build.old
+  [ -d build ] && rm -rf build.old && mv build build.old
   [ -e build ] && rm -rf build
   ln -sf /scratch/syn/build build
   D_BLD="build" #$0_bld"
