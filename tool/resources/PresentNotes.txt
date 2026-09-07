@@ -3,4 +3,7 @@ Demonstrate basics of GIOS (graphics commands added to BIOS), plus a "dump" comm
 
 Show UARX interrupts responding to "keyboard" commands and triggering various benchmarks.
 
+Use "imem" and "dmem" for accellerated live (shared) data as well as stack pointer (sp).
+Potentially use "gp" or "fp" if never used by other code???
 
+Slowed down DVI interface pixel clock by using 40MHz rather than 50MHz. Lessens the load on DDR2 RAM slightly. It is unlikely that driving the monitor at 60 FPS vs 72 FPS will make any difference. App probably can't do 60 fps much less 72 fps. Dimensions are still 800x600.

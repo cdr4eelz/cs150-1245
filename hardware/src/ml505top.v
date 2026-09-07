@@ -173,13 +173,16 @@ module ml505top #(
 
 //RESOLUTION:          Width FrontH PulseH BackH Height FrontV PulseV BackV ClockFreq
 //  VGA  640x480@60Hz:  800    16     96    48    525     10      2    33    25175000
+// VESA  800x600@60Hz: 1056    40    128    88    628      1      4    23    40000000
 // VESA  800x600@72Hz: 1040    56    120    64    666     37      6    23    50000000
 // VESA 1024x768@70Hz: 1328    24    136   144    806      3      6    29    75000000
     DVI #(
 //      .Width ( 800), .FrontH( 16), .PulseH( 96), .BackH( 48), //  VGA  640x480@60Hz
 //      .Height( 525), .FrontV( 10), .PulseV(  2), .BackV( 33), .ClockFreq(25_175_000)
-        .Width (1040), .FrontH( 56), .PulseH(120), .BackH( 64), // VESA  800x600@72Hz
-        .Height( 666), .FrontV( 37), .PulseV(  6), .BackV( 23), .ClockFreq(50_000_000)
+//      .Width (1040), .FrontH( 56), .PulseH(120), .BackH( 64), // VESA  800x600@72Hz
+//      .Height( 666), .FrontV( 37), .PulseV(  6), .BackV( 23), .ClockFreq(50_000_000)
+        .Width (1040), .FrontH( 56), .PulseH(120), .BackH( 64), // VESA  800x600@60Hz
+        .Height( 666), .FrontV( 37), .PulseV(  6), .BackV( 23), .ClockFreq(40_000_000)
 //      .Width (1328), .FrontH( 24), .PulseH(136), .BackH(144), // VESA 1024x768@70Hz
 //      .Height( 806), .FrontV(  3), .PulseV(  6), .BackV( 29), .ClockFreq(75_000_000)
     ) dvi (
@@ -265,14 +268,14 @@ module ml505top #(
         .CLKFBOUT_MULT( 24),
         .DIVCLK_DIVIDE(  4),
         .BANDWIDTH("OPTIMIZED"),
-        .CLKOUT0_DIVIDE(12),    .CLKOUT0_PHASE(  0.0),  .CLKOUT0_DUTY_CYCLE(0.5),
-        .CLKOUT1_DIVIDE(12),    .CLKOUT1_PHASE( 45.0),  .CLKOUT1_DUTY_CYCLE(0.5),
-        .CLKOUT2_DIVIDE( 3),    .CLKOUT2_PHASE(  0.0),  .CLKOUT2_DUTY_CYCLE(0.5),
-        .CLKOUT3_DIVIDE( 3),    .CLKOUT3_PHASE(  0.0),  .CLKOUT3_DUTY_CYCLE(0.5),
-        .CLKOUT4_DIVIDE( 3),    .CLKOUT4_PHASE( 90.0),  .CLKOUT4_DUTY_CYCLE(0.5),
-        .CLKOUT5_DIVIDE( 6),    .CLKOUT5_PHASE(  0.0),  .CLKOUT5_DUTY_CYCLE(0.5),
+        .CLKOUT0_DIVIDE(12),    .CLKOUT0_PHASE(  0.0),  .CLKOUT0_DUTY_CYCLE(0.5), //  50 MHz
+        .CLKOUT1_DIVIDE(15),    .CLKOUT1_PHASE(  0.0),  .CLKOUT1_DUTY_CYCLE(0.5), //  40 MHz
+        .CLKOUT2_DIVIDE( 3),    .CLKOUT2_PHASE(  0.0),  .CLKOUT2_DUTY_CYCLE(0.5), // 200 MHz
+        .CLKOUT3_DIVIDE( 3),    .CLKOUT3_PHASE(  0.0),  .CLKOUT3_DUTY_CYCLE(0.5), // 200 MHz
+        .CLKOUT4_DIVIDE( 3),    .CLKOUT4_PHASE( 90.0),  .CLKOUT4_DUTY_CYCLE(0.5), // 200 @90deg
+        .CLKOUT5_DIVIDE( 6),    .CLKOUT5_PHASE(  0.0),  .CLKOUT5_DUTY_CYCLE(0.5), // 100 MHz
         .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
-    ) user_clk_pll (
+    ) user_clk_pll ( // 100MHz *24 /4 = 600 MHz (then apply DIVIDEs above)
         .CLKIN(user_clk_g), .RST(rst_user_base), .LOCKED(pll_lock),
         .CLKOUT0(cpu_clk),
         .CLKOUT1(dvi_clk),

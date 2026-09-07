@@ -5,7 +5,7 @@
 `include "gpcommands.vh"
 
 module PixelFeeder #(
-    parameter DVI_CLOCK_HZ=50_000_000,
+    parameter DVI_CLOCK_HZ=40_000_000, //WAS: 50_000_000,
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
     parameter LITTLEWORDIAN=1, //TODO:Unimplemented!
     parameter PIXFO_CAPACITY=(2048/2), //max pixel_fifo "chunk" capacity (adjust to 256-bit units)

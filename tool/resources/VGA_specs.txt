@@ -1,0 +1,175 @@
+http://www.microvga.com/vga-timing
+
+(Unsure why project is set @72 Hz)
+(Should drop framerate to @56/@60 to go easy on DDR???)
+
+=========
+800 x 600
+=========
+SVGA 800x600@56 Hz (pixel clock 36.0 MHz)
+SVGA 800x600@60 Hz (pixel clock 40.0 MHz)
+SVGA 800x600@75 Hz (pixel clock 49.5 MHz)
+VESA 800x600@72 Hz (pixel clock 50.0 MHz)
+SXGA 800x600@85 Hz (Modes 102/103) (pixel clock 56.25 MHz)
+VESA 800x600@100 Hz (pixel clock 68.18 MHz)
+
+
+=========================
+Screen refresh rate	56 Hz
+=========================
+Vertical refresh	35.15625 kHz
+Pixel freq.	36.0 MHz
+
+Horizontal timing (micro-seconds)
+------------------------
+Polarity of horizontal sync pulse is positive.
+Scanline part	Pixels	Time [µs]
+Visible area	800	22.222222222222
+Front porch	24	0.66666666666667
+Sync pulse	72	2
+Back porch	128	3.5555555555556
+Whole line	1024	28.444444444444
+
+Vertical timing (frame)
+-----------------------
+Polarity of vertical sync pulse is positive.
+Frame part	Lines	Time [ms]
+Visible area	600	17.066666666667
+Front porch	1	0.028444444444444
+Sync pulse	2	0.056888888888889
+Back porch	22	0.62577777777778
+Whole frame	625	17.777777777778
+
+
+=========================
+Screen refresh rate	60 Hz
+=========================
+Vertical refresh	37.878787878788 kHz
+Pixel freq.	40.0 MHz
+
+Horizontal timing (line)
+------------------------
+Polarity of horizontal sync pulse is positive.
+Scanline part	Pixels	Time [µs]
+Visible area	800	20
+Front porch	40	1
+Sync pulse	128	3.2
+Back porch	88	2.2
+Whole line	1056	26.4
+
+Vertical timing (frame)
+-----------------------
+Polarity of vertical sync pulse is positive.
+Frame part	Lines	Time [ms]
+Visible area	600	15.84
+Front porch	1	0.0264
+Sync pulse	4	0.1056
+Back porch	23	0.6072
+Whole frame	628	16.5792
+
+
+=========================
+Screen refresh rate	75 Hz
+=========================
+Vertical refresh	46.875 kHz
+Pixel freq.	49.5 MHz
+
+Horizontal timing (line)
+------------------------
+Polarity of horizontal sync pulse is positive.
+Scanline part	Pixels	Time [µs]
+Visible area	800	16.161616161616
+Front porch	16	0.32323232323232
+Sync pulse	80	1.6161616161616
+Back porch	160	3.2323232323232
+Whole line	1056	21.333333333333
+
+Vertical timing (frame)
+-----------------------
+Polarity of vertical sync pulse is positive.
+Frame part	Lines	Time [ms]
+Visible area	600	12.8
+Front porch	1	0.021333333333333
+Sync pulse	3	0.064
+Back porch	21	0.448
+Whole frame	625	13.333333333333
+
+
+=========================
+Screen refresh rate	72 Hz
+=========================
+Vertical refresh	48.076923076923 kHz
+Pixel freq.	50.0 MHz
+
+Horizontal timing (line)
+-----------------------
+Polarity of horizontal sync pulse is positive.
+Scanline part	Pixels	Time [µs]
+Visible area	800	16
+Front porch	56	1.12
+Sync pulse	120	2.4
+Back porch	64	1.28
+Whole line	1040	20.8
+
+Vertical timing (frame)
+-----------------------
+Polarity of vertical sync pulse is positive.
+Frame part	Lines	Time [ms]
+Visible area	600	12.48
+Front porch	37	0.7696
+Sync pulse	6	0.1248
+Back porch	23	0.4784
+Whole frame	666	13.8528
+
+
+=========================
+Screen refresh rate	85 Hz
+=========================Vertical refresh	53.673664122137 kHz
+Pixel freq.	56.25 MHz
+
+Horizontal timing (line)
+-----------------------
+Polarity of horizontal sync pulse is positive.
+Scanline part	Pixels	Time [µs]
+Visible area	800	14.222222222222
+Front porch	32	0.56888888888889
+Sync pulse	64	1.1377777777778
+Back porch	152	2.7022222222222
+Whole line	1048	18.631111111111
+
+Vertical timing (frame)
+-----------------------
+Polarity of vertical sync pulse is positive.
+Frame part	Lines	Time [ms]
+Visible area	600	11.178666666667
+Front porch	1	0.018631111111111
+Sync pulse	3	0.055893333333333
+Back porch	27	0.50304
+Whole frame	631	11.756231111111
+
+
+=========================
+Screen refresh rate	100 Hz
+=========================
+Vertical refresh	63.600746268657 kHz
+Pixel freq.	68.18 MHz
+
+Horizontal timing (line)
+-----------------------
+Polarity of horizontal sync pulse is negative.
+Scanline part	Pixels	Time [µs]
+Visible area	800	11.733646230566
+Front porch	48	0.70401877383397
+Sync pulse	88	1.2907010853623
+Back porch	136	1.9947198591962
+Whole line	1072	15.723085948959
+
+Vertical timing (frame)
+-----------------------
+Polarity of vertical sync pulse is positive.
+Frame part	Lines	Time [ms]
+Visible area	600	9.4338515693752
+Front porch	1	0.015723085948959
+Sync pulse	3	0.047169257846876
+Back porch	32	0.50313875036668
+Whole frame	636	9.9998826635377
