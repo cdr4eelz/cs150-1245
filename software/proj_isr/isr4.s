@@ -8,9 +8,9 @@
 
 
 # SHARED memory locations between app and isr handler
-.equiv K_BUFSIZEB,      0x0100
-.equiv K_BUFROLLOVER,   0x00FF
-.equiv K_SHARED_MAGIC,  0xFEEDBEEF
+.equiv K_SHBUF_SIZEB,       0x0100
+.equiv K_SHBUF_ROLLOVER,    0x00FF
+.equiv K_MAGIC_VERSION,     0xFEDBEEF0
 
 #struct SM_DATA {
 #    volatile uint32_t magic; // Initialized to known value
@@ -19,7 +19,7 @@
 #    volatile uint32_t buff_size; // For comparison & sanity check
 #    volatile uint32_t buff_head; // Offset to circular buffer head
 #    volatile uint32_t buff_tail; // Likewise for tail
-#    int8_t buff_data[K_BUFSIZEB]; // The buffer itself (bytes NOT words)
+#    int8_t buff_data[K_SHBUF_SIZEB]; // The buffer itself (bytes NOT words)
 #};
 .equiv  SM_BASE,        0x50000000  #Some agreed upon spot in memory
 # Offsets from base address as in SMO_xyz($SM_BASE)
@@ -32,7 +32,7 @@
 .equiv  SMO_buff_size,      0x0018  # Sanity check of agreed bufsize
 .equiv  SMO_buff_head,      0x001C  # App writes to ring buffer head
 .equiv  SMO_buff_tail,      0x0020  # ISR reads from ring buffer tail
-.equiv  SMO_buff_data,      0x0024  # Start of int8_t[K_BUFSIZEB]
+.equiv  SMO_buff_data,      0x0024  # Start of int8_t[K_SHBUF_SIZEB]
 # Direct addresses of shared structure members
 .equiv  SMA_magic,          (SM_BASE + SMO_magic)
 .equiv  SMA_stash0,         (SM_BASE + SMO_stash0)
@@ -189,7 +189,7 @@ ISR_UATX:
     la      $k1, SM_BASE #REDUNDANT
     lw      $t1, SMO_buff_tail($k1) #REDUNDANT
     addi    $t0, $t1, 1                 # Advance to next char
-    andi    $t0, $t0, K_BUFROLLOVER
+    andi    $t0, $t0, K_SHBUF_ROLLOVER
     sw      $t0, SMO_buff_tail($k1)     # Store new offset
     la      $k1, MMIO_BASE              # Memory mapped XMIT char
     sw      $k0, OW_UATX_DATA($k1)      # Send character
