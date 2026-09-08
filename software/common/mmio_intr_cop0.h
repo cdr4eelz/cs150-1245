@@ -30,6 +30,7 @@
 #define IM_TIMER        (1 << IB_TIMER)
 #define     IM_POSSIBLE     (0xFC00u)
 
+
 /*  Verilog MemMapIO (word offsets and mapped byte addresses)
 
 //                  Table 2: I/O Memory Map
@@ -91,17 +92,28 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 #define MM_GP_STATE     (MMIO_BASE + OW_GP_STATE)
 
 
+//TODO: Should we implicitly AND "Cause" with "KEEP" mask?
 #define ISR_STATUS(KEEP, SET)                   \
     asm (                                       \
         "li     $t0,%0\n\t"                     \
         "li     $t1,%1\n\t"                     \
-        "mfc0   $t2," COP0_Status "\n\t"                    \
+        "mfc0   $t2," COP0_Status "\n\t"        \
         "and    $t2,$t2,$t0\n\t"                \
         "or     $t2,$t2,$t1\n\t"                \
-        "mtc0   $t2," COP0_Status "\n\t"                    \
+        "mtc0   $t2," COP0_Status "\n\t"        \
         :                                       \
         : "i" (KEEP), "i" (SET)                 \
         : "t0","t1","t2" )
+
+// ISR_COMPARE implicitly resets "Count"
+#define ISR_COMPARE(COMPARE)                    \
+    asm (                                       \
+        "li     $t0,%0\n\t"                     \
+        "mtc0   $zero," COP0_Count "\n\t"       \
+        "mtc0   $t0," COP0_Compare "\n\t"       \
+        :                                       \
+        : "i" (COMPARE)                         \
+        : "t0" )
 
 
 #endif // COP0_INTR_MMIO_H_

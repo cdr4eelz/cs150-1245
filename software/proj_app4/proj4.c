@@ -9,15 +9,25 @@ DEFINE_TO_ASCII_HEX(uint32)
 
 //TODO: Perhaps "#include" desired xxx_yyy_ISR() like above???
 
+// Constants for memory shared with ISR handler
 #define SM_BASE ((struct SM_DATA *) 0x50000000u)
 #define K_SHBUF_SIZEB      0x0100
 #define K_SHBUF_ROLLOVER   0x00FF
-#define K_MAGIC_VERSION 0xFEDBEEF0
+#define K_MAGIC_VERSION 0xFEDBEEF1
+
+// Constants for TIMER interrupt ("Compare" register)
+#define K_CPU_HZ        (50000000)      //50 MHz
+#define K_TIMER_HZ      (1)             // 1 Hz
+#define K_TIMER_CYC     (K_TIMER_HZ * K_CPU_HZ)
+
 
 struct SM_DATA {
     volatile uint32_t magic; // Initialized to known value
     volatile uint32_t stash0, stash1, stash2, stash3; // Stash regs during interrupt
-    volatile uint32_t flags; // 
+    volatile uint32_t flags; // Not yet used
+    volatile uint32_t RTC_count; // Incremented for each RTC interrupt
+    volatile uint32_t seconds; // Increment every second along with "clock"
+    volatile uint32_t clock; // Low-word is BCD of minutes + seconds
     volatile uint32_t buff_size; // For comparison & sanity check
     volatile uint32_t buff_head; // Offset to circular buffer head,
     volatile uint32_t buff_tail; // Likewise for tail
@@ -40,10 +50,13 @@ void SM_INIT(struct SM_DATA* sm) {
     sm->stash2 = -1u;
     sm->stash3 = -1u;
     sm->flags = 0;
+    sm->seconds = 0;
+    sm->clock = 0;
     sm->buff_size = K_SHBUF_SIZEB; // Sanity check
     sm->buff_head = 0;
     sm->buff_tail = 0;
 }
+// Set "Compare" to zero so interrupt fires on first opportunity
 
 //TODO: Put in UART library but keep it optional somehow
 void uwrite_int8s_ISR(int8_t* src) { //Should use MAX/TIMEOUT???
@@ -111,10 +124,11 @@ int8_t* copy_string(int8_t* dst, int8_t* src, uint16_t maxLen) { //Add size chec
 */
 
 #define TBUF_SIZE (256)
-static int8_t tbuff[TBUF_SIZE];
+static int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located
 
 void main() {
     struct SM_DATA* share = SM_BASE;
+    uint32_t tClock, prevClock;
 
     //TODO: Clear "Cause" register???
     //TODO: Should macro mask "Cause" based on enabled "Status" bits???
@@ -123,7 +137,7 @@ void main() {
 
     // Initialize the shared memory block (shared with ISR handler)
     SM_INIT(share);
-
+    
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
     uwait_ISR(); // Get off to a clean start with nobody sending yet
 
@@ -133,7 +147,24 @@ void main() {
     uwrite_int8s_ISR("\n\r");
     uwait_ISR();
 
-    // Do interesting stuff here!
+    ISR_COMPARE(K_TIMER_CYC); // This implicitly resets "Count" to zero
+    //NOTE: We set "Compare" here on init, but after that the ISR handles it
+
+    ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX | IM_UARX | IM_RTC | IM_TIMER); //GPU?
+    
+    tClock = prevClock = 0;
+    while (1) {
+        tClock = share->clock;
+        if (tClock != prevClock) {
+            if (1) { //TODO: Conditional based on a flag
+                uwrite_int8s_ISR("\n\rCLOCK: ");
+                //TODO: Assemble clock string "mm:ss" in tbuff
+                uwrite_int8s_ISR(uint32_to_ascii_hex(tClock, tbuff, TBUF_SIZE));
+                uwrite_int8s_ISR("\n\r");
+            }
+            prevClock = tClock; // Advance whether or not printing enabled
+        }
+    }
 
     uwait_ISR();
     ISR_STATUS(0x00000000, 0x00000000);
