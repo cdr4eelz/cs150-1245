@@ -171,11 +171,69 @@ ISR_TIMER:
     addiu   $k0, $k0, 1
     sw      $k0, SMO_seconds($k1)
 
-    lw      $k0, SMO_clock($k1)
+    lw      $t0, SMO_clock($k1)
     nop
-    addiu   $k0, $k0, 1    ###TEMP: Simple inc for testing
-    #TODO: Increment BCD mm:ss value in "clock" field
-    sw      $k0, SMO_clock($k1)
+
+    # IN : $t0 = 0x0000_d3d2d1d0   packed BCD
+    # OUT: $t0 = that value + 1    (BCD)
+    # TMP: $t1, $k0, $k1
+    # (This BCD code is from GROK and slightly tweaked)
+bcd4_inc:
+    andi    $t1, $t0, 0x000F        # ones
+    addiu   $t1, $t1, 1
+    sltiu   $k0, $t1, 10            # 1 => no carry
+    bne     $k0, $zero, bcd4_ones
+    andi    $t0, $t0, 0xFFF0        # D; clear ones
+
+    # ones was 9 -> 0, carry into tens
+    srl     $t1, $t0, 4
+    andi    $t1, $t1, 0x000F
+    addiu   $t1, $t1, 1
+    sltiu   $k0, $t1, 6             # Normally 10
+    bne     $k0, $zero, bcd4_tens
+    andi    $t0, $t0, 0xFF0F        # D; clear tens
+
+    # tens was 9 -> 0, carry into hundreds
+    srl     $t1, $t0, 8
+    andi    $t1, $t1, 0x000F
+    addiu   $t1, $t1, 1
+    sltiu   $k0, $t1, 10
+    bne     $k0, $zero, bcd4_hundreds
+    andi    $t0, $t0, 0xF0FF        # D; clear hundreds
+
+    # hundreds was 9 -> 0, carry into thousands
+    srl     $t1, $t0, 12
+    andi    $t1, $t1, 0x000F
+    addiu   $t1, $t1, 1
+    sltiu   $k0, $t1, 6             # Normally 10
+    bne     $k0, $zero, bcd4_thousands
+    andi    $t0, $t0, 0x0FFF        # D; clear thousands
+
+    # 9999 + 1 -> 0000
+    b       bcd4_done
+    or      $t0, $zero, $zero       # D;
+
+bcd4_thousands:
+    sll     $t1, $t1, 12
+    b       bcd4_done
+    or      $t0, $t0, $t1           # D;
+
+bcd4_hundreds:
+    sll     $t1, $t1, 8
+    b       bcd4_done
+    or      $t0, $t0, $t1           # D;
+
+bcd4_tens:
+    sll     $t1, $t1, 4
+    b       bcd4_done
+    or      $t0, $t0, $t1           # D;
+
+bcd4_ones:
+    or      $t0, $t0, $t1
+bcd4_done:
+
+    la      $k1, SM_BASE
+    sw      $t0, SMO_clock($k1)
 
     mfc0    $k0, COP0_Compare
     la      $k1, K_TIMER_CYC        #Is large value (can't use IMMEDIATE)

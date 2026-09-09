@@ -123,6 +123,7 @@ int8_t* copy_string(int8_t* dst, int8_t* src, uint16_t maxLen) { //Add size chec
 }
 */
 
+
 #define TBUF_SIZE (256)
 static int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located
 
@@ -157,9 +158,15 @@ void main() {
         tClock = share->clock;
         if (tClock != prevClock) {
             if (1) { //TODO: Conditional based on a flag
-                uwrite_int8s_ISR("\n\rCLOCK: ");
-                //TODO: Assemble clock string "mm:ss" in tbuff
-                uwrite_int8s_ISR(uint32_to_ascii_hex(tClock, tbuff, TBUF_SIZE));
+                uwrite_int8s_ISR("\n\rCLK: ");
+                // Assemble clock string "mm:ss" in tbuff
+                tbuff[0] = '0' + ((tClock >> 12) & 0x0F);
+                tbuff[1] = '0' + ((tClock >>  8) & 0x0F);
+                tbuff[2] = ':';
+                tbuff[3] = '0' + ((tClock >>  4) & 0x0F);
+                tbuff[4] = '0' + ((tClock >>  0) & 0x0F);
+                tbuff[5] = NULL;
+                uwrite_int8s_ISR(tbuff);
                 uwrite_int8s_ISR("\n\r");
             }
             prevClock = tClock; // Advance whether or not printing enabled
