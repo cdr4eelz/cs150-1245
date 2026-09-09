@@ -123,9 +123,22 @@ int8_t* copy_string(int8_t* dst, int8_t* src, uint16_t maxLen) { //Add size chec
 }
 */
 
-
 #define TBUF_SIZE (256)
 static int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located
+
+void uwrite_clock(uint32_t clk_bcd) {
+    uwrite_int8s_ISR("\n\rCLK: ");
+    // Assemble clock string "mm:ss" in tbuff
+    tbuff[0] = '0' + ((clk_bcd >> 12) & 0x0F);
+    tbuff[1] = '0' + ((clk_bcd >>  8) & 0x0F);
+    tbuff[2] = ':';
+    tbuff[3] = '0' + ((clk_bcd >>  4) & 0x0F);
+    tbuff[4] = '0' + ((clk_bcd >>  0) & 0x0F);
+    tbuff[5] = NULL;
+    uwrite_int8s_ISR(tbuff);
+    uwrite_int8s_ISR("\n\r");
+}
+
 
 void main() {
     struct SM_DATA* share = SM_BASE;
@@ -143,7 +156,7 @@ void main() {
     uwait_ISR(); // Get off to a clean start with nobody sending yet
 
     uwrite_int8s_ISR("\r\n\r\nPROJ-4:\r\n");
-    uwrite_int8s_ISR("\n\rMAGIC: ");
+    uwrite_int8s_ISR("MAGIC: ");
     uwrite_int8s_ISR(uint32_to_ascii_hex(share->magic, tbuff, TBUF_SIZE));
     uwrite_int8s_ISR("\n\r");
     uwait_ISR();
@@ -157,18 +170,8 @@ void main() {
     while (1) {
         tClock = share->clock;
         if (tClock != prevClock) {
-            if (1) { //TODO: Conditional based on a flag
-                uwrite_int8s_ISR("\n\rCLK: ");
-                // Assemble clock string "mm:ss" in tbuff
-                tbuff[0] = '0' + ((tClock >> 12) & 0x0F);
-                tbuff[1] = '0' + ((tClock >>  8) & 0x0F);
-                tbuff[2] = ':';
-                tbuff[3] = '0' + ((tClock >>  4) & 0x0F);
-                tbuff[4] = '0' + ((tClock >>  0) & 0x0F);
-                tbuff[5] = NULL;
-                uwrite_int8s_ISR(tbuff);
-                uwrite_int8s_ISR("\n\r");
-            }
+            //TODO: Conditional based on a flag
+            if (1) uwrite_clock(tClock);
             prevClock = tClock; // Advance whether or not printing enabled
         }
     }
