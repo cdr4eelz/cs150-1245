@@ -27,14 +27,17 @@ $(TARGET).elf: $(ELF_INPUT)
 
 
 %.bin: %.elf
-	-$(PCOPY) -j .text -p -O binary $< $@
+	-$(PCOPY) -j .text -j .data -p -O binary $< $@
 	-chmod -x $@
+	-touch $@
 %.inst.bin: %.elf
 	-$(PCOPY) -j .text -p -O binary $^ $@
 	-chmod -x $@
+	-touch $@
 %.data.bin: %.elf
 	-$(PCOPY) -j .data -p -O binary $^ $@
 	-chmod -x $@
+	-touch $@
 #%.both.bin: %.elf
 #	-$(PCOPY) -j .both -p -O binary $^ $@
 #	-chmod -x $@
@@ -46,7 +49,10 @@ $(TARGET).elf: $(ELF_INPUT)
 #	bin2mem 16384 < $*.inst.bin | sed s/^@00000000/@00004000/ >> $@
 
 
-%.dump: %.elf
+%-strip.elf: %.elf
+	-$(PSTRIP) --strip-debug -o $@ $^
+	-chmod -x $@
+%.dump: %-strip.elf
 	-$(PDUMP) $^ -xsD >$@
 %.inst.dump: %.elf
 	-$(PDUMP) -j .text $^ -xsSDl >$@

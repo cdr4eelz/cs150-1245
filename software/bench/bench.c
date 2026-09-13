@@ -1,6 +1,9 @@
 #include "types.h"
 #include "graphics.h"
-//TODO: Include benchmark tools???
+#include "mmio_intr_cop0.h"
+#include "ascii.h"
+#include "benchmark.h"
+
 
 //typedef void (*entry_t)(void);
 
@@ -35,10 +38,6 @@ void sw_draw(void) {
     swelip(sw_frame, 0x20008844, 600,300,  100, 50);
     swpixl(sw_frame, 0x20023666,  21, 51);
     swcirc(sw_frame, 0x22222222, 650,200,   50);
-}
-
-void dd_fill(color_t color)
-{
 }
 
 
