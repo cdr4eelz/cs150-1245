@@ -101,10 +101,11 @@ module ScanLineRunner #(
     reg  [ 7:0] r_edge_L, r_fill_L, r_edge_R, r_fill_R;
     reg  [ 3:0] maskW;
     reg  [31:0] maskC [3:0]; //Array rather than "bus style" vector concatenation
+    reg  [31:0] r_color_edge, r_color_fill;
 
     wire [ 9:0] x = {X8[6:0], 3'b000}; //Truncate to first pixel in chunk of 8 (match memory width)
     wire [ 5:0] framebits = SLR_frame[27:22];
-    wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
+    wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00000}; //CPU "byte" address
     wire isLAST8 = (X8 >= X8_last); //(x >= x_finish)
 
     //Sub-Offsets & Active-Lo byte-enable masks for start/finish edge cases (LITTLEWORDIAN)
@@ -119,6 +120,7 @@ module ScanLineRunner #(
     wire [ 7:0] fill8 = ( (r_fill_L & {8{ isFIRST8}}) | (r_fill_R & {8{ isLAST8}}) );
 //  wire [ 7:0] mask8 = (edge8 & fill8); //"either is active" (active-lo)
     wire        hi4 = (LITTLEWORDIAN) ? cs_M[MH_DDR1] : cs_M[MH_DDR2];
+    wire fill_active = (r_color_fill >> 31);
 
     wire wdr_advance1 = (!wdf_full && !caf_full);
     wire wdr_advance2 = (!wdf_full);
@@ -128,12 +130,18 @@ module ScanLineRunner #(
         integer b;
         for (b=0; b<4; b=b+1) begin
             maskW[b] = 1'b0;            //Default to ENABLE pixel write
-            maskC[b] = SLR_color_edge;  //  in EDGE color
+            maskC[b] = r_color_edge;  //  in EDGE color
             casez ({hi4, edge8[b], fill8[b], edge8[4+b], fill8[4+b]})
                 5'b0_11_zz: maskW[b] = 1'b1; //AND of active-lo -=> OR the two enables
-                5'b0_10_zz: maskC[b] = SLR_color_fill; //When only FILL active
+                5'b0_10_zz: begin   //When only FILL active
+                    maskC[b] = r_color_fill;
+                    maskW[b] = !fill_active; //Invert to match mask active-lo
+                end
                 5'b1_zz_11: maskW[b] = 1'b1; //As above, for 2nd pair
-                5'b1_zz_10: maskC[b] = SLR_color_fill; // (hi-bit is "mux" selector)
+                5'b1_zz_10: begin
+                    maskC[b] = r_color_fill;
+                    maskW[b] = !fill_active;
+                end // (hi-bit is "mux" selector)
             endcase //Flat "muxie-style" (defaults  & casez keep it short); probly confusing!
         end
     end
@@ -165,12 +173,14 @@ module ScanLineRunner #(
                 isFIRST8  <= 1'b1;
                 {r_edge_L, r_fill_L} <= {c_edge_L, c_fill_L};
                 {r_edge_R, r_fill_R} <= {c_edge_R, c_fill_R};
+                r_color_edge <= SLR_color_edge;
+                r_color_fill <= SLR_color_fill;
             end
             MS_DDR1: begin
                 //NADA
             end
             MS_DDR2: if (wdr_advance2) begin
-                X8 <= (X8+1);
+                X8 <= (X8+1);   //TODO: If not filling, skip to last!?!
                 isFIRST8 <= 1'b0;
             end
         endcase

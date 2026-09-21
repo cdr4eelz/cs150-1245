@@ -39,8 +39,8 @@ module GraphicsProcessor #(
     input   [127:0] rdf_data,
 
 //GraphicsProcessor interface:
-    input           GP_vcode, GP_vframe,
-    input   [ 31:0] GP_wcode, GP_wframe,
+    input           GP_vcode, GP_vframe,    //NOTE: GP_vframe unused in this module!
+    input   [ 31:0] GP_wcode, GP_wframe,    // ... GP_wframe captured on GP_vcode.
     output  [ 31:0] GP_rcode,
     output  [  5:0]           GP_rframe,
     output          GP_ready,
@@ -250,7 +250,7 @@ module GraphicsProcessor #(
 //MAP ENGINEs as appropriate (or continuous/junk when no harm):
     wire engine_x = cs_S[0]; //ODDs: SS_X0||SS_XX
     wire [ 9:0] engine_point = (engine_x) ? INST_pointX : INST_pointY;
-    wire [31:0] engine_color = INST_color;
+    wire [31:0] engine_color = INST_color; //TODO: Investigate whether this should be registered
     wire [31:0] engine_frame = {4'h1,frame_bits,22'd0};
 
     assign FF_valid   = (hot_GOP_val && hot_GOP[`GOP_FILL]);

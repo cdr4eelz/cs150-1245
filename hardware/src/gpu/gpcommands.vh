@@ -7,9 +7,9 @@
 `define GOP_STOP    8'h00   //Terminate processing GP_CODE block
 `define GOP_FILL    8'h01   //w/color; no trailer (auto-triggers fill)
 `define GOP_LINE    8'h02   //w/color; then 2 x POINTs (2nd point triggers)
-`define GOP_ELIP    8'h03   //w/color; then 2 x POINTs (2nd point triggers)
-`define GOP_BACK    8'h04   //w/color; no trailer
-`define GOP_CLIP    8'h05   //w/parms; then 2 x POINTs (2nd point triggers)
+`define GOP_ELIP    8'h03   //w/color; then back & 2 x POINTs (2nd point triggers)
+`define GOP_RECT    8'h04   //w/color; then back & 2 x POINTs (2nd point triggers)
+`define GOP_BACK    8'h05   //w/color; no trailer
 `define GOP__LAST   5
 
 //INSTruction-initiation (opcode & packed fields)

@@ -120,10 +120,12 @@ localparam [5:0]            //   DATA-ENCODING/DESC
             pf_wframe_r <= dina;
             pf_vframe_r <= 1'b1;
         end else pf_vframe_r <= 1'b0;
+
         if (isWrite && HOT_ADDR[H_GPFrame]) begin
             gp_wframe_r <= dina;
             gp_vframe_r <= 1'b1;
         end else gp_vframe_r <= 1'b0;
+
         if (isWrite && HOT_ADDR[H_GPCode])  begin
           gp_wcode_r  <= dina;
           gp_vcode_r <= 1'b1;

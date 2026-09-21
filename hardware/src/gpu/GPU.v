@@ -234,6 +234,7 @@ module GPU #(
 
     ElipseEngine #(
         .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT)
+        // ALWAYS uses SLR so no DDR FIFOs needed
     ) el (
         .clk(clk),
         .rst(rst),
@@ -266,8 +267,10 @@ module GPU #(
         integer idx;
         for (idx = 0; idx < SLR__CNT; idx = idx+1) begin
             if (WATCH_SLR && SLRs_ready[idx] && SLRs_valid[idx]) begin
-                $display("%d SLR[%0d] ready=%b row=%0d s=%0d f=%0d",
+                $display("%d SLR[%0d] ready=%b edge=%8h fill=%8h row=%0d s=%0d f=%0d",
                          $time, idx, SLRs_ready[idx],
+                         SLRs_color_edge[(idx*32)+31 -: 32],
+                         SLRs_color_fill[(idx*32)+31 -: 32],
                          SLRs_row       [(idx*10)+ 9 -: 10],
                          SLRs_col_start [(idx*10)+ 9 -: 10],
                          SLRs_col_finish[(idx*10)+ 9 -: 10]

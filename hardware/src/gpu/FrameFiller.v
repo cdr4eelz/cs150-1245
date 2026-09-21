@@ -54,6 +54,7 @@ module FrameFiller #(
     reg  [ 1:0] ns, cs = S_DEAD;
     reg  [31:0] color_r;
     reg  [ 5:0] framebits;
+    //TODO: Turn rL, rR, rT, rB into adjustable values!!!
     localparam [ 9:0] rL = 0, rR = (SCREEN_WIDTH  - 1),
                       rT = 0, rB = (SCREEN_HEIGHT - 1);
 
@@ -99,7 +100,7 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
     assign SLR_valid        = (cs == S_RUN),
             SLR_frame       = {4'h1, framebits[5:0], 22'b0},
             SLR_color_edge  = color_r,
-            SLR_color_fill  = color_r,
+            SLR_color_fill  = 32'hFF000000 | color_r,  //TODO: Use back color unless y==rT | y==rB (top/bottom EDGE)
             SLR_row         = y,
             SLR_col_start   = rL,
             SLR_col_finish  = rR;
