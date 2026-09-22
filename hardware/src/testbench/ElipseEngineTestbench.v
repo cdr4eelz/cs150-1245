@@ -7,7 +7,7 @@
 `timescale 1ns / 100ps
 
 module ElipseEngineTestbench;
-    parameter SCANLINERUNNER = 1, LITTLEWORDIAN = 1;
+    parameter LITTLEWORDIAN = 1;
 
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;
@@ -33,19 +33,10 @@ module ElipseEngineTestbench;
     `include "util_gwatch.vh"
 
     ElipseEngine #(
-//        .SCANLINERUNNER(SCANLINERUNNER),
 //        .LITTLEWORDIAN(LITTLEWORDIAN)
     ) DUT (
         .clk(Clock),
         .rst(rst),
-
-//        .caf_full(caf_full),
-//        .wdf_full(wdf_full),
-//        .caf_addr(caf_addr),
-//        .caf_wren(caf_wren),
-//        .wdf_data(wdf_data),
-//        .wdf_mask(wdf_mask),
-//        .wdf_wren(wdf_wren),
 
         .EL_ready(      EL_ready),
         .EL_color_valid(EL_color_valid),

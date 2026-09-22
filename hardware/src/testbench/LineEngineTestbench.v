@@ -7,7 +7,7 @@
 `timescale 1ns / 100ps
 
 module LineEngineTestbench;
-    parameter SCANLINERUNNER = 1, LITTLEWORDIAN = 1;
+    parameter LITTLEWORDIAN = 1;
 
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;
@@ -33,19 +33,10 @@ module LineEngineTestbench;
     `include "util_gwatch.vh"
 
     LineEngine #(
-        .SCANLINERUNNER(SCANLINERUNNER),
         .LITTLEWORDIAN(LITTLEWORDIAN)
     ) DUT (
         .clk(Clock),
         .rst(rst),
-
-        .caf_full(caf_full),
-        .wdf_full(wdf_full),
-        .caf_addr(caf_addr),
-        .caf_wren(caf_wren),
-        .wdf_data(wdf_data),
-        .wdf_mask(wdf_mask),
-        .wdf_wren(wdf_wren),
 
         .LE_ready(      LE_ready),
         .LE_color_valid(LE_color_valid),
@@ -71,8 +62,6 @@ module LineEngineTestbench;
 
     initial begin
         @(posedge Clock);
-        caf_full = 1'b0;
-        wdf_full = 1'b0;
         LE_color_valid = 1'b0;
         LE_x0_valid = 1'b0;
         LE_y0_valid = 1'b0;

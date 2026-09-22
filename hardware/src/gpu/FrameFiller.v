@@ -1,8 +1,7 @@
 `timescale 1ns/1ps
 
 module FrameFiller #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter SCANLINERUNNER=0
+    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600
 )(
     input           clk, rst,
 
@@ -12,16 +11,7 @@ module FrameFiller #(
     input  [ 31:0]  FF_color,   //8-zeros, 3 x 8-bit R/G/B
     input  [ 31:0]  FF_frame,   //Frame-base (modulo 0x0040_0000)
 
-//DDR FIFOs (write-only): [if !SCANLINERUNNER]
-    input           caf_full,
-    input           wdf_full,
-    output          caf_wren,
-    output [ 30:0]  caf_addr,
-    output          wdf_wren,
-    output [ 15:0]  wdf_mask,
-    output [127:0]  wdf_data,
-
-//SLR control (write-only): [if SCANLINERUNNER]
+//SLR control (write-only): [Only ScanLineRunner]
     input           SLR_ready,
     output          SLR_valid,
     output  [ 31:0] SLR_frame,
@@ -95,8 +85,6 @@ module FrameFiller #(
     end
 
 
-generate if (SCANLINERUNNER) begin:_WITH_SLR_
-
     assign SLR_valid        = (cs == S_RUN),
             SLR_frame       = {4'h1, framebits[5:0], 22'b0},
             SLR_color_edge  = color_r,
@@ -111,36 +99,6 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
             T_DONE_LINE = slr_advance,
             T_DONE_FULL = slr_advance && lastY;
 
-    assign caf_wren       = 1'b0,
-            caf_addr   = 31'bx,
-            wdf_wren     = 1'b0,
-            wdf_data       = 128'bx,
-            wdf_mask  = 16'bx;
-
-end else begin:_NO_SLR_
-
-    assign SLR_valid        = 1'b0,
-            SLR_frame       = 32'bx,
-            SLR_color_edge  = 32'bx,
-            SLR_color_fill  = 32'bx,
-            SLR_row         = 10'bx,
-            SLR_col_start   = 10'bx,
-            SLR_col_finish  = 10'bx;
-
-    wire mem_advance = (!caf_full && !wdf_full && wdf_wren);
-
-    assign T_DONE_PIX4 = mem_advance,
-            T_DONE_LINE = mem_advance && lastX,
-            T_DONE_FULL = mem_advance && lastX && lastY;
-
-    wire [31:0] head_addr = {4'h1, framebits, y[9:0], x[9:0], 2'b00}; //"Byte" address
-    assign caf_wren       = ((cs == S_RUN) && !x[2]), //Skip address on odds's
-            caf_addr   = {6'd0, head_addr[27:3]},  //Turn into 31-bit "DoubleWord" or DDR-address
-            wdf_wren     = (cs == S_RUN),            //Data & mask on odd & even
-            wdf_data       = {4{color_r}},             //Replicate same color on all 4 pixels of both writes
-            wdf_mask  = {4{4'b0000}};             //Write all bytes on every write
-
-end endgenerate
 
 //synthesis translate_off
     always @(posedge clk) begin

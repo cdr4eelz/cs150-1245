@@ -6,7 +6,7 @@
 `timescale 1ns / 1ps
 
 module FrameFillerTestbench;
-    parameter SCANLINERUNNER = 1, LITTLEWORDIAN = 0;
+    parameter LITTLEWORDIAN = 0;
 
     parameter ClockFreq = 50_000_000;
     parameter HalfCycle = 5;
@@ -26,7 +26,7 @@ module FrameFillerTestbench;
     `include "util_gwatch.vh"
 
     FrameFiller #(
-        .SCANLINERUNNER(SCANLINERUNNER)
+        
     ) DUT (
         .clk(Clock),
         .rst(rst),
@@ -35,14 +35,6 @@ module FrameFillerTestbench;
         .FF_valid(FF_valid),
         .FF_color(FF_color),
         .FF_frame(FF_frame),
-    //DDR FIFOs (write-only):
-        .caf_full(caf_full),
-        .caf_wren(caf_wren),
-        .caf_addr(caf_addr),
-        .wdf_full(wdf_full),
-        .wdf_wren(wdf_wren),
-        .wdf_data(wdf_data),
-        .wdf_mask(wdf_mask),
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_FF]                    ),
         .SLR_valid(SLRs_valid           [SLR_FF]                    ),
@@ -57,14 +49,10 @@ module FrameFillerTestbench;
     initial begin
         #(Cycle);
         @(posedge Clock);
-        caf_full = 1'b1;
-        wdf_full = 1'b1;
         FF_valid = 1'b0;
         rst = 1'b1;
         #(10*Cycle);
         rst = 1'b0;
-        caf_full = 1'b0;
-        wdf_full = 1'b0;
 
 $display("FrameFiller: Fake memory/SLR...");
         fillFrame( 32'h00_7F2211, 32'h1040_0000 );

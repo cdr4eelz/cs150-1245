@@ -1,8 +1,10 @@
 `timescale 1ns/1ps
 
 module GPU #(
-    parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter LITTLEWORDIAN=1, WATCH_SLR=1
+    parameter SCREEN_WIDTH=800,
+    parameter SCREEN_HEIGHT=600,
+    parameter LITTLEWORDIAN=1,
+    parameter WATCH_SLR=1
 )(
     input clk,
     input rst,
@@ -144,7 +146,8 @@ module GPU #(
     wire [(SLR__CNT*10)-1:0] SLRs_col_finish;
 
     ScanLineRunner #(
-        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT),
         .LITTLEWORDIAN(LITTLEWORDIAN),
         .SLR_COUNT(SLR__CNT)
     ) slr (
@@ -171,8 +174,8 @@ module GPU #(
 
 
     FrameFiller #(
-        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
-        .SCANLINERUNNER(1)
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT)
     ) ff (
         .clk(clk),
         .rst(rst),
@@ -181,11 +184,6 @@ module GPU #(
         .FF_valid (fill_valid),
         .FF_color (fill_color),
         .FF_frame (fill_frame),
-    //DDR FIFOs (write-only):
-        .caf_full(1'b1), .wdf_full(1'b1),
-        .caf_wren    (), .wdf_wren    (),
-        .caf_addr    (), .wdf_mask    (),
-        .wdf_data(),
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_FF]                    ),
         .SLR_valid(SLRs_valid           [SLR_FF]                    ),
@@ -199,8 +197,9 @@ module GPU #(
 
 
     LineEngine #(
-        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT),
-        .SCANLINERUNNER(1), .LITTLEWORDIAN(0)
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT),
+        .LITTLEWORDIAN(0)
     ) le (
         .clk(clk),
         .rst(rst),
@@ -215,11 +214,6 @@ module GPU #(
         .LE_point   (line_point),
         .LE_trigger(line_trigger),
         .LE_frame  (line_frame),
-    //DDR FIFOs (write-only):
-        .caf_full(1'b1), .wdf_full(1'b1),
-        .caf_wren    (), .wdf_wren    (),
-        .caf_addr    (), .wdf_mask    (),
-        .wdf_data(),
     //SLR interface (write-only):
         .SLR_ready(SLRs_ready           [SLR_LE]                    ),
         .SLR_valid(SLRs_valid           [SLR_LE]                    ),
@@ -233,8 +227,8 @@ module GPU #(
 
 
     ElipseEngine #(
-        .SCREEN_WIDTH(SCREEN_WIDTH), .SCREEN_HEIGHT(SCREEN_HEIGHT)
-        // ALWAYS uses SLR so no DDR FIFOs needed
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT)
     ) el (
         .clk(clk),
         .rst(rst),

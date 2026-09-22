@@ -2,7 +2,7 @@
 
 module LineEngine #(
     parameter SCREEN_WIDTH=800, SCREEN_HEIGHT=600,
-    parameter SCANLINERUNNER=1, LITTLEWORDIAN=1
+    parameter LITTLEWORDIAN=1
 )(
     input           clk, rst,
 
@@ -18,16 +18,7 @@ module LineEngine #(
     input           LE_trigger, //Trigger drawing (LE_frame captured)
     input   [ 31:0] LE_frame,   //Frame-base (modulo 0x0040_0000)
 
-//DDR FIFOs (write-only): [if !SCANLINERUNNER]
-    input           caf_full,
-    input           wdf_full,
-    output          caf_wren,
-    output  [ 30:0] caf_addr,
-    output          wdf_wren,
-    output  [127:0] wdf_data,
-    output  [ 15:0] wdf_mask,
-
-//SLR control (write-only): [if SCANLINERUNNER]
+//SLR control (write-only): [Only ScanLineRunner]
     input           SLR_ready,
     output          SLR_valid,
     output  [ 31:0] SLR_frame,
@@ -191,8 +182,6 @@ module LineEngine #(
     end
 
 
-generate if (SCANLINERUNNER) begin:_WITH_SLR_
-
 //Write "run" of pixels instead via ScanLineRunner module
     assign SLR_valid        = cs_M[MH_RUN1],
             SLR_frame       = {4'h1, framebits[5:0], 22'b0},
@@ -208,44 +197,6 @@ generate if (SCANLINERUNNER) begin:_WITH_SLR_
     assign adv1   = SLR_ready, //Used iif MH_RUN1 implying SLR_valid
             adv2  = 1'b1;
 
-    assign caf_wren       = 1'b0,
-            caf_addr   = 31'bx,
-            wdf_wren     = 1'b0,
-            wdf_data       = 128'bx,
-            wdf_mask  = 16'bx;
-
-end else begin:_NO_SLR_
-
-    assign SLR_valid = 1'b0;
-
-//Drive DDR lines to write 1 pixel at-a-time
-    reg  [ 3:0] maskW;
-    wire [31:0] cpu_addr = {4'h1, framebits[5:0], y[9:0], x[9:3], 5'b00}; //CPU "byte" address
-    wire [ 2:0] offset_pixel  = (LITTLEWORDIAN) ? x[2:0] : ~x[2:0];
-
-    assign caf_addr  = {6'b000000, cpu_addr[27:3]}, //Turn into 31-bit "DoubleWord" or DDR-address
-            wdf_mask = { {4{maskW[3]}}, {4{maskW[2]}}, {4{maskW[1]}}, {4{maskW[0]}} },
-            wdf_data      = {4{color_r}}, //Replicate same color on all 4 pixels of both writes
-            caf_wren     = (cs_M[MH_RUN1]),
-            wdf_wren    = (cs_M[MH_RUN1] || cs_M[MH_RUN2]);
-    assign adv1 = (!wdf_full && !caf_full),
-            adv2 = (!wdf_full);
-
-    always @(*) begin
-        case ({cs_M[MH_RUN1],cs_M[MH_RUN2], offset_pixel})
-            5'b10_000: maskW = 4'b0111; //NOTE: LITTLEWORDIAN
-            5'b10_001: maskW = 4'b1011;
-            5'b10_010: maskW = 4'b1101;
-            5'b10_011: maskW = 4'b1110;
-            5'b01_100: maskW = 4'b0111;
-            5'b01_101: maskW = 4'b1011;
-            5'b01_110: maskW = 4'b1101;
-            5'b01_111: maskW = 4'b1110;
-            default:   maskW = 4'b1111;
-        endcase
-    end
-
-end endgenerate
 
 //synthesis translate_off
 /*
