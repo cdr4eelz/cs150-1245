@@ -180,7 +180,7 @@ module ScanLineRunner #(
                 //NADA
             end
             MS_DDR2: if (wdr_advance2) begin
-                X8 <= (X8+1);   //TODO: If not filling, skip to last!?!
+                X8 <= (fill_active) ? (X8+1) : X8_last;   //Jump to end when not filling
                 isFIRST8 <= 1'b0;
             end
         endcase
