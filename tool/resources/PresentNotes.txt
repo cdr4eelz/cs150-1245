@@ -7,3 +7,12 @@ Use "imem" and "dmem" for accellerated live (shared) data as well as stack point
 Potentially use "gp" or "fp" if never used by other code???
 
 Slowed down DVI interface pixel clock by using 40MHz rather than 50MHz. Lessens the load on DDR2 RAM slightly. It is unlikely that driving the monitor at 60 FPS vs 72 FPS will make any difference. App probably can't do 60 fps much less 72 fps. Dimensions are still 800x600.
+
+Mention "SLR" and it's benefits such as simpified interface for each graphics engine and helpful handling of edge vs. fill while sweeping a range of x/col values (which is aligned to DDR2 memory chunks).
+
+Turned "FILL" into more adaptable "BOX" command/engine with versatility in terms of edge/fill colors/masks.
+
+Potential simple speed-up by exposing an SLR to software control.
+
+Speed comparison between SW, SW-SLR, HW-indi, HW-GP sequence. Highlite HW-GP ability to free up CPU for other work.
+
