@@ -28,6 +28,8 @@ int main( void )
     bcmdspec_t* last_bcs  = NULL;
     color_t     sw_color = (color_t)0x4044FFAA;
     color_t     hw_color = (color_t)0xC044AAFF;
+    color_t     sw_back = (color_t)0x00000000;
+    color_t     hw_back = (color_t)0x00000000;
     gframe_pv   sw_frame = STD_FRAME1;
 
     GP_FRAME = STD_FRAME1;
@@ -38,11 +40,12 @@ int main( void )
         bcmdspec_t* bcs = token_cmdspec(input);
         bcmd_t cmd = bcs->cmd;
         uint16_t flags = bcs->flags;
-        uint16_t gflag = flags;
-        if (!gflag) {
-            if (hw_color!=KILLR) gflag |= 2;
-            if (sw_color!=KILLR) gflag |= 1;
-        }
+        //uint16_t gflag = flags;
+
+        //if (!gflag) {
+        //    if (hw_color!=KILLR) gflag |= 2;
+        //    if (sw_color!=KILLR) gflag |= 1;
+        //}
 
         if ((cmd==BC_BLANK) && (last_bcs) && (last_bcs->cmd==BC_DUMP)) {
             stash_address = (void*)dump_block(stash_address, 16);
@@ -90,7 +93,6 @@ int main( void )
                 }
             } break;
 
-        //COLT45 extensions:
             case BC_HELP: {
                 bufw_cmdspec();
             } break;
@@ -150,30 +152,23 @@ int main( void )
                 if (flags & 0x01) sw_frame = frame;
             } break;
 
+        //HW/SW common commands:
             case BC_BACK: {
                 color_t color = (color_t)tok_hex32u();
-                hwback(color);
+                if (flags & 0x02) hw_back = color;
+                if (flags & 0x01) sw_back = color;
             } break;
 
-            case BC_CLIP: {
-                uint32_t parms = tok_hex32u();
-                uint16_t L  = tok_dec16u();
-                uint16_t T  = tok_dec16u();
-                uint16_t R  = tok_dec16u();
-                uint16_t B  = tok_dec16u();
-                hwclip(parms, L,T, R,B);
-            } break;
-
-        //HW/SW common commands:
             case BC_COLOR: {
                 color_t color = (color_t)tok_hex32u();
                 if (flags & 0x02) hw_color = color;
                 if (flags & 0x01) sw_color = color;
             } break;
 
+        //These graphical cmds used to use "gflag"
             case BC_FILL: {
-                if (gflag & 0x02) hwfill(hw_color);
-                if (gflag & 0x01) swfill(sw_frame, sw_color);
+                if (flags & 0x02) hwfill(hw_color);
+                if (flags & 0x01) swfill(sw_frame, sw_color);
             } break;
 
             case BC_LINE: {
@@ -181,15 +176,8 @@ int main( void )
                 uint16_t y0 = tok_dec16u();
                 uint16_t x1 = tok_dec16u();
                 uint16_t y1 = tok_dec16u();
-                if (gflag & 0x02) hwline(hw_color, x0,y0, x1,y1);
-                if (gflag & 0x01) swline(sw_frame, sw_color, x0,y0, x1,y1);
-            } break;
-
-            case BC_PIXL: {
-                uint16_t x  = tok_dec16u();
-                uint16_t y  = tok_dec16u();
-                if (gflag & 0x02) hwline(hw_color, x,y, x,y);
-                if (gflag & 0x01) swpixl(sw_frame, sw_color, x,y);
+                if (flags & 0x02) hwline(hw_color, x0,y0, x1,y1);
+                if (flags & 0x01) swline(sw_frame, sw_color, x0,y0, x1,y1);
             } break;
 
             case BC_ELIP: {
@@ -197,8 +185,18 @@ int main( void )
                 uint16_t yc = tok_dec16u();
                 uint16_t a  = tok_dec16u();
                 uint16_t b  = tok_dec16u();
-                if (gflag & 0x02) hwelip(hw_color, xc,yc, a,b);
-                if (gflag & 0x01) swelip(sw_frame, sw_color, xc,yc, a,b);
+                if (flags & 0x02) hwelip(hw_color, xc,yc, a,b, hw_back);
+                if (flags & 0x01) swelip(sw_frame, sw_color, xc,yc, a,b, sw_back);
+            } break;
+
+            case BC_RECT: {
+                uint16_t L  = tok_dec16u();
+                uint16_t T  = tok_dec16u();
+                uint16_t R  = tok_dec16u();
+                uint16_t B  = tok_dec16u();
+                
+                if (flags & 0x02) hwrect(hw_color, L,T, R,B, hw_back);
+                if (flags & 0x01) swrect(sw_frame, sw_color, L,T, R,B, sw_back);
             } break;
 
         //Misc. commands:

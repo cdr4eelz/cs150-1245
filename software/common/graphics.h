@@ -17,7 +17,7 @@
 #define GPTEMP_SZB    ((GPTEMP_SZW) << 2)  //  128-bytes
 
 
-// DVI Mode: VESA 800x600 pixels @72Hz (***INCOMPLETE/INCORRECT***)
+// DVI Mode: VESA 800x600 pixels @60Hz (***INCOMPLETE/INCORRECT***)
 #define PIX_SIZEB     (4)
 #define COL_SIZEP     (0x0320)      //800P
 #define COL_SIZEB     (4*COL_SIZEP)             //3200B (0x0C80)
@@ -59,6 +59,7 @@ struct __attribute__ ((aligned (4), packed)) gstate_s {
         unsigned UNUSED_2a:1;
         unsigned gp_procframe:6;    //End Byte#3
     unsigned UNUSED_3a:4;
+        //TODO: Other engines/operations/shapes
         unsigned elipse_ready:1;
         unsigned line_ready:1;
         unsigned filler_ready:1;
@@ -107,7 +108,7 @@ typedef volatile gframe_tp gframe_tv, *gframe_pv;
     ((uint32_t)(FP)) | ((Y)<<(YSHIFT)) | ((X)<<(XSHIFT)) ) )
 #define FRAME_PTR(F)  ( std_frame((uint32_t)(F)) )
 
-__attribute__((always_inline)) inline
+inline __attribute__((always_inline))
 gframe_pv std_frame(uint32_t const fn_or_fp)
 {
     uint32_t fp = (fn_or_fp & (FPMASK));
@@ -118,101 +119,167 @@ gframe_pv std_frame(uint32_t const fn_or_fp)
 
 // *** GP_GCODE COMMANDs: INST Fields, OpCodes, etc. ***
 
-typedef struct __attribute__ ((aligned (4), packed)) cmd_rgb {
-    uint8_t gop;
-    unsigned rgb:24;
-} cmd_rgb_t, *cmd_rgb_p;
-typedef struct __attribute__ ((aligned (4), packed)) cmd_pnt {
-    unsigned flags:6;
+typedef struct __attribute__ ((aligned (4), packed)) cmd_orgb28_s {
+    unsigned gop:4;     // High nibble only
+    unsigned xrgb28:28; // Foreground/Edge color missing high nibble
+} cmd_orgb28_t, *cmd_orgb28_p;
+typedef struct __attribute__ ((aligned (4), packed)) cmd_xrgb32_s {
+    unsigned xrgb32:32; // Upper "extra" byte as "special purpose"
+} cmd_xrgb32_t, *cmd_xrgb32_p;
+typedef struct __attribute__ ((aligned (4), packed)) cmd_pnt_s {
+    unsigned flags1:6;
     unsigned x:10;
-    unsigned _u2:6;
+    unsigned flags2:6;
     unsigned y:10;
 } cmd_pnt_t, *cmd_pnt_p;
 typedef union gpcode_u {
     uint32_t u32;
-    struct cmd_rgb fRGB;
-    struct cmd_pnt fPNT;
+    cmd_orgb28_t    fORGB28;
+    cmd_xrgb32_t    fXRGB32;
+    cmd_pnt_t       fPNT;
 } gpcode_t, *gpcode_p;
 
-#define GOP_STOP    ((uint8_t) 0x00)
-#define GOP_FILL    ((uint8_t) 0x01)
-#define GOP_LINE    ((uint8_t) 0x02)
-#define GOP_ELIP    ((uint8_t) 0x03)
-#define GOP_BACK    ((uint8_t) 0x04)
-#define GOP_CLIP    ((uint8_t) 0x05)
+//NOTE: These are 4-bit "nibbles", not actually bytes
+#define GOP_STOP    (0)
+#define GOP_FILL    (1)
+#define GOP_LINE    (2)
+#define GOP_ELIP    (3)
+#define GOP_RECT    (4)
 
-#define CMD_STOP()    CMD_rgb(GOP_STOP, 0 ) //ZEROS; No trailing words
-#define CMD_FILL(_C)  CMD_rgb(GOP_FILL, _C) //COLOR; No trailing words
-#define CMD_LINE(_C)  CMD_rgb(GOP_LINE, _C) //COLOR; 2 x CMD_point (X0,Y0,X1,Y1)
-#define CMD_ELIP(_C)  CMD_rgb(GOP_ELIP, _C) //COLOR; 2 x CMD_point (XC,YC,A,B)
-#define CMD_BACK(_C)  CMD_rgb(GOP_BACK, _C) //COLOR; No trailing words
-#define CMD_CLIP(_P)  CMD_rgb(GOP_CLIP, _P) //PARMS; 2 x CMD_point (L,T,R,B)
+#define CMD_orgb28(_GOP,_XRGB28) \
+            ({const cmd_orgb28_t c={.gop=(_GOP),.xrgb28=(_XRGB28)};             c;})
+#define CMD_xrgb32(_XRGB32) \
+            ({const cmd_xrgb32_t c={.xrgb32=(_XRGB32)};                         c;})
+#define CMD_pnt(_X,_Y) \
+            ({const cmd_pnt_t  p={.x=(_X),.y=(_Y),.flags1=0,    .flags2=0    }; p;})
+#define CMD_pntflags(_X,_Y,_F1,_F2) \
+            ({const cmd_pnt_t  p={.x=(_X),.y=(_Y),.flags1=(_F1),.flags2=(_F2)}; p;})
 
-#define CMD_rgb(_OP,_RGB) ({const cmd_rgb_t c={.gop=(_OP),.rgb=(_RGB)};          c;})
-#define CMD_pnt(_X,_Y)    ({const cmd_pnt_t p={.flags=0,.x=(_X),._u2=0,.y=(_Y)}; p;})
-#define CMD32_rgb(_OP,_U24) ((uint32_t)( (((_OP)& 0x0FF)<<24) | ((_U24)& 0x0FFFFFF) ))
-#define CMD32_pnt(_X,_Y)    ((uint32_t)( (((_X)& 0x03FF)<<16) | (  (_Y)&    0x03FF) ))
+#define CMD32_orgb28(_GOP,_U28) \
+            ((uint32_t)( (( (_GOP) & 0x0F  )<<28) | ((_U28) & 0x0FFFFFFF) ))
+#define CMD32_xrgb32(_XRGB32) \
+            ((uint32_t)(_XRGB32)                                           )
+#define CMD32_pnt(_X,_Y) \
+            ((uint32_t)( ((   (_X) & 0x03FF)<<16) | (  (_Y) &     0x03FF) ))
+//MISSING: CMD32_pntflags like CMD_pntflags!
+
+#define CMD_STOP()      CMD_orgb28(GOP_STOP,0)    //ZEROS; No trailing words
+#define CMD_FILL(_XC28) CMD_orgb28(GOP_FILL,_XC28)  //COLOR; No trailing words
+#define CMD_LINE(_XC28) CMD_orgb28(GOP_LINE,_XC28)  //COLOR; 2 x CMD_point (X0,Y0,X1,Y1)
+#define CMD_ELIP(_XC28) CMD_orgb28(GOP_ELIP,_XC28)  //COLOR; 2 x CMD_point (XC,YC,A,B) + FILL_COLOR
+#define CMD_RECT(_XC28) CMD_orgb28(GOP_RECT,_XC28)  //COLOR; 2 x CMD_point (L,T,R,B)   + FILL_COLOR
 
 gpcode_p hw_OpRGB_PP_S(
     gpcode_p pINST, //NULL uses GPTEMP_PTR & launchs single cmd pronto
-    const struct cmd_rgb cmd, //Required: Use CMD_rgb(op,rgb) or CMD_XYZ(color)
-    const struct cmd_pnt p0, //pnt_NULL if op doesn't use point
-    const struct cmd_pnt p1);
+    const cmd_orgb28_t  orgb28, //Required: Use cmd_orgb28(op,rgb28)
+    const cmd_pnt_t     p0,     //Opt: pnt_null if op doesn't use point
+    const cmd_pnt_t     p1,     //Opt: pnt_null if unused
+    const cmd_xrgb32_t  xrgb32  //Opt: Full 32-bits (upper byte interpreted later!)
+);
+extern const cmd_pnt_t      null_pnt;
+extern const cmd_xrgb32_t   null_xrgb32;
 
-extern const cmd_pnt_t pnt_null;
 
-#define hwfill(_C)                      \
-    hw_OpRGB_PP_S( NULL, CMD_FILL(_C),   \
-    pnt_null, pnt_null)
-#define hwline(_C,_X0,_Y0,_X1,_Y1)      \
-    hw_OpRGB_PP_S( NULL, CMD_LINE(_C),   \
-    CMD_pnt(_X0,_Y0), CMD_pnt(_X1,_Y1))
-#define hwelip(_C,_XC,_YC,_A,_B)        \
-    hw_OpRGB_PP_S( NULL, CMD_ELIP(_C),   \
-    CMD_pnt(_XC,_YC), CMD_pnt(_A,_B))
-#define hwback(_C)                      \
-    hw_OpRGB_PP_S( NULL, CMD_BACK(_C),   \
-    pnt_null, pnt_null)
-#define hwclip(_P,_L,_T,_R,_B)          \
-    hw_OpRGB_PP_S( NULL, CMD_CLIP(_P),   \
-    CMD_pnt(_L,_T), CMD_pnt(_R,_B))
+//These macros "enqueue" a single operation and trigger immediately:
+#define hwfill(_C28)                        \
+    hw_OpRGB_PP_S( NULL, CMD_FILL(_C28),     \
+        null_pnt, null_pnt,                   \
+        null_xrgb32)
+#define hwline(_C28,_X0,_Y0,_X1,_Y1)        \
+    hw_OpRGB_PP_S( NULL, CMD_LINE(_C28),     \
+        CMD_pnt(_X0,_Y0), CMD_pnt(_X1,_Y1),   \
+        null_xrgb32)
+#define hwelip(_EC28,_XC,_YC,_A,_B,_FC32)   \
+    hw_OpRGB_PP_S( NULL, CMD_ELIP(_EC28),    \
+        CMD_pnt(_XC,_YC), CMD_pnt(_A,_B),     \
+        CMD_xrgb32(_FC32))
+#define hwrect(_EC28,_L,_T,_R,_B,_FC32)     \
+    hw_OpRGB_PP_S( NULL, CMD_RECT(_EC28),    \
+        CMD_pnt(_L,_T), CMD_pnt(_R,_B),       \
+        CMD_xrgb32(_FC32))
+//A few fake operations/shapes:
+#define hwcirc(_EC28,_XC,_YC,_R,_FC32) \
+            hwelip((_EC28),(_XC),(_YC),(_R),(_R),(_FC32))
+#define hwpixl(_C28,_X,_Y) \
+            hwline((_C28), (_X),(_Y), (_X),(_Y))
 
-/*
-void hwfill(color_t color);
-void hwline(color_t color,
-              uint16_t x0, uint16_t y0,
-              uint16_t x1, uint16_t y1);
-void hwelip(color_t color,
-              uint16_t xc, uint16_t yc,
-              uint16_t a,  uint16_t b);
-void hwback(color_t color);
-void hwclip(uint32_t parms,
-              uint16_t l,  uint16_t t,
-              uint16_t r,  uint16_t b);
-*/
+//These macros enqueue GOPs into a sequence, advancing ptr for each:
+#define hwq_stop(_QPTR)                           \
+    hw_OpRGB_PP_S( _QPTR, CMD_STOP(),              \
+        null_pnt, null_pnt,                         \
+        null_xrgb32)
+#define hwq_fill(_QPTR,_C28)                      \
+    hw_OpRGB_PP_S( _QPTR, CMD_FILL(_C28),          \
+        null_pnt, null_pnt,                         \
+        null_xrgb32)
+#define hwq_line(_QPTR,_C28,_X0,_Y0,_X1,_Y1)      \
+    hw_OpRGB_PP_S( _QPTR, CMD_LINE(_C28),          \
+        CMD_pnt(_X0,_Y0), CMD_pnt(_X1,_Y1),         \
+        null_xrgb32)
+#define hwq_elip(_QPTR,_EC28,_XC,_YC,_A,_B,_FC32) \
+    hw_OpRGB_PP_S( _QPTR, CMD_ELIP(_EC28),         \
+        CMD_pnt(_XC,_YC), CMD_pnt(_A,_B),           \
+        CMD_xrgb32(_FC32))
+#define hwq_rect(_QPTR,_EC28,_L,_T,_R,_B,_FC32)   \
+    hw_OpRGB_PP_S( _QPTR, CMD_RECT(_EC28),         \
+        CMD_pnt(_L,_T), CMD_pnt(_R,_B),             \
+        CMD_xrgb32(_FC32))
+//A few fake operations/shapes:
+#define hwq_circ(_QPTR,_EC28,_XC,_YC,_R,_FC32) \
+            hwq_elip((_QPTR),(_EC28),(_XC),(_YC),(_R),(_R),(_FC32))
+#define hwq_pixl(_QPTR,_C28,_X,_Y) \
+            hwq_line((_QPTR),(_C28), (_X),(_Y), (_X),(_Y))
 
-void swfill(gframe_pv frame, color_t color);
+
+//Software graphics functions
+void swslr(gframe_pv frame, color_t color_edge,
+              uint16_t Y, uint16_t L,  uint16_t R,
+              color_t color_fill);
+
+//inline __attribute__((always_inline))
+//void swfill_rect(gframe_pv frame, color_t color);
+void swfill_unroll(gframe_pv frame, color_t color);
+#define swfill swfill_unroll
+
 void swline(gframe_pv frame, color_t color,
               uint16_t x0, uint16_t y0,
               uint16_t x1, uint16_t y1);
-void swelip(gframe_pv frame, color_t color,
+void swelip(gframe_pv frame, color_t color_edge,
               uint16_t xc, uint16_t yc,
-              uint16_t a,  uint16_t b);
-
-void swcirc(gframe_pv frame, color_t color,
+              uint16_t a,  uint16_t b,
+              color_t color_fill);
+void swrect(gframe_pv frame, color_t color_edge,
+              uint16_t L, uint16_t T,
+              uint16_t R,  uint16_t B,
+              color_t color_fill);
+/* void swcirc(gframe_pv frame, color_t color_edge,
               uint16_t xc, uint16_t yc,
-              uint16_t r);
-void swcirc_old(gframe_pv frame, color_t color,
+              uint16_t r); */
+/* void swcirc_old(gframe_pv frame, color_t color,
                   uint16_t xc, uint16_t yc,
-                  uint16_t r);
+                  uint16_t r); */
+#define swcirc(frame,color_edge,xc,yc,r,color_fill) \
+            swelip((frame),(color_edge),(xc),(yc),(r),(r),(color_fill))
+#define swpixl(_FRAME, _COLOR32, _X, _Y) \
+    { *PIX_PTR(_FRAME, _X, _Y) = _COLOR32; }
+/* void swpixl(gframe_pv frame, color_t color,
+              uint16_t x,  uint16_t y); */
 
-void swpixl(gframe_pv frame, color_t color,
-              uint16_t x,  uint16_t y);
-void swpixl_4way(gframe_pv fp, color_t color,
+inline __attribute__((always_inline))
+void swslr_4way(
+    gframe_pv const fp, color_t const color_edge,
+    uint16_t const xc, uint16_t const yc,
+    uint16_t const ox, uint16_t const oy,
+    color_t const color_fill)
+{
+    swslr(fp, color_edge, yc-oy, xc-ox, xc+ox, color_fill);
+    swslr(fp, color_edge, yc+oy, xc-ox, xc+ox, color_fill);
+}
+/* void swpixl_4way(gframe_pv fp, color_t color_edge,
                     uint16_t xc, uint16_t yc,
-                    uint16_t ox, uint16_t oy);
-void swpixl_8way(gframe_pv fp, color_t color,
+                    uint16_t ox, uint16_t oy); */
+/* void swpixl_8way(gframe_pv fp, color_t color,
                     uint16_t xc, uint16_t yc,
-                    uint16_t ox, uint16_t oy);
+                    uint16_t ox, uint16_t oy); */
 
 #endif

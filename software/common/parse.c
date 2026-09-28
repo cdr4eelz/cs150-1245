@@ -28,24 +28,27 @@ bcmdspec_t const bcmd_table[] = {
     {"pf",            BC_FRAME,     4},         // "w"
     {"gf",            BC_FRAME,     2},         // "w"
     {"sf",            BC_FRAME,     1},         // "w"
-    {"back",        BC_BACK,      2},           // "w"
-    {"clip",        BC_CLIP,      2},           // "hhhh"
 
+    {"back",        BC_BACK,      3},           // "w"
+    {"hw" "back",     BC_BACK,      2},         // "w"
+    {"sw" "back",     BC_BACK,      1},         // "w"
     {"color",       BC_COLOR,     3},           // "w"
     {"hw" "color",    BC_COLOR,     2},         // "w"
     {"sw" "color",    BC_COLOR,     1},         // "w"
-    {"fill",        BC_FILL,      0},           // ""
+
+    //These used to use "gflag" and had "flags" == 0 not 3:
+    {"fill",        BC_FILL,      3},           // ""
     {"hw" "fill",     BC_FILL,      2},         // ""
     {"sw" "fill",     BC_FILL,      1},         // ""
-    {"line",        BC_LINE,      0},           // "hhhh"
+    {"line",        BC_LINE,      3},           // "hhhh"
     {"hw" "line",     BC_LINE,      2},         // "hhhh"
     {"sw" "line",     BC_LINE,      1},         // "hhhh"
-    {"elip",        BC_ELIP,      0},           // "hhhh"
+    {"elip",        BC_ELIP,      3},           // "hhhh"
     {"hw" "elip",     BC_ELIP,      2},         // "hhhh"
     {"sw" "elip",     BC_ELIP,      1},         // "hhhh"
-    {"pixl",        BC_PIXL,      0},           // "hh"
-    {"hw" "pixl",     BC_PIXL,      2},         // "hh"
-    {"sw" "pixl",     BC_PIXL,      1},         // "hh"
+    {"rect",        BC_RECT,      3},           // "hhhh"
+    {"hw" "rect",     BC_RECT,      2},         // "hhhh"
+    {"sw" "rect",     BC_RECT,      1},         // "hhhh"
 
     {"??", BC_UNKNOWN, FLAG_EOT}, //Flags end of table
 };

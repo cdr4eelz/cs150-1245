@@ -134,7 +134,7 @@ void uwrite_clock(uint32_t clk_bcd) {
     tbuff[2] = ':';
     tbuff[3] = '0' + ((clk_bcd >>  4) & 0x0F);
     tbuff[4] = '0' + ((clk_bcd >>  0) & 0x0F);
-    tbuff[5] = NULL;
+    tbuff[5] = 0;
     uwrite_int8s_ISR(tbuff);
     uwrite_int8s_ISR("\n\r");
 }
