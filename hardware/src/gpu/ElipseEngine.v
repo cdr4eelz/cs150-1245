@@ -6,9 +6,11 @@ module ElipseEngine #(
     input           clk, rst,
 
 //Elipse control <=> GPU:
+//TODO: Specify all controlling signals at one time during trigger (from GP)
     output          EL_ready, //Can start issuing values/trigger
-    input           EL_color_valid, //EL_color capture
-    input   [ 31:0] EL_color,   //8-zeros, 3 x 8-bit R/G/B
+    input           EL_color_valid, //EL_color capture into "color" (edge color)
+    input           EL_backc_valid, //EL_color capture into "backc" (background/fill)
+    input   [ 31:0] EL_color,   //4-zeros, 4-bits special, 3 x 8-bit (4+4+R/G/B)
     input           EL_xc_valid,//EL_point captured into xc, and/or...
     input           EL_yc_valid,//  ... yc
     input           EL_a_valid, //  ... a
@@ -39,22 +41,28 @@ module ElipseEngine #(
                 //Grabbed @clk & trigger  //MUXed to expose value @trigger
     reg  [ 5:0] framebits_r,              framebits;
     reg  [31:0] color_r,                  color;
+    reg  [31:0] backc_r,                  backc;
     reg  [ 9:0] xc_r,yc_r, a_r,b_r,       xc,yc, a,b;
+
     always @(posedge clk) begin
         if (rst_r) begin //Internal reset (don't bog global rst unless needed)
-            {framebits_r, color_r} <= 0;
+            {framebits_r, color_r, backc_r} <= 0;
             {xc_r,yc_r,   a_r,b_r} <= 0;
         end else if (EL_ready) begin
-            {framebits_r, color_r} <= {framebits, color}; //Feedback muxed vals
-            {xc_r,yc_r,   a_r,b_r} <= {xc,yc,     a,b};  // since available.
+//$display("/// EL_ready: Capture new value ///");
+            {framebits_r, color_r, backc_r} <= {framebits, color, backc}; //Feedback muxed vals
+            {xc_r,yc_r,   a_r,b_r}          <= {xc,yc,     a,b};  // since available.
         end
     end
+
     always @(*) begin //NOTE:Seems OK to lump into one always@* block!
-        {framebits, color} = {framebits_r, color_r  };
-        {xc,yc,     a,b}   = {xc_r,yc_r,   a_r,b_r};
+        framebits = framebits_r;
+        {color, backc} = {color_r, backc_r};
+        {xc,yc, a,b} = {xc_r,yc_r, a_r,b_r};
         if (EL_ready) begin //Preview/capture active inputs up until trigger
             if (EL_trigger)     framebits = EL_frame[27:22];
             if (EL_color_valid) color     = EL_color;
+            if (EL_backc_valid) backc     = EL_color;
             if (EL_xc_valid)    xc        = EL_point;
             if (EL_yc_valid)    yc        = EL_point;
             if (EL_a_valid)     a         = EL_point;
@@ -279,10 +287,7 @@ $display("%8d          : x=%0d y=%0d",
                                cs_M[MH_SLb1] || cs_M[MH_SLb2]),
             SLR_frame       = {4'h1, framebits[5:0], 22'b0},
             SLR_color_edge  = color_r,
-            SLR_color_fill  = { color_r[31:24], //Left/Right 1-pixel
-                                color_r[23:16] >> 1, //Darkened
-                                color_r[15: 8] >> 1,
-                                color_r[ 7: 0] },
+            SLR_color_fill  = backc_r,
             SLR_col_start   = xL,
             SLR_col_finish  = xR,
             SLR_row         = (cs_M[MH_SLa1] || cs_M[MH_SLb1]) ? yT : yB;
@@ -296,6 +301,8 @@ $display("%8d          : x=%0d y=%0d",
             #1;
             $display("[=ELIP=]: frame=%h color=%h %0d(%0d,%0d,%0d)", framebits,
                      color, color[31:24], color[23:16], color[15:8], color[7:0]);
+            $display("        : backc=%h %0d(%0d,%0d,%0d)", backc_r,
+                     backc_r[31:24], backc_r[23:16], backc_r[15:8], backc_r[7:0]);
             $display("        : (%4d,%4d)=>(%4d,%4d)  (%h,%h)=>(%h,%h)",
                      xc,yc, a,b,  xc,yc, a,b);
         end

@@ -67,6 +67,7 @@ module GraphicsProcessor #(
 //ElipseEngine interface:
     input           EL_ready,
     output          EL_color_valid,
+    output          EL_backc_valid,
     output  [ 31:0] EL_color,
     output          EL_xc_valid,
     output          EL_yc_valid,
@@ -75,6 +76,19 @@ module GraphicsProcessor #(
     output  [  9:0] EL_point,
     output          EL_trigger,
     output  [ 31:0] EL_frame
+
+//TODO: Add RectangleEngine interface (either separate or replacing FrameFiller engine)
+    //input           RE_ready,
+    //output          RE_color_valid,
+    //output          RE_backc_valid,
+    //output  [ 31:0] RE_color,
+    //output          RE_x0_valid,
+    //output          RE_y0_valid,
+    //output          RE_x1_valid,
+    //output          RE_y1_valid,
+    //output  [  9:0] RE_point,
+    //output          RE_trigger,
+    //output  [ 31:0] RE_frame
 );
 
    //Your code goes here. GL HF.
@@ -103,19 +117,19 @@ module GraphicsProcessor #(
 
 //Sub-States:
     localparam [2:0]
-        SS_TOP      = 0, //First or only INSTruction part
-        SS_X0       = 1, //Sub-CMDs from separate
-        SS_Y0       = 2, //  INSTs and/or within
-        SS_XX       = 3, //  INSTs trailing initial
-        SS_YY       = 4; //  INST at SS_TOP
-    localparam SS__LAST = 4;
+        SS_TOP      = 0, //Initial sub-state (nibble) & color 28-bit
+        SS_X0       = 1, //  First point's X
+        SS_Y0       = 2, //  First point's Y
+        SS_XX       = 3, //  Second point's X
+        SS_YY       = 4, //  Second point's Y
+        SS_XRGB     = 5; //  Background/Fill 32-bit color when needed (e.g. ELIPSE)
+    localparam SS__LAST = 5;
 
 //Key State Registers
     reg  [ 1:0] ns_M, cs_M = MS_DEAD; //Master-State
     reg  [ 2:0] ns_S, cs_S = SS_TOP;  //Sub-State
-    //TODO:One/Zero-hot MS_ & SS_ also
     reg  [ 5: 0] frame_bits;  //Insist on aligning with multiples of 0x0040_0000
-    reg  [31:28] code_hinib;
+    reg  [31:28] code_hinib; //Not used but send it back in GP_rcode (future use?)
     reg  [27: 5] code_chunk; //256-bit chunk # within 256MB range of DDR (8 x 32-bit words each)
     reg  [ 4: 2] code_index; //Offset of 32-bit CODE within 256-bit chunk
     reg          fault_r;
@@ -127,19 +141,20 @@ module GraphicsProcessor #(
     wire chunk_reset   = (rst_r || (cs_M==MS_IDLE)); //Reset chunk on IDLE to let pending read clear
     wire [255:0] chunk_data;
 
-    assign GP_ready = (cs_M==MS_IDLE);
-    assign GP_fault = fault_r;
-    assign GP_rframe = frame_bits;
-    assign GP_rcode = {code_hinib, code_chunk, code_index, 2'b0}; //4+23+3+2=32-bit
+    assign GP_ready     = (cs_M==MS_IDLE);
+    assign GP_fault     = fault_r;
+    assign GP_rframe    = frame_bits;
+    assign GP_rcode     = {code_hinib, code_chunk, code_index, 2'b0}; //4+23+3+2=32-bit
 
 
 //INSTruction RAW decode (includes invalid/inactive signals)
     wire [ 7:0] code_shift  = (code_index << 5);
     wire [31:0] INST        = (chunk_data >> code_shift);
-    wire [ 7:0] INST_gop    = INST[`IX_INST_GOP];
-    wire [31:0] INST_color  = {8'd0, INST[`IX_INST_COLOR]};
-    wire [ 9:0] INST_pointX = INST[`IX_POINT_X];
+    wire [ 3:0] INST_gop    = INST[`IX_INST_GOP];
+    wire [31:0] INST_color  = {4'b0000, INST[`IX_INST_COLOR28]};
+    wire [ 9:0] INST_pointX = INST[`IX_POINT_X];    // Ignore flags/unused bits
     wire [ 9:0] INST_pointY = INST[`IX_POINT_Y];
+    wire [31:0] INST_backc  = INST[`IX_XRGB32];
 //  wire        INST_trigger = INST[`IX_POINT_TRIG]);
 
     reg  hot_GOP_err;
@@ -159,8 +174,8 @@ module GraphicsProcessor #(
     always @(*) begin
         hot_GOP_cal = (1 << `GOP_STOP);
         hot_GOP_err = 1'b1; //This is RAW signal
-        case (INST_gop) //If big/slow, maybe barrel-shift or ROM lookup.
-            `GOP_FILL, `GOP_LINE, `GOP_ELIP: begin
+        case (INST_gop)
+            `GOP_FILL, `GOP_LINE, `GOP_ELIP, `GOP_RECT: begin
                 hot_GOP_cal = (1 << INST_gop);
                 hot_GOP_err = 1'b0;
             end
@@ -175,29 +190,36 @@ module GraphicsProcessor #(
 
         if (hot_GOP_val) hot_GOP_reg <= hot_GOP_cal;
     end
-    assign hot_GOP = (hot_GOP_sel) ? hot_GOP_cal :  hot_GOP_reg;
+    assign hot_GOP = (hot_GOP_sel) ? hot_GOP_cal : hot_GOP_reg;
 
 
 //Sub-State machine & Mealy outputs: CMD_advance, INST_advance
-    wire INST_advance = (CMD_advance && !cs_S[0]); //NOTE:FRAGILE! (EVENs: SS_TOP||SS_Y0||SS_YY)
-    wire INST_dopoints = (INST_gop==`GOP_LINE) || (INST_gop==`GOP_ELIP);
+    wire INST_advance = (CMD_advance && (cs_S==SS_TOP||cs_S==SS_Y0||cs_S==SS_YY||cs_S==SS_XRGB));
+    //wire INST_dopoints = (INST_gop==`GOP_LINE) || (INST_gop==`GOP_ELIP) || (INST_gop==`GOP_RECT);
+    //WARN: We use "hot_GOP" here because "INST" and "INST_gop" are only temporarily valid
+    wire INST_dopoints = hot_GOP[`GOP_LINE] || hot_GOP[`GOP_ELIP] || hot_GOP[`GOP_RECT];
+    wire INST_dobackrgb = hot_GOP[`GOP_ELIP] || hot_GOP[`GOP_RECT];
     always @(*) begin
-        ns_S = cs_S; //Hold current state until valid
-        case (cs_S) //Just a ring shifter with extra enable test!
-            SS_TOP: if (INST_dopoints) ns_S = SS_X0; //else SS_TOP
+        ns_S = cs_S; //Hold current state until valid (failsafe for "case" below)
+        case (cs_S)
+            SS_TOP: ns_S = (INST_dopoints) ? SS_X0 : SS_TOP;
             SS_X0:  ns_S = SS_Y0;
             SS_Y0:  ns_S = SS_XX;
             SS_XX:  ns_S = SS_YY;
-            SS_YY:  ns_S = SS_TOP;
+            SS_YY:  ns_S = (INST_dobackrgb) ? SS_XRGB : SS_TOP;
+            SS_XRGB: ns_S = SS_TOP;
         endcase
-        //GOP-LatchieMux:(cs_S==SS_TOP)
-        //RING-SHIFTER (TOP=>X0=>Y0=>XX=>YY=>TOP...)
-        //ENABLE:((cs_S!=SS_TOP)||(INST_gop==`GOP_LINE))&&CMD_advance
-        //Optionally invert TOP in/out so reset state is all zeros
     end
     always @(posedge clk) begin
-        if (cs_M==MS_RSET) cs_S <= SS_TOP;
-        else if (CMD_advance) cs_S <= ns_S;
+        if (cs_M==MS_RSET) begin
+            cs_S <= SS_TOP;
+        end else if (CMD_advance) begin
+            cs_S <= ns_S;
+$display("        SUB: %h => %h", cs_S, ns_S);
+            if (ns_S != cs_S) begin
+$display("        XXX: A=%b B=%b C=%b", INST_advance, INST_dopoints, INST_dobackrgb);
+            end
+        end
     end
 
 
@@ -229,7 +251,7 @@ module GraphicsProcessor #(
 
 
 //FETCH GPCode chunks & present as 32-bit INSTruction stream
-    assign raf_addr  = {6'd0, code_chunk, 2'b00}; //Chunk addr in 64-bit "resolution"
+    assign raf_addr  = {6'b000000, code_chunk, 2'b00}; //Chunk addr in 64-bit "resolution"
     assign raf_wren  = (cs_M==MS_PROC) && !rdf_rden && chunk_advance;
     //NOTE:Don't base raf_wren on !raf_full when using RequestController!!!
 
@@ -248,9 +270,9 @@ module GraphicsProcessor #(
 
 
 //MAP ENGINEs as appropriate (or continuous/junk when no harm):
-    wire engine_x = cs_S[0]; //ODDs: SS_X0||SS_XX
-    wire [ 9:0] engine_point = (engine_x) ? INST_pointX : INST_pointY;
-    wire [31:0] engine_color = INST_color; //TODO: Investigate whether this should be registered
+    wire is_point_X = (cs_S==SS_X0) || (cs_S==SS_XX);
+    wire [ 9:0] engine_point = (is_point_X) ? INST_pointX : INST_pointY;
+    wire [31:0] engine_color = (cs_S==SS_XRGB) ? INST_backc : INST_color;
     wire [31:0] engine_frame = {4'h1,frame_bits,22'd0};
 
     assign FF_valid   = (hot_GOP_val && hot_GOP[`GOP_FILL]);
@@ -272,7 +294,8 @@ module GraphicsProcessor #(
             EL_yc_valid   = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_Y0)),
             EL_a_valid    = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_XX)),
             EL_b_valid    = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_YY)),
-            EL_trigger    = EL_b_valid; //INST_trigger;
+            EL_backc_valid= (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_XRGB)),
+            EL_trigger    = EL_backc_valid; //WAS: EL_b_valid; //INST_trigger;
     assign EL_color   = engine_color,
             EL_point  = engine_point,
             EL_frame  = engine_frame;

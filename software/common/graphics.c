@@ -13,7 +13,7 @@ gpcode_p hw_OpRGB_PP_S(
     const cmd_xrgb32_t  const xrgb32
 ) {
     gpcode_p pINST = (bINST) ? bINST : GPTEMP_PTR;
-    GP_WAIT();
+    if (!bINST) GP_WAIT();  //Ensure completion of GP before new cmds
     (*pINST++).fORGB28 = orgb28;
     if (p0.flags1 != null_pnt.flags1) {
         (*pINST++).fPNT = p0;

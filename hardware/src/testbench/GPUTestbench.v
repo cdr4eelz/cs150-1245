@@ -49,38 +49,60 @@ module GPUTestbench;
 
 /*
 *** SAMPLE-2 GPCODE block ***
-    0x4000:   FF_FFFFFF   # ERR!
-    0x4004:   FF_FFFFFF   # ERR!
-    0x4008:   FF_FFFFFF   # ERR!
-    0x400C:   01_FFFFFF   # FILL: white
-    0x4010:   0200_00FF   # LINE: green
-    0x4014:   0010_0020   #   first-endpoint  (0x10, 0x20)
-    0x4018:   001A_002B   #   second-endpoint (0x1A, 0x2B)
-    0x401C:   03_1144EE   # ELIP: bluish
-    0x4020:   0064_0064   #   center-point    (0x64, 0x64)
-    0x4024:   000A_0014   #   dimensions-a/b  (0x0A, 0x14)
-    0x4028:   0000_0000   # STOP.
-    0x402C:   FF_FFFFFF   # ERR!
+    0x4000:   hFF_FFFF00   # ERR!
+    0x4004:   hFF_FFFF01   # ERR!
+    0x4008:   hFF_FFFF02   # ERR!
+    0x400C:   h10_FFFFFF   # FILL: white
+    0x4010:   h20_00FF00   # LINE: green
+    0x4014:   h0010_0020   #   first-endpoint    (0x10, 0x20)
+    0x4018:   h001A_002B   #   second-endpoint   (0x1A, 0x2B)
+    0x401C:   h30_1144EE   # ELIP: bluish
+    0x4020:   h0064_0064   #   center-point      (0x64, 0x64)
+    0x4024:   h000A_0014   #   dimensions-a/b    (0x0A, 0x14)
+    0x4028:   hFF_44EE11   #   fill color (greenish)
+    0x402C:   h40_EE4411   # RECT: redish
+    0x4030:   h0100_0100   #   top-left        (0x100, 0x100)
+    0x4034:   h0111_0123   #   bottom-right    (0x111, 0x123)
+    0x4038:   h00_012345   #   fill color (transparent)
+    0x403C:   h0000_0000   # STOP.
+    0x4040:   ...
 */
 wire [0:1023] GPCODE_SAMPLE2 = { //Ascending bit order
-    32'hFF_FFFF00, 32'hFF_FFFF01, 32'hFF_FFFF02, 32'h01_FFFFFF,
-    32'h02_00FF00, 32'h0010_0020, 32'h001A_002B, 32'h03_1144EE,
-    32'h0064_0064, 32'h000A_0014, 32'h0000_0000, 32'hFF_FFFFFF,
-    128'b0,
+    32'hFF_FFFF00, 32'hFF_FFFF01, 32'hFF_FFFF02, 32'h10_FFFFFF,
+    32'h20_00FF00, 32'h0010_0020, 32'h001A_002B, 32'h30_1144EE,
+    32'h0064_0064, 32'h000A_0014, 32'hFF_44EE11, 32'h40_EE4411,
+    32'h0100_0100, 32'h0111_0123, 32'h00_012345, 32'h0000_0000,
     128'b0,
     128'b0,
     128'b0,
     128'b0
 };
+
 /*
 *** SAMPLE-3 GPCODE block ***
-    0x4000:   03_808080   # ELIP: grey
-    0x4004:   0032_0019   #   center-point    ( 50,  25)
-    0x4008:   0020_0008   #   dimensions-a/b  ( 32,   8)
-    0x400C:   0000_0000   # STOP.
+    0x4000:   h30_808080   # ELIP: grey
+    0x4004:   h0032_0019   #   center-point    ( 50,  25)
+    0x4008:   h0020_0008   #   dimensions-a/b  ( 32,   8)
+    0x400C:   hFF_111111   #   fill color (near black)
+    0x4010:   h00_000000   # STOP.
 */
 wire [0:1023] GPCODE_SAMPLE3 = { //Ascending bit order
-    32'h03_808080, 32'h0032_0019, 32'h0020_0008, 32'h00_000000,
+    32'h30_808080, 32'h0032_0019, 32'h0020_0008, 32'hFF_111111,
+    128'b0,
+    256'b0,
+    512'b0
+};
+
+/*
+*** SAMPLE-4 GPCODE block ***
+    0x4000:   h40_808080   # RECT: grey
+    0x4004:   h0032_0019   #   top-left        ( 50,  25)
+    0x4008:   h00FF_00FF   #   bottom-right    (255, 255)
+    0x400C:   hFF_111111   #   fill color (near black)
+    0x4010:   h00_000000   # STOP.
+*/
+wire [0:1023] GPCODE_SAMPLE4 = { //Ascending bit order
+    32'h40_808080, 32'h0032_0019, 32'h00FF_00FF, 32'hFF_111111,
     128'b0,
     256'b0,
     512'b0
@@ -124,6 +146,10 @@ wire [0:1023] GPCODE_SAMPLE3 = { //Ascending bit order
         $display("\n\nGPU: Sample #3");
         force DDR2MEM = GPCODE_SAMPLE3;
         execGP( 32'h0000_4000,           1 ); //Frame 1: 1040_0000
+
+        $display("\n\nGPU: Sample #4");
+        force DDR2MEM = GPCODE_SAMPLE4;
+        execGP( 32'h0000_4000, `STD_FRAME2 ); //Frame 2: 1080_0000?
 
         @(posedge cpu_clk_g);
         while (!ENGINES_ready) #(Cycle); // GP should have waited already

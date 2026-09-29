@@ -40,6 +40,7 @@ module GraphicsProcessorTestbench;
 
     reg         EL_ready;
     wire        EL_color_valid;
+    wire        EL_backc_valid;
     wire [31:0] EL_color;
     wire        EL_xc_valid;
     wire        EL_yc_valid;
@@ -85,6 +86,7 @@ module GraphicsProcessorTestbench;
     //ElipseEngine control signals
         .EL_ready(EL_ready),
         .EL_color_valid(EL_color_valid),
+        .EL_backc_valid(EL_backc_valid),
         .EL_color(EL_color),
         .EL_xc_valid(EL_xc_valid),
         .EL_yc_valid(EL_yc_valid),
@@ -163,7 +165,7 @@ reg ELOG_errors = 0;
     end endtask
 
 
-/*
+/*  ... old version ...
 *** SAMPLE-1 GPCODE block from checkpoint 4 ***
     0x4000:   0x0100_0000   # FILL: black
     0x4004:   0x0200_00FF   # LINE: blue
@@ -177,7 +179,6 @@ reg ELOG_errors = 0;
     0x4024:   0x0020_0032   #   second-endpoint (0x20, 0x32)
     0x4028:   0x0000_0000   # STOP.
     0x402C:   0xFFFF_FFFF   # ERR.
-*/
 reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
     32'h0100_0000, 32'h0200_00FF, 32'h0010_0020, 32'h001A_002B,
     32'h02FF_0000, 32'h0123_0124, 32'h00AA_00BB, 32'h03FF_0000,
@@ -187,6 +188,38 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
     128'b0,
     128'b0,
     128'b0
+};
+*/
+
+/*
+*** SAMPLE-1 GPCODE block tweaked from checkpoint 4 ***
+    0x4000:   1000_0000   # FILL: black
+    0x4004:   2000_00FF   # LINE: blue
+    0x4008:   0010_0020   #   first-endpoint  (0x10, 0x20)
+    0x400C:   001A_002B   #   second-endpoint (0x1A, 0x2B)
+    0x4010:   20FF_0000   # LINE: red
+    0x4014:   0123_0124   #   first-endpoint  (0x123,0x124)
+    0x4018:   00AA_00BB   #   second-endpoint (0xAA, 0xBB)
+    0x401C:   3000_FF00   # ELIP: green outline
+    0x4020:   0143_0104   #   center-point    (0x143,0x104)
+    0x4024:   0020_0032   #   second-endpoint (0x20, 0x32)
+    0x4028:   0000_0000   #   XRGB fill-color transparent
+    0x402C:   40FF_FFFF   # RECT: white outline & fill
+    0x4030:   0200_0200   #   left-top
+    0x4034:   0280_024F   #   right-bottom
+    0x4038:   FFFF_FFFF   #   fill-color white
+    0x403C:   0000_0000   # STOP.
+    0x4040:   FFFF_FFFF   # ERR...
+*/
+reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
+    32'h1000_0000, 32'h2000_00FF, 32'h0010_0020, 32'h001A_002B,
+    32'h20FF_0000, 32'h0123_0124, 32'h00AA_00BB, 32'h3000_FF00,
+    32'h0143_0104, 32'h0020_0032, 32'h0000_0000, 32'h40FF_FFFF,
+    32'h0200_0200, 32'h0280_024F, 32'hFFFF_FFFF, 32'h0000_0000,
+    32'hFFFF_FFFF, 32'hFFFF_FFFF, 32'hFFFF_FFFF, 32'hFFFF_FFFF,
+    128'd0,
+    128'd0,
+    128'd0 //NOTE: This MUST total 1024-bits (32 x 32-bit) in size!
 };
 
 
@@ -234,7 +267,7 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
 //Fake ENGINEs to listen to GP actions
     integer FF__countdown, LE__countdown, EL__countdown;
     integer LE__frame, LE__color, LE__x0, LE__y0, LE__x1, LE__y1;
-    integer EL__frame, EL__color, EL__x0, EL__y0, EL__x1, EL__y1;
+    integer EL__frame, EL__color, EL__x0, EL__y0, EL__x1, EL__y1, EL__backc;
     assign ENGINES_ready = (FF_ready && LE_ready && EL_ready);
     always @(posedge cpu_clk_g) begin
         if (rst_cpu_bus) begin
@@ -317,6 +350,11 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
                          EL_color[23:16], EL_color[15:8], EL_color[7:0]);
                 EL__color <= EL_color;
             end
+            if (EL_backc_valid) begin
+                $display(" ELIP: backc=%h (%0d,%0d,%0d)", EL_color,
+                         EL_color[23:16], EL_color[15:8], EL_color[7:0]);
+                EL__backc <= EL_color;
+            end
             if (EL_xc_valid) begin
                 $display(" ELIP: x0=%h (%0d)", EL_point, EL_point);
                 EL__x0 <= EL_point;
@@ -340,6 +378,8 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
                 $display("[=ELIP=] frame=%h", EL__frame);
                 $display("[-ELIP-] color=%h (%0d,%0d,%0d)", EL__color,
                          EL__color[23:16], EL__color[15:8], EL__color[7:0]);
+                $display("[-ELIP-] backc=%h (%0d,%0d,%0d)", EL__backc,
+                         EL__backc[23:16], EL__backc[15:8], EL__backc[7:0]);
                 $display("[-ELIP-] P0=%h,%h (%0d,%0d)",
                          EL__x0, EL__y0, EL__x0, EL__y0);
                 $display("[-ELIP-] P1=%h,%h (%0d,%0d)",
@@ -348,7 +388,7 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
                 EL__countdown <= 3;
             end
         end else begin
-            if (EL_color_valid || EL_xc_valid || EL_yc_valid
+            if (EL_color_valid || EL_backc_valid || EL_xc_valid || EL_yc_valid
                     || EL_a_valid || EL_b_valid || EL_trigger)
                 ELOG_ERROR("ELIP", "Premature");
         end

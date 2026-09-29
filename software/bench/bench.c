@@ -10,7 +10,7 @@
 
 uint32_t sw_draw(void) {
     for (int i = 0; i < TIMER_REPS; i++) {
-        gframe_pv sw_frame = STD_FRAME1;
+        gframe_pv sw_frame = FRAME_PTR(1);
         swfill(sw_frame, 0x00002233u);
         swline(sw_frame, 0x00FFFFFFu,  10, 10,  700,300);
         swline(sw_frame, 0x00FFFFFFu, 400, 10,   10,500);
@@ -24,7 +24,7 @@ uint32_t sw_draw(void) {
         swcirc(sw_frame, 0x00DDDDDDu, 650,200,   10,        0x00000000u);
         swrect(sw_frame, 0x003FFF2Fu, 550,515,  310,333,    0xFFF300F2u);
 
-        sw_frame = STD_FRAME3;
+        sw_frame = FRAME_PTR(4);
         swfill(sw_frame, 0x00FF2222u);
         swline(sw_frame, 0x0000FF00u,  10, 10,  700,300);
         swline(sw_frame, 0x000000FFu, 500,250,  200, 90);
@@ -43,7 +43,7 @@ uint32_t sw_draw(void) {
 
 uint32_t hw_draw_per_shape(void) {
     for (int i = 0; i < TIMER_REPS; i++) {
-        GP_FRAME = STD_FRAME2;
+        GP_FRAME = FRAME_PTR(2);
         hwfill(0x00002233u);
         hwline(0x00FFFFFFu,  10, 10,  700,300);
         hwline(0x00FFFFFFu, 400, 10,   10,500);
@@ -57,7 +57,7 @@ uint32_t hw_draw_per_shape(void) {
         hwcirc(0x00DDDDDDu, 650,200,   10,      0x00000000u);
         hwrect(0x003FFF2Fu, 550,515,  310,333,  0xFFF300F2u);
 
-        GP_FRAME = STD_FRAME4;
+        GP_FRAME = FRAME_PTR(5);
         hwfill(0x00FF2222u);
         hwline(0x0000FF00u,  10, 10,  700,300);
         hwline(0x000000FFu, 500,250,  200, 90);
@@ -82,7 +82,7 @@ uint32_t hw_draw_per_frame(void) {
 
     //We add up total waiting instructions when SW could do other stuff...
     for (int i = 0; i < TIMER_REPS; i++) {
-        GP_FRAME = STD_FRAME2;
+        GP_FRAME = FRAME_PTR(3);
         pINST = GOP_SEQUENCE;       //Point at sequence "buffer"
         hwq_fill(pINST, 0x00002233u);
         hwq_line(pINST, 0x00FFFFFFu,  10, 10,  700,300);
@@ -102,7 +102,7 @@ uint32_t hw_draw_per_frame(void) {
         GP_WAIT();  //Wait for all GPU OPs to complete
         total_wait += (INSTRUCTION_COUNTER - inst_count);
 
-        GP_FRAME = STD_FRAME4;
+        GP_FRAME = FRAME_PTR(6);
         pINST = GOP_SEQUENCE;       //Start fresh sequence
         hwq_fill(pINST, 0x00FF2222u);
         hwq_line(pINST, 0x0000FF00u,  10, 10,  700,300);

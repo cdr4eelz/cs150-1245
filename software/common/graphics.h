@@ -108,6 +108,7 @@ typedef volatile gframe_tp gframe_tv, *gframe_pv;
     ((uint32_t)(FP)) | ((Y)<<(YSHIFT)) | ((X)<<(XSHIFT)) ) )
 #define FRAME_PTR(F)  ( std_frame((uint32_t)(F)) )
 
+//TODO: Make "std_frame" a macro so compiler can compute
 inline __attribute__((always_inline))
 gframe_pv std_frame(uint32_t const fn_or_fp)
 {
@@ -174,7 +175,7 @@ gpcode_p hw_OpRGB_PP_S(
     const cmd_orgb28_t  orgb28, //Required: Use cmd_orgb28(op,rgb28)
     const cmd_pnt_t     p0,     //Opt: pnt_null if op doesn't use point
     const cmd_pnt_t     p1,     //Opt: pnt_null if unused
-    const cmd_xrgb32_t  xrgb32  //Opt: Full 32-bits (upper byte interpreted later!)
+    const cmd_xrgb32_t  xrgb32  //Opt: Full 32-bits (upper byte interpreted elsewhere!)
 );
 extern const cmd_pnt_t      null_pnt;
 extern const cmd_xrgb32_t   null_xrgb32;

@@ -120,7 +120,7 @@ module ScanLineRunner #(
     wire [ 7:0] fill8 = ( (r_fill_L & {8{ isFIRST8}}) | (r_fill_R & {8{ isLAST8}}) );
 //  wire [ 7:0] mask8 = (edge8 & fill8); //"either is active" (active-lo)
     wire        hi4 = (LITTLEWORDIAN) ? cs_M[MH_DDR1] : cs_M[MH_DDR2];
-    wire fill_active = (r_color_fill >> 31);
+    wire fill_active = |(r_color_fill & 32'hFF_000000);
 
     wire wdr_advance1 = (!wdf_full && !caf_full);
     wire wdr_advance2 = (!wdf_full);

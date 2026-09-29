@@ -4,24 +4,24 @@
 // GraphicsProcessor macros
 
 //Graphics-OPcode vocabulary (GOP)
-`define GOP_STOP    8'h00   //Terminate processing GP_CODE block
-`define GOP_FILL    8'h01   //w/color; no trailer (auto-triggers fill)
-`define GOP_LINE    8'h02   //w/color; then 2 x POINTs (2nd point triggers)
-`define GOP_ELIP    8'h03   //w/color; then back & 2 x POINTs (2nd point triggers)
-`define GOP_RECT    8'h04   //w/color; then back & 2 x POINTs (2nd point triggers)
-`define GOP_BACK    8'h05   //w/color; no trailer
-`define GOP__LAST   5
+`define GOP_STOP    4'h0    //Terminate processing GP_CODE block
+`define GOP_FILL    4'h1    //w/color; no trailer (auto-triggers fill)
+`define GOP_LINE    4'h2    //w/color; then 2 x POINTs (2nd point triggers)
+`define GOP_ELIP    4'h3    //w/color; then 2 x POINTs; then XRGB32
+`define GOP_RECT    4'h4    //w/color; then 2 x POINTs; then XRGB32
+`define GOP__LAST   4
 
 //INSTruction-initiation (opcode & packed fields)
-`define IX_INST_GOP    31:24 //Graphics-OpCode
-`define IX_INST_COLOR  23:0  //So far, is only field packed in with opcode
+`define IX_INST_GOP     31:28   //Graphics-OpCode in a single nibble (4-bits)
+`define IX_INST_COLOR28 27:0    //RGB plus an extra high nibble packed w/opcode
 
 //FIELDs in trailing INSTruction-slots (based on context)
-`define IX_POINT_Y     9:0
-`define IX_POINT_X     25:16
+`define IX_POINT_Y      9:0
+`define IX_POINT_X      25:16
 //`define IX_POINT_TRIG  31
 //`define IX_POINT_MORE  30 //TODO:Allow 2+ points (line/point series)
 //Some unused bits could indicate "sprite/shape" to "stamp"
+`define IX_XRGB32       31:0
 
 //Renumbered so FRAME0 is 0x10000000...but usually skip that one!
 `define STD_FRAME0X 32'h1000_0000

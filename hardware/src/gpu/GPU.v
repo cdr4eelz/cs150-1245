@@ -57,6 +57,7 @@ module GPU #(
     wire [ 31:0] elip_color;
     wire [  9:0] elip_point;
     wire         elip_color_valid;
+    wire         elip_backc_valid;
     wire         elip_xc_valid;
     wire         elip_yc_valid;
     wire         elip_a_valid;
@@ -121,6 +122,7 @@ module GPU #(
     //ElipseEngine <=> GP:
         .EL_ready(elip_ready),
         .EL_color_valid(elip_color_valid),
+        .EL_backc_valid(elip_backc_valid),
         .EL_color      (elip_color),
         .EL_xc_valid(elip_xc_valid),
         .EL_yc_valid(elip_yc_valid),
@@ -235,6 +237,7 @@ module GPU #(
     //Elipse control <=> CPU:
         .EL_ready(elip_ready),
         .EL_color_valid(elip_color_valid),
+        .EL_backc_valid(elip_backc_valid),
         .EL_color      (elip_color),
         .EL_xc_valid(elip_xc_valid),
         .EL_yc_valid(elip_yc_valid),
