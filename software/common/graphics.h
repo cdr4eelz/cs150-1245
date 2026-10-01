@@ -12,10 +12,10 @@
 
 //MEMORY FIXED GLOBAL TEMPORARIES
 //TODO: Allow dynamic location/size for temp GP commands (or map into BRAM, not DDR memory)
-#define GPTEMP_PTR    ((gpcode_p)0x10003000) //FIXED location "global"
+#define GPTEMP_PTR    ((gpcode_p)0x12003000) //FIXED location "global" within DDR2 memory for GP commands
 #define GPTEMP_SZW    (0x00000020)          //  32-words is...
 #define GPTEMP_SZB    ((GPTEMP_SZW) << 2)  //  128-bytes
-
+#define GPTEMP_BIG    (GPTEMP_PTR+GPTEMP_SZW) //Huge spot to store long runs of GP Commands
 
 // DVI Mode: VESA 800x600 pixels @60Hz (***INCOMPLETE/INCORRECT***)
 #define PIX_SIZEB     (4)
@@ -34,7 +34,7 @@
 #define ROW_OFFSETB   (4*ROW_OFFSETP) //4KB   (0x1000)
 #define ROW_XTRAP     (ROW_OFFSETP-COL_SIZEP)       //1KP-800P= 224P  (0xE0)
 #define FRAME_SIZEP   (COL_SIZEP*ROW_SIZEP)                   //480KP (0x00075300)
-#define FRAME_SIZEB   (4*ROW_SIZEP) //2400KB (0x00258000) ???
+#define FRAME_SIZEB   (4*ROW_SIZEP) //2400KB (0x00258000) ??? HUH??????
 #define FRAME_OFFSETR (0x0400)      //1KR
 #define FRAME_OFFSETP (FRAME_OFFSETR*ROW_OFFSETC*COL_OFFSETP) //1MP   (0x00100000)
 #define FRAME_OFFSETB (0x00400000)    //4MB (0x00400000)
@@ -89,7 +89,7 @@ typedef struct gframe_sx {
 } gframe_tp, *gframe_pp;
 typedef volatile gframe_tp gframe_tv, *gframe_pv;
 
-//Renumbered so FRAME0 is 0x10000000...but usually skip that one!
+//Renumbered so FRAME0 is 0x10000000...but usually skip that one excetp for fun!
 #define STD_FRAME0X ((gframe_pv) 0x10000000)
 #define STD_FRAME1  ((gframe_pv) 0x10400000)
 #define STD_FRAME2  ((gframe_pv) 0x10800000)

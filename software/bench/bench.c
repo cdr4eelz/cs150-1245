@@ -77,13 +77,13 @@ uint32_t hw_draw_per_shape(void) {
 uint32_t hw_draw_per_frame(void) {
     uint32_t total_wait = 0;
     uint32_t inst_count;
-    gpcode_t GOP_SEQUENCE[12 * 4]; //Over-estimate sequence length
     gpcode_p pINST;
+    const gpcode_p pSEQUENCE = GPTEMP_BIG; //A large chunk of memory
 
     //We add up total waiting instructions when SW could do other stuff...
     for (int i = 0; i < TIMER_REPS; i++) {
         GP_FRAME = FRAME_PTR(3);
-        pINST = GOP_SEQUENCE;       //Point at sequence "buffer"
+        pINST = pSEQUENCE;       //Point at sequence "buffer"
         hwq_fill(pINST, 0x00002233u);
         hwq_line(pINST, 0x00FFFFFFu,  10, 10,  700,300);
         hwq_line(pINST, 0x00FFFFFFu, 400, 10,   10,500);
@@ -97,13 +97,13 @@ uint32_t hw_draw_per_frame(void) {
         hwq_circ(pINST, 0x00DDDDDDu, 650,200,   10,      0x00000000u);
         hwq_rect(pINST, 0x003FFF2Fu, 550,515,  310,333,  0xFFF300F2u);
         hwq_stop(pINST);
-        GP_GCODE = GOP_SEQUENCE;    //Triggers GPU drawing
+        GP_GCODE = pSEQUENCE;    //Triggers GPU drawing
         inst_count = INSTRUCTION_COUNTER;
         GP_WAIT();  //Wait for all GPU OPs to complete
         total_wait += (INSTRUCTION_COUNTER - inst_count);
 
         GP_FRAME = FRAME_PTR(6);
-        pINST = GOP_SEQUENCE;       //Start fresh sequence
+        pINST = pSEQUENCE;       //Start fresh sequence
         hwq_fill(pINST, 0x00FF2222u);
         hwq_line(pINST, 0x0000FF00u,  10, 10,  700,300);
         hwq_line(pINST, 0x000000FFu, 500,250,  200, 90);
@@ -117,7 +117,7 @@ uint32_t hw_draw_per_frame(void) {
         hwq_pixl(pINST, 0x00023666u,  21, 51);
         hwq_circ(pINST, 0x00222222u, 650,200,   50,      0x00000000u);
         hwq_stop(pINST);
-        GP_GCODE = GOP_SEQUENCE;
+        GP_GCODE = pSEQUENCE;
         inst_count = INSTRUCTION_COUNTER;
         GP_WAIT();
         total_wait += (INSTRUCTION_COUNTER - inst_count);
