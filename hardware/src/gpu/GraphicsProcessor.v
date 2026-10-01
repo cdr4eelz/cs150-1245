@@ -75,20 +75,20 @@ module GraphicsProcessor #(
     output          EL_b_valid,
     output  [  9:0] EL_point,
     output          EL_trigger,
-    output  [ 31:0] EL_frame
+    output  [ 31:0] EL_frame,
 
-//TODO: Add RectangleEngine interface (either separate or replacing FrameFiller engine)
-    //input           RE_ready,
-    //output          RE_color_valid,
-    //output          RE_backc_valid,
-    //output  [ 31:0] RE_color,
-    //output          RE_x0_valid,
-    //output          RE_y0_valid,
-    //output          RE_x1_valid,
-    //output          RE_y1_valid,
-    //output  [  9:0] RE_point,
-    //output          RE_trigger,
-    //output  [ 31:0] RE_frame
+//RectangleEngine interface:
+    input           RE_ready,
+    output          RE_color_valid,
+    output          RE_backc_valid,
+    output  [ 31:0] RE_color,
+    output          RE_xl_valid,
+    output          RE_yt_valid,
+    output          RE_xr_valid,
+    output          RE_yb_valid,
+    output  [  9:0] RE_point,
+    output          RE_trigger,
+    output  [ 31:0] RE_frame
 );
 
    //Your code goes here. GL HF.
@@ -295,12 +295,23 @@ $display("        XXX: A=%b B=%b C=%b", INST_advance, INST_dopoints, INST_doback
             EL_a_valid    = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_XX)),
             EL_b_valid    = (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_YY)),
             EL_backc_valid= (CMD_advance && hot_GOP[`GOP_ELIP] && (cs_S==SS_XRGB)),
-            EL_trigger    = EL_backc_valid; //WAS: EL_b_valid; //INST_trigger;
+            EL_trigger    = EL_backc_valid;
     assign EL_color   = engine_color,
             EL_point  = engine_point,
             EL_frame  = engine_frame;
 
-    assign ENGINES_ready = (FF_ready && LE_ready && EL_ready);
+    assign RE_color_valid = (hot_GOP_val && hot_GOP[`GOP_RECT]),
+            RE_xl_valid   = (CMD_advance && hot_GOP[`GOP_RECT] && (cs_S==SS_X0)),
+            RE_yt_valid   = (CMD_advance && hot_GOP[`GOP_RECT] && (cs_S==SS_Y0)),
+            RE_xr_valid   = (CMD_advance && hot_GOP[`GOP_RECT] && (cs_S==SS_XX)),
+            RE_yb_valid   = (CMD_advance && hot_GOP[`GOP_RECT] && (cs_S==SS_YY)),
+            RE_backc_valid= (CMD_advance && hot_GOP[`GOP_RECT] && (cs_S==SS_XRGB)),
+            RE_trigger    = RE_backc_valid;
+    assign RE_color   = engine_color,
+            RE_point  = engine_point,
+            RE_frame  = engine_frame;
+
+    assign ENGINES_ready = (FF_ready && LE_ready && EL_ready && RE_ready);
 
 
 //synthesis translate_off

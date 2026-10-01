@@ -58,8 +58,8 @@ struct __attribute__ ((aligned (4), packed)) gstate_s {
     unsigned gp_fault:1;
         unsigned UNUSED_2a:1;
         unsigned gp_procframe:6;    //End Byte#3
-    unsigned UNUSED_3a:4;
-        //TODO: Other engines/operations/shapes
+    unsigned UNUSED_3a:3;
+        unsigned rectangle_ready:1;
         unsigned elipse_ready:1;
         unsigned line_ready:1;
         unsigned filler_ready:1;

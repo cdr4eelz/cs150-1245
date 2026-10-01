@@ -88,7 +88,7 @@ module FrameFiller #(
     assign SLR_valid        = (cs == S_RUN),
             SLR_frame       = {4'h1, framebits[5:0], 22'b0},
             SLR_color_edge  = color_r,
-            SLR_color_fill  = 32'hFF000000 | color_r,  //TODO: Use back color unless y==rT | y==rB (top/bottom EDGE)
+            SLR_color_fill  = 32'hFF000000 | color_r,
             SLR_row         = y,
             SLR_col_start   = rL,
             SLR_col_finish  = rR;

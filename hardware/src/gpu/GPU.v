@@ -65,6 +65,19 @@ module GPU #(
     wire         elip_trigger;
     wire [ 31:0] elip_frame;
 
+    // GraphicsProcessor <=> RectangleEngine:
+    wire         rect_ready;
+    wire [ 31:0] rect_color;
+    wire [  9:0] rect_point;
+    wire         rect_color_valid;
+    wire         rect_backc_valid;
+    wire         rect_xl_valid;
+    wire         rect_yt_valid;
+    wire         rect_xr_valid;
+    wire         rect_yb_valid;
+    wire         rect_trigger;
+    wire [ 31:0] rect_frame;
+
 //GP status & interrupt generation => CPU
     wire [  5:0] gp_rframe;
     wire         gp_ready, gp_fault;
@@ -82,7 +95,7 @@ module GPU #(
 
     assign gp_status = {
         gp_fault, 1'b0, gp_rframe[5:0],
-        4'b0000, elip_ready, line_ready, fill_ready, gp_ready
+        4'b000, rect_ready, elip_ready, line_ready, fill_ready, gp_ready
     };
     assign irq_gp_done = gp_done_1shot_1cycle_sync_posedge;
 
@@ -130,16 +143,29 @@ module GPU #(
         .EL_b_valid (elip_b_valid),
         .EL_point   (elip_point),
         .EL_trigger(elip_trigger),
-        .EL_frame  (elip_frame)
+        .EL_frame  (elip_frame),
+    //RectangleEngine <=> GP:
+        .RE_ready(rect_ready),
+        .RE_color_valid(rect_color_valid),
+        .RE_backc_valid(rect_backc_valid),
+        .RE_color      (rect_color),
+        .RE_xl_valid(rect_xl_valid),
+        .RE_yt_valid(rect_yt_valid),
+        .RE_xr_valid(rect_xr_valid),
+        .RE_yb_valid(rect_yb_valid),
+        .RE_point   (rect_point),
+        .RE_trigger(rect_trigger),
+        .RE_frame  (rect_frame)
     ) /* synthesis syn_noprune=1 */;
 
     localparam SLR_FF       = 0,
                 SLR_LE      = 1,
-                SLR_EL      = 2;
-    localparam  SLR__CNT = 3;
+                SLR_EL      = 2,
+                SLR_RE      = 3;
+    localparam  SLR__CNT = 4;
 
-    wire [(SLR__CNT)-1:0] SLRs_ready;
-    wire [(SLR__CNT)-1:0] SLRs_valid;
+    wire [(SLR__CNT)-1:0]    SLRs_ready;
+    wire [(SLR__CNT)-1:0]    SLRs_valid;
     wire [(SLR__CNT*32)-1:0] SLRs_frame;
     wire [(SLR__CNT*32)-1:0] SLRs_color_edge;
     wire [(SLR__CNT*32)-1:0] SLRs_color_fill;
@@ -255,6 +281,36 @@ module GPU #(
         .SLR_row       (SLRs_row       [(SLR_EL*10)+ 9:(SLR_EL*10)] ),
         .SLR_col_start (SLRs_col_start [(SLR_EL*10)+ 9:(SLR_EL*10)] ),
         .SLR_col_finish(SLRs_col_finish[(SLR_EL*10)+ 9:(SLR_EL*10)] )
+    ) /* synthesis syn_noprune=1 */;
+
+
+    RectangleEngine #(
+        .SCREEN_WIDTH(SCREEN_WIDTH),
+        .SCREEN_HEIGHT(SCREEN_HEIGHT)
+    ) re (
+        .clk(clk),
+        .rst(rst),
+    //Rectangle control <=> CPU:
+        .RE_ready(rect_ready),
+        .RE_color_valid(rect_color_valid),
+        .RE_backc_valid(rect_backc_valid),
+        .RE_color      (rect_color),
+        .RE_xl_valid(rect_xl_valid),
+        .RE_yt_valid(rect_yt_valid),
+        .RE_xr_valid(rect_xr_valid),
+        .RE_yb_valid(rect_yb_valid),
+        .RE_point   (rect_point),
+        .RE_trigger(rect_trigger),
+        .RE_frame  (rect_frame),
+    //SLR interface (write-only):
+        .SLR_ready(SLRs_ready           [SLR_RE]                    ),
+        .SLR_valid(SLRs_valid           [SLR_RE]                    ),
+        .SLR_frame     (SLRs_frame     [(SLR_RE*32)+31:(SLR_RE*32)] ),
+        .SLR_color_fill(SLRs_color_fill[(SLR_RE*32)+31:(SLR_RE*32)] ),
+        .SLR_color_edge(SLRs_color_edge[(SLR_RE*32)+31:(SLR_RE*32)] ),
+        .SLR_row       (SLRs_row       [(SLR_RE*10)+ 9:(SLR_RE*10)] ),
+        .SLR_col_start (SLRs_col_start [(SLR_RE*10)+ 9:(SLR_RE*10)] ),
+        .SLR_col_finish(SLRs_col_finish[(SLR_RE*10)+ 9:(SLR_RE*10)] )
     ) /* synthesis syn_noprune=1 */;
 
 

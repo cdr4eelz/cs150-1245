@@ -50,6 +50,18 @@ module GraphicsProcessorTestbench;
     wire        EL_trigger;
     wire [31:0] EL_frame;
 
+    reg         RE_ready;
+    wire        RE_color_valid;
+    wire        RE_backc_valid;
+    wire [31:0] RE_color;
+    wire        RE_xl_valid;
+    wire        RE_yt_valid;
+    wire        RE_xr_valid;
+    wire        RE_yb_valid;
+    wire [ 9:0] RE_point;
+    wire        RE_trigger;
+    wire [31:0] RE_frame;
+
     GraphicsProcessor #(
         .LITTLEWORDIAN(1)
     ) DUT(
@@ -94,7 +106,19 @@ module GraphicsProcessorTestbench;
         .EL_b_valid(EL_b_valid),
         .EL_point(EL_point),
         .EL_trigger(EL_trigger),
-        .EL_frame(EL_frame)
+        .EL_frame(EL_frame),
+    //RectangleEngine control signals
+        .RE_ready(RE_ready),
+        .RE_color_valid(RE_color_valid),
+        .RE_backc_valid(RE_backc_valid),
+        .RE_color(RE_color),
+        .RE_xl_valid(RE_xl_valid),
+        .RE_yt_valid(RE_yt_valid),
+        .RE_xr_valid(RE_xr_valid),
+        .RE_yb_valid(RE_yb_valid),
+        .RE_point(RE_point),
+        .RE_trigger(RE_trigger),
+        .RE_frame(RE_frame)
     );
 
 
@@ -265,15 +289,17 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
 
 
 //Fake ENGINEs to listen to GP actions
-    integer FF__countdown, LE__countdown, EL__countdown;
+    integer FF__countdown, LE__countdown, EL__countdown, RE__countdown;
     integer LE__frame, LE__color, LE__x0, LE__y0, LE__x1, LE__y1;
-    integer EL__frame, EL__color, EL__x0, EL__y0, EL__x1, EL__y1, EL__backc;
-    assign ENGINES_ready = (FF_ready && LE_ready && EL_ready);
+    integer EL__frame, EL__color, EL__xc, EL__yc, EL__a,  EL__b,  EL__backc;
+    integer RE__frame, RE__color, RE__xl, RE__yt, RE__xr, RE__yb, RE__backc;
+    assign ENGINES_ready = (FF_ready && LE_ready && EL_ready && RE_ready);
     always @(posedge cpu_clk_g) begin
         if (rst_cpu_bus) begin
             {FF_ready, FF__countdown} <= 0;
             {LE_ready, LE__countdown} <= 0;
             {EL_ready, EL__countdown} <= 0;
+            {RE_ready, RE__countdown} <= 0;
         end else begin
             if (FF__countdown == 0) begin
                 FF_ready <= 1'b1;
@@ -287,6 +313,10 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
                 EL_ready <= 1'b1;
                 if (!EL_ready) $display("[+ELIP+] Ready!");
             end else EL__countdown <= (EL__countdown-1);
+            if (RE__countdown == 0) begin
+                RE_ready <= 1'b1;
+                if (!RE_ready) $display("[+RECT+] Ready!");
+            end else RE__countdown <= (RE__countdown-1);
         end
 
         if (FF_ready) begin
@@ -356,20 +386,20 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
                 EL__backc <= EL_color;
             end
             if (EL_xc_valid) begin
-                $display(" ELIP: x0=%h (%0d)", EL_point, EL_point);
-                EL__x0 <= EL_point;
+                $display(" ELIP: xc=%h (%0d)", EL_point, EL_point);
+                EL__xc <= EL_point;
             end
             if (EL_yc_valid) begin
-                $display(" ELIP: y0=%h (%0d)", EL_point, EL_point);
-                EL__y0 <= EL_point;
+                $display(" ELIP: yc=%h (%0d)", EL_point, EL_point);
+                EL__yc <= EL_point;
             end
             if (EL_a_valid) begin
-                $display(" ELIP: x1=%h (%0d)", EL_point, EL_point);
-                EL__x1 <= EL_point;
+                $display(" ELIP: a=%h (%0d)", EL_point, EL_point);
+                EL__a <= EL_point;
             end
             if (EL_b_valid) begin
-                $display(" ELIP: y1=%h (%0d)", EL_point, EL_point);
-                EL__y1 <= EL_point;
+                $display(" ELIP: b=%h (%0d)", EL_point, EL_point);
+                EL__b <= EL_point;
             end
             if (EL_trigger) begin
                 EL__frame <= EL_frame;
@@ -380,10 +410,10 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
                          EL__color[23:16], EL__color[15:8], EL__color[7:0]);
                 $display("[-ELIP-] backc=%h (%0d,%0d,%0d)", EL__backc,
                          EL__backc[23:16], EL__backc[15:8], EL__backc[7:0]);
-                $display("[-ELIP-] P0=%h,%h (%0d,%0d)",
-                         EL__x0, EL__y0, EL__x0, EL__y0);
-                $display("[-ELIP-] P1=%h,%h (%0d,%0d)",
-                         EL__x1, EL__y1, EL__x1, EL__y1);
+                $display("[-ELIP-] CENTER=%h,%h (%0d,%0d)",
+                         EL__xc, EL__yc, EL__xc, EL__yc);
+                $display("[-ELIP-] SIZE=%h,%h (%0d,%0d)",
+                         EL__a, EL__b, EL__a, EL__b);
                 EL_ready <= 0;
                 EL__countdown <= 3;
             end
@@ -391,6 +421,55 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
             if (EL_color_valid || EL_backc_valid || EL_xc_valid || EL_yc_valid
                     || EL_a_valid || EL_b_valid || EL_trigger)
                 ELOG_ERROR("ELIP", "Premature");
+        end
+
+        if (RE_ready) begin
+            if (RE_color_valid) begin
+                $display(" RECT: color=%h (%0d,%0d,%0d)", RE_color,
+                         RE_color[23:16], RE_color[15:8], RE_color[7:0]);
+                RE__color <= RE_color;
+            end
+            if (RE_backc_valid) begin
+                $display(" RECT: backc=%h (%0d,%0d,%0d)", RE_color,
+                         RE_color[23:16], RE_color[15:8], RE_color[7:0]);
+                RE__backc <= RE_color;
+            end
+            if (RE_xl_valid) begin
+                $display(" RECT: XL=%h (%0d)", RE_point, RE_point);
+                RE__xl <= RE_point;
+            end
+            if (RE_yt_valid) begin
+                $display(" RECT: YT=%h (%0d)", RE_point, RE_point);
+                RE__yt <= RE_point;
+            end
+            if (RE_xr_valid) begin
+                $display(" RECT: XR=%h (%0d)", RE_point, RE_point);
+                RE__xr <= RE_point;
+            end
+            if (RE_yb_valid) begin
+                $display(" RECT: YB=%h (%0d)", RE_point, RE_point);
+                RE__yb <= RE_point;
+            end
+            if (RE_trigger) begin
+                RE__frame <= RE_frame;
+                if (!ENGINES_ready) ELOG_ERROR("RECT", "Overlap");
+                #1; //Might have simultaneously assigned other values above!
+                $display("[=RECT=] frame=%h", RE__frame);
+                $display("[-RECT-] color=%h (%0d,%0d,%0d)", RE__color,
+                         RE__color[23:16], RE__color[15:8], RE__color[7:0]);
+                $display("[-RECT-] backc=%h (%0d,%0d,%0d)", RE__backc,
+                         RE__backc[23:16], RE__backc[15:8], RE__backc[7:0]);
+                $display("[-RECT-] LEFTTOP=%h,%h (%0d,%0d)",
+                         RE__xl, RE__yt, RE__xl, RE__yt);
+                $display("[-RECT-] RIGHTBOTTOM=%h,%h (%0d,%0d)",
+                         RE__xr, RE__yb, RE__xr, RE__yb);
+                RE_ready <= 0;
+                RE__countdown <= 3;
+            end
+        end else begin
+            if (RE_color_valid || RE_backc_valid || RE_xl_valid || RE_yt_valid
+                    || RE_xr_valid || RE_yb_valid || RE_trigger)
+                ELOG_ERROR("RECT", "Premature");
         end
     end
 
