@@ -299,11 +299,11 @@ $display("%8d          : x=%0d y=%0d",
     always @(posedge clk) begin
         if (EL_ready && EL_trigger) begin
             #1;
-            $display("[=ELIP=]: frame=%h color=%h %0d(%0d,%0d,%0d)", framebits,
+            $display("[=ELIP=]: frame=%h color=0x%h %0d(%0d,%0d,%0d)", framebits,
                      color, color[31:24], color[23:16], color[15:8], color[7:0]);
-            $display("        : backc=%h %0d(%0d,%0d,%0d)", backc_r,
+            $display("        : backc=0x%h %0d(%0d,%0d,%0d)", backc_r,
                      backc_r[31:24], backc_r[23:16], backc_r[15:8], backc_r[7:0]);
-            $display("        : (%4d,%4d)=>(%4d,%4d)  (%h,%h)=>(%h,%h)",
+            $display("        : (%4d,%4d)=>(%4d,%4d)  (%3h,%3h)=>(%3h,%3h)",
                      xc,yc, a,b,  xc,yc, a,b);
         end
     end

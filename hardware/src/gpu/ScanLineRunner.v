@@ -53,7 +53,7 @@ module ScanLineRunner #(
         ready_SLRs[live_SLR] = SLR_MASTER_ready;
     end
 
-    //Next SLR selection (priority based)
+    //Next SLR selection (priority based, but should never be a fight)
     always @(live_SLR or SLRs_valid) begin:_SLR_PRI_
         integer idx;
         next_SLR = live_SLR;
@@ -77,11 +77,15 @@ module ScanLineRunner #(
                   SLR_color_fill = SLRs_color_fill  >> (live_SLR*32),//[(live_SLR*32)+31 -: 32],
                   SLR_color_edge = SLRs_color_edge  >> (live_SLR*32);//[(live_SLR*32)+31 -: 32];
     wire [ 9:0] SLR_row          = SLRs_row         >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
-                  SLR_col_start  = SLRs_col_start   >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
-                  SLR_col_finish = SLRs_col_finish  >> (live_SLR*10);//[(live_SLR*10)+ 9 -: 10];
+                  TEMP_START     = SLRs_col_start   >> (live_SLR*10),//[(live_SLR*10)+ 9 -: 10],
+                  TEMP_FINISH    = SLRs_col_finish  >> (live_SLR*10);//[(live_SLR*10)+ 9 -: 10];
+    wire [9:0] SLR_col_start, SLR_col_finish; //Start/Finish get FLIPPED if needed:
+//    assign {SLR_col_start, SLR_col_finish} = {TEMP_START, TEMP_FINISH};
+    assign {SLR_col_start, SLR_col_finish} = (TEMP_START <= TEMP_FINISH) ?
+                                                {TEMP_START, TEMP_FINISH} :
+                                                {TEMP_FINISH, TEMP_START};
 
-
-//SLR-Master: Drive DDR lines to write a "run" (series) of pixels
+//SLR-Master: Drive DDR lines to write a "run" (series) of horizontal pixels
     localparam
         MH_RSET     = 0, //Performing or coming out of reset     <=-._
         MH_IDLE     = 1, //Ready for initiation                       \

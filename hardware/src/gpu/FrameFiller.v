@@ -104,7 +104,7 @@ module FrameFiller #(
     always @(posedge clk) begin
         if (T_START) begin
             #1;
-            $display("[=FILL=]: frame=%h color=%h (%0d,%0d,%0d)", framebits,
+            $display("[=FILL=]: frame=%h color=0x%h (%0d,%0d,%0d)", framebits,
                      color_r, color_r[23:16], color_r[15:8], color_r[7:0]);
         end
     end

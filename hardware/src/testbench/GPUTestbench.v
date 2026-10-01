@@ -95,14 +95,14 @@ wire [0:1023] GPCODE_SAMPLE3 = { //Ascending bit order
 
 /*
 *** SAMPLE-4 GPCODE block ***
-    0x4000:   h40_808080   # RECT: grey
-    0x4004:   h0032_0019   #   top-left        ( 50,  25)
-    0x4008:   h00FF_00FF   #   bottom-right    (255, 255)
+    0x4000:   h40_808080   # RECT: grey (reversed coordinates)...
+    0x4004:   h0040_0010   #   top-left        ( 64,  16)
+    0x4008:   h0020_0009   #   bottom-right    ( 32,   9)
     0x400C:   hFF_111111   #   fill color (near black)
     0x4010:   h00_000000   # STOP.
 */
 wire [0:1023] GPCODE_SAMPLE4 = { //Ascending bit order
-    32'h40_808080, 32'h0032_0019, 32'h00FF_00FF, 32'hFF_111111,
+    32'h40_808080, 32'h0040_0010, 32'h0020_0009, 32'hFF_111111,
     128'b0,
     256'b0,
     512'b0

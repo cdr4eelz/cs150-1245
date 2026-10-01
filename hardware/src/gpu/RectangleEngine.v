@@ -50,8 +50,10 @@ module RectangleEngine #(
             {xl_r,yt_r, xr_r,yb_r} <= 0;
         end else if (RE_ready) begin
 //$display("/// RE_ready: Capture new value ///");
-            {framebits_r, color_r, backc_r} <= {framebits, color, backc}; //Feedback muxed vals
-            {xl_r,yt_r, xr_r,yb_r}          <= {xl,yt, xr,yb};  // since available.
+            //TODO: Eliminate strange approach between registered and non-registered values!
+            {framebits_r, color_r, backc_r} <= {framebits, color, backc};
+            {xl_r,xr_r} <= (xl<=xr) ? {xl,xr} : {xr,xl}; //Force left<=right
+            {yt_r,yb_r} <= (yt<=yb) ? {yt,yb} : {yb,yt}; //Force top<=bottom
         end
     end
 
@@ -135,11 +137,11 @@ module RectangleEngine #(
     always @(posedge clk) begin
         if (T_START) begin
             #1;
-            $display("[=RECT=]: frame=%h color=%h %0d(%0d,%0d,%0d)", framebits,
+            $display("[=RECT=]: frame=%h color=0x%h %0d(%0d,%0d,%0d)", framebits,
                      color, color[31:24], color[23:16], color[15:8], color[7:0]);
-            $display("        : backc=%h %0d(%0d,%0d,%0d)", backc_r,
+            $display("        : backc=0x%h %0d(%0d,%0d,%0d)", backc_r,
                      backc_r[31:24], backc_r[23:16], backc_r[15:8], backc_r[7:0]);
-            $display("        : (%4d,%4d)=>(%4d,%4d)  (%h,%h)=>(%h,%h)",
+            $display("        : (%4d,%4d)=>(%4d,%4d)  (%3h,%3h)=>(%3h,%3h)",
                      xl,yt, xr,yb,  xl,yt, xr,yb);
         end
     end
