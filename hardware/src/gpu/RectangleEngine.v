@@ -52,8 +52,7 @@ module RectangleEngine #(
 //$display("/// RE_ready: Capture new value ///");
             //TODO: Eliminate strange approach between registered and non-registered values!
             {framebits_r, color_r, backc_r} <= {framebits, color, backc};
-            {xl_r,xr_r} <= (xl<=xr) ? {xl,xr} : {xr,xl}; //Force left<=right
-            {yt_r,yb_r} <= (yt<=yb) ? {yt,yb} : {yb,yt}; //Force top<=bottom
+            {xl_r,xr_r, yt_r,yb_r} <= {xl,xr, yt,yb};
         end
     end
 
@@ -88,8 +87,8 @@ module RectangleEngine #(
     reg  [MH__LAST:0] ns_M, cs_M = MS__DEAD;
 
 //Iteration adjusted values
-    reg  [ 9:0] yy;
-    wire lastY = (yy >= yb_r);
+    reg  [ 9:0] yy, yb_saved;
+    wire lastY = (yy >= yb_saved);
 
 //Key Live-Wires & Assigns
     wire advSLR;
@@ -104,7 +103,7 @@ module RectangleEngine #(
         if (cs_M[MH_DRAW]) begin
             if (advSLR) yy <= (yy + 1);
         end else if (T_START) begin
-            yy <= yt_r;
+            {yy,yb_saved} <= (yt <= yb) ? {yt,yb} : {yb,yt};
         end
     end
 
@@ -124,10 +123,10 @@ module RectangleEngine #(
 //Write "run" of pixels via ScanLineRunner module
     assign SLR_valid        = cs_M[MH_DRAW],
             SLR_frame       = {4'h1, framebits[5:0], 22'b0},
-            SLR_color_edge  = color_r,
-            SLR_color_fill  = ((yy == yt_r) || lastY) ? (32'hFF000000 | color_r) : backc_r,
-            SLR_col_start   = xl_r,
-            SLR_col_finish  = xr_r,
+            SLR_color_edge  = color,
+            SLR_color_fill  = ((yy == yt) || lastY) ? (32'hFF000000 | color) : backc,
+            SLR_col_start   = xl,
+            SLR_col_finish  = xr,
             SLR_row         = yy;
 
     assign advSLR = SLR_ready && SLR_valid;
@@ -136,11 +135,11 @@ module RectangleEngine #(
 //synthesis translate_off
     always @(posedge clk) begin
         if (T_START) begin
-            #1;
+            //#1; // Hack to make sure the *_r values are pre-captured (notably framebits)
             $display("[=RECT=]: frame=%h color=0x%h %0d(%0d,%0d,%0d)", framebits,
                      color, color[31:24], color[23:16], color[15:8], color[7:0]);
-            $display("        : backc=0x%h %0d(%0d,%0d,%0d)", backc_r,
-                     backc_r[31:24], backc_r[23:16], backc_r[15:8], backc_r[7:0]);
+            $display("        : backc=0x%h %0d(%0d,%0d,%0d)", backc,
+                     backc[31:24], backc[23:16], backc[15:8], backc[7:0]);
             $display("        : (%4d,%4d)=>(%4d,%4d)  (%3h,%3h)=>(%3h,%3h)",
                      xl,yt, xr,yb,  xl,yt, xr,yb);
         end
