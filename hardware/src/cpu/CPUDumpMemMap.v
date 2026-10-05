@@ -4,7 +4,6 @@
 `include "../tuntap.vh"
 
 module CPUDumpMemMap #(
-    parameter DD=`COLT45_DD,
     parameter CPU_FREQ=50_000_000,
     parameter COLT45_STEPMAX=0
 )(
@@ -38,14 +37,14 @@ module CPUDumpMemMap #(
     wire [ 1: 0]    STATE;
     wire [ 1: 0]    NEXT_STATE;
 
-    assign #DD ADDR_W   = ADDR[13: 2];
-    assign #DD ADDR_N   = ADDR[ 1: 0];
-    assign #DD TX_Data  = (ADDR_N[1]) 
+    assign ADDR_W   = ADDR[13: 2];
+    assign ADDR_N   = ADDR[ 1: 0];
+    assign TX_Data  = (ADDR_N[1]) 
                 ? ( (ADDR_N[0]) ? DATA_W[ 0 +: 8] : DATA_W[ 8 +: 8])
                 : ( (ADDR_N[0]) ? DATA_W[16 +: 8] : DATA_W[24 +: 8]);
 
-    assign #DD NEXT_STATE = ((STATE === 1) && (IOSTATUS !== 32'd1)) ? STATE : (STATE+1)%4;
-    assign #DD ADDR_NEXT = (STATE === 2) ? (ADDR + 1) : ADDR;
+    assign NEXT_STATE = ((STATE === 1) && (IOSTATUS !== 32'd1)) ? STATE : (STATE+1)%4;
+    assign ADDR_NEXT = (STATE === 2) ? (ADDR + 1) : ADDR;
 
     PipelineRegister #( .Width(2) )
     ADVANCE_REG ( .clk(clk), .rst(rst), .stall(stall),

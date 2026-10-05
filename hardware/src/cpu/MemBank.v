@@ -7,7 +7,6 @@ module MemBank #(
     parameter CPU_FREQ = 50_000_000,
     parameter [31:0] DEAD_DMEM = 32'd0, DEAD_IMEM = 32'd0,
     parameter BRAM_XTRA = 0, //Scratchpad EXTRA block-rams
-    parameter DD=`COLT45_DD,
     parameter COLT45_SCRATCH=0, COLT45_MEMWRITE=0
 )(
     input   clk, rst, stall,

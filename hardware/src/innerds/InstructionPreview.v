@@ -3,7 +3,6 @@
 `include "../cpuglobal.vh"
 
 module InstructionPreview #(
-    parameter DD=`COLT45_DD,
     parameter USE_DECODER=1
 )(
     // Inputs to decode (PC to pin down branch/jump)

@@ -20,7 +20,6 @@
 
 
 module RegFile #(
-    parameter DD=`COLT45_DD,
     parameter COLT45_REGWRITE=0, COLT45_REGSTALL=0
 )(
     input         clk,
@@ -53,8 +52,8 @@ always @(posedge clk) begin
     end
 end
 
-assign #DD rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
-assign #DD rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
+assign rd1 = (ra1 == 5'd0) ? 32'd0 : R[ra1];
+assign rd2 = (ra2 == 5'd0) ? 32'd0 : R[ra2];
 
 task DUMP;
     reg [5:0] r;

@@ -3,7 +3,6 @@
 `include "../cpuglobal.vh"
 
 module CPUDumpMemUART #(
-    parameter DD=`COLT45_DD,
     parameter CPU_FREQ=50_000_000,
     parameter COLT45_STEPMAX=9
 )(

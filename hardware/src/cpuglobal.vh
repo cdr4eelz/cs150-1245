@@ -1,8 +1,6 @@
 `ifndef CPUGLOBAL_VH
 `define CPUGLOBAL_VH
 
-`define COLT45_DD 0
-
 //NOTE:For tagging signals with foul state in simulation which propagates when misued
 `define NOUNKLE         1
 `define UNCLEBIT        1'b0

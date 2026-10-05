@@ -3,9 +3,7 @@
 `include "../cpuglobal.vh"
 `include "opcode.vh"
 
-module InstructionControl #(
-    parameter DD=`COLT45_DD
-)(
+module InstructionControl (
     // Input instruction to decode (PC-relative branch/jump finalized elsewhere)
     input [31:0] _inst,
     // Signals used for instruction "Preview" during fetch stage
@@ -63,22 +61,22 @@ module InstructionControl #(
     assign isIComp     = (_opcode_[5:3] == 3'b001___);
     assign isICompS    = (_opcode_[5:2] == 4'b0010__);
     assign isISigned   = (isICompS || isMemory);
-    wire #DD isCopRead, isCopWrite;
+    wire isCopRead, isCopWrite;
     //assign isMSigned   = (isMemory && !isMStore && !_opcode_[1] && !_opcode_[2]);
     assign isCopRead   = (isCType && (_rs_ == `OS_MFC0));
     assign isCopWrite  = (isCType && (_rs_ == `OS_MTC0));
-    wire #DD isRShift, isRShiftI, isRShiftR, isROther;
+    wire isRShift, isRShiftI, isRShiftR, isROther;
     assign isRShift    = (isRType  && (_funct_[5:3] == 3'b000___));
     assign isRShiftI   = (isRShift && (_funct_[2]   ==    1'b0__));
     assign isRShiftR   = (isRShift && (_funct_[2]   ==    1'b1__));
     assign isROther    = (isRType  && (_funct_[5:4] == 2'b10____));
     wire isIJump;
     assign isIJump     = isJType;
-    wire #DD isRJump, isJump, isJLink;
+    wire isRJump, isJump, isJLink;
     assign isRJump     = (isRType  && (_funct_[5:1] == 5'b00100_));
     assign isJump      = (isIJump || isRJump);
     assign isJLink     = (isIJump && _opcode_[0]) || (isRJump && _funct_[0]); //JAL/JALR lo-bit==1
-    wire #DD isBSimple, isBranchX, isBranchZo, isBranchZr, isBranch, isBranch0, isBLink;
+    wire isBSimple, isBranchX, isBranchZo, isBranchZr, isBranch, isBranch0, isBLink;
     assign isBSimple   = (_opcode_[5:2] == 4'b0001__);
     assign isBranchX   = (_opcode_[5:1] == 5'b00010_); //Subset of BSimple
     assign isBranchZo  = (_opcode_[5:1] == 5'b00011_); //Subset of BSimple

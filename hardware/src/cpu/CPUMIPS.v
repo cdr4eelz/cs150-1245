@@ -4,7 +4,6 @@
 
 module CPUMIPS #(
     parameter PC_BOOT=32'h4000_0000, PC_ISR=32'hC000_0180,
-    parameter DD=`COLT45_DD,
     parameter COLT45_SCOPE=0, COLT45_BRK=0,
     parameter COLT45_PC=0, COLT45_REGREAD=0, COLT45_CONTROL=0, COLT45_STEPMAX=0 //48
 )(
@@ -74,12 +73,12 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
 
     // Forward declare feedback related wires (other key wires declared just prior to use, ALAP)
-    wire         #DD BRA_DoBranch_DX2F_;
-    wire [31: 0] #DD BRA_PCBranch_DX2F_;
-    wire         #DD BRA_IRQPending_DX2F_;
-    wire [ 4: 0] #DD WBK_Reg_MW2DX_;
-    wire [31: 0] #DD WBK_Val_MW2DX_;
-    wire         #DD WBK_CanFWD_MW2DX_;
+    wire         BRA_DoBranch_DX2F_;
+    wire [31: 0] BRA_PCBranch_DX2F_;
+    wire         BRA_IRQPending_DX2F_;
+    wire [ 4: 0] WBK_Reg_MW2DX_;
+    wire [31: 0] WBK_Val_MW2DX_;
+    wire         WBK_CanFWD_MW2DX_;
 
     // Declare outputs of F stage
     wire [31: 0] PC_F_, PCNEXT_F_;
@@ -130,8 +129,8 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire FWD_Allow = (REGFILE_wa != 0) ? WBK_CanFWD_MW2DX_ : 1'b0;
     wire FWD_1 = FWD_Allow && (REGFILE_wa == REGFILE_ra1);
     wire FWD_2 = FWD_Allow && (REGFILE_wa == REGFILE_ra2);
-    wire [31: 0] #DD FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
-    wire [31: 0] #DD FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
+    wire [31: 0] FWD_rd1 = (FWD_1) ? REGFILE_wd : REGFILE_rd1;
+    wire [31: 0] FWD_rd2 = (FWD_2) ? REGFILE_wd : REGFILE_rd2;
 
     // Declare outputs of DX stage
     wire [31: 0] MemAddrDX_, RegWValueDX_, MemWValueDX_;

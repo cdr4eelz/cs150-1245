@@ -7,7 +7,6 @@
 **    This had been experimental multi-mode (reg/sync-ctl-latch/passreset/passthru).
 */
 module PipelineRegister #(
-    parameter DD=`COLT45_DD,
     parameter Width=0, //Instantiated module had best override this! :)
     ResetValue={Width{1'b0}}
 )(
