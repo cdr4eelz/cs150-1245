@@ -108,12 +108,13 @@ module GraphicsProcessor #(
 //Chose for GP, FF, LE, etc. to EACH capture own copy of frame upon trigger.
 
 //Master-States:
-    localparam [1:0]
+    localparam [2:0]
         MS_DEAD     = 0, //Initial or fault (requires explicit reset)
         MS_RSET     = 1, //Performing or coming out of reset
         MS_IDLE     = 2, //Ready for GPCode initiation
-        MS_PROC     = 3; //Processing GPCode block (to MS_RSET when done)
-    localparam MS__LAST = 3;
+        MS_READ     = 3, //Fetch chunk of data from DDR (to be processed by sub-state machine)
+        MS_PROC     = 4; //Processing GPCode block (to MS_READ for more, or MS_RSET when done)
+    localparam MS__LAST = 4;
 
 //Sub-States:
     localparam [2:0]
@@ -126,7 +127,7 @@ module GraphicsProcessor #(
     localparam SS__LAST = 5;
 
 //Key State Registers
-    reg  [ 1:0] ns_M, cs_M = MS_DEAD; //Master-State
+    reg  [ 2:0] ns_M, cs_M = MS_DEAD; //Master-State
     reg  [ 2:0] ns_S, cs_S = SS_TOP;  //Sub-State
     reg  [ 5: 0] frame_bits;  //Insist on aligning with multiples of 0x0040_0000
     reg  [31:28] code_hinib; //Not used but send it back in GP_rcode (future use?)
@@ -137,7 +138,6 @@ module GraphicsProcessor #(
     wire ENGINES_ready, chunk_valid;
     wire INST_valid    = (chunk_valid && (cs_M==MS_PROC));
     wire CMD_advance   = (INST_valid && ENGINES_ready);
-    wire chunk_advance = (!chunk_valid || (&code_index && CMD_advance));
     wire chunk_reset   = (rst_r || (cs_M==MS_IDLE)); //Reset chunk on IDLE to let pending read clear
     wire [255:0] chunk_data;
 
@@ -195,6 +195,7 @@ module GraphicsProcessor #(
 
 //Sub-State machine & Mealy outputs: CMD_advance, INST_advance
     wire INST_advance = (CMD_advance && (cs_S==SS_TOP||cs_S==SS_Y0||cs_S==SS_YY||cs_S==SS_XRGB));
+    wire chunk_last   = (&code_index && INST_advance);
     //wire INST_dopoints = (INST_gop==`GOP_LINE) || (INST_gop==`GOP_ELIP) || (INST_gop==`GOP_RECT);
     //WARN: We use "hot_GOP" here because "INST" and "INST_gop" are only temporarily valid
     wire INST_dopoints = hot_GOP[`GOP_LINE] || hot_GOP[`GOP_ELIP] || hot_GOP[`GOP_RECT];
@@ -229,8 +230,12 @@ $display("        XXX: A=%b B=%b C=%b", INST_advance, INST_dopoints, INST_doback
         case (cs_M)
             //MS_DEAD: if (T_RESET) ns_M = MS_RSET; //Redundant with machine reset
             MS_RSET: if (T_READY) ns_M = MS_IDLE;
-            MS_IDLE: if (T_START) ns_M = MS_PROC;
-            MS_PROC: if (T_STOPS) ns_M = MS_RSET;
+            MS_IDLE: if (T_START) ns_M = MS_READ;
+            MS_READ: if (chunk_valid) ns_M = MS_PROC;
+            MS_PROC: begin
+                if (T_STOPS) ns_M = MS_RSET;
+                else if (chunk_last) ns_M = MS_READ;
+            end
         endcase
     end
     always @(posedge clk) begin
@@ -252,7 +257,9 @@ $display("        XXX: A=%b B=%b C=%b", INST_advance, INST_dopoints, INST_doback
 
 //FETCH GPCode chunks & present as 32-bit INSTruction stream
     assign raf_addr  = {6'b000000, code_chunk, 2'b00}; //Chunk addr in 64-bit "resolution"
-    assign raf_wren  = (cs_M==MS_PROC) && !rdf_rden && chunk_advance;
+    assign raf_wren  = !rdf_rden &&
+                       (((cs_M==MS_READ) && !chunk_valid) ||
+                        ((cs_M==MS_PROC) && chunk_last && !T_STOPS));
     //NOTE:Don't base raf_wren on !raf_full when using RequestController!!!
 
     DDRStage #(
@@ -327,12 +334,9 @@ $display("        XXX: A=%b B=%b C=%b", INST_advance, INST_dopoints, INST_doback
                      rdf_data[63:32], rdf_data[31:0]
             );
         if (INST_advance)
-            $strobe("stage-R1: %h gop=%h  valid=%b advance=%b code_chunk=%h code_index=%h",
+            $display("stage-R1: %h gop=%h  valid=%b advance=%b code_chunk=%h code_index=%h",
                      INST, INST_gop, INST_valid, INST_advance,
                      code_chunk, code_index
-            );
-            $strobe("stage-R2: chunk_valid=%b chunk_advance=%b chunk_data=%h",
-                     chunk_valid, chunk_advance, chunk_data
             );
     end
 //synthesis translate_on
