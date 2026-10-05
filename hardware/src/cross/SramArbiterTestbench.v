@@ -1,6 +1,24 @@
 `timescale 1ns/100ps
 // synthesis translate_off
 
+// Used to be inside SramArbiterTestbench.v but moved to avoid Icarus error
+module WATCHER #(
+    parameter WATCH_ID = "WATCH", WID = 32
+)(
+    input clk, rst, trig,
+    input [WID-1:0] data
+);
+    integer cnt_cycle = 0, cnt_trig = 0;
+    always @(posedge clk) if (rst === 0) begin
+        cnt_cycle = cnt_cycle + 1;
+        if (trig) begin
+            cnt_trig = cnt_trig + 1;
+            $display("%s:%h #%0d  @%0d", WATCH_ID, data, cnt_trig, cnt_cycle);
+        end
+    end
+endmodule
+
+
 module SramArbiterTestbench;
 
     parameter CLK_PERIOD = 20; // 20 * 1ns timescale
@@ -87,27 +105,12 @@ SramArbiter dut (
 );
 
 
-module WATCHER #(
-    parameter WATCH_ID = "WATCH", WID = 32
-)(
-    input clk, trig,
-    input [WID-1:0] data
-);
-    integer cnt_cycle = 0, cnt_trig = 0;
-    always @(posedge clk) if (reset === 0) begin
-        cnt_cycle = cnt_cycle + 1;
-        if (trig) begin
-            cnt_trig = cnt_trig + 1;
-            $display("%s:%h #%0d  @%0d", WATCH_ID, data, cnt_trig, cnt_cycle);
-        end
-    end
-endmodule
-WATCHER #("W0-REQ",54) watch_w0_req (w0_clock, w0_din_ready && w0_din_valid, w0_din);
-WATCHER #("W1-REQ",54) watch_w1_req (w1_clock, w1_din_ready && w1_din_valid, w1_din);
-WATCHER #("R0-REQ",18) watch_r0_req (r0_clock, r0_din_ready && r0_din_valid, r0_din);
-WATCHER #("R0-RESP",32) watch_r0_resp (r0_clock, r0_dout_ready && r0_dout_valid, r0_dout);
-WATCHER #("R1-REQ",18) watch_r1_req (r1_clock, r1_din_ready && r1_din_valid, r1_din);
-WATCHER #("R1-RESP",32) watch_r1_resp (r1_clock, r1_dout_ready && r1_dout_valid, r1_dout);
+WATCHER #("W0-REQ",54) watch_w0_req (w0_clock, reset, w0_din_ready && w0_din_valid, w0_din);
+WATCHER #("W1-REQ",54) watch_w1_req (w1_clock, reset, w1_din_ready && w1_din_valid, w1_din);
+WATCHER #("R0-REQ",18) watch_r0_req (r0_clock, reset, r0_din_ready && r0_din_valid, r0_din);
+WATCHER #("R0-RESP",32) watch_r0_resp (r0_clock, reset, r0_dout_ready && r0_dout_valid, r0_dout);
+WATCHER #("R1-REQ",18) watch_r1_req (r1_clock, reset, r1_din_ready && r1_din_valid, r1_din);
+WATCHER #("R1-RESP",32) watch_r1_resp (r1_clock, reset, r1_dout_ready && r1_dout_valid, r1_dout);
 
 //Some events for a little coordination
 event now_reset;

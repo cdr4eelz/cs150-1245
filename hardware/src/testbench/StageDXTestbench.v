@@ -23,7 +23,7 @@ module StageDXTestbench;
     wire MemSigned, MemToReg, MemWrite;
 
     wire [ 4:0] REG_ra1, REG_ra2;
-    wire [31:0] #1 REG_rd1, REG_rd2;
+    wire [31:0] REG_rd1, REG_rd2;
     assign REG_rd1 = REGFILE[REG_ra1], REG_rd2 = REGFILE[REG_ra2];
     StageDX DUT
     ( //.clk(1'bx), .rst(1'bx), .stall(1'bx),

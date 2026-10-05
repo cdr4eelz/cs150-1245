@@ -84,6 +84,7 @@ module PixelFeeder #(
     wire video_adv = (video_valid && video_ready); //reset will trump this
     wire rollCOL = (curCOL >= SCREEN_WIDTH-1); //Could use fast-counter/pixelrange
     wire rollROW = (curROW >= SCREEN_HEIGHT-1);
+    wire [31:0] nextROW = (curROW + 32'd1);
 
     always @(posedge dvi_clk_g) begin
         if (dvi_rst_r) begin //Use synchronized reset
@@ -104,7 +105,7 @@ module PixelFeeder #(
                         {curCOL,curROW} <= {32'd0, 32'd0};
                         if (fifo_start_clkDVI) isRunning <= 1'b1; //Switch to FIFO on frame boundary
                     end
-                    (2'b01): {curCOL,curROW} <= {32'd0, curROW+1};
+                    (2'b01): {curCOL,curROW} <= {32'd0, nextROW}; //curROW+1
                     //2'b10 just means we're ON last row but not yet at end
                     default: curCOL <= curCOL+1;
                 endcase

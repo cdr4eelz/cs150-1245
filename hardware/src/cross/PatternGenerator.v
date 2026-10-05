@@ -26,6 +26,7 @@ reg         validRGB;
 //Could use fast-counter/pixelrange util instead of our own
 wire rollCOL = (curCOL >= SCREEN_WIDTH-1);
 wire rollROW = (curROW >= SCREEN_HEIGHT-1);
+wire [31:0] nextROW = (curROW + 32'd1);
 wire [ 2:0] scale = curFRAME[6:4];
 wire [ 2:0] idx   = {curSCENE, curROW[scale], curCOL[scale+1]}; //Scene in MSB
 wire advanceRVA  = video_valid && video_ready; //reset will trump this
@@ -50,7 +51,7 @@ always @(posedge clock) begin
           {curCOL,curROW} <= {32'd0, 32'd0};
         end
         (2'b01): begin
-          {curCOL,curROW} <= {32'd0, curROW+1};
+          {curCOL,curROW} <= {32'd0, nextROW}; //curROW+1
         end
         //2'b10 just means we're ON last row but not yet at end
         default: begin
