@@ -327,9 +327,12 @@ $display("        XXX: A=%b B=%b C=%b", INST_advance, INST_dopoints, INST_doback
                      rdf_data[63:32], rdf_data[31:0]
             );
         if (INST_advance)
-            $display("stage-R: %h gop=%h  valid=%b advance=%b chunk=%h index=%h",
+            $strobe("stage-R1: %h gop=%h  valid=%b advance=%b code_chunk=%h code_index=%h",
                      INST, INST_gop, INST_valid, INST_advance,
                      code_chunk, code_index
+            );
+            $strobe("stage-R2: chunk_valid=%b chunk_advance=%b chunk_data=%h",
+                     chunk_valid, chunk_advance, chunk_data
             );
     end
 //synthesis translate_on

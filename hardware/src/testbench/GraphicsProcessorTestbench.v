@@ -152,7 +152,9 @@ reg ELOG_errors = 0;
         #(Cycle);
 
         $display("GraphicsProcessor: Fake memory & engines...");
-        execGP( 32'h0000_4000, 1 );
+        //execGP( 32'h0000_4000, 1 );
+//        execGP( 32'h1200_3080, 1 );
+        execGP( 32'h1200_3000, 1 );
 
         @(posedge cpu_clk_g);
         while (!ENGINES_ready) #(Cycle); // GP should have waited already
@@ -246,14 +248,64 @@ reg  [0:1023] GPCODE_SAMPLE1 = { //Ascending bit order
     128'd0 //NOTE: This MUST total 1024-bits (32 x 32-bit) in size!
 };
 
+/*
+Fill, Line, Line, Line, Elip, Elip, Stop...
+> dump 12003080  (From SW generated sequence)
+12003080:10002233 20ffffff 000a000a 02bc012c
+12003090:20ffffff 0190000a 000a01f4 20ffffff
+120030a0:001400fa 001400fa 30ff0000 00640064
+120030b0:0014001e ff1a7f0f 3000ff00 028a00c8
+120030c0:00320032 ff0000ff 00000000 00000000
+
+Above is sw generated GP sequence for the following commands:
+    pINST = pSEQUENCE;  //Point at 0x12003080 (IMPORTANT DETAIL)
+    pINST = hwq_fill(pINST, 0x00002233u);
+    pINST = hwq_line(pINST, 0x00FFFFFFu,  10, 10,  700,300);
+    pINST = hwq_line(pINST, 0x00FFFFFFu, 400, 10,   10,500);
+    pINST = hwq_pixl(pINST, 0x00FFFFFFu,  20,250);
+    pINST = hwq_elip(pINST, 0x00FF0000u, 100,100,   20, 30,  0xFF1A7F0Fu);
+////pINST = hwq_rect(pINST, 0x00FFFFFFu, 550,150,  750,250,  0xFFF0F020u);
+    pINST = hwq_circ(pINST, 0x0000FF00u, 650,200,   50,      0xFF0000FFu);
+*/
+reg  [0:1023] GPCODE_SAMPLE2 = { //Ascending bit order
+    32'h10002233, 32'h20ffffff, 32'h000a000a, 32'h02bc012c,
+    32'h20ffffff, 32'h0190000a, 32'h000a01f4, 32'h20ffffff,
+    32'h001400fa, 32'h001400fa, 32'h30ff0000, 32'h00640064,
+    32'h0014001e, 32'hff1a7f0f, 32'h3000ff00, 32'h028a00c8,
+    32'h00320032, 32'hff0000ff, 32'h00000000, 32'hFFFFFFFF,
+    128'h00010203_04050607_08090A0B_0C0D0E0F,
+    128'h10111213_14151617_18191A1B_1C1D1E1F,
+    128'h20212223_24252627_28292A2B_2C2D2E2F
+};
+/*
+   Starts at 0x12003080, Fill, Line, Line, Line, then these two elipses...
+# [-FILL-] color=00002233 (0,34,51)
+# [-LINE-] color=00ffffff (255,255,255) 
+# [-LINE-] P0=0000000a,0000000a (10,10)
+# [-LINE-] P1=000002bc,0000012c (700,300)
+...
+>>>>pINST = hwq_elip(pINST, 0x00FF0000u, 100,100,   20, 30,  0xFF1A7F0Fu);
+# [-ELIP-] color=00ff0000 (255,0,0)
+# [-ELIP-] backc=ff1a7f0f (26,127,15)
+# [-ELIP-] CENTER=00000064,00000064 (100,100)
+# [-ELIP-] SIZE=00000014,0000001e (20,30)
+
+*** BUG causes last elipse to have bad coordinates and fill color ***
+>>>>pINST = hwq_circ(pINST, 0x0000FF00u, 650,200,   50,      0xFF0000FFu);
+# [-ELIP-] color=0000ff00 (0,255,0)
+# [-ELIP-] backc=00000000 (0,0,0)
+# [-ELIP-] CENTER=0000028a,00000000 (650,0)
+# [-ELIP-] SIZE=00000000,00000000 (0,0)
+*/
+
 
 // Fake memory fetch/response, always fetches 2-parts of SAMPLE-1 ignoring address!
     wire [0:1023] GPCODE;
-    assign GPCODE[0:1023] = GPCODE_SAMPLE1;
+    assign GPCODE[0:1023] = GPCODE_SAMPLE2;
 
     localparam MS_DEAD=0, MS_IDLE=1, MS_OFFER1=2, MS_OFFER2=3;
     reg [1:0] mem_ns, mem_cs = MS_DEAD;
-    integer mem_offset;
+    integer mem_offset = 0;
     always @(*) begin
         mem_ns = mem_cs;  //Default: Hold prior state
         raf_full = 1'b1;   //Default: Pretend full like RequestController
