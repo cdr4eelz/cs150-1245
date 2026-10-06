@@ -74,7 +74,7 @@ uint32_t copy_xor(uint32_t pSRC, uint32_t pDST, uint32_t length)
 
 typedef void (*entry_t)(void);
 
-int main(void)
+void main_bios(void)
 {
     uwrite_int8s("\r\n\r\n[COLT45.");
     uwrite_int8(VERSION_CHAR);
@@ -164,5 +164,4 @@ int main(void)
         }
     }
 
-    return 0;
 }

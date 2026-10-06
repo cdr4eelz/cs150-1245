@@ -18,7 +18,7 @@
 typedef void (*entry_t)(void);
 
 
-int main( void )
+void main_bios( void )
 {
     uwrite_int8s("\r\n\r\n[Golt45.2." VERSION_S "]\r\n\r\n");
 
@@ -218,5 +218,4 @@ int main( void )
     }
 
     uwrite_int8s("\r\n\r\n[EXIT-BIOS!]\r\n\r\n");
-    return 0;
 }

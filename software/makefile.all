@@ -1,6 +1,6 @@
 
-$(TARGET).elf: $(ELF_INPUT)
-	$(PGCC) $(ELF_CCOPT) $^ $(LIBOPTS) -T $(LDSRC) -o $@
+$(TARGET).elf: $(ELF_INPUT) $(FIXED_ELF)
+	$(PGCC) $(ELF_CCOPT) $(ELF_INPUT) $(FIXED_LDOPTS) $(LIBOPTS) -T $(LDSRC) -o $@
 	$(PSIZE) $@
 #	$(PSTRIP) -R .pdr -R .comment -R .reginfo $@
 #	$(PSIZE) $@
@@ -8,7 +8,7 @@ $(TARGET).elf: $(ELF_INPUT)
 
 #C sources with .nopt.c get "NOPOPT"
 %.nopt.c.o: %.nopt.c
-	$(PGCC) $(CCMIPS) $(CCOPTS) $(NOPOPT) -o $@ -c $<
+	$(PGCC) $(CCMIPS) $(FIXED_CCOPTS) $(CCOPTS) $(NOPOPT) -o $@ -c $<
 %.nopt.c.ll: %.nopt.c
 	$(PCLANG) $(CCOPTS) $(NOPOPT) -emit-llvm -o $@ -x c $<
 %.nopt.c.ll.o: %.nopt.c.ll
@@ -17,7 +17,7 @@ $(TARGET).elf: $(ELF_INPUT)
 	$(PCLANG) $(CCMIPS) $(CCOPTS) $(NOPOPT) -S -o $@ -x c $<
 #...others get "OPTOPT"
 %.c.o: %.c
-	$(PGCC) $(CCMIPS) $(CCOPTS) $(OPTOPT) -o $@ -c $<
+	$(PGCC) $(CCMIPS) $(FIXED_CCOPTS) $(CCOPTS) $(OPTOPT) -o $@ -c $<
 %.c.ll: %.c
 	$(PCLANG) $(CCOPTS) $(OPTOPT) -emit-llvm -o $@ -x c $<
 %.c.ll.s: %.c
@@ -58,6 +58,8 @@ $(TARGET).elf: $(ELF_INPUT)
 	-$(PDUMP) -j .text $^ -xsSDl >$@
 %.data.dump: %.elf
 	-($(PDUMP) -j .data $^ -xS >$@ || exit 0)
+%.syms: %.elf
+	$(PNM) -n $< > $@
 
 
 %.mif: %.bin
@@ -71,8 +73,8 @@ $(TARGET).elf: $(ELF_INPUT)
 
 
 clean:
-	$(RM) -f *.o *.ll *.ll.s *.c.s *.elf *.bin *.mif *.coe *.mem *.v *.dump *.log $(OBJS)
+	$(RM) -f *.o *.ll *.ll.s *.c.s *.elf *.bin *.mif *.coe *.mem *.v *.dump *.syms *.log $(OBJS)
 
-.PHONY: clean $(TARGET) elf dump data inst both bins
+.PHONY: clean $(TARGET) elf dump syms data inst both bins
 .PRECIOUS: %.s %.c.ll %.c.ll.s
 .SECONDARY:

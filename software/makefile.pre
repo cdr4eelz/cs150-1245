@@ -1,6 +1,14 @@
 LDSTYLE ?= inject_basic
 LDSRC ?= ../link/$(LDSTYLE).ld
 START ?= ../link/$(LDSTYLE).s
+# From software/bench: make -C ../gios; make FIXED_ELF=../gios/gios.elf
+# The referenced image must remain loaded at the addresses in its ELF.
+FIXED_ELF ?=
+
+ifneq ($(strip $(FIXED_ELF)),)
+FIXED_CCOPTS := -mlong-calls
+FIXED_LDOPTS := -Wl,--just-symbols=$(FIXED_ELF)
+endif
 
 ALLCS ?= $(wildcard *.c)
 NOPTS ?= $(wildcard *.nopt.c)
@@ -20,6 +28,7 @@ NOPTOBJS = $(NOPTS:%.c=%.c.o)
 default: all
 elf: $(TARGET).elf
 dump: $(TARGET).dump $(TARGET).inst.dump $(TARGET).data.dump
+syms: $(TARGET).syms
 data: $(OUTS:%=$(TARGET).data.%)
 inst: $(OUTS:%=$(TARGET).inst.%)
 bins: $(SECS:%=$(TARGET).%.bin)
@@ -42,10 +51,12 @@ PSTRIP ?= $(M_PRE)-strip
 PSIZE  ?= $(M_PRE)-size
 PDUMP  ?= $(M_PRE)-objdump
 PCOPY  ?= $(M_PRE)-objcopy
+PNM    ?= $(M_PRE)-nm
 
 ASOPTS ?= -mips1 -march=mips1 -mabi=32 --no-break --no-trap  -mno-pdr -non_shared -mno-shared -R -g2
 # -O0
 CCOPTS ?= -pipe -fasm -std=gnu99 -ffreestanding -g
+CCOPTS += -I../common
 CCOPTS += -ffunction-sections -fdata-sections -Wl,--gc-sections
 #CCOPTS += -flto
 OPTOPT ?= -Os

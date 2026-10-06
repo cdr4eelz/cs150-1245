@@ -1,5 +1,5 @@
 ELF_INPUT = $(CSRCS) $(SSRCS) $(NOPTOBJS)
-ELF_CCOPT = $(CCMIPS) $(CCOPTS) $(OPTOPT) -Wl,--no-relax
+ELF_CCOPT = $(CCMIPS) $(FIXED_CCOPTS) $(CCOPTS) $(OPTOPT) -Wl,--no-relax
 
 default: all
 

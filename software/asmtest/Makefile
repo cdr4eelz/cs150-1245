@@ -12,27 +12,27 @@ SCOES := $(SELFS:%.elf=%.coe) $(SELFS:%.elf=%.data.coe)
 SVEES := $(SELFS:%.elf=%.v)   $(SELFS:%.elf=%.data.v)
 DUMPS := $(SELFS:%.elf=%.dump)
 
-PRE ?= mips64-linux-gnu
+M_PRE ?= mips64-linux-gnu
 
 default: mifs coes
 
 all: objs elfs mifs coes vees dumps multi
 
 multi: objs
-	$(PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T ld.multi $(SOBJS) -o multi.elf
-	$(PRE)-objdump $(DUMPOPTS) multi.elf > multi.dump
+	$(M_PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T ld.multi $(SOBJS) -o multi.elf
+	$(M_PRE)-objdump $(DUMPOPTS) multi.elf > multi.dump
 
 %.dump: %.elf
-	$(PRE)-objdump $(DUMPOPTS) $< > $@
+	$(M_PRE)-objdump $(DUMPOPTS) $< > $@
 
 %.ld: %.s
 	sed "s/##ASMNAME##/$$(basename $<)/" < ld.each > $@
 
 %.bin: %.elf
-	$(PRE)-objcopy --only-section=.text -O binary $< $@
+	$(M_PRE)-objcopy --only-section=.text -O binary $< $@
 
 %.data.bin: %.elf
-	$(PRE)-objcopy --only-section=.data -O binary $< $@
+	$(M_PRE)-objcopy --only-section=.data -O binary $< $@
 
 %.mif: %.bin
 	bin2mif < $< > $@
@@ -44,10 +44,10 @@ multi: objs
 	bin2rom $(TARGET) 0 < $< > $@
 
 %.elf: %.ld %.s.o
-	$(PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T  $^ -o $@  ## Had $< $^ -o $@
+	$(M_PRE)-gcc -static -nostartfiles -nostdlib -nodefaultlibs -G0 -T  $^ -o $@  ## Had $< $^ -o $@
 
 %.s.o: %.s
-	$(PRE)-as $(ASMOPTS) $< -o $<.o
+	$(M_PRE)-as $(ASMOPTS) $< -o $<.o
 
 elfs: $(SELFS)
 
