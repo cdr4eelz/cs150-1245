@@ -6,7 +6,7 @@
 
 //typedef void (*entry_t)(void);
 
-#define TIMER_REPS  (1)//(0x10u)    // Use power of 2, actually power of 16 for easy rounding
+#define TIMER_REPS  (0x10u)    // Use power of 2, actually power of 16 for easy rounding
 
 uint32_t sw_draw(void) {
     for (int i = 0; i < TIMER_REPS; i++) {
@@ -17,7 +17,7 @@ uint32_t sw_draw(void) {
         swpixl(sw_frame, 0x00FFFFFFu,  20,250);
         swelip(sw_frame, 0x00FF0000u, 100,100,   20, 30,    0xFF1A7F0Fu);
         swrect(sw_frame, 0x00FFFFFFu, 550,150,  750,250,    0xFFF0F020u);
-        swcirc(sw_frame, 0x00000000u, 650,200,   50,        0x00000000u);
+        swcirc(sw_frame, 0x0000FF00u, 650,200,   50,        0xFF0000FFu);
         swcirc(sw_frame, 0x00222222u, 650,200,   40,        0x00000000u);
         swcirc(sw_frame, 0x00444444u, 650,200,   30,        0x00000000u);
         swcirc(sw_frame, 0x00AAAAAAu, 650,200,   20,        0xFF000000u);
@@ -49,9 +49,8 @@ uint32_t hw_draw_per_shape(void) {
         hwline(0x00FFFFFFu, 400, 10,   10,500);
         hwpixl(0x00FFFFFFu,  20,250);
         hwelip(0x00FF0000u, 100,100,   20, 30,  0xFF1A7F0Fu);
-////        hwrect(0x00FFFFFFu, 550,150,  750,250,  0xFFF0F020u);
+        hwrect(0x00FFFFFFu, 550,150,  750,250,  0xFFF0F020u);
         hwcirc(0x0000FF00u, 650,200,   50,      0xFF0000FFu);
-/*
         hwcirc(0x00222222u, 650,200,   40,      0x00000000u);
         hwcirc(0x00444444u, 650,200,   30,      0x00000000u);
         hwcirc(0x00AAAAAAu, 650,200,   20,      0xFF000000u);
@@ -71,7 +70,6 @@ uint32_t hw_draw_per_shape(void) {
         hwelip(0x00008844u, 600,300,  100, 50,  0xFF7FFF1Fu);
         hwpixl(0x00023666u,  21, 51);
         hwcirc(0x00222222u, 650,200,   50,      0x00000000u);
-*/
     }
     return 0;
 }
@@ -92,29 +90,22 @@ uint32_t hw_draw_per_frame(void) {
         pINST = hwq_line(pINST, 0x00FFFFFFu, 400, 10,   10,500);
         pINST = hwq_pixl(pINST, 0x00FFFFFFu,  20,250);
         pINST = hwq_elip(pINST, 0x00FF0000u, 100,100,   20, 30,  0xFF1A7F0Fu);
-////        pINST = hwq_rect(pINST, 0x00FFFFFFu, 550,150,  750,250,  0xFFF0F020u);
-//pINST = hwq_stop(pINST);
-//GP_GCODE = pSEQUENCE;    //Triggers GPU drawing
-//GP_WAIT();  //Wait for all GPU OPs to complete
-//pINST = pSEQUENCE;       //Start fresh sequence reusing buffer
+        pINST = hwq_rect(pINST, 0x00FFFFFFu, 550,150,  750,250,  0xFFF0F020u);
         pINST = hwq_circ(pINST, 0x0000FF00u, 650,200,   50,      0xFF0000FFu);
-pINST = hwq_stop(pINST);
-/*
         pINST = hwq_circ(pINST, 0x00222222u, 650,200,   40,      0x00000000u);
         pINST = hwq_circ(pINST, 0x00444444u, 650,200,   30,      0x00000000u);
         pINST = hwq_circ(pINST, 0x00AAAAAAu, 650,200,   20,      0xFF000000u);
         pINST = hwq_circ(pINST, 0x00DDDDDDu, 650,200,   10,      0x00000000u);
         pINST = hwq_rect(pINST, 0x003FFF2Fu, 550,515,  310,333,  0xFFF300F2u);
         pINST = hwq_stop(pINST);
-*/
         GP_GCODE = pSEQUENCE;    //Triggers GPU drawing
         inst_count = INSTRUCTION_COUNTER;
         GP_WAIT();  //Wait for all GPU OPs to complete
         total_wait += (INSTRUCTION_COUNTER - inst_count);
-/*
+
         GP_FRAME = FRAME_PTR(6);
         pINST = pSEQUENCE;       //Start fresh sequence reusing buffer
-        hwq_fill(pINST, 0x00FF2222u);
+        pINST = hwq_fill(pINST, 0x00FF2222u);
         pINST = hwq_line(pINST, 0x0000FF00u,  10, 10,  700,300);
         pINST = hwq_line(pINST, 0x000000FFu, 500,250,  200, 90);
         pINST = hwq_line(pINST, 0x00000000u,  10,300,  400,500);
@@ -131,7 +122,6 @@ pINST = hwq_stop(pINST);
         inst_count = INSTRUCTION_COUNTER;
         GP_WAIT();
         total_wait += (INSTRUCTION_COUNTER - inst_count);
-*/
     }
     return total_wait;
 }
