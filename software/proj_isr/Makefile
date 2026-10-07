@@ -3,6 +3,7 @@ DUMPOPTS ?= -xsD --wide --disassembler-options=reg-names=n32,reg-names=mips32
 # --disassembler-options=reg-names=numeric,no-aliases
 
 ASMOPTS = --warn -g -ahlsgmd=$(patsubst %.s,%.list,$<)
+ASMOPTS += -I../common
 
 SSRCS := $(wildcard *.s)
 SOBJS := $(SSRCS:%.s=%.s.o)

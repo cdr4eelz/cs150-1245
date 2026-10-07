@@ -1,17 +1,19 @@
 LDSTYLE ?= inject_basic
 LDSRC ?= ../link/$(LDSTYLE).ld
 START ?= ../link/$(LDSTYLE).s
+
 # From software/bench: make -C ../gios; make FIXED_ELF=../gios/gios.elf
 # The referenced image must remain loaded at the addresses in its ELF.
 FIXED_ELF ?=
-
 ifneq ($(strip $(FIXED_ELF)),)
 FIXED_CCOPTS := -mlong-calls
 FIXED_LDOPTS := -Wl,--just-symbols=$(FIXED_ELF)
 endif
 
-ALLCS ?= $(wildcard *.c)
-NOPTS ?= $(wildcard *.nopt.c)
+COMCS ?=
+NOPCS ?=
+ALLCS ?= $(wildcard *.c) $(COMCS:%=../common/%)
+NOPTS ?= $(wildcard *.nopt.c) $(NOPCS:%=../common/%)
 CSRCS ?= $(filter-out $(NOPTS),$(ALLCS))
 SSRCS ?= $(wildcard *.s) $(START)
 
