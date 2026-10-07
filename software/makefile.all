@@ -59,7 +59,7 @@ $(TARGET).elf: $(ELF_INPUT) $(FIXED_ELF)
 %.data.dump: %.elf
 	-($(PDUMP) -j .data $^ -xS >$@ || exit 0)
 %.syms: %.elf
-	$(PNM) -n $< > $@
+	$(PNM) --numeric-sort --line-numbers --print-size --radix=x $< > $@
 
 
 %.mif: %.bin

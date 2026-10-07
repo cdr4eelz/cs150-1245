@@ -57,9 +57,12 @@ PNM    ?= $(M_PRE)-nm
 
 ASOPTS ?= -mips1 -march=mips1 -mabi=32 --no-break --no-trap  -mno-pdr -non_shared -mno-shared -R -g2
 # -O0
+NO_CODE_REMOVAL ?=
 CCOPTS ?= -pipe -fasm -std=gnu99 -ffreestanding -g
 CCOPTS += -I../common
+ifeq ($(strip $(NO_CODE_REMOVAL)),)
 CCOPTS += -ffunction-sections -fdata-sections -Wl,--gc-sections
+endif
 #CCOPTS += -flto
 OPTOPT ?= -Os
 NOPOPT ?= -O0
