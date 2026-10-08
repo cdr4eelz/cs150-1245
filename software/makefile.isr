@@ -1,0 +1,38 @@
+# Build one app-paired ISR image, following the standalone proj_isr flow.
+ISR_TARGET ?= isr
+ISR_LD ?= ../link/isr.ld
+ISR_ASMOPTS ?= --warn -g
+ISR_ASMOPTS += -ahlsgmd=$(ISR_TARGET).list -I../common -I.
+ISR_DUMPOPTS ?= -xsD --wide --disassembler-options=reg-names=n32,reg-names=mips32
+
+.PHONY: isr isr-clean
+
+all: isr
+isr: $(ISR_TARGET).mif $(ISR_TARGET).coe $(ISR_TARGET).dump
+clean: isr-clean
+
+$(ISR_TARGET).s.o: $(ISR_TARGET).s shared.s ../common/mmio_intr_cop0.s.inc
+	$(PGAS) $(ISR_ASMOPTS) $< -o $@
+
+$(ISR_TARGET).elf: $(ISR_LD) $(ISR_TARGET).s.o
+	$(PGCC) -static -nostartfiles -nostdlib -nodefaultlibs -G0 -Wl,--build-id=none -T $(ISR_LD) $(ISR_TARGET).s.o -o $@
+
+$(ISR_TARGET).bin: $(ISR_TARGET).elf
+	$(PCOPY) --only-section=.text -O binary $< $@
+
+$(ISR_TARGET).mif: $(ISR_TARGET).bin
+	bin2mif < $< > $@
+
+$(ISR_TARGET).coe: $(ISR_TARGET).bin
+	bin2coe < $< > $@
+
+$(ISR_TARGET).dump: $(ISR_TARGET).elf
+	$(PDUMP) $(ISR_DUMPOPTS) $< > $@
+
+$(ISR_TARGET).v: $(ISR_TARGET).bin
+	bin2rom $(ISR_TARGET) 0 < $< > $@
+
+isr-clean:
+	rm -f $(ISR_TARGET).o $(ISR_TARGET).s.o $(ISR_TARGET).elf $(ISR_TARGET).bin \
+		$(ISR_TARGET).mif $(ISR_TARGET).coe $(ISR_TARGET).v \
+		$(ISR_TARGET).dump $(ISR_TARGET).list

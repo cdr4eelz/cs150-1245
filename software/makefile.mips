@@ -1,0 +1,18 @@
+# Honor an explicit environment or command-line M_PRE; otherwise prefer a
+# complete 32-bit GNU MIPS toolchain and fall back to the 64-bit-prefixed suite.
+MIPS_LINUX_GNU_TOOLS := $(shell for tool in gcc as objcopy strip size objdump nm; do \
+	command -v mips-linux-gnu-$$tool >/dev/null 2>&1 || exit 1; \
+done; echo yes)
+MIPS64_LINUX_GNU_TOOLS := $(shell for tool in gcc as objcopy strip size objdump nm; do \
+	command -v mips64-linux-gnu-$$tool >/dev/null 2>&1 || exit 1; \
+done; echo yes)
+
+ifeq ($(origin M_PRE),undefined)
+ifeq ($(MIPS_LINUX_GNU_TOOLS),yes)
+M_PRE := mips-linux-gnu
+else ifeq ($(MIPS64_LINUX_GNU_TOOLS),yes)
+M_PRE := mips64-linux-gnu
+else
+$(error No complete GNU MIPS toolchain found (need mips-linux-gnu-* or mips64-linux-gnu-* tools); set M_PRE to override)
+endif
+endif

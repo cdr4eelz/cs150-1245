@@ -12,10 +12,10 @@ TARGET_KEY ?= $(TARGET).elf $(TARGET).bin $(TARGET).mif $(TARGET).coe
 TARGET_ALL ?= $(TARGET_KEY) $(TARGET).v $(TARGET).hak $(TARGET).mem \
 	      	$(TARGET)_rom.mif $(TARGET).dis $(COBJS) $(SOBJS)
 
+include ../makefile.mips
+
 default: $(TARGET_KEY)
 all: $(TARGET_ALL)
-
-M_PRE ?= mips64-linux-gnu
 
 ## -mips1 -march=mips1 -mabi=32 -mno-abicalls -msoft-float -mno-dsp -mno-mips3d -mlong32 -mno-branch-likely -mno-flush-func -fno-PIE -fno-PIC -fno-pie -fno-pic -fno-exceptions -Wa,-mno-pdr,-non_shared,-mno-shared,-O,-R -pipe -fasm -std=gnu99 -ffreestanding -g -Os -Wl,--no-relax draw.c graphics.c ../link/inject_cache.s mutmath.nopt.c.o -nostartfiles -nostdlib -nodefaultlibs -static -T ../link/inject_cache.ld -o draw.elf
 

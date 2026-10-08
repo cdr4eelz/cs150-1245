@@ -5,6 +5,8 @@ DUMPOPTS ?= -xsD --wide --disassembler-options=reg-names=n32,reg-names=mips32
 ASMOPTS = --warn -g -ahlsgmd=$(patsubst %.s,%.list,$<)
 ASMOPTS += -I../common
 
+include ../makefile.mips
+
 SSRCS := $(wildcard *.s)
 SOBJS := $(SSRCS:%.s=%.s.o)
 SELFS := $(SSRCS:%.s=%.elf)
@@ -12,8 +14,6 @@ SMIFS := $(SELFS:%.elf=%.mif)
 SCOES := $(SELFS:%.elf=%.coe)
 SVEES := $(SELFS:%.elf=%.v)
 DUMPS := $(SELFS:%.elf=%.dump)
-
-M_PRE ?= mips64-linux-gnu
 
 default: mifs coes dumps
 

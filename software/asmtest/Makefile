@@ -13,7 +13,7 @@ SCOES := $(SELFS:%.elf=%.coe) $(SELFS:%.elf=%.data.coe)
 SVEES := $(SELFS:%.elf=%.v)   $(SELFS:%.elf=%.data.v)
 DUMPS := $(SELFS:%.elf=%.dump)
 
-M_PRE ?= mips64-linux-gnu
+include ../makefile.mips
 
 default: mifs coes
 

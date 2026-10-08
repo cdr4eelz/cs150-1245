@@ -1,7 +1,7 @@
 Demonstrate GPU and comparison with software rendering. Should we count clock cycles and/or elapsed time???
 Demonstrate basics of GIOS (graphics commands added to BIOS), plus a "dump" command and XOR calc while uploading or in block "copy" command!
 
-Show UARX interrupts responding to "keyboard" commands and triggering various benchmarks.
+Demonstrate UARX interrupts responding to "keyboard" commands and triggering various benchmarks.
 
 Use "imem" and "dmem" for accellerated live (shared) data as well as stack pointer (sp).
 Potentially use "gp" or "fp" if never used by other code???
@@ -10,29 +10,34 @@ Slowed down DVI interface pixel clock by using 40MHz rather than 50MHz. Lessens 
 
 Mention "SLR" and it's benefits such as simpified interface for each graphics engine and helpful handling of edge vs. fill while sweeping a range of x/col values (which is aligned to DDR2 memory chunks).
 
-Turned "FILL" into more adaptable "BOX" command/engine with versatility in terms of edge/fill colors/masks.
+DONE: Created "RECT" command with versatility in terms of edge/fill colors.
 
-Potential simple speed-up by exposing an SLR to software control.
+FUN: Characters/Fonts. Easiest to align with 256-bit chunks??? How to sync with SDRAM result rather than fetch coordinates?
 
-Speed comparison between SW, SW-SLR, HW-indi, HW-GP sequence. Highlite HW-GP ability to free up CPU for other work.
+FUN: Sprite/Stamp/Overlay???
 
+
+========================================================
+Speed comparison between SW, SW-SLR, HW-indi, HW-GP sequence.
+Highlite HW-GP ability to free up CPU for other work.
 ========================================================
 > jal 10000000 [Each frame is repeated 16 times x 3 ways]
 
 1. +++[Software only rendering]+++
-Result: 00000000 (software busy entire time)
-Cycle Count:        05d9a641   ( 98,149,953 )
-Instruction Count:  03b2f906   ( 62,060,806 )
+    Result: 00000000 (software busy entire time)
+    Cycle Count:        05d9a641   ( 98,149,953 )
+    Instruction Count:  03b2f906   ( 62,060,806 )
 
 2. +++[Each shape individually rendered in hw]+++
-Result: 00000000 (scattered wait points)
-Cycle Count:        004d32f0    ( 5,059,312 )
-Instruction Count:  004d19d3    ( 5,052,883 )
+    Result: 00000000 (wait after EACH GPU command)
+    Cycle Count:        004d32f0    ( 5,059,312 )
+    Instruction Count:  004d19d3    ( 5,052,883 )
 
 3. +++[Frame specified & rendered in hw at once]+++
-RESULT:         (*) 004cdc92    ( 5,037,202 )
-Cycle Count:        004d525a    ( 5,067,354 )
-Instruction Count:  004d343f    ( 5,059,647 )
+    RESULT:         (*) 004cdc92    ( 5,037,202 )
+    Cycle Count:        004d525a    ( 5,067,354 )
+    Instruction Count:  004d343f    ( 5,059,647 )
+      CPU Instructions not-waiting: 22,445
 
 (*) WAITING Instruction Count during hw rendering.
     As one can see, nearly the entire Instruction Count
@@ -47,3 +52,31 @@ Instruction Count:  004d343f    ( 5,059,647 )
     is manipulating it significantly while hardware is
     rendering.
 ========================================================
+
+Mention other accellerated hw features that could help software:
+  Multiplication/Division operators or side functionality.
+  Possibility of float operations (via CPU spec or on side).
+  Hardware SLR accessible from software render algorithms.
+    Background SLR activitiy after trigger.
+    Queue (via FIFO) of SLR actions (with "wait" sync feature).
+  Avoidance of DDR2RAM except for truly large data (video frames).
+    The GPU operations should be in an BlockRam.
+      GPU ops could be in FIFO (paused, filled, waited on).
+      GPU ops could be stored/queued as words fetched as 128-bit.
+  Lookup tables and/or CORDIC operations for trig calculations.
+  Variable substitution and simple calculations within GPU ops.
+  Simple mini/micro-controller to handle basic game logic/calcs.
+    Could just be enhanced GPU operations, branches, loops?
+
+
+
+Random number via LFSR (16-bit loops after state # 65535):
+reg [15:0] lfsr;
+always_ff @(posedge clk) begin
+    if (reset)
+        lfsr <= 16'hACE1;  // nonzero seed
+    else
+        lfsr <= {lfsr[14:0],
+                 lfsr[15] ^ lfsr[13] ^ lfsr[12] ^ lfsr[10]};
+end
+

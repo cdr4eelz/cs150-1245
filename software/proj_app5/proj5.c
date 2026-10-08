@@ -2,6 +2,10 @@
 #include "uart.h"
 #include "mmio_intr_cop0.h"
 #include "ascii.h"
+#include "shared.h"
+#ifdef VIZARD
+#include "vizard_host.h"
+#endif
 
 // Only declare ASCII function(s) as needed
 // #undef ASCII_WANT_DEC
@@ -9,31 +13,6 @@
 // DEFINE_TO_ASCII_HEX(uint32)
 
 //TODO: Perhaps "#include" desired xxx_yyy_ISR() like above???
-
-// Constants for memory shared with ISR handler
-#define SM_BASE ((struct SM_DATA *) 0x50000000u)
-#define K_SHBUF_SIZEB      0x0100
-#define K_SHBUF_ROLLOVER   0x00FF
-#define K_MAGIC_VERSION 0xFEDBEEF1
-
-// Constants for TIMER interrupt ("Compare" register)
-#define K_CPU_HZ        (50000000)      //50 MHz
-#define K_TIMER_HZ      (1)             // 1 Hz
-#define K_TIMER_CYC     (K_TIMER_HZ * K_CPU_HZ)
-
-
-struct SM_DATA {
-    volatile uint32_t magic; // Initialized to known value
-    volatile uint32_t stash0, stash1, stash2, stash3; // Stash regs during interrupt
-    volatile uint32_t flags; // Not yet used
-    volatile uint32_t RTC_count; // Incremented for each RTC interrupt
-    volatile uint32_t seconds; // Increment every second along with "clock"
-    volatile uint32_t clock; // Low-word is BCD of minutes + seconds
-    volatile uint32_t buff_size; // For comparison & sanity check
-    volatile uint32_t buff_head; // Offset to circular buffer head,
-    volatile uint32_t buff_tail; // Likewise for tail
-    int8_t buff_data[K_SHBUF_SIZEB]; // The buffer itself (bytes NOT words)
-};
 
 /*
   REGISTER MAP:
@@ -44,21 +23,9 @@ struct SM_DATA {
   CALLEE preserves: s0-s7,gp,sp,fp,ra
 */
 
-void SM_INIT(struct SM_DATA* sm) {
-    sm->magic = K_MAGIC_VERSION; // Sanity check
-    sm->stash0 = -1u;
-    sm->stash1 = -1u;
-    sm->stash2 = -1u;
-    sm->stash3 = -1u;
-    sm->flags = 0;
-    sm->seconds = 0;
-    sm->clock = 0;
-    sm->buff_size = K_SHBUF_SIZEB; // Sanity check
-    sm->buff_head = 0;
-    sm->buff_tail = 0;
-}
 // Set "Compare" to zero so interrupt fires on first opportunity
 
+#ifndef VIZARD
 //TODO: Put in UART library but keep it optional somehow
 void uwrite_int8s_ISR(int8_t* src) { //Should use MAX/TIMEOUT???
     struct SM_DATA* share = SM_BASE; //Should pass as argument???
@@ -77,6 +44,7 @@ void uwrite_int8s_ISR(int8_t* src) { //Should use MAX/TIMEOUT???
     }
     // Should there be a return a value (indicating success vs. timeout)?
 }
+#endif
 
 /* More complicated send (attempt to handle bad situations gracefully)...
 void uwrite_int8s_ISR(int8_t* src) {
@@ -105,6 +73,7 @@ void uwrite_int8s_ISR(int8_t* src) {
 */
 
 // Drain the ring-buffer and UART ready flag:
+#ifndef VIZARD
 void uwait_ISR(void) {
     struct SM_DATA* share = SM_BASE; //Should pass as argument???
 
@@ -113,6 +82,7 @@ void uwait_ISR(void) {
     while ((share->buff_tail != share->buff_head)
              || (!UTRAN_CTRL)) { } //Wait on prior sends
 }
+#endif
 
 /*  UNNEEDED FUNCTION? Certainly should be optional or inline/macro if defined
 //TODO: Put in simple string library (perhaps as INLINE)
@@ -138,6 +108,14 @@ void uwrite_clock(uint32_t clk_bcd) {
     tbuff[5] = 0;
     uwrite_int8s_ISR(tbuff);
     uwrite_int8s_ISR("\n\r");
+}
+
+void frame_gp_generate(uint32_t frame) {
+
+}
+
+void frame_gp_render(uint32_t frame) {
+
 }
 
 
@@ -168,13 +146,17 @@ void main() {
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX | IM_UARX | IM_RTC | IM_TIMER); //GPU?
     
     tClock = prevClock = 0;
-    while (1) {
+    while (ISR_POLL(share)) {
         tClock = share->clock;
         if (tClock != prevClock) {
             //TODO: Conditional based on a flag
             if (1) uwrite_clock(tClock);
             prevClock = tClock; // Advance whether or not printing enabled
         }
+
+        // Temporarily utilize just one frame
+        frame_gp_generate(1);
+        frame_gp_render(1);
     }
 
     uwait_ISR();
