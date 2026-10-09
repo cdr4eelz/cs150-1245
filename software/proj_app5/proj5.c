@@ -37,6 +37,8 @@ void frame_gp_generate(uint32_t frame) {
 void frame_gp_render(uint32_t frame) {
     GP_FRAME = frame;
     GP_GCODE = GPTEMP_BIG;
+    GP_WAIT();
+    PF_FRAME = frame;
 }
 
 
@@ -55,7 +57,7 @@ void main() {
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
     uwait_ISR(); // Get off to a clean start with nobody sending yet
 
-    uwrite_int8s_ISR("\r\n\r\nPROJ-4:\r\n");
+    uwrite_int8s_ISR("\r\n\r\nPROJ-5:\r\n");
     uwrite_int8s_ISR("MAGIC: ");
     uwrite_int8s_ISR(uint32_to_ascii_hex(share->magic, tbuff, TBUF_SIZE));
     uwrite_int8s_ISR("\n\r");

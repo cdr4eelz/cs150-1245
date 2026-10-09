@@ -1,5 +1,18 @@
 {
     "chat.tools.terminal.autoApprove": {
         "make": true
+    },
+    "files.exclude": {
+        "**/*.log": true,
+        "**/*.bin": true,
+        "**/*.coe": true,
+        "**/*.dump": true,
+        "**/*.elf": true,
+        "**/*.list": true,
+        "**/*.s.o": true,
+        "**/*.o": true,
+        "**/*.mif": true,
+        "**/*.mem": true,
+        "**/*.syms": true
     }
 }

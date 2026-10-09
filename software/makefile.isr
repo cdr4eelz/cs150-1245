@@ -16,9 +16,11 @@ $(ISR_TARGET).s.o: $(ISR_TARGET).s shared.s ../common/mmio_intr_cop0.s.inc
 
 $(ISR_TARGET).elf: $(ISR_LD) $(ISR_TARGET).s.o
 	$(PGCC) -static -nostartfiles -nostdlib -nodefaultlibs -G0 -Wl,--build-id=none -T $(ISR_LD) $(ISR_TARGET).s.o -o $@
+	chmod -x $@
 
 $(ISR_TARGET).bin: $(ISR_TARGET).elf
 	$(PCOPY) --only-section=.text -O binary $< $@
+	-chmod -x $@
 
 $(ISR_TARGET).mif: $(ISR_TARGET).bin
 	bin2mif < $< > $@
