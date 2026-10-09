@@ -1,6 +1,10 @@
 #ifndef COP0_INTR_MMIO_H_
 #define COP0_INTR_MMIO_H_
 
+#ifdef VIZARD
+#include <stdbool.h>
+#endif
+
 // C HEADER file for Coprocessor, Interrupts & MMIO
 
 // COP0 register names (also c0_sr, c0_cause, etc.)
@@ -93,6 +97,16 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 
 
 //TODO: Should we implicitly AND "Cause" with "KEEP" mask?
+#ifdef VIZARD
+void vizard_host_isr_status(unsigned int keep, unsigned int set);
+void vizard_host_isr_compare(unsigned int compare);
+bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clock,
+                      volatile unsigned int *rtc_count);
+#define ISR_STATUS(KEEP, SET) vizard_host_isr_status((KEEP), (SET))
+#define ISR_COMPARE(COMPARE) vizard_host_isr_compare(COMPARE)
+#define ISR_POLL(share) \
+    vizard_host_poll(&(share)->seconds, &(share)->clock, &(share)->RTC_count)
+#else
 #define ISR_STATUS(KEEP, SET)                   \
     asm (                                       \
         "li     $t0,%0\n\t"                     \
@@ -114,6 +128,8 @@ localparam [5:0]            //   DATA-ENCODING/DESC
         :                                       \
         : "i" (COMPARE)                         \
         : "t0" )
+    #define ISR_POLL(share) (1)
+    #endif
 
 
 #endif // COP0_INTR_MMIO_H_

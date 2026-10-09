@@ -7,10 +7,10 @@
 // If bINST is NULL, put a single operation in GPTEMP_PTR and trigger:
 gpcode_p hw_OpRGB_PP_S(
     gpcode_p bINST,
-    const cmd_orgb28_t  const orgb28,
-    const cmd_pnt_t     const p0,
-    const cmd_pnt_t     const p1,
-    const cmd_xrgb32_t  const xrgb32
+    const cmd_orgb28_t orgb28,
+    const cmd_pnt_t p0,
+    const cmd_pnt_t p1,
+    const cmd_xrgb32_t xrgb32
 ) {
     gpcode_p pINST = (bINST) ? bINST : GPTEMP_PTR;
     if (!bINST) GP_WAIT();  //Ensure completion of GP before new cmds

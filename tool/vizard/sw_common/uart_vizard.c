@@ -1,14 +1,12 @@
 #include "uart.h"
-#ifdef VIZARD
+
 #include "vizard_host.h"
 #include "vizard_uart.h"
-
-#include <string.h>
 
 void vizard_uart_init(VizardUart *uart)
 {
     if (uart != NULL) {
-        memset(uart, 0, sizeof(*uart));
+        *uart = (VizardUart){0};
     }
 }
 
@@ -67,58 +65,3 @@ bool vizard_uart_transmit(VizardUart *uart, uint8_t *byte)
     --uart->tx_count;
     return true;
 }
-
-void uwrite_int8(int8_t c)
-{
-    vizard_host_uart_write((unsigned char)c);
-}
-
-void uwrite_int8s(const int8_t* s)
-{
-    for (int i = 0; s[i] != '\0'; ++i) {
-        uwrite_int8(s[i]);
-    }
-}
-
-int8_t uread_int8(void)
-{
-    int8_t ch = (int8_t)vizard_host_uart_read();
-    if ((ch == '\x0d') || (ch == '\x0a')) {
-        uwrite_int8('\r');
-        uwrite_int8('\n');
-    } else {
-        uwrite_int8(ch);
-    }
-    return ch;
-}
-
-#else
-
-void uwrite_int8(int8_t c)
-{
-    while (!UTRAN_CTRL) ;
-    UTRAN_DATA = c;
-}
-
-void uwrite_int8s(const int8_t* s)
-{
-    for (int i = 0; s[i] != '\0'; i++) {
-        uwrite_int8(s[i]);
-    }
-}
-
-int8_t uread_int8(void)
-{
-    while (!URECV_CTRL) ;
-    int8_t ch = URECV_DATA;
-    if ((ch == '\x0d') || (ch == '\x0a')) {
-        //uwrite_int8s("\r\n");
-        uwrite_int8('\r');
-        uwrite_int8('\n');
-    } else {
-        uwrite_int8(ch);
-        //uwrite_int8(ch);
-    }
-    return ch;
-}
-#endif

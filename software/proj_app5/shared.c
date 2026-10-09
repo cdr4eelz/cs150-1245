@@ -1,5 +1,5 @@
-#include "shared.h"
 #include "uart.h"
+#include "shared.h"
 #ifdef VIZARD
 #include "vizard_host.h"
 #endif

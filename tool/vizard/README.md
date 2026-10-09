@@ -6,9 +6,10 @@ target compiles `software/proj_app5/proj5.c` with `VIZARD` defined, preserving
 the app's C control flow while replacing its MMIO and COP0 boundaries with a
 Raylib host runtime. No MIPS instruction emulation is involved.
 
-The project's `software/common` sources are mirrored in `sw_common/`; Vizard
-builds against that local copy so host-specific adaptations do not alter the
-FPGA software library.
+Vizard uses the shared headers and portable sources from `software/common`.
+Host-specific graphics and UART implementations live in `sw_common/*_vizard.c`.
+The shared headers select the host MMIO and graphics interfaces when `VIZARD`
+is defined.
 
 ## Build and run
 
@@ -59,8 +60,6 @@ proj5 ISR-style output and common UART writes print to the Vizard launch
 terminal. The host timer emulates the paired `isr5.s` 1 Hz seconds/BCD clock
 update; Escape exits the app.
 
-`proj5.c` currently demonstrates the timer and UART output path and does not
-submit GPU commands, so its graphics area remains blank until the app invokes
-the common rendering helpers. Vizard is synchronous at GPU submission and
-approximates ISR timing; it does not model MIPS instruction execution or
-cycle-accurate hardware timing.
+`proj5.c` demonstrates the timer, UART output, and common GPU command helpers.
+Vizard is synchronous at GPU submission and approximates ISR timing; it does
+not model MIPS instruction execution or cycle-accurate hardware timing.

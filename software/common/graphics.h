@@ -5,14 +5,32 @@
 #include "mmio_intr_cop0.h"
 
 //MEMORY MAPPED CONTROLS (defined here because structs are unique to graphics.h)
+#ifdef VIZARD
+extern volatile void * volatile vizard_pf_frame;
+extern volatile void * volatile vizard_gp_frame;
+extern void * volatile vizard_gp_gcode;
+extern volatile uint32_t vizard_gp_state_storage;
+void vizard_host_wait_gpu(void);
+#define PF_FRAME  (vizard_pf_frame)
+#define GP_FRAME  (vizard_gp_frame)
+#define GP_GCODE  (vizard_gp_gcode)
+#define GP_STATE  (*((gstate_pv)(void *)&vizard_gp_state_storage))
+#define GP_READY() (vizard_gp_gcode == NULL)
+#define GP_WAIT()  vizard_host_wait_gpu()
+#else
 #define PF_FRAME  (*((gframe_pv volatile *)MM_PF_FRAME)) //WRITE:PixelFeeder source frame addr/num
 #define GP_FRAME  (*((gframe_pv volatile *)MM_GP_FRAME)) //WRITE:GraphicsProcessor frame addr/num
 #define GP_GCODE  (*((gpcode_p  volatile *)MM_GP_GCODE)) //WRITE:Set code-addr, trigger GP now!
 #define GP_STATE  (*((gstate_pv           )MM_GP_STATE)) //READ:Status of PIX,GP,etc.
+#endif
 
 //MEMORY FIXED GLOBAL TEMPORARIES
 //TODO: Allow dynamic location/size for temp GP commands (or map into BRAM, not DDR memory)
+#ifdef VIZARD
+#define GPTEMP_PTR    (vizard_gptemp)
+#else
 #define GPTEMP_PTR    ((gpcode_p)0x12003000) //FIXED location "global" within DDR2 memory for GP commands
+#endif
 #define GPTEMP_SZW    (0x00000020)          //  32-words is...
 #define GPTEMP_SZB    ((GPTEMP_SZW) << 2)  //  128-bytes
 #define GPTEMP_BIG    (GPTEMP_PTR+GPTEMP_SZW) //Huge spot to store long runs of GP Commands
@@ -71,8 +89,10 @@ typedef union gstate_u {
 } gstate_tp, *gstate_pp;
 typedef gstate_tp volatile gstate_tv, *gstate_pv;
 
+#ifndef VIZARD
 #define GP_READY()    (GP_STATE.f.gp_ready)
 #define GP_WAIT()     do {} while (!GP_READY())
+#endif
 
 
 typedef uint32_t color_t, *color_p;
@@ -114,7 +134,11 @@ gframe_pv std_frame(uint32_t const fn_or_fp)
 {
     uint32_t fp = (fn_or_fp & (FPMASK));
     if (!fp) fp = (0x10000000 | ((fn_or_fp & (FNMASK)) << (FSHIFT)));
+#ifdef VIZARD
+    return (gframe_pv)(unsigned long)fp;
+#else
     return (gframe_pv)fp;
+#endif
 }
 
 
@@ -139,6 +163,10 @@ typedef union gpcode_u {
     cmd_xrgb32_t    fXRGB32;
     cmd_pnt_t       fPNT;
 } gpcode_t, *gpcode_p;
+
+#ifdef VIZARD
+extern gpcode_t vizard_gptemp[];
+#endif
 
 //NOTE: These are 4-bit "nibbles", not actually bytes
 #define GOP_STOP    (0)
