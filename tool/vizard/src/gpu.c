@@ -133,6 +133,45 @@ const uint32_t *vizard_gpu_frame(const VizardGpu *gpu, unsigned frame)
     return gpu->frames[frame].pixels;
 }
 
+bool vizard_gpu_stream_word_count(const uint32_t *words, size_t max_word_count,
+                                  size_t *word_count)
+{
+    if (words == NULL || word_count == NULL) {
+        return false;
+    }
+
+    size_t index = 0;
+    while (index < max_word_count) {
+        uint32_t instruction = words[index++];
+        unsigned opcode = instruction >> 28;
+        size_t trailing_words;
+
+        if (opcode == GOP_STOP) {
+            if (instruction != 0) {
+                return false;
+            }
+            *word_count = index;
+            return true;
+        }
+        if (opcode == GOP_FILL) {
+            trailing_words = 0;
+        } else if (opcode == GOP_LINE) {
+            trailing_words = 2;
+        } else if (opcode == GOP_ELLIPSE || opcode == GOP_RECT) {
+            trailing_words = 3;
+        } else {
+            return false;
+        }
+
+        if (trailing_words > max_word_count - index) {
+            return false;
+        }
+        index += trailing_words;
+    }
+
+    return false;
+}
+
 bool vizard_gpu_submit(VizardGpu *gpu, const uint32_t *words, size_t word_count,
                        uint32_t frame)
 {

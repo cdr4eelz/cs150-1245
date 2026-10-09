@@ -24,6 +24,8 @@ typedef struct {
 
 bool vizard_gpu_init(VizardGpu *gpu, unsigned width, unsigned height);
 void vizard_gpu_dispose(VizardGpu *gpu);
+bool vizard_gpu_stream_word_count(const uint32_t *words, size_t max_word_count,
+                                 size_t *word_count);
 bool vizard_gpu_submit(VizardGpu *gpu, const uint32_t *words, size_t word_count,
                        uint32_t frame);
 const uint32_t *vizard_gpu_frame(const VizardGpu *gpu, unsigned frame);

@@ -166,7 +166,7 @@ typedef union gpcode_u {
 } gpcode_t, *gpcode_p;
 
 #ifdef VIZARD
-extern gpcode_t vizard_gptemp[GPTEMP_SZW];
+extern gpcode_t vizard_gptemp[];
 #endif
 
 //NOTE: These are 4-bit "nibbles", not actually bytes

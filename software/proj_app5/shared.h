@@ -2,6 +2,8 @@
 #define PROJ_APP5_SHARED_H_
 
 #include "types.h"
+#define TBUF_SIZE (256)
+extern int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located
 
 #define K_SHBUF_SIZEB      0x0100
 #define K_SHBUF_ROLLOVER   0x00FF
@@ -50,5 +52,9 @@ extern struct SM_DATA vizard_shared;
 #endif
 
 void SM_INIT(struct SM_DATA *sm);
+
+void uwrite_int8s_ISR(int8_t* src);
+void uwait_ISR(void);
+void uwrite_clock(uint32_t clk_bcd);
 
 #endif

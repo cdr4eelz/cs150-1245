@@ -2,120 +2,41 @@
 #include "uart.h"
 #include "mmio_intr_cop0.h"
 #include "ascii.h"
+#include "graphics.h"
+
 #include "shared.h"
+
 #ifdef VIZARD
 #include "vizard_host.h"
 #endif
 
-// Only declare ASCII function(s) as needed
-// #undef ASCII_WANT_DEC
-// #include "ascii_defs.inc"
-// DEFINE_TO_ASCII_HEX(uint32)
-
-//TODO: Perhaps "#include" desired xxx_yyy_ISR() like above???
-
-/*
-  REGISTER MAP:
-    $0  $at $v0 $v1 $a0 $a1 $a2 $a3
-    $t0 $t1 $t2 $t3 $t4 $t5 $t6 $t7
-    $s0 $s1 $s2 $s3 $s4 $s5 $s6 $s7
-            $t8 $t9 $gp $sp $fp $ra
-  CALLEE preserves: s0-s7,gp,sp,fp,ra
-*/
-
-// Set "Compare" to zero so interrupt fires on first opportunity
-
-#ifndef VIZARD
-//TODO: Put in UART library but keep it optional somehow
-void uwrite_int8s_ISR(int8_t* src) { //Should use MAX/TIMEOUT???
-    struct SM_DATA* share = SM_BASE; //Should pass as argument???
-    int8_t ch;
-
-    while (ch = *src++) { // Repeat while not NULL
-        if (UTRAN_CTRL) { // We can send directly
-            UTRAN_DATA = ch; // Simple send direct to UART
-        } else { // Utilize ring-buffer
-            uint32_t head = share->buff_head;
-            uint32_t nextHead = (head + 1) & K_SHBUF_ROLLOVER;
-            while (nextHead == share->buff_tail) { } //Buffer is full
-            share->buff_data[head] = ch;
-            share->buff_head = nextHead;
-        }
-    }
-    // Should there be a return a value (indicating success vs. timeout)?
-}
-#endif
-
-/* More complicated send (attempt to handle bad situations gracefully)...
-void uwrite_int8s_ISR(int8_t* src) {
-    struct SM_DATA* share = SM_BASE;
-    int8_t ch;
-
-    while (ch = *src) {       // Repeat while not NULL
-        if (UTRAN_CTRL) {       // We can send right now
-            UTRAN_DATA = ch;    // Send direct via UART TX
-            src++;              // Advance within source str
-        } else {                // Utilize ring-buffer...
-            uint32_t head = share->buff_head;
-            uint32_t nextHead = (head + 1) & K_SHBUF_ROLLOVER;
-            if (nextHead == share->buff_tail) { // FULL
-                //TODO: Could count/timeout then give up???
-                //TODO: Ensure UATX interrupt is enabled???
-                // if give up, then break; // Break early
-            } else {
-                share->buff_data[head] = ch;
-                share->buff_head = nextHead;
-                src++;          // Advance
-            }
-        }
-    }
-}
-*/
-
-// Drain the ring-buffer and UART ready flag:
-#ifndef VIZARD
-void uwait_ISR(void) {
-    struct SM_DATA* share = SM_BASE; //Should pass as argument???
-
-    // Wait until interrupt based sending is done, BUT...
-    //TODO: Should only check buffer IIF UATX interrupt on???
-    while ((share->buff_tail != share->buff_head)
-             || (!UTRAN_CTRL)) { } //Wait on prior sends
-}
-#endif
-
-/*  UNNEEDED FUNCTION? Certainly should be optional or inline/macro if defined
-//TODO: Put in simple string library (perhaps as INLINE)
-int8_t* copy_string(int8_t* dst, int8_t* src, uint16_t maxLen) { //Add size check
-    int8_t* base = dst;
-    while ((*dst++ = *src++) && (maxLen--)) { }
-    if (!maxLen) *dst = 0;
-    return base;
-}
-*/
-
-#define TBUF_SIZE (256)
-static int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located
-
-void uwrite_clock(uint32_t clk_bcd) {
-    uwrite_int8s_ISR("\n\rCLK: ");
-    // Assemble clock string "mm:ss" in tbuff
-    tbuff[0] = '0' + ((clk_bcd >> 12) & 0x0F);
-    tbuff[1] = '0' + ((clk_bcd >>  8) & 0x0F);
-    tbuff[2] = ':';
-    tbuff[3] = '0' + ((clk_bcd >>  4) & 0x0F);
-    tbuff[4] = '0' + ((clk_bcd >>  0) & 0x0F);
-    tbuff[5] = 0;
-    uwrite_int8s_ISR(tbuff);
-    uwrite_int8s_ISR("\n\r");
-}
+int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located
 
 void frame_gp_generate(uint32_t frame) {
+    gpcode_p pINST;
+    const gpcode_p pSEQUENCE = GPTEMP_BIG; //TEMP: Calculate based on frame
 
+    pINST = pSEQUENCE;
+    pINST = hwq_fill(pINST, 0x00002233u);
+    pINST = hwq_line(pINST, 0x00FFFFFFu,  10, 10,  700,300);
+    pINST = hwq_line(pINST, 0x00FFFFFFu, 400, 10,   10,500);
+    pINST = hwq_pixl(pINST, 0x00FFFFFFu,  20,250);
+    pINST = hwq_rect(pINST, 0x00FFFFFFu, 550,150,  750,250,  0xFFF0F020u);
+
+    for (int i = 0; i < 10; i++) {
+        uint16_t xc = 100 + (i * 20);
+        uint16_t yc = 300 - (i * 25);
+        uint16_t r = 10 + (i * 6);
+        pINST = hwq_elip(pINST, 0x00FF0000u, xc, yc, r, r, 0xFF1A7F0Fu);
+    }
+
+    pINST = hwq_stop(pINST);
+    GP_WAIT();
 }
 
 void frame_gp_render(uint32_t frame) {
-
+    GP_FRAME = frame;
+    GP_GCODE = GPTEMP_BIG;
 }
 
 

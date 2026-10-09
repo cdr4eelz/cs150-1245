@@ -56,6 +56,26 @@ static void test_gpu_commands(void)
     vizard_gpu_dispose(&gpu);
 }
 
+static void test_gpu_stream_word_count(void)
+{
+    const uint32_t commands[] = {
+        0x10002233u,
+        0x2f00ffffu, 0x000a000au, 0x02bc012cu,
+        0x2f00ffffu, 0x0190000au, 0x000a01f4u,
+        0x2f00ffffu, 0x001400fau, 0x001400fau,
+        0x4f00ffffu, 0x02260096u, 0x02ee00fau, 0xfff0f020u,
+        0x00000000u
+    };
+    size_t word_count = 0;
+    assert(vizard_gpu_stream_word_count(
+        commands, sizeof(commands) / sizeof(commands[0]), &word_count));
+    assert(word_count == sizeof(commands) / sizeof(commands[0]));
+
+    const uint32_t truncated[] = { 0x20000000u, 0x00000000u };
+    assert(!vizard_gpu_stream_word_count(
+        truncated, sizeof(truncated) / sizeof(truncated[0]), &word_count));
+}
+
 static void test_uart_registers(void)
 {
     VizardUart uart;
@@ -78,6 +98,7 @@ static void test_uart_registers(void)
 int main(void)
 {
     test_gpu_commands();
+    test_gpu_stream_word_count();
     test_uart_registers();
     puts("Vizard core tests passed.");
     return 0;

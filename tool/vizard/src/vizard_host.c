@@ -196,16 +196,11 @@ bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clo
 
     if (vizard_gp_gcode != NULL) {
         const unsigned int *words = vizard_gp_gcode;
-        const size_t max_words = 1u << 20;
         size_t word_count;
-        for (word_count = 0; word_count < max_words; ++word_count) {
-            if ((words[word_count] >> 28) == 0) {
-                ++word_count;
-                break;
-            }
-        }
-        if (word_count == max_words) {
-            fprintf(stderr, "Vizard: GP_GCODE stream has no STOP within %zu words\n", max_words);
+        if (!vizard_gpu_stream_word_count(words, VIZARD_GPU_COMMAND_CAPACITY,
+                                         &word_count)) {
+            fprintf(stderr, "Vizard: malformed or unterminated GP_GCODE stream "
+                            "(limit %u words)\n", VIZARD_GPU_COMMAND_CAPACITY);
             gpu.fault = true;
         } else {
             vizard_host_gpu_submit(words, word_count, frame_number(vizard_gp_frame));
@@ -273,13 +268,13 @@ int vizard_host_uart_read(void)
     return (int)vizard_uart_read32(&uart, VIZARD_UART_RX_DATA);
 }
 
-void uwrite_int8s_ISR_VIZZARD(int8_t *src)
+void uwrite_int8s_ISR_VIZARD(int8_t *src)
 {
     fputs((const char *)src, stdout);
     fflush(stdout);
 }
 
-void uwait_ISR_VIZZARD(void)
+void uwait_ISR_VIZARD(void)
 {
     fflush(stdout);
 }

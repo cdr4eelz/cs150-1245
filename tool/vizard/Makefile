@@ -27,10 +27,10 @@ vizard: src/main.c src/vizard_host.c src/vizard_host.h $(CORE_SRC) $(UART_SRC) v
 $(APP5_OBJ): $(APP5_SRC) src/vizard_host.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -I$(COMMON_DIR) -Isrc -DVIZARD -Dmain=vizard_app_main -c $< -o $@
 
-$(APP5_SHARED_OBJ): $(APP5_SHARED_SRC) ../../software/proj_app5/shared.h
-	$(CC) $(CPPFLAGS) $(CFLAGS) -I$(COMMON_DIR) -DVIZARD -c $< -o $@
+$(APP5_SHARED_OBJ): $(APP5_SHARED_SRC) ../../software/proj_app5/shared.h src/vizard_host.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -I$(COMMON_DIR) -Isrc -DVIZARD -c $< -o $@
 
-$(GRAPHICS_OBJ): $(COMMON_DIR)/graphics.c $(COMMON_DIR)/graphics.h src/vizard_host.h
+$(GRAPHICS_OBJ): $(COMMON_DIR)/graphics.c $(COMMON_DIR)/graphics.h src/vizard_host.h vizard.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -Isrc -DVIZARD -c $< -o $@
 
 check: tests/test_core tests/test_graphics_bridge

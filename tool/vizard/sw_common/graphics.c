@@ -5,7 +5,7 @@
 #endif
 #ifdef VIZARD
 #include "vizard_host.h"
-gpcode_t vizard_gptemp[GPTEMP_SZW];
+gpcode_t vizard_gptemp[GPTEMP_SZW + VIZARD_GPU_COMMAND_CAPACITY];
 #endif
 
 // *** HARDWARE IMPLEMENTATION ***
