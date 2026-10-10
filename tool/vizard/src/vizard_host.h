@@ -6,6 +6,7 @@
 
 #define VIZARD_GPU_COMMAND_CAPACITY 4096u
 
+void vizard_host_wait_pf_frame(unsigned int frame);
 bool vizard_host_init(void);
 void vizard_host_shutdown(void);
 void vizard_host_isr_status(unsigned int keep, unsigned int set);

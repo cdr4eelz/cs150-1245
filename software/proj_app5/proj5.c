@@ -38,7 +38,8 @@ void frame_gp_render(uint32_t frame) {
     GP_FRAME = frame;
     GP_GCODE = GPTEMP_BIG;
     GP_WAIT();
-    PF_FRAME = frame;
+    //PF_FRAME = frame;
+    PF_WAIT(frame);
 }
 
 
@@ -77,9 +78,11 @@ void main() {
             prevClock = tClock; // Advance whether or not printing enabled
         }
 
-        // Temporarily utilize just one frame
+        // Temporarily swap frames with a hack
         frame_gp_generate(1);
         frame_gp_render(1);
+        frame_gp_generate(2);
+        frame_gp_render(2);
     }
 
     uwait_ISR();

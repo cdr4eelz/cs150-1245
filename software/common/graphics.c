@@ -35,6 +35,19 @@ gpcode_p hw_OpRGB_PP_S(
 const cmd_pnt_t     null_pnt    = { .flags1 = 0x3F       };
 const cmd_xrgb32_t  null_xrgb32 = { .xrgb32 = 0xF101234A };
 
+void pf_wait(uint32_t frame)
+{
+    gframe_pv current_frame = PF_FRAME;
+    gframe_pv new_frame = FRAME_PTR(frame);
+
+    if (current_frame == new_frame) {
+        return;
+    }
+
+    PF_FRAME = new_frame;
+    while (PF_FRAME != new_frame) { }
+}
+
 
 // *** SOFTWARE IMPLEMENTATION ***
 

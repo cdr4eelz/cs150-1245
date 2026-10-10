@@ -3,6 +3,11 @@
 
 gpcode_t vizard_gptemp[GPTEMP_SZW + VIZARD_GPU_COMMAND_CAPACITY];
 
+void pf_wait(uint32_t frame)
+{
+    vizard_host_wait_pf_frame((uint32_t)(unsigned long)FRAME_PTR(frame));
+}
+
 gpcode_p hw_OpRGB_PP_S(
     gpcode_p bINST,
     const cmd_orgb28_t orgb28,

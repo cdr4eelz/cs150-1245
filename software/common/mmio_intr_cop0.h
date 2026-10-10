@@ -54,7 +54,7 @@ localparam [5:0]            //   DATA-ENCODING/DESC
     A_CntInst       =6'h05, // Number of instructions executed
 //h006    32'h80000018    Reset counts                  Write
     A_ResetCnt      =6'h06, // N/A (any byte will trigger)
-//h014    32'h80000050    PF_FRAME                      Write
+//h014    32'h80000050    PF_FRAME                      Read active / Write next
     A_PFFrame       =6'h14, // PixelFeeder frame# (ADDR is frame# * 0x0040_0000)
 //h015    32'h80000054    GP_FRAME                      Write
     A_GPFrame       =6'h15, // Stored, then "captured" along with GP_CODE on launch

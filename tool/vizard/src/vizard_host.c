@@ -28,6 +28,8 @@ static volatile unsigned int *active_rtc_count;
 static volatile unsigned int idle_seconds;
 static volatile unsigned int idle_clock;
 static volatile unsigned int idle_rtc_count;
+static volatile void *pending_pf_frame;
+static bool pf_frame_pending;
 
 volatile void * volatile vizard_pf_frame = (volatile void *)0x10400000u;
 volatile void * volatile vizard_gp_frame = (volatile void *)0x10400000u;
@@ -38,6 +40,11 @@ static unsigned int frame_number(volatile void *frame)
 {
     unsigned int address = (unsigned int)(unsigned long)frame;
     return (address >> 28) ? ((address >> 22) & 0x3fu) : (address & 0x3fu);
+}
+
+static unsigned int frame_address(unsigned int frame)
+{
+    return 0x10000000u | ((frame_number((volatile void *)(unsigned long)frame) & 0x3fu) << 22);
 }
 
 static unsigned int increment_bcd_clock(unsigned int clock)
@@ -217,6 +224,10 @@ bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clo
         }
     }
     if (now >= next_draw) {
+        if (pf_frame_pending) {
+            vizard_pf_frame = pending_pf_frame;
+            pf_frame_pending = false;
+        }
         draw_host_view(*seconds, *clock);
         next_draw = now + (1.0 / 60.0);
     }
@@ -243,6 +254,26 @@ void vizard_host_wait_gpu(void)
     volatile unsigned int *clock = active_clock ? active_clock : &idle_clock;
     volatile unsigned int *rtc_count = active_rtc_count ? active_rtc_count : &idle_rtc_count;
     while (vizard_gp_gcode != NULL) {
+        if (!vizard_host_poll(seconds, clock, rtc_count)) {
+            break;
+        }
+    }
+}
+
+void vizard_host_wait_pf_frame(unsigned int frame)
+{
+    unsigned int target = frame_address(frame);
+    if (frame_number(vizard_pf_frame) == frame_number((volatile void *)(unsigned long)target)) {
+        return;
+    }
+
+    pending_pf_frame = (volatile void *)(unsigned long)target;
+    pf_frame_pending = true;
+
+    volatile unsigned int *seconds = active_seconds ? active_seconds : &idle_seconds;
+    volatile unsigned int *clock = active_clock ? active_clock : &idle_clock;
+    volatile unsigned int *rtc_count = active_rtc_count ? active_rtc_count : &idle_rtc_count;
+    while (frame_number(vizard_pf_frame) != frame_number((volatile void *)(unsigned long)target)) {
         if (!vizard_host_poll(seconds, clock, rtc_count)) {
             break;
         }

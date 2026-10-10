@@ -18,11 +18,13 @@ void vizard_host_wait_gpu(void);
 #define GP_READY() (vizard_gp_gcode == NULL)
 #define GP_WAIT()  vizard_host_wait_gpu()
 #else
-#define PF_FRAME  (*((gframe_pv volatile *)MM_PF_FRAME)) //WRITE:PixelFeeder source frame addr/num
+#define PF_FRAME  (*((gframe_pv volatile *)MM_PF_FRAME)) //READ:Active; WRITE:Next PixelFeeder frame
 #define GP_FRAME  (*((gframe_pv volatile *)MM_GP_FRAME)) //WRITE:GraphicsProcessor frame addr/num
 #define GP_GCODE  (*((gpcode_p  volatile *)MM_GP_GCODE)) //WRITE:Set code-addr, trigger GP now!
 #define GP_STATE  (*((gstate_pv           )MM_GP_STATE)) //READ:Status of PIX,GP,etc.
 #endif
+void pf_wait(uint32_t frame);
+#define PF_WAIT(frame) pf_wait((uint32_t)(frame))
 
 //MEMORY FIXED GLOBAL TEMPORARIES
 //TODO: Allow dynamic location/size for temp GP commands (or map into BRAM, not DDR memory)

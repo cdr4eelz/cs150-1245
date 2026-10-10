@@ -13,6 +13,7 @@ volatile uint32_t vizard_gp_state_storage;
 static unsigned int submitted[8];
 static size_t submitted_count;
 static unsigned int submitted_frame;
+static unsigned int waited_frame;
 
 bool vizard_host_gpu_submit(const unsigned int *words, size_t word_count,
                             unsigned int frame)
@@ -30,6 +31,12 @@ void vizard_host_wait_gpu(void)
 {
 }
 
+void vizard_host_wait_pf_frame(unsigned int frame)
+{
+    waited_frame = frame;
+    vizard_pf_frame = (volatile void *)(unsigned long)frame;
+}
+
 int main(void)
 {
     gpcode_t queue[8];
@@ -44,6 +51,10 @@ int main(void)
     assert(submitted[3] == 0xffabcdefu);
     assert(submitted[4] == 0);
     assert(submitted_frame == 0x10800000u);
+
+    PF_WAIT(2);
+    assert(waited_frame == 0x10800000u);
+    assert((unsigned int)(unsigned long)vizard_pf_frame == waited_frame);
 
     cursor = hwq_rect(cursor, 0x00123456u, 1, 2, 10, 11, 0xffabcdefu);
     cursor = hwq_stop(cursor);

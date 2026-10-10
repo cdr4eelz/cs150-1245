@@ -43,7 +43,7 @@ localparam [5:0]            //   DATA-ENCODING/DESC
     A_CntInst       =6'h05, // Number of instructions executed
 //h006    32'h80000018    Reset counts                  Write
     A_ResetCnt      =6'h06, // N/A (any byte will trigger)
-//h014    32'h80000050    PF_FRAME                      Write
+//h014    32'h80000050    PF_FRAME                      Read active frame / Write next frame
     A_PFFrame       =6'h14, // PixelFeeder frame# (ADDR is frame# * 0x0040_0000)
 //h015    32'h80000054    GP_FRAME                      Write
     A_GPFrame       =6'h15, // Stored, then "captured" along with GP_CODE on launch
@@ -149,6 +149,7 @@ localparam [5:0]            //   DATA-ENCODING/DESC
             A_D0RxData  : MUX_DOUTA = {24'd0, Rx_Data};
             A_CntCycle  : MUX_DOUTA = CNT_Cycle[31:0];
             A_CntInst   : MUX_DOUTA = CNT_Inst[31:0];
+            A_PFFrame   : MUX_DOUTA = {4'h1, pf_status[13:8], 22'd0};
             //A_ResetCnt,A_PFFrame,A_GPFrame,A_GPCode
             A_GPUStatus : MUX_DOUTA = gpu_status_r;
             default: MUX_DOUTA = (BADNESS) ? BAD_WORD : 32'dx;
