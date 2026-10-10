@@ -13,4 +13,4 @@ nada.bin:
 clean:
 	rm -f nada.bin zeros.coe
 
-.phony: clean
+.PHONY: clean

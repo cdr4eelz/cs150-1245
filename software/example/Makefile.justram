@@ -43,5 +43,5 @@ mems: $(MEMS)
 clean:
 	rm -f rm *.bin *.coe *.mif *.mem *.v
 
-.phony: clean all count mifs coes mems vees asms
+.PHONY: clean all count mifs coes mems vees asms
 

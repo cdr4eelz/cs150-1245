@@ -54,7 +54,7 @@ $(DOFILES) : build/%.do : tests/%.do | builddir
 	echo 'proc start {m} {vsim $(XILINX_LIB_INC) work.glbl $$m}' \
 	| cat - $< > $@ 
 
-$(TESTINPUTSBUILD) : build/% : tests/%
+$(TESTINPUTSBUILD) : build/% : tests/% | builddir
 	cp $< $@
 
 $(TRANSCRIPT) : results/%.transcript : build/%.do $(STATUS) $(TESTINPUTSBUILD) | resultsdir

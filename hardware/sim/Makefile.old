@@ -18,8 +18,10 @@ $(STATUS): $(SRCS) | build/Makefile
 	make -C build
 	touch $@
 
-build/Makefile:
+builddir:
 	mkdir -p build
+
+build/Makefile: | builddir
 	(cd build; vlib work; vmap work work)
 	(cd build; for file in $(XILINX_LIBS_MAP); do \
 	vmap $$(basename $$file) $$file || exit 1; done)
@@ -34,12 +36,11 @@ build/Makefile:
 results:
 	mkdir -p results
 
-$(DOFILES) : build/%.do : tests/%.do
-	mkdir -p build
+$(DOFILES) : build/%.do : tests/%.do | builddir
 	echo 'proc start {m} {vsim $(XILINX_LIB_INC) work.glbl $$m}' \
 	| cat - $< > $@ 
 
-$(TESTINPUTSBUILD) : build/% : tests/%
+$(TESTINPUTSBUILD) : build/% : tests/% | builddir
 	cp $< $@
 	
 $(TRANSCRIPT) : results/%.transcript : build/%.do $(STATUS) $(TESTINPUTSBUILD) | results
@@ -50,4 +51,4 @@ $(TRANSCRIPT) : results/%.transcript : build/%.do $(STATUS) $(TESTINPUTSBUILD) |
 clean:
 	rm -rf results build
 
-.PHONY := all clean compile
+.PHONY := all clean compile builddir results

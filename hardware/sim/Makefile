@@ -22,9 +22,7 @@ $(STATUS): $(SRCS) | build/Makefile
 	make -C ./build work/ml505top/_primary.dat
 	touch $@
 
-build/Makefile:
-	mkdir -p /scratch/sim/build
-	[ -e build ] || ln -sf /scratch/sim/build build
+build/Makefile: | builddir
 	[ -e /scratch/sim/src || ln -sf -T $(realpath $(SRCDIR)) /scratch/sim/src
 	(cd build; vlib work; vmap work work)
 	(cd build; for file in $(XILINX_LIBS_MAP); do \
@@ -42,14 +40,12 @@ results:
 	[ -e results ] || ln -sf /scratch/sim/results results
 	[ -e /scratch/sim/sw ] || ln -sf -T $(realpath $(SWDIR)) /scratch/sim/sw
 
-$(DOFILES) : build/%.do : tests/%.do
-	mkdir -p /scratch/sim/build
-	[ -e build ] || ln -sf /scratch/sim/build build
+$(DOFILES) : build/%.do : tests/%.do | builddir
 	[ -e /scratch/sim/src ] || ln -sf -T $(realpath $(SRCDIR)) /scratch/sim/src
 	echo 'proc start {m} {vsim $(XILINX_LIB_INC) work.glbl $$m}' \
 	| cat - $< > $@ 
 
-$(TESTINPUTSBUILD) : build/% : tests/%
+$(TESTINPUTSBUILD) : build/% : tests/% | builddir
 	cp $< $@
 	
 $(TRANSCRIPT) : results/%.transcript : build/%.do $(STATUS) $(TESTINPUTSBUILD) | results
@@ -64,4 +60,8 @@ fresh:
 clean:
 	rm -rf /scratch/sim results build sw
 
-.PHONY := all clean compile fresh
+.PHONY := all clean compile fresh builddir results
+
+builddir:
+	mkdir -p /scratch/sim/build
+	[ -e build ] || ln -sf /scratch/sim/build build
