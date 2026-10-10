@@ -73,6 +73,16 @@ int main(void)
     assert(queue[2].u32 == 0x000a000bu);
     assert(queue[3].u32 == 0xffabcdefu);
     assert(queue[4].u32 == 0);
+
+    cursor = queue;
+    cursor = hwq_pixl(cursor, 0x00a1b2c3u, 7, 9);
+    cursor = hwq_stop(cursor);
+    assert((size_t)(cursor - queue) == 4);
+    assert(queue[0].u32 == 0x20a1b2c3u);
+    assert(queue[1].u32 == 0x00070009u);
+    assert(queue[2].u32 == 0x00070009u);
+    assert(queue[3].u32 == 0);
+
     puts("Vizard graphics bridge tests passed.");
     return 0;
 }

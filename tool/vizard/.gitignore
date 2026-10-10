@@ -1,6 +1,7 @@
 /vizard
 /tests/test_core
 /tests/test_graphics_bridge
+/tests/test_frame_extra_overflow
 /src/proj5_vizard.o
 /src/shared_vizard.o
 /src/graphics_vizard.o
