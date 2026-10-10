@@ -13,3 +13,6 @@ $(APP_SHARED_OBJ): $(APP_SHARED_SRC) $(APP_SHARED_HEADER) src/vizard_host.h $(CO
 
 $(GRAPHICS_OBJ): $(GRAPHICS_SRC) $(COMMON_DIR)/graphics.h src/vizard_host.h vizard.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(COMMON_DIR) -Isrc -DVIZARD -c $< -o $@
+
+clean-main:
+	rm -f vizard $(APP_OBJ) $(APP_SHARED_OBJ) $(GRAPHICS_OBJ)

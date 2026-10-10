@@ -13,6 +13,10 @@
         "**/*.o": true,
         "**/*.mif": true,
         "**/*.mem": true,
-        "**/*.syms": true
+        "**/*.syms": true,
+        "tool/vizard/vizard": true,
+        "tool/vizard/tests/test_core": true,
+        "tool/vizard/tests/test_graphics_bridge": true,
+        "tool/vizard/tests/test_frame_extra_overflow": true
     }
 }
