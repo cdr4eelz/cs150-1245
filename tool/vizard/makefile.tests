@@ -1,0 +1,20 @@
+check: tests/test_core tests/test_graphics_bridge tests/test_frame_extra_overflow
+	./tests/test_core
+	./tests/test_graphics_bridge
+	@output=$$(ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 ./tests/test_frame_extra_overflow 2>&1); status=$$?; \
+	if test $$status -eq 0 || ! printf '%s\n' "$$output" | grep -q 'AddressSanitizer: global-buffer-overflow'; then \
+		printf '%s\n' "$$output"; \
+		echo "Expected ASan global-buffer-overflow was not detected." >&2; \
+		exit 1; \
+	fi; \
+	printf '%s\n' "$$output" | grep -m1 'AddressSanitizer: global-buffer-overflow'; \
+	echo "FRAME_EXTRA_TAIL overflow caught by ASan as expected."
+
+tests/test_core: tests/test_core.c $(CORE_SRC) $(UART_SRC) $(UART_VIZARD_SRC) $(COMMON_HEADERS) vizard.h src/vizard_uart.h src/vizard_host.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(COMMON_DIR) -Isrc -DVIZARD tests/test_core.c $(CORE_SRC) $(UART_SRC) $(UART_VIZARD_SRC) -o $@ -lm
+
+tests/test_graphics_bridge: tests/test_graphics_bridge.c $(GRAPHICS_OBJ) $(COMMON_DIR)/graphics.h src/vizard_host.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(COMMON_DIR) -Isrc -DVIZARD $< $(GRAPHICS_OBJ) -o $@
+
+tests/test_frame_extra_overflow: tests/test_frame_extra_overflow.c $(GRAPHICS_OBJ) $(COMMON_DIR)/graphics.h src/vizard_host.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(COMMON_DIR) -Isrc -DVIZARD $< $(GRAPHICS_OBJ) -o $@
