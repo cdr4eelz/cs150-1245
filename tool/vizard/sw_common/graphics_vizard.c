@@ -2,6 +2,8 @@
 #include "vizard_host.h"
 
 gpcode_t vizard_gptemp[GPTEMP_SZW + VIZARD_GPU_COMMAND_CAPACITY];
+uint32_t vizard_frame_extra[VIZARD_EXTRA_FRAME_COUNT][FRAME_XTRAP]
+    __attribute__((aligned(FRAME_ALIGN_BYTES)));
 
 void pf_wait(uint32_t frame)
 {

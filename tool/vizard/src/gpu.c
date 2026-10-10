@@ -1,6 +1,5 @@
 #include "vizard.h"
 
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -80,6 +79,28 @@ static void draw_rect(VizardGpu *gpu, uint32_t *pixels, int x0, int y0,
     }
 }
 
+static void draw_ellipse_row(VizardGpu *gpu, uint32_t *pixels,
+                             int xc, int row, int x,
+                             uint32_t edge, uint32_t fill)
+{
+    int left = xc - x;
+    int right = xc + x;
+    for (int column = left; column <= right; ++column) {
+        put_pixel(gpu, pixels, column, row,
+                  column == left || column == right ? edge : fill);
+    }
+}
+
+static void draw_ellipse_scanlines(VizardGpu *gpu, uint32_t *pixels,
+                                   int xc, int yc, int x, int y,
+                                   uint32_t edge, uint32_t fill)
+{
+    draw_ellipse_row(gpu, pixels, xc, yc - y, x, edge, fill);
+    if (y != 0) {
+        draw_ellipse_row(gpu, pixels, xc, yc + y, x, edge, fill);
+    }
+}
+
 static void draw_ellipse(VizardGpu *gpu, uint32_t *pixels, int xc, int yc,
                          int a, int b, uint32_t edge, uint32_t fill)
 {
@@ -88,17 +109,50 @@ static void draw_ellipse(VizardGpu *gpu, uint32_t *pixels, int xc, int yc,
         return;
     }
 
-    double aa = (double)a * a;
-    double bb = (double)b * b;
-    for (int y = yc - b; y <= yc + b; ++y) {
-        for (int x = xc - a; x <= xc + a; ++x) {
-            double dx = (double)(x - xc);
-            double dy = (double)(y - yc);
-            double distance = dx * dx / aa + dy * dy / bb;
-            if (distance <= 1.0) {
-                put_pixel(gpu, pixels, x, y, distance >= 0.78 ? edge : fill);
-            }
+    uint32_t aa = (uint32_t)a * (uint32_t)a;
+    uint32_t bb = (uint32_t)b * (uint32_t)b;
+    uint32_t aabb = aa * bb;
+    uint32_t x_squared = 0;
+    uint32_t y_squared = (uint32_t)b;
+    uint32_t aay = aa * y_squared;
+    uint32_t bbx = 0;
+    uint32_t bb_twice_x_plus_three = (bb << 1) + bb;
+    int32_t stopper = (int32_t)((aa >> 1) + bb);
+    uint32_t decision = bb - aay + (aa >> 2);
+
+    draw_ellipse_scanlines(gpu, pixels, xc, yc, (int)x_squared,
+                           (int)y_squared, edge, fill);
+    while ((aay - bbx) > (uint32_t)stopper && y_squared > 0 &&
+           x_squared <= (uint32_t)a) {
+        if ((decision & 0x80000000u) == 0) {
+            decision += (aa << 1) - (aay << 1);
+            --y_squared;
+            aay -= aa;
         }
+        decision += (int32_t)bb_twice_x_plus_three;
+        ++x_squared;
+        bbx += bb;
+        bb_twice_x_plus_three += bb << 1;
+        draw_ellipse_scanlines(gpu, pixels, xc, yc, (int)x_squared,
+                               (int)y_squared, edge, fill);
+    }
+
+    uint32_t bb_twice_x_plus_two = bb_twice_x_plus_three - bb;
+    uint32_t x_expression = x_squared * x_squared + x_squared;
+    uint32_t y_minus_one = y_squared - 1;
+    decision = bb * x_expression + (bb >> 2) +
+               aa * y_minus_one * y_minus_one - aabb;
+    while (y_squared > 0 && x_squared <= (uint32_t)a) {
+        if ((decision & 0x80000000u) != 0) {
+            decision += bb_twice_x_plus_two;
+            ++x_squared;
+            bb_twice_x_plus_two += bb << 1;
+        }
+        decision += (aa << 1) + aa - (aay << 1);
+        --y_squared;
+        aay -= aa;
+        draw_ellipse_scanlines(gpu, pixels, xc, yc, (int)x_squared,
+                               (int)y_squared, edge, fill);
     }
 }
 

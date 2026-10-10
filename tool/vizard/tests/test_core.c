@@ -76,6 +76,32 @@ static void test_gpu_stream_word_count(void)
         truncated, sizeof(truncated) / sizeof(truncated[0]), &word_count));
 }
 
+static void test_ellipse_border_thickness(void)
+{
+    VizardGpu gpu;
+    assert(vizard_gpu_init(&gpu, 64, 64));
+
+    const uint32_t commands[] = {
+        0x30ff0000u, 0x00200020u, 0x0014000fu, 0xff0000ffu, 0
+    };
+    assert(vizard_gpu_submit(&gpu, commands,
+                             sizeof(commands) / sizeof(commands[0]), 0));
+
+    unsigned edge_pixels = 0;
+    for (unsigned x = 0; x < gpu.width; ++x) {
+        if (pixel(&gpu, 0, x, 32) == 0xffff0000u) {
+            ++edge_pixels;
+        }
+    }
+    assert(edge_pixels == 2);
+    assert(pixel(&gpu, 0, 12, 32) == 0xffff0000u);
+    assert(pixel(&gpu, 0, 13, 32) == 0xff0000ffu);
+    assert(pixel(&gpu, 0, 52, 32) == 0xffff0000u);
+    assert(pixel(&gpu, 0, 51, 32) == 0xff0000ffu);
+
+    vizard_gpu_dispose(&gpu);
+}
+
 static void test_uart_registers(void)
 {
     VizardUart uart;
@@ -99,6 +125,7 @@ int main(void)
 {
     test_gpu_commands();
     test_gpu_stream_word_count();
+    test_ellipse_border_thickness();
     test_uart_registers();
     puts("Vizard core tests passed.");
     return 0;

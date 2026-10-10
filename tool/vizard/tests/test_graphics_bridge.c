@@ -52,6 +52,15 @@ int main(void)
     assert(submitted[4] == 0);
     assert(submitted_frame == 0x10800000u);
 
+    pixel_pv extra0 = FRAME_EXTRA_TAIL(0);
+    pixel_pv extra1 = FRAME_EXTRA_TAIL(1);
+    pixel_pv extra9 = FRAME_EXTRA_TAIL(9);
+    assert((unsigned long)extra0 % FRAME_ALIGN_BYTES == 0);
+    assert(extra1 - extra0 == FRAME_XTRAP);
+    assert(extra9 - extra0 == 9 * FRAME_XTRAP);
+    assert(FRAME_XTRAP == FRAME_XTRAR * ROW_OFFSETP + ROW_XTRAP);
+    assert(FRAME_XTRAP == 434400);
+
     PF_WAIT(2);
     assert(waited_frame == 0x10800000u);
     assert((unsigned int)(unsigned long)vizard_pf_frame == waited_frame);

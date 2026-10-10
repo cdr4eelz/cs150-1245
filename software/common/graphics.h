@@ -59,7 +59,12 @@ void pf_wait(uint32_t frame);
 #define FRAME_OFFSETP (FRAME_OFFSETR*ROW_OFFSETC*COL_OFFSETP) //1MP   (0x00100000)
 #define FRAME_OFFSETB (0x00400000)    //4MB (0x00400000)
 #define FRAME_XTRAR  (FRAME_OFFSETR-ROW_SIZEP)     //1KR-600P= 424P  (0x1A8)
-#define FRAME_XTRAP  (FRAME_OFFSETP-x)     //1MP-600P= 424P  (0x...)
+#define FRAME_ACTIVE_ENDP (((ROW_SIZEP-1)*ROW_OFFSETP)+COL_SIZEP)
+#define FRAME_ACTIVE_ENDB (FRAME_ACTIVE_ENDP*PIX_SIZEB)
+// Contiguous words after the last visible pixel and before the next frame.
+#define FRAME_XTRAP  (FRAME_OFFSETP-FRAME_ACTIVE_ENDP)
+#define FRAME_ALIGN_WORDS (16)
+#define FRAME_ALIGN_BYTES (FRAME_ALIGN_WORDS*PIX_SIZEB)
 #define PIX_SIZEF   (4*FRAME_SIZEP) //2400KB (0x00258000)
 #define PIX_LASTB     (0x00257C7C)    //2396KB+3196B (0x00257C7C)
 #define PIX_XTRAP  (Ay+Bx-AB)     //1MP-600P= 424P  (0x...)
@@ -129,6 +134,18 @@ typedef volatile gframe_tp gframe_tv, *gframe_pv;
 #define PIX_PTR(FP,X,Y) ( (pixel_pv) (                    \
     ((uint32_t)(FP)) | ((Y)<<(YSHIFT)) | ((X)<<(XSHIFT)) ) )
 #define FRAME_PTR(F)  ( std_frame((uint32_t)(F)) )
+#define FRAME_INDEX(F) ((((uint32_t)(unsigned long)FRAME_PTR(F)) >> FSHIFT) & FNMASK)
+
+#ifdef VIZARD
+#define VIZARD_EXTRA_FRAME_COUNT (10)
+extern uint32_t vizard_frame_extra[VIZARD_EXTRA_FRAME_COUNT][FRAME_XTRAP];
+#define FRAME_EXTRA_TAIL(F) \
+    (vizard_frame_extra[FRAME_INDEX(F)])
+#else
+#define FRAME_EXTRA_TAIL(F) \
+    ((pixel_pv)((((uint32_t)(unsigned long)FRAME_PTR(F) + FRAME_ACTIVE_ENDB + \
+                  (FRAME_ALIGN_BYTES-1)) / FRAME_ALIGN_BYTES) * FRAME_ALIGN_BYTES))
+#endif
 
 //TODO: Make "std_frame" a macro so compiler can compute
 inline __attribute__((always_inline))
