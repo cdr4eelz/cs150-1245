@@ -38,13 +38,13 @@ volatile unsigned int vizard_gp_state_storage = 0xf8000000u;
 
 static unsigned int frame_number(volatile void *frame)
 {
-    unsigned int address = (unsigned int)(unsigned long)frame;
+    unsigned int address = (unsigned int)(uintptr_t)frame;
     return (address >> 28) ? ((address >> 22) & 0x3fu) : (address & 0x3fu);
 }
 
 static unsigned int frame_address(unsigned int frame)
 {
-    return 0x10000000u | ((frame_number((volatile void *)(unsigned long)frame) & 0x3fu) << 22);
+    return 0x10000000u | ((frame_number((volatile void *)(uintptr_t)frame) & 0x3fu) << 22);
 }
 
 static unsigned int increment_bcd_clock(unsigned int clock)
@@ -263,17 +263,17 @@ void vizard_host_wait_gpu(void)
 void vizard_host_wait_pf_frame(unsigned int frame)
 {
     unsigned int target = frame_address(frame);
-    if (frame_number(vizard_pf_frame) == frame_number((volatile void *)(unsigned long)target)) {
+    if (frame_number(vizard_pf_frame) == frame_number((volatile void *)(uintptr_t)target)) {
         return;
     }
 
-    pending_pf_frame = (volatile void *)(unsigned long)target;
+    pending_pf_frame = (volatile void *)(uintptr_t)target;
     pf_frame_pending = true;
 
     volatile unsigned int *seconds = active_seconds ? active_seconds : &idle_seconds;
     volatile unsigned int *clock = active_clock ? active_clock : &idle_clock;
     volatile unsigned int *rtc_count = active_rtc_count ? active_rtc_count : &idle_rtc_count;
-    while (frame_number(vizard_pf_frame) != frame_number((volatile void *)(unsigned long)target)) {
+    while (frame_number(vizard_pf_frame) != frame_number((volatile void *)(uintptr_t)target)) {
         if (!vizard_host_poll(seconds, clock, rtc_count)) {
             break;
         }

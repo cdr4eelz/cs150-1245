@@ -1,17 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <math.h>
+// Uses standard <stdint.h> and <stdbool.h>; standard C has no <types.h> header.
 
-// Subset of cs150 "types.h"
-typedef int   int32_t;
-typedef short int16_t;
-//typedef char  int8_t;
-typedef unsigned int   uint32_t;
-typedef unsigned short uint16_t;
-typedef unsigned char  uint8_t;
-#define BOOL  _Bool
-#define TRUE  ((BOOL)1)
-#define FALSE ((BOOL)0)
+//Redefine boolean stuff even though we now use <stdbool.h>
+#define BOOL  bool
+#define TRUE  true
+#define FALSE false
 
 // Fake subset of cs150 "graphics.h"
 typedef uint32_t gframe_pv;

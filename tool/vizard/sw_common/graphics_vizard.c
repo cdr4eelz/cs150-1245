@@ -7,7 +7,7 @@ uint32_t vizard_frame_extra[VIZARD_EXTRA_FRAME_COUNT][FRAME_XTRAP]
 
 void pf_wait(uint32_t frame)
 {
-    vizard_host_wait_pf_frame((uint32_t)(unsigned long)FRAME_PTR(frame));
+    vizard_host_wait_pf_frame((uint32_t)(uintptr_t)FRAME_PTR(frame));
 }
 
 gpcode_p hw_OpRGB_PP_S(
@@ -37,7 +37,7 @@ gpcode_p hw_OpRGB_PP_S(
         (*pINST++).fORGB28 = CMD_STOP();
         vizard_host_gpu_submit((const unsigned int *)GPTEMP_PTR,
                                (size_t)(pINST - GPTEMP_PTR),
-                               (unsigned int)(unsigned long)GP_FRAME);
+                               (unsigned int)(uintptr_t)GP_FRAME);
     }
     return pINST;
 }

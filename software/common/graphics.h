@@ -134,7 +134,11 @@ typedef volatile gframe_tp gframe_tv, *gframe_pv;
 #define PIX_PTR(FP,X,Y) ( (pixel_pv) (                    \
     ((uint32_t)(FP)) | ((Y)<<(YSHIFT)) | ((X)<<(XSHIFT)) ) )
 #define FRAME_PTR(F)  ( std_frame((uint32_t)(F)) )
-#define FRAME_INDEX(F) ((((uint32_t)(unsigned long)FRAME_PTR(F)) >> FSHIFT) & FNMASK)
+#ifdef VIZARD
+#define FRAME_INDEX(F) ((((uint32_t)(uintptr_t)FRAME_PTR(F)) >> FSHIFT) & FNMASK)
+#else
+#define FRAME_INDEX(F) ((((uint32_t)FRAME_PTR(F)) >> FSHIFT) & FNMASK)
+#endif
 
 #ifdef VIZARD
 #define VIZARD_EXTRA_FRAME_COUNT (10)
@@ -143,8 +147,9 @@ extern uint32_t vizard_frame_extra[VIZARD_EXTRA_FRAME_COUNT][FRAME_XTRAP];
     (vizard_frame_extra[FRAME_INDEX(F)])
 #else
 #define FRAME_EXTRA_TAIL(F) \
-    ((pixel_pv)((((uint32_t)(unsigned long)FRAME_PTR(F) + FRAME_ACTIVE_ENDB + \
-                  (FRAME_ALIGN_BYTES-1)) / FRAME_ALIGN_BYTES) * FRAME_ALIGN_BYTES))
+    ((uint32_t *)((((uint32_t)FRAME_PTR(F) + \
+                  FRAME_ACTIVE_ENDB + (FRAME_ALIGN_BYTES-1)) / \
+                  FRAME_ALIGN_BYTES) * FRAME_ALIGN_BYTES))
 #endif
 
 //TODO: Make "std_frame" a macro so compiler can compute
@@ -154,7 +159,7 @@ gframe_pv std_frame(uint32_t const fn_or_fp)
     uint32_t fp = (fn_or_fp & (FPMASK));
     if (!fp) fp = (0x10000000 | ((fn_or_fp & (FNMASK)) << (FSHIFT)));
 #ifdef VIZARD
-    return (gframe_pv)(unsigned long)fp;
+    return (gframe_pv)(uintptr_t)fp;
 #else
     return (gframe_pv)fp;
 #endif

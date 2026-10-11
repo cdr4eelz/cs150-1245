@@ -14,7 +14,7 @@ int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located
 
 void frame_gp_generate(uint32_t frame) {
     gpcode_p pINST;
-    const gpcode_p pSEQUENCE = FRAME_EXTRA_TAIL(frame);
+    const gpcode_p pSEQUENCE = (gpcode_p)FRAME_EXTRA_TAIL(frame);
 
     pINST = pSEQUENCE;
     pINST = hwq_fill(pINST, 0x00002233u);
@@ -40,11 +40,11 @@ void frame_gp_generate(uint32_t frame) {
 }
 
 void frame_gp_render(uint32_t frame) {
-    GP_FRAME = frame;
-    GP_GCODE = FRAME_EXTRA_TAIL(frame);
-    GP_WAIT();
-    //PF_FRAME = frame;
-    PF_WAIT(frame);
+    GP_WAIT(); //Just in case, harmless if not needed
+    GP_FRAME = FRAME_PTR(frame);
+    GP_GCODE = (gpcode_p)FRAME_EXTRA_TAIL(frame);
+    GP_WAIT(); //TODO: Consider 3-frame flipping and performing CPU actions rather than waiting here
+    PF_WAIT(frame); //WAS: PF_FRAME = frame;
 }
 
 

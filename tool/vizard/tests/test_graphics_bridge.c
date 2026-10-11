@@ -34,7 +34,7 @@ void vizard_host_wait_gpu(void)
 void vizard_host_wait_pf_frame(unsigned int frame)
 {
     waited_frame = frame;
-    vizard_pf_frame = (volatile void *)(unsigned long)frame;
+    vizard_pf_frame = (volatile void *)(uintptr_t)frame;
 }
 
 int main(void)
@@ -52,10 +52,10 @@ int main(void)
     assert(submitted[4] == 0);
     assert(submitted_frame == 0x10800000u);
 
-    pixel_pv extra0 = FRAME_EXTRA_TAIL(0);
-    pixel_pv extra1 = FRAME_EXTRA_TAIL(1);
-    pixel_pv extra9 = FRAME_EXTRA_TAIL(9);
-    assert((unsigned long)extra0 % FRAME_ALIGN_BYTES == 0);
+    uint32_t *extra0 = FRAME_EXTRA_TAIL(0);
+    uint32_t *extra1 = FRAME_EXTRA_TAIL(1);
+    uint32_t *extra9 = FRAME_EXTRA_TAIL(9);
+    assert((uintptr_t)extra0 % FRAME_ALIGN_BYTES == 0);
     assert(extra1 - extra0 == FRAME_XTRAP);
     assert(extra9 - extra0 == 9 * FRAME_XTRAP);
     assert(FRAME_XTRAP == FRAME_XTRAR * ROW_OFFSETP + ROW_XTRAP);
@@ -63,7 +63,7 @@ int main(void)
 
     PF_WAIT(2);
     assert(waited_frame == 0x10800000u);
-    assert((unsigned int)(unsigned long)vizard_pf_frame == waited_frame);
+    assert((unsigned int)(uintptr_t)vizard_pf_frame == waited_frame);
 
     cursor = hwq_rect(cursor, 0x00123456u, 1, 2, 10, 11, 0xffabcdefu);
     cursor = hwq_stop(cursor);
