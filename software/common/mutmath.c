@@ -1,14 +1,21 @@
 #include "mutmath.h"
 
-uint32_t mul32u(uint16_t n, uint16_t m)
-__attribute__ ((weak, alias ("mut_mul32u_branchless") ));
+uint32_t mul16u32u(uint16_t n, uint16_t m)
+__attribute__ ((weak, alias ("mut_mul16u32u_branchless") ));
 
-uint32_t sqr32u(uint16_t n)
-__attribute__ ((weak, alias ("mut_sqr32u_branchless") ));
+uint32_t mul32u32u(uint32_t n, uint32_t m)
+__attribute__ ((weak, alias ("mut_mul32u32u_quick") ));
+
+
+uint32_t sqr16u32u(uint16_t n)
+__attribute__ ((weak, alias ("mut_sqr16u32u_branchless") ));
+
+uint32_t sqr32u32u(uint32_t n)
+__attribute__ ((weak, alias ("mut_sqr32u32u_mul") ));
 
 
 /*
-uint32_t mut_mul32u_naive(uint16_t n, uint16_t m)
+uint32_t mut_mul16u32u_naive(uint16_t n, uint16_t m)
 {
 //  return n*m;
     uint32_t prod = 0;
@@ -24,7 +31,7 @@ uint32_t mut_mul32u_naive(uint16_t n, uint16_t m)
 
 /*
 // Russian Peasant / Binary Long Multiplication algorithm
-uint32_t mut_mul32u_quick(uint16_t a, uint16_t b) {
+uint32_t mut_mul16u32u_quick(uint16_t a, uint16_t b) {
     uint32_t aa = a, bb = b, result = 0;
     while (bb) {
         if (bb & 1) {
@@ -37,6 +44,19 @@ uint32_t mut_mul32u_quick(uint16_t a, uint16_t b) {
 }
 */
 
+// Russian Peasant / Binary Long Multiplication algorithm
+uint32_t mut_mul32u32u_quick(uint32_t a, uint32_t b) {
+    uint32_t aa = a, bb = b, result = 0;
+    while (bb) {
+        if (bb & 1) {
+            result += aa;
+        }
+        aa <<= 1;
+        bb >>= 1;
+    }
+    return result;
+}
+
 /**
  * @brief Product of two unsigned 16-bit integers as 32-bit .
  * @note Completely branchless and unrolled to maximize execution speed on MIPS I.
@@ -44,7 +64,7 @@ uint32_t mut_mul32u_quick(uint16_t a, uint16_t b) {
  * @param m2 Second unsigned 16-bit operand.
  * @return The unsigned 32-bit result (m1 * m2).
  */
-uint32_t mut_mul32u_branchless(uint16_t m1, uint16_t m2) {
+uint32_t mut_mul16u32u_branchless(uint16_t m1, uint16_t m2) {
     uint32_t r = 0;
     uint32_t a = m1;
     uint32_t b = m2;
@@ -129,14 +149,14 @@ int32_t mut_mul32s_branchless(int16_t m1, int16_t m2) {
 // SQUARE (n * n) functions:
 
 /*
-uint32_t mut_sqr32u_mul(uint16_t n)
+uint32_t mut_sqr16u32u_mul(uint16_t n)
 {
-    mul32u(n,n); // Use whicever multiplication function is active
+    mul16u32u(n,n); // Use whicever multiplication function is active
 }
 */
 
 // Branchless 16-bit squaring for MIPS-I (No multiplication)
-uint32_t mut_sqr32u_branchless(uint16_t x) {
+uint32_t mut_sqr16u32u_branchless(uint16_t x) {
     uint32_t res = 0;
     uint32_t accum = x;
 
@@ -160,4 +180,10 @@ uint32_t mut_sqr32u_branchless(uint16_t x) {
     res += accum & (-((int32_t)(x & (1 << 15)) >> 15));
 
     return res;
+}
+
+
+uint32_t mut_sqr32u32u_mul(uint32_t n)
+{
+    mul32u32u(n,n); // Use whicever multiplication function is active
 }

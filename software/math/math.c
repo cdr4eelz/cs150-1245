@@ -9,12 +9,12 @@
 
 typedef void (*entry_t)(void);
 
-void test_mul32u(uint16_t n, uint16_t m, uint32_t ref)
+void test_mul16u32u(uint16_t n, uint16_t m, uint32_t ref)
 {
     int8_t buffer[256];
-    uint32_t res = mul32u(n, m);
+    uint32_t res = mul16u32u(n, m);
     
-    uwrite_int8s("mul32u: ");
+    uwrite_int8s("mul16u32u: ");
     uwrite_int8s(uint32_to_ascii_dec(n, buffer, 256));
     uwrite_int8s(" x ");
     uwrite_int8s(uint32_to_ascii_dec(m, buffer, 256));
@@ -25,12 +25,12 @@ void test_mul32u(uint16_t n, uint16_t m, uint32_t ref)
     uwrite_int8s("]\n\r");
 }
 
-void test_sqr32u(uint16_t n, uint32_t ref)
+void test_sqr16u32u(uint16_t n, uint32_t ref)
 {
     int8_t buffer[256];
-    uint32_t res = sqr32u(n);
+    uint32_t res = sqr16u32u(n);
 
-    uwrite_int8s("sqr32u: ");
+    uwrite_int8s("sqr16u32u: ");
     uwrite_int8s(uint32_to_ascii_dec(n, buffer, 256));
     uwrite_int8s(" = ");
     uwrite_int8s(uint32_to_ascii_dec(res, buffer, 256));
@@ -43,16 +43,16 @@ void main() {
     //run_and_time(&mmult);
 
     uwrite_int8s("\n\rUnsigned Multiply:\n\r");
-    test_mul32u(  5,   4, 20);
-    test_mul32u( -1, 100, 6553500);
-    test_mul32u(  5,   5, 25);
-    test_mul32u( -1,  -1, 4294836225);
+    test_mul16u32u(  5,   4, 20);
+    test_mul16u32u( -1, 100, 6553500);
+    test_mul16u32u(  5,   5, 25);
+    test_mul16u32u( -1,  -1, 4294836225);
 
     uwrite_int8s("\n\rUnsigned Square\n\r");
-    test_sqr32u(    5, 25);
-    test_sqr32u(   -1, 4294836225);
-    test_sqr32u(12345, 152399025);
-    test_sqr32u( 9999, 99980001);
+    test_sqr16u32u(    5, 25);
+    test_sqr16u32u(   -1, 4294836225);
+    test_sqr16u32u(12345, 152399025);
+    test_sqr16u32u( 9999, 99980001);
 
     uint32_t bios = 0x40000000;
     entry_t start = (entry_t) (bios);

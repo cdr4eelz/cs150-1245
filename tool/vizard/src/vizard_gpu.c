@@ -113,12 +113,12 @@ static void draw_ellipse_scanlines(VizardGpu *gpu, uint32_t *pixels,
     }
 }
 
-static uint32_t swelip_mul32u(uint32_t left, uint32_t right)
+static uint32_t swelip_mul16u32u(uint16_t left, uint16_t right)
     __attribute__((unused));
 
-static uint32_t swelip_mul32u(uint32_t left, uint32_t right)
+static uint32_t swelip_mul16u32u(uint16_t left, uint16_t right)
 {
-    return (uint32_t)(uint16_t)left * (uint16_t)right;
+    return (uint32_t)(left * right);
 }
 
 static uint32_t swelip_mul32u_full(uint32_t left, uint32_t right)
