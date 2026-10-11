@@ -66,6 +66,8 @@ static void draw_line(VizardGpu *gpu, uint32_t *pixels, int x0, int y0,
 static void draw_rect(VizardGpu *gpu, uint32_t *pixels, int x0, int y0,
                       int x1, int y1, uint32_t edge, uint32_t fill)
 {
+    bool fill_active = (fill & 0xff000000u) != 0;
+    fill = opaque_color(fill);
     int left = x0 < x1 ? x0 : x1;
     int right = x0 > x1 ? x0 : x1;
     int top = y0 < y1 ? y0 : y1;
@@ -74,7 +76,11 @@ static void draw_rect(VizardGpu *gpu, uint32_t *pixels, int x0, int y0,
     for (int y = top; y <= bottom; ++y) {
         for (int x = left; x <= right; ++x) {
             bool is_edge = x == left || x == right || y == top || y == bottom;
-            put_pixel(gpu, pixels, x, y, is_edge ? edge : fill);
+            if (is_edge) {
+                put_pixel(gpu, pixels, x, y, edge);
+            } else if (fill_active) {
+                put_pixel(gpu, pixels, x, y, fill);
+            }
         }
     }
 }
@@ -83,11 +89,16 @@ static void draw_ellipse_row(VizardGpu *gpu, uint32_t *pixels,
                              int xc, int row, int x,
                              uint32_t edge, uint32_t fill)
 {
+    bool fill_active = (fill & 0xff000000u) != 0;
+    fill = opaque_color(fill);
     int left = xc - x;
     int right = xc + x;
     for (int column = left; column <= right; ++column) {
-        put_pixel(gpu, pixels, column, row,
-                  column == left || column == right ? edge : fill);
+        if (column == left || column == right) {
+            put_pixel(gpu, pixels, column, row, edge);
+        } else if (fill_active) {
+            put_pixel(gpu, pixels, column, row, fill);
+        }
     }
 }
 
@@ -288,7 +299,7 @@ bool vizard_gpu_submit(VizardGpu *gpu, const uint32_t *words, size_t word_count,
             continue;
         }
 
-        uint32_t fill = opaque_color(words[index++]);
+        uint32_t fill = words[index++];
         ++gpu->commands_processed;
         if (opcode == GOP_RECT) {
             draw_rect(gpu, pixels, x0, y0, x1, y1, edge, fill);

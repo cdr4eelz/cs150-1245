@@ -75,6 +75,37 @@ static void test_pixel_command(void)
     vizard_gpu_dispose(&gpu);
 }
 
+static void test_shape_fill_transparency(void)
+{
+    VizardGpu gpu;
+    assert(vizard_gpu_init(&gpu, 16, 16));
+
+    const uint32_t transparent_rect[] = {
+        0x40ff0000u, 0x00030003u, 0x000a000au, 0x00112233u, 0
+    };
+    assert(vizard_gpu_submit(&gpu, transparent_rect,
+                             sizeof(transparent_rect) / sizeof(transparent_rect[0]), 0));
+    assert(pixel(&gpu, 0, 3, 6) == 0xffff0000u);
+    assert(pixel(&gpu, 0, 6, 6) == 0);
+
+    const uint32_t flagged_rect[] = {
+        0x40ff0000u, 0x00030003u, 0x000a000au, 0x01010203u, 0
+    };
+    assert(vizard_gpu_submit(&gpu, flagged_rect,
+                             sizeof(flagged_rect) / sizeof(flagged_rect[0]), 1));
+    assert(pixel(&gpu, 1, 6, 6) == 0xff010203u);
+
+    const uint32_t transparent_ellipse[] = {
+        0x30ff0000u, 0x00080008u, 0x00040003u, 0x00112233u, 0
+    };
+    assert(vizard_gpu_submit(&gpu, transparent_ellipse,
+                             sizeof(transparent_ellipse) / sizeof(transparent_ellipse[0]), 2));
+    assert(pixel(&gpu, 2, 8, 5) == 0xffff0000u);
+    assert(pixel(&gpu, 2, 8, 8) == 0);
+
+    vizard_gpu_dispose(&gpu);
+}
+
 static void test_gpu_stream_word_count(void)
 {
     const uint32_t commands[] = {
@@ -144,6 +175,7 @@ int main(void)
 {
     test_gpu_commands();
     test_pixel_command();
+    test_shape_fill_transparency();
     test_gpu_stream_word_count();
     test_ellipse_border_thickness();
     test_uart_registers();
