@@ -10,6 +10,8 @@ In a prior attempt to port the XUPv5/ISE based original work to a PYNQ or ARTY b
 
 In a minimal and infrequent fashion, an AI change to "Vizard" (which is entirely AI developed), touches shared "software/common/..." files beyond the obvious tweaks to code guarded by "VIZARD" macro checks.
 
+Nowadays, web-searches tend to include an AI response which may be used for follow-up information queries. These were searched on occasion when seeking implementation or development tool documentation. Grok was used too, but both of these activities were primarily done during the attempt at the unsuccessful Vivado/PYNQ/ARTY port.
+
 ## Demonstration Goals
 
 - Compare GPU hardware rendering with software rendering. Decide whether to report cycle counts, elapsed time, or both.

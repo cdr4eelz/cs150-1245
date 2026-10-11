@@ -11,21 +11,23 @@ APP_SHARED_SRC := $(APP_SRC_DIR)/$(APP_SNAME).c
 APP_SHARED_HEADER := $(APP_SRC_DIR)/$(APP_SNAME).h
 APP_COMMON_DIR := ../../software/common
 APP_COMMON_HEADERS := $(wildcard $(APP_COMMON_DIR)/*.h)
-UART_SRC := $(APP_COMMON_DIR)/uart.c
+APP_ASCII_SRC := $(APP_COMMON_DIR)/ascii.c
+APP_UART_SRC := $(APP_COMMON_DIR)/uart.c
 
 APP_OBJ := $(BUILD_DIR)/$(notdir $(APP_SRC:.c=_vizard.o))
 APP_SHARED_OBJ := $(BUILD_DIR)/$(notdir $(APP_SHARED_SRC:.c=_vizard.o))
 
+VIZARD_GPU_SRC := src/vizard_gpu.c
+VIZARD_SRCS := src/vizard_main.c src/vizard_host.c
+VIZARD_HDRS := src/vizard_host.h src/vizard_uart.h src/vizard_gpu.h
+VIZARD_COMMON_DIR := sw_common
+VIZARD_UART_SRC := $(VIZARD_COMMON_DIR)/uart_vizard.c
+VIZARD_GRAPHICS_SRC := $(VIZARD_COMMON_DIR)/graphics_vizard.c
+VIZARD_GRAPHICS_OBJ := $(BUILD_DIR)/$(notdir $(VIZARD_GRAPHICS_SRC:.c=.o))
+
+#EXTERNAL LIBRARY DEPENDENCIES:
 RAYLIB_CFLAGS := $(shell pkg-config --cflags raylib 2>/dev/null)
 RAYLIB_LIBS := $(shell pkg-config --libs raylib 2>/dev/null)
-
-CORE_SRC := src/vizard_gpu.c
-VIZARD_SRCS := src/vizard_main.c src/vizard_host.c
-VIZARD_HDRS := src/vizard_host.h src/vizard_uart.h vizard.h
-VIZARD_COMMON_DIR := sw_common
-GRAPHICS_SRC := $(VIZARD_COMMON_DIR)/graphics_vizard.c
-UART_VIZARD_SRC := $(VIZARD_COMMON_DIR)/uart_vizard.c
-GRAPHICS_OBJ := $(BUILD_DIR)/$(notdir $(GRAPHICS_SRC:.c=.o))
 
 CC ?= gcc
 CPPFLAGS ?= -I.
@@ -44,7 +46,7 @@ clean: clean-tests clean-main
 $(BUILD_DIR):
 	mkdir -p $@
 
-$(APP_OBJ) $(APP_SHARED_OBJ) $(GRAPHICS_OBJ): | $(BUILD_DIR)
+$(APP_OBJ) $(APP_SHARED_OBJ) $(VIZARD_GRAPHICS_OBJ): | $(BUILD_DIR)
 
 check:
 

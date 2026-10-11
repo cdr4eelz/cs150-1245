@@ -1,5 +1,5 @@
-#include "vizard.h"
 #include "vizard_host.h"
+#include "vizard_gpu.h"
 
 #include <stdio.h>
 

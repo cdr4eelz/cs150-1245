@@ -1,14 +1,16 @@
-#ifndef VIZARD_H
-#define VIZARD_H
+#ifndef VIZARD_GPU_H
+#define VIZARD_GPU_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
 #include "vizard_uart.h"
 
 #define VIZARD_SCREEN_WIDTH 800
 #define VIZARD_SCREEN_HEIGHT 600
-#define VIZARD_FRAME_COUNT 64
+#define VIZARD_FRAME_COUNT 16
+
 typedef struct {
     uint32_t *pixels;
 } VizardFrame;

@@ -1,4 +1,4 @@
-#include "vizard.h"
+#include "vizard_gpu.h"
 
 #include <assert.h>
 #include <stdio.h>
