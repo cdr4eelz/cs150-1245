@@ -1,9 +1,15 @@
 ELF_INPUT = $(CSRCS) $(SSRCS) $(NOPTOBJS)
 ELF_CCOPT = $(CCMIPS) $(FIXED_CCOPTS) $(CCOPTS) $(OPTOPT) -Wl,--no-relax
 
+.DEFAULT_GOAL := default
+.PHONY: default all fresh
+
 default: all
 
 all: elf dump syms $(SECS)
 #all: $(TARGET).coe $(TARGET).mif
+
+fresh: clean
+	$(MAKE) all
 
 include ../makefile.all
