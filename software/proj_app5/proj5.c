@@ -35,6 +35,9 @@ void frame_gp_generate(uint32_t frame) {
         }
     }
     
+    pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 100, 299, 0x00000000);
+    pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 399, 299, 0x00000000);
+
     pINST = hwq_stop(pINST);
     GP_WAIT();
 }
