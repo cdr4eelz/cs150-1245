@@ -2,4 +2,4 @@
 /tests/test_core
 /tests/test_graphics_bridge
 /tests/test_frame_extra_overflow
-/objs/
+/build/

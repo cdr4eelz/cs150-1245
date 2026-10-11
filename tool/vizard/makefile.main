@@ -1,18 +1,18 @@
-vizard: $(VIZARD_SRCS) $(VIZARD_HDRS) $(CORE_SRC) $(COMMON_DIR)/ascii.c $(GRAPHICS_SRC) $(UART_SRC) $(UART_VIZARD_SRC) $(COMMON_HEADERS) $(APP_OBJ) $(APP_SHARED_OBJ) $(GRAPHICS_OBJ)
+vizard: $(VIZARD_SRCS) $(VIZARD_HDRS) $(CORE_SRC) $(APP_COMMON_DIR)/ascii.c $(GRAPHICS_SRC) $(UART_SRC) $(UART_VIZARD_SRC) $(APP_COMMON_HEADERS) $(APP_OBJ) $(APP_SHARED_OBJ) $(GRAPHICS_OBJ)
 	@if ! pkg-config --exists raylib; then \
 		echo "Raylib is required to build the graphical app (pkg-config package: raylib)." >&2; \
 		exit 1; \
 	fi
-	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(COMMON_DIR) -Isrc -DVIZARD $(RAYLIB_CFLAGS) $(VIZARD_SRCS) $(CORE_SRC) $(COMMON_DIR)/ascii.c $(GRAPHICS_SRC) $(UART_SRC) $(UART_VIZARD_SRC) $(APP_OBJ) $(APP_SHARED_OBJ) -o $@ $(RAYLIB_LIBS) -lm
+	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(APP_COMMON_DIR) -Isrc -DVIZARD $(RAYLIB_CFLAGS) $(VIZARD_SRCS) $(CORE_SRC) $(APP_COMMON_DIR)/ascii.c $(GRAPHICS_SRC) $(UART_SRC) $(UART_VIZARD_SRC) $(APP_OBJ) $(APP_SHARED_OBJ) -o $@ $(RAYLIB_LIBS) -lm
 
-$(APP_OBJ): $(APP_SRC) $(VIZARD_HDRS) $(COMMON_HEADERS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(COMMON_DIR) -Isrc -DVIZARD -Dmain=vizard_app_main -c $< -o $@
+$(APP_OBJ): $(APP_SRC) $(VIZARD_HDRS) $(APP_COMMON_HEADERS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(APP_COMMON_DIR) -Isrc -DVIZARD -Dmain=vizard_app_main -c $< -o $@
 
-$(APP_SHARED_OBJ): $(APP_SHARED_SRC) $(APP_SHARED_HEADER) $(VIZARD_HDRS) $(COMMON_HEADERS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(COMMON_DIR) -Isrc -DVIZARD -c $< -o $@
+$(APP_SHARED_OBJ): $(APP_SHARED_SRC) $(APP_SHARED_HEADER) $(VIZARD_HDRS) $(APP_COMMON_HEADERS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(APP_COMMON_DIR) -Isrc -DVIZARD -c $< -o $@
 
-$(GRAPHICS_OBJ): $(GRAPHICS_SRC) $(COMMON_DIR)/graphics.h $(VIZARD_HDRS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(COMMON_DIR) -Isrc -DVIZARD -c $< -o $@
+$(GRAPHICS_OBJ): $(GRAPHICS_SRC) $(APP_COMMON_DIR)/graphics.h $(VIZARD_HDRS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(APP_COMMON_DIR) -Isrc -DVIZARD -c $< -o $@
 
 clean-main:
 	rm -f vizard $(APP_OBJ) $(APP_SHARED_OBJ) $(GRAPHICS_OBJ)

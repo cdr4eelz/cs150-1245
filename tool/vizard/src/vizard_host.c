@@ -86,12 +86,12 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
     ClearBackground((Color){ 18, 23, 29, 255 });
     DrawTexture(canvas, 0, 0, WHITE);
     if (pixels == NULL) {
-        DrawText("proj5.c has no GPU commands", 34, 280, 22, (Color){ 171, 185, 187, 255 });
+        DrawText("projN.c has no GPU commands", 34, 280, 22, (Color){ 171, 185, 187, 255 });
     }
     DrawRectangle(VIZARD_SCREEN_WIDTH, 0, PANEL_WIDTH, WINDOW_HEIGHT,
                   (Color){ 27, 34, 40, 255 });
     DrawText("VIZARD", VIZARD_SCREEN_WIDTH + 20, 22, 26, RAYWHITE);
-    DrawText("software/proj_app5/proj5.c", VIZARD_SCREEN_WIDTH + 20, 56, 12,
+    DrawText("software/proj_appN/projN.c", VIZARD_SCREEN_WIDTH + 20, 56, 12,
              (Color){ 116, 196, 184, 255 });
     DrawLine(VIZARD_SCREEN_WIDTH + 20, 82, WINDOW_WIDTH - 20, 82,
              (Color){ 67, 82, 89, 255 });

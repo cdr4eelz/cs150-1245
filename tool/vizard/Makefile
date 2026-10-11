@@ -1,18 +1,20 @@
+BUILD_DIR := build
+
 #KEY "MIPS CODE" NAME/LOCATION SETTINGS (Coordinated with main project):
-APP_FNAME := proj5
-APP_SRC_DIR := ../../software/proj_app5
+APP_SRC_DIR := ../../software/proj_app6
+APP_FNAME := proj6
+APP_SNAME := shared6
 
 #OTHER "MIPS CODE" RELATED SETTINGS (Code from main project):
 APP_SRC := $(APP_SRC_DIR)/$(APP_FNAME).c
-APP_SHARED_SRC := $(APP_SRC_DIR)/shared.c
-APP_SHARED_HEADER := $(APP_SRC_DIR)/shared.h
-COMMON_DIR := ../../software/common
-COMMON_HEADERS := $(wildcard $(COMMON_DIR)/*.h)
-UART_SRC := $(COMMON_DIR)/uart.c
-OBJ_DIR := objs
+APP_SHARED_SRC := $(APP_SRC_DIR)/$(APP_SNAME).c
+APP_SHARED_HEADER := $(APP_SRC_DIR)/$(APP_SNAME).h
+APP_COMMON_DIR := ../../software/common
+APP_COMMON_HEADERS := $(wildcard $(APP_COMMON_DIR)/*.h)
+UART_SRC := $(APP_COMMON_DIR)/uart.c
 
-APP_OBJ := $(OBJ_DIR)/$(notdir $(APP_SRC:.c=_vizard.o))
-APP_SHARED_OBJ := $(OBJ_DIR)/$(notdir $(APP_SHARED_SRC:.c=_vizard.o))
+APP_OBJ := $(BUILD_DIR)/$(notdir $(APP_SRC:.c=_vizard.o))
+APP_SHARED_OBJ := $(BUILD_DIR)/$(notdir $(APP_SHARED_SRC:.c=_vizard.o))
 
 RAYLIB_CFLAGS := $(shell pkg-config --cflags raylib 2>/dev/null)
 RAYLIB_LIBS := $(shell pkg-config --libs raylib 2>/dev/null)
@@ -23,7 +25,7 @@ VIZARD_HDRS := src/vizard_host.h src/vizard_uart.h vizard.h
 VIZARD_COMMON_DIR := sw_common
 GRAPHICS_SRC := $(VIZARD_COMMON_DIR)/graphics_vizard.c
 UART_VIZARD_SRC := $(VIZARD_COMMON_DIR)/uart_vizard.c
-GRAPHICS_OBJ := $(OBJ_DIR)/$(notdir $(GRAPHICS_SRC:.c=.o))
+GRAPHICS_OBJ := $(BUILD_DIR)/$(notdir $(GRAPHICS_SRC:.c=.o))
 
 CC ?= gcc
 CPPFLAGS ?= -I.
@@ -37,12 +39,12 @@ all: vizard
 fresh: clean check all
 
 clean: clean-tests clean-main
-	rm -rf $(OBJ_DIR)
+	rm -rf $(BUILD_DIR)
 
-$(OBJ_DIR):
+$(BUILD_DIR):
 	mkdir -p $@
 
-$(APP_OBJ) $(APP_SHARED_OBJ) $(GRAPHICS_OBJ): | $(OBJ_DIR)
+$(APP_OBJ) $(APP_SHARED_OBJ) $(GRAPHICS_OBJ): | $(BUILD_DIR)
 
 check:
 

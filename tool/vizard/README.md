@@ -1,7 +1,7 @@
 # Vizard
 
 Vizard provides a fast graphical preview of the current final-project
-application, App 5 (`software/proj_app5/proj5.c`). Its purpose is to make the
+application, App N (`software/proj_appN/projN.c`). Its purpose is to make the
 application's appearance and interactive behavior easy to review before
 building and testing it in situ on the FPGA, which takes longer.
 
@@ -94,11 +94,11 @@ UART accesses use the MIPS memory map: TX ready at `0x80000000`, RX valid at
 `0x80000004`, TX data at `0x80000008`, and RX data at `0x8000000c`. Raylib
 character events enter the RX FIFO; the common `uread_int8()` API blocks while
 pumping the event loop and echoes input like the hardware library. Both the
-proj5 ISR-style output and common UART writes print to the Vizard launch
-terminal. The host timer emulates the paired `isr5.s` 1 Hz seconds/BCD clock
+projN ISR-style output and common UART writes print to the Vizard launch
+terminal. The host timer emulates the paired `isrN.s` 1 Hz seconds/BCD clock
 update; Escape exits the app.
 
-`proj5.c` demonstrates the timer, UART output, and common GPU command helpers.
+`projN.c` demonstrates the timer, UART output, and common GPU command helpers.
 Vizard is synchronous at GPU submission and approximates ISR timing; it does
 not model MIPS instruction execution or cycle-accurate hardware timing.
 
