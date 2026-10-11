@@ -103,7 +103,8 @@ static void draw_ellipse_row(VizardGpu *gpu, uint32_t *pixels,
 }
 
 static void draw_ellipse_scanlines(VizardGpu *gpu, uint32_t *pixels,
-                                   int xc, int yc, int x, int y,
+                                   uint16_t xc, uint16_t yc,
+                                   uint16_t x, uint16_t y,
                                    uint32_t edge, uint32_t fill)
 {
     draw_ellipse_row(gpu, pixels, xc, yc - y, x, edge, fill);
@@ -112,58 +113,62 @@ static void draw_ellipse_scanlines(VizardGpu *gpu, uint32_t *pixels,
     }
 }
 
-static void draw_ellipse(VizardGpu *gpu, uint32_t *pixels, int xc, int yc,
-                         int a, int b, uint32_t edge, uint32_t fill)
+static uint32_t swelip_mul32u(uint32_t left, uint32_t right)
+    __attribute__((unused));
+
+static uint32_t swelip_mul32u(uint32_t left, uint32_t right)
 {
-    if (a == 0 || b == 0) {
-        draw_line(gpu, pixels, xc - a, yc - b, xc + a, yc + b, edge);
-        return;
+    return (uint32_t)(uint16_t)left * (uint16_t)right;
+}
+
+static uint32_t swelip_mul32u_full(uint32_t left, uint32_t right)
+{
+    return left * right;
+}
+
+static void draw_ellipse(VizardGpu *gpu, uint32_t *pixels,
+                         uint16_t xc, uint16_t yc,
+                         uint16_t a, uint16_t b,
+                         uint32_t edge, uint32_t fill)
+{
+    uint16_t x = 0, y = b;
+    uint32_t const AA = (uint32_t)a * a;
+    uint32_t const BB = (uint32_t)b * b;
+    uint32_t const AABB = swelip_mul32u_full(AA, BB);
+    uint32_t AAy = swelip_mul32u_full(AA, y);
+    uint32_t BBx = 0;
+    uint32_t BB2xp3 = (BB << 1) + BB;
+    int32_t const stopper = (AA >> 1) + BB;
+    int32_t dd = BB - AAy + (AA >> 2);
+
+    draw_ellipse_scanlines(gpu, pixels, xc, yc, x, y, edge, fill);
+    while ((AAy - BBx) > (uint32_t)stopper && y > 0 && x <= a) {
+        if (dd >= 0) {
+            dd += (AA << 1) - (AAy << 1);
+            --y;
+            AAy -= AA;
+        }
+        dd += BB2xp3;
+        ++x;
+        BBx += BB;
+        BB2xp3 += BB << 1;
+        draw_ellipse_scanlines(gpu, pixels, xc, yc, x, y, edge, fill);
     }
 
-    uint32_t aa = (uint32_t)a * (uint32_t)a;
-    uint32_t bb = (uint32_t)b * (uint32_t)b;
-    uint32_t aabb = aa * bb;
-    uint32_t x_squared = 0;
-    uint32_t y_squared = (uint32_t)b;
-    uint32_t aay = aa * y_squared;
-    uint32_t bbx = 0;
-    uint32_t bb_twice_x_plus_three = (bb << 1) + bb;
-    int32_t stopper = (int32_t)((aa >> 1) + bb);
-    uint32_t decision = bb - aay + (aa >> 2);
-
-    draw_ellipse_scanlines(gpu, pixels, xc, yc, (int)x_squared,
-                           (int)y_squared, edge, fill);
-    while ((aay - bbx) > (uint32_t)stopper && y_squared > 0 &&
-           x_squared <= (uint32_t)a) {
-        if ((decision & 0x80000000u) == 0) {
-            decision += (aa << 1) - (aay << 1);
-            --y_squared;
-            aay -= aa;
+    uint32_t BB2xp2 = BB2xp3 - BB;
+    uint16_t y_minus_one = y - 1;
+    dd = swelip_mul32u_full(BB, (uint32_t)x * x + x) + (BB >> 2) +
+         swelip_mul32u_full(AA, (uint32_t)y_minus_one * y_minus_one) - AABB;
+    while (y > 0 && x <= a) {
+        if (dd < 0) {
+            dd += BB2xp2;
+            ++x;
+            BB2xp2 += BB << 1;
         }
-        decision += (int32_t)bb_twice_x_plus_three;
-        ++x_squared;
-        bbx += bb;
-        bb_twice_x_plus_three += bb << 1;
-        draw_ellipse_scanlines(gpu, pixels, xc, yc, (int)x_squared,
-                               (int)y_squared, edge, fill);
-    }
-
-    uint32_t bb_twice_x_plus_two = bb_twice_x_plus_three - bb;
-    uint32_t x_expression = x_squared * x_squared + x_squared;
-    uint32_t y_minus_one = y_squared - 1;
-    decision = bb * x_expression + (bb >> 2) +
-               aa * y_minus_one * y_minus_one - aabb;
-    while (y_squared > 0 && x_squared <= (uint32_t)a) {
-        if ((decision & 0x80000000u) != 0) {
-            decision += bb_twice_x_plus_two;
-            ++x_squared;
-            bb_twice_x_plus_two += bb << 1;
-        }
-        decision += (aa << 1) + aa - (aay << 1);
-        --y_squared;
-        aay -= aa;
-        draw_ellipse_scanlines(gpu, pixels, xc, yc, (int)x_squared,
-                               (int)y_squared, edge, fill);
+        dd += (AA << 1) + AA - (AAy << 1);
+        --y;
+        AAy -= AA;
+        draw_ellipse_scanlines(gpu, pixels, xc, yc, x, y, edge, fill);
     }
 }
 
@@ -304,7 +309,8 @@ bool vizard_gpu_submit(VizardGpu *gpu, const uint32_t *words, size_t word_count,
         if (opcode == GOP_RECT) {
             draw_rect(gpu, pixels, x0, y0, x1, y1, edge, fill);
         } else {
-            draw_ellipse(gpu, pixels, x0, y0, x1, y1, edge, fill);
+            draw_ellipse(gpu, pixels, (uint16_t)x0, (uint16_t)y0,
+                         (uint16_t)x1, (uint16_t)y1, edge, fill);
         }
     }
 
