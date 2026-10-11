@@ -2,7 +2,13 @@
 
 ## Artificial Intelligence Declaration
 
-TODO: Fill in with details of where/how AI was utilized and the justification for doing so.
+TODO: Fill in with details of where/how AI was utilized and the justification for doing so...
+
+There is virtually zero touching of FPGA Verilog code by AI. Exceptions are very minimal and tangential to the development of "Vizard" where a new or fixed Vizard feature involved slight tweak to GPU itself to match.
+
+In a prior attempt to port the XUPv5/ISE based original work to a PYNQ or ARTY board based on Vivado, upon being stalled with failing port (essentially I never got the MIG to function reliably even with some gross hacks), I made many manual queries via Grok (and of course search engine searches) in the hopes of debugging the failed port. None of that work is present in the current submission, which was created by reverting to the original ISE/XUPv5 codebase.
+
+In a minimal and infrequent fashion, an AI change to "Vizard" (which is entirely AI developed), touches shared "software/common/..." files beyond the obvious tweaks to code guarded by "VIZARD" macro checks.
 
 ## Demonstration Goals
 
