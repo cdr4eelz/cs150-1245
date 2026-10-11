@@ -7,9 +7,12 @@
 #include "uart.h"
 */
 
-#define N 6
-#define DIM_SIZE (1 << N)
-#define M_SIZE (1 << (N << 1))
+#define DIM_SCALER 6
+#define DIM_SIZE (1 << DIM_SCALER)
+#define M_COUNT_ELEMENTS (DIM_SIZE * DIM_SIZE)
+#define M_ELEMENT_TYPE int32_t
+#define M_ELEMENT_BYTES sizeof(M_ELEMENT_TYPE)
+#define M_SIZE_BYTES (M_COUNT_ELEMENTS * M_ELEMENT_BYTES)
 
 //#define DATA ((uint32_t *) 0x10018000)
 int32_t* DATA;
@@ -42,16 +45,16 @@ int32_t times(int32_t a, int32_t b) {
 uint32_t mmult() {
     int32_t sum = 0;
     int32_t* A = DATA;
-    int32_t* B = DATA + M_SIZE;
-    int32_t* S = DATA + M_SIZE + M_SIZE;
+    int32_t* B = DATA + M_COUNT_ELEMENTS; //Addition works because "DATA" is typed as 32-bit value
+    int32_t* S = DATA + M_COUNT_ELEMENTS + M_COUNT_ELEMENTS;
     int32_t i, j, k;
     for (i = 0; i < DIM_SIZE; i++) {
         for (j = 0; j < DIM_SIZE; j++) {
-            int32_t* s = S + (i << N) + j;
+            int32_t* s = S + (i << DIM_SCALER) + j;
             *s = 0;
             for (k = 0; k < DIM_SIZE; k++) {
-                int32_t a = *(A + (i << N) + k);
-                int32_t b = *(B + (k << N) + j);
+                int32_t a = *(A + (i << DIM_SCALER) + k);
+                int32_t b = *(B + (k << DIM_SCALER) + j);
                 int32_t prod = times(a, b);
                 *s = *s + prod;
             }
@@ -97,7 +100,7 @@ void print_matrix(char *label, int32_t* base) {
 //typedef void (*entry_t)(void);
 
 int main(int argc, char**argv) {
-    DATA = malloc(M_SIZE * 3); // A,B,C
+    DATA = malloc(M_SIZE_BYTES * 3); // A, B, and C matrices
 
     generate_matrices();
     
@@ -106,8 +109,8 @@ int main(int argc, char**argv) {
     printf("\nResult: 0x%x (%d)\n", result, result);
 
     print_matrix("A", DATA); // A matrix
-    print_matrix("B", DATA + M_SIZE); // B matrix
-    print_matrix("C", DATA + M_SIZE + M_SIZE); // C matrix
+    print_matrix("B", DATA + M_COUNT_ELEMENTS); // B matrix
+    print_matrix("C", DATA + M_COUNT_ELEMENTS + M_COUNT_ELEMENTS); // C matrix
 
     // go back to the bios - using this function causes a jr to the addr,
     // the compiler "jals" otherwise and then cannot set PC[31:28]

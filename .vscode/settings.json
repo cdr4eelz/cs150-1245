@@ -17,7 +17,11 @@
         "tool/vizard/vizard": true,
         "tool/vizard/tests/test_core": true,
         "tool/vizard/tests/test_graphics_bridge": true,
-        "tool/vizard/tests/test_frame_extra_overflow": true
+        "tool/vizard/tests/test_frame_extra_overflow": true,
+        "tool/mutmath/check_mutmath": true,
+        "tool/mmult/check_mmult": true,
+        "tool/clocker/clocker": true,
+        "tool/line-engine/le": true
     },
     "chat.sessionSync.enabled": true
 }

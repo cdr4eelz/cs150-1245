@@ -12,6 +12,21 @@
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "linux-clang-x64"
+        },
+        {
+            "name": "Vizard",
+            "includePath": [
+                "${workspaceFolder}/software/common",
+                "${workspaceFolder}/tool/vizard",
+                "${workspaceFolder}/tool/vizard/src"
+            ],
+            "defines": [
+                "VIZARD"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu99",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64"
         }
     ],
     "version": 4
