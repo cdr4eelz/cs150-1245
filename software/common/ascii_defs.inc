@@ -62,17 +62,17 @@ int8_t* type##_to_ascii_hex(type##_t const x, int8_t* const buffer, \
  *   value by repeated subtraction.  That count becomes the digit.
  *   Leading zeros are suppressed.
  *
- * Buffer must be at least 11 bytes.
+ * The output is truncated to fit; n includes space for the terminator.
+ * If n is nonzero, the result is always null-terminated.
  */
 int8_t* uint32_to_ascii_dec(uint32_t const x, int8_t* const buffer,
                             uint32_t const n)
 {
-    uint32_t value = x;
-    if (value == 0) {
-        buffer[0] = '0';
-        buffer[1] = '\0';
+    if (n == 0) {
         return buffer;
     }
+
+    uint32_t value = x;
 
     /* 10^9 down to 10^0 */
     static const uint32_t powers[10] = {
@@ -88,8 +88,8 @@ int8_t* uint32_to_ascii_dec(uint32_t const x, int8_t* const buffer,
                  1U
     };
 
-    char *p = buffer;
-    int   started = 0;          /* have we written a non-zero digit yet? */
+    uint32_t written = 0;
+    int started = 0;          /* have we written a non-zero digit yet? */
 
     for (int i = 0; i < 10; ++i) {
         uint32_t power = powers[i];
@@ -103,12 +103,14 @@ int8_t* uint32_to_ascii_dec(uint32_t const x, int8_t* const buffer,
 
         /* suppress leading zeros, but always emit the units digit */
         if (digit != '0' || started || i == 9) {
-            *p++ = digit;
+            if (written < n - 1) {
+                buffer[written++] = (int8_t)digit;
+            }
             started = 1;
         }
     }
 
-    *p = '\0';
+    buffer[written] = '\0';
     return buffer;
 }
 #endif // ASCII_WANT_DEC

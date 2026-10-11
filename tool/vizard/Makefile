@@ -17,7 +17,9 @@ APP_SHARED_OBJ := $(OBJ_DIR)/$(notdir $(APP_SHARED_SRC:.c=_vizard.o))
 RAYLIB_CFLAGS := $(shell pkg-config --cflags raylib 2>/dev/null)
 RAYLIB_LIBS := $(shell pkg-config --libs raylib 2>/dev/null)
 
-CORE_SRC := src/gpu.c
+CORE_SRC := src/vizard_gpu.c
+VIZARD_SRCS := src/vizard_main.c src/vizard_host.c
+VIZARD_HDRS := src/vizard_host.h src/vizard_uart.h vizard.h
 VIZARD_COMMON_DIR := sw_common
 GRAPHICS_SRC := $(VIZARD_COMMON_DIR)/graphics_vizard.c
 UART_VIZARD_SRC := $(VIZARD_COMMON_DIR)/uart_vizard.c

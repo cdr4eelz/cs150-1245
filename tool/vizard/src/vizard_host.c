@@ -299,9 +299,9 @@ int vizard_host_uart_read(void)
     return (int)vizard_uart_read32(&uart, VIZARD_UART_RX_DATA);
 }
 
-void uwrite_int8s_ISR_VIZARD(int8_t *src)
+void uwrite_int8s_ISR_VIZARD(const char *src)
 {
-    fputs((const char *)src, stdout);
+    fputs(src, stdout);
     fflush(stdout);
 }
 

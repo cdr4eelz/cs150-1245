@@ -21,9 +21,9 @@ int vizard_host_uart_read(void);
 #define VIZARD_SUFFIX_INNER(name) name##_VIZARD
 #define VIZARD_SUFFIX(name) VIZARD_SUFFIX_INNER(name)
 #define uwait_ISR VIZARD_SUFFIX(uwait_ISR)
-#define uwrite_int8s_ISR VIZARD_SUFFIX(uwrite_int8s_ISR)
+#define uwrite_int8s_ISR(src) uwrite_int8s_ISR_VIZARD((const char *)(src))
 
 void uwait_ISR_VIZARD(void);
-void uwrite_int8s_ISR_VIZARD(int8_t *src);
+void uwrite_int8s_ISR_VIZARD(const char *src);
 
 #endif
