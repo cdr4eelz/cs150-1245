@@ -51,7 +51,7 @@ void frame_gp_render(uint32_t frame) {
 }
 
 
-void main() {
+void main_imem( void ) {
     struct SM_DATA* share = SM_BASE;
     uint32_t tClock, prevClock;
 

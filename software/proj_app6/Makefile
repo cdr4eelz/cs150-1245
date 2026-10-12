@@ -3,7 +3,7 @@ ISR_TARGET := isr6
 ISR_SHARED := shared6
 LDSTYLE := as_scratchpair
 FIXED_ELF ?= ../gios/gios.elf
-SSRCS = $(START)
+SSRCS = $(START) #Don't include ISR assembly here, it builds separately
 
 include ../makefile.pre
 include ../makefile.in

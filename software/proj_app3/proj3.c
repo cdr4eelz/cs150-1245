@@ -76,7 +76,7 @@ int8_t* copy_string(int8_t* dst, int8_t* src, uint16_t maxLen) { //Add size chec
 
 #define TBUF_SIZE (256)
 
-void main() {
+void main_imem( void ) {
     struct SM_DATA* share = SM_BASE;
     int8_t tbuff[TBUF_SIZE];
 

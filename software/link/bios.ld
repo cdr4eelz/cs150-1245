@@ -13,7 +13,7 @@ SECTIONS
 
 .text 0x40000000:
 {
-    *(.start) *(.text) *(.text.*) *(.gnu.linkonce.t.*)
+    *(.start_bios) *(.text) *(.text.*) *(.gnu.linkonce.t.*)
     . = ALIGN(4); _rodata = .; *(.rodata) *(.rodata.*) *(.gnu.linkonce.r.*)
     _gp = ALIGN(16) + 0x7ff0;
     . = ALIGN(4);              *(.got) *(.got1) *(.got2) *(.jcr)

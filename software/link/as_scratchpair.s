@@ -1,7 +1,7 @@
-.section    .start
-.global     _start
+.section    .start_imem
+.global     _start_imem
 
-_start:
+_start_imem:
     lui     $v0, 0
     lui     $v1, 0
     lui     $a0, 0
@@ -18,9 +18,14 @@ _start:
     lui     $s7, 0
     lui     $k0, 0
     lui     $k1, 0
-    la 	    $gp, _gp #TODO: %hi/lo rather than pseudo-instruction "la"
-    la      $sp, _sp #TODO: Use %hi/lo
-    la      $fp, _fp #TODO: Use %hi/lo
-    li      $ra, 0x40000000 # If ever "returns", launch BIOS fresh
-    j       main
+
+    lui     $gp, %hi(_gp)
+    addiu   $gp, $gp, %lo(_gp)
+    lui     $fp, %hi(_fp)
+    addiu   $fp, $fp, %lo(_fp)
+    lui     $sp, %hi(_sp)
+    addiu   $sp, $sp, %lo(_sp)
+
+    lui     $ra, 0x4000     # If ever "returns", launch BIOS fresh
+    j       main_imem
     nop

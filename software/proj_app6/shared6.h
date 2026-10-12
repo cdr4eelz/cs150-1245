@@ -3,9 +3,6 @@
 
 #include "types.h"
 
-#define VER_SHARED_MAJOR 6
-#define VER_SHARED_MINOR 0
-
 #define K_SHBUF_SIZEB      0x0100
 #define K_SHBUF_ROLLOVER   0x00FF
 #define K_MAGIC_VERSION    0xFEDBEEF1
@@ -23,10 +20,12 @@
 #define SMO_RTC_count      0x0018
 #define SMO_seconds        0x001C
 #define SMO_clock          0x0020
-#define SMO_buff_size      0x0024
-#define SMO_buff_head      0x0028
-#define SMO_buff_tail      0x002C
-#define SMO_buff_data      0x0030
+#define SMO_player_y        0x0024
+#define SMO_player_x        0x0026
+#define SMO_buff_size      0x0028
+#define SMO_buff_head      0x002C
+#define SMO_buff_tail      0x0030
+#define SMO_buff_data      0x0034
 
 struct SM_DATA {
     volatile uint32_t magic;
@@ -35,11 +34,16 @@ struct SM_DATA {
     volatile uint32_t RTC_count;
     volatile uint32_t seconds;
     volatile uint32_t clock;
+    volatile uint16_t player_y;
+    volatile uint16_t player_x;
     volatile uint32_t buff_size;
     volatile uint32_t buff_head;
     volatile uint32_t buff_tail;
     int8_t buff_data[K_SHBUF_SIZEB];
 };
+
+#define     SMM_flags_pause     (0x00000001)
+#define     SMM_flags_notimer   (0x00000002)
 
 
 #ifdef VIZARD
@@ -53,11 +57,11 @@ extern struct SM_DATA vizard_shared;
 #define ISR_POLL(share) (1)
 #endif
 
-void SM_INIT(struct SM_DATA *sm);
+void SM_INIT6(struct SM_DATA *sm);
 
 void uwrite_int8s_ISR(int8_t* src);
 void uwait_ISR(void);
-void uwrite_clock(uint32_t clk_bcd);
+void uwrite_clock_ISR(uint32_t clk_bcd);
 
 #define TBUF_SIZE (256)
 extern int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located

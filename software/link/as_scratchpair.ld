@@ -3,14 +3,14 @@ PHDRS {
     dmem PT_LOAD ;
 }
 
-ENTRY (_start);
+ENTRY (_start_imem);
 
 SECTIONS
 {
     .text 0x60000000: /* AT(0x00000000) */
     { /* The .inst. portion is imem scratch BRAM. */
         _text = .;
-        . = ALIGN(4);   _stimem = .;    *(.start)
+        . = ALIGN(4);   _stimem = .;    *(.start_imem)
         . = ALIGN(4);   _strttx = .;    *(.text.startup)
         . = ALIGN(4);   _texttx = .;    *(.text)
         . = ALIGN(4);                       *(.text.*)
@@ -18,7 +18,7 @@ SECTIONS
         /* Stuff DATA into TEXT since later dump focuses on that. */
         . = ALIGN(16);  /* Big alignment at start of data... */
         _data = .;
-        _gp = .;
+        _gp = ALIGN(16) + 0x7ff0; /* GP offsets are signed so aim for "middle" */
                         _rodata = .;    *(.rodata)
         . = ALIGN(4);                       *(.rodata.*)
         . = ALIGN(4);                       *(.gnu.linkonce.r.*)
@@ -38,7 +38,7 @@ SECTIONS
     .data 0x50000000: /* The .data. portion empty but used... */
     { /* ...for stack pointer and friends used in .s _start code. */
         _dyn_data = .;
-        _sp = 0x0004000; _fp = _sp;
+        _sp = 0x0004000; _fp = _sp; /* SP grows down from last dmem address */
 /*      . = 0x00003FFC; LONG(1); THIS would make data binary output 0x4000 big! */
         _end_data = .;
     } : dmem

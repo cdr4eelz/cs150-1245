@@ -140,7 +140,7 @@ void uwrite_clock(uint32_t clk_bcd) {
 }
 
 
-void main() {
+void main_imem( void ) {
     struct SM_DATA* share = SM_BASE;
     uint32_t tClock, prevClock;
 

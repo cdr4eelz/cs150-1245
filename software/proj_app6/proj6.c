@@ -68,7 +68,7 @@ void frame_gp_render(uint32_t frame) {
 }
 
 
-void main() {
+void main_imem( void ) {
     struct SM_DATA* share = SM_BASE;
     uint32_t tClock, prevClock;
     uint32_t frameCounter = 0;
@@ -79,7 +79,7 @@ void main() {
     ISR_STATUS(0x00000000, 0x00000000); // Disable ALL interrupts & global
 
     // Initialize the shared memory block (shared with ISR handler)
-    SM_INIT(share);
+    SM_INIT6(share);
     
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
     uwait_ISR(); // Get off to a clean start with nobody sending yet
@@ -100,10 +100,12 @@ void main() {
         tClock = share->clock;
         if (tClock != prevClock) {
             //TODO: Conditional based on a flag
-            if (1) uwrite_clock(tClock);
+            if (!(share->flags & SMM_flags_notimer)) uwrite_clock_ISR(tClock);
             prevClock = tClock; // Advance whether or not printing enabled
         }
 
+        if (share->flags & SMM_flags_pause) continue;
+        // Skip frame if paused...
         frame_gp_generate((frameCounter % 2) + 1, frameCounter);
         frame_gp_render((frameCounter % 2) + 1);
         frameCounter++;

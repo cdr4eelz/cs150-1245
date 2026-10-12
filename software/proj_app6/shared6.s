@@ -1,7 +1,4 @@
 # Shared C/ISR constants. Keep offsets synchronized with struct SM_DATA in sharedN.h.
-.equiv  VER_SHARED_MAJOR, 6
-.equiv  VER_SHARED_MINOR, 0
-
 .equiv  K_SHBUF_SIZEB,      0x0100
 .equiv  K_SHBUF_ROLLOVER,   0x00FF
 .equiv  K_MAGIC_VERSION,    0xFEDBEEF1
@@ -19,10 +16,12 @@
 .equiv  SMO_RTC_count,      0x0018
 .equiv  SMO_seconds,        0x001C
 .equiv  SMO_clock,          0x0020
-.equiv  SMO_buff_size,      0x0024
-.equiv  SMO_buff_head,      0x0028
-.equiv  SMO_buff_tail,      0x002C
-.equiv  SMO_buff_data,      0x0030
+.equiv  SMO_player_y,        0x0024
+.equiv  SMO_player_x,        0x0026
+.equiv  SMO_buff_size,      0x0028
+.equiv  SMO_buff_head,      0x002C
+.equiv  SMO_buff_tail,      0x0030
+.equiv  SMO_buff_data,      0x0034
 
 .equiv  SMA_magic,          (SM_BASE + SMO_magic)
 .equiv  SMA_stash0,         (SM_BASE + SMO_stash0)
@@ -33,7 +32,12 @@
 .equiv  SMA_RTC_count,      (SM_BASE + SMO_RTC_count)
 .equiv  SMA_seconds,        (SM_BASE + SMO_seconds)
 .equiv  SMA_clock,          (SM_BASE + SMO_clock)
+.equiv  SMA_player_y,       (SM_BASE + SMO_player_y)
+.equiv  SMA_player_x,       (SM_BASE + SMO_player_x)
 .equiv  SMA_buff_size,      (SM_BASE + SMO_buff_size)
 .equiv  SMA_buff_head,      (SM_BASE + SMO_buff_head)
 .equiv  SMA_buff_tail,      (SM_BASE + SMO_buff_tail)
 .equiv  SMA_buff_data,      (SM_BASE + SMO_buff_data)
+
+.equiv  SMM_flags_pause, (0x00000001)
+.equiv  SMM_flags_notimer, (0x00000002)

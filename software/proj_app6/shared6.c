@@ -17,6 +17,8 @@ SM_CHECK_OFFSET(flags, SMO_flags);
 SM_CHECK_OFFSET(RTC_count, SMO_RTC_count);
 SM_CHECK_OFFSET(seconds, SMO_seconds);
 SM_CHECK_OFFSET(clock, SMO_clock);
+SM_CHECK_OFFSET(player_y, SMO_player_y);
+SM_CHECK_OFFSET(player_x, SMO_player_x);
 SM_CHECK_OFFSET(buff_size, SMO_buff_size);
 SM_CHECK_OFFSET(buff_head, SMO_buff_head);
 SM_CHECK_OFFSET(buff_tail, SMO_buff_tail);
@@ -27,16 +29,20 @@ typedef char sm_size_check[(sizeof(struct SM_DATA) == SMO_buff_data + K_SHBUF_SI
 struct SM_DATA vizard_shared;
 #endif
 
-void SM_INIT(struct SM_DATA *sm)
+void SM_INIT6(struct SM_DATA *sm)
 {
     sm->magic = K_MAGIC_VERSION;
     sm->stash0 = -1u;
     sm->stash1 = -1u;
     sm->stash2 = -1u;
     sm->stash3 = -1u;
-    sm->flags = 0;
+    sm->flags = 0x00000000;
+        // "pause" default is zero... so not paused
+        // "notimer" default is zero... so timer shown
     sm->seconds = 0;
     sm->clock = 0;
+    sm->player_y = 400;
+    sm->player_x = 300;
     sm->buff_size = K_SHBUF_SIZEB;
     sm->buff_head = 0;
     sm->buff_tail = 0;
@@ -112,7 +118,7 @@ int8_t* copy_string(int8_t* dst, int8_t* src, uint16_t maxLen) { //Add size chec
 }
 */
 
-void uwrite_clock(uint32_t clk_bcd) {
+void uwrite_clock_ISR(uint32_t clk_bcd) {
     uwrite_int8s_ISR("\n\rCLK: ");
     // Assemble clock string "mm:ss" in tbuff
     tbuff[0] = '0' + ((clk_bcd >> 12) & 0x0F);

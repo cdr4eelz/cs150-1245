@@ -1,4 +1,4 @@
-.section    .start
+.section    .start_bios
 .global     _start_bios
 .extern     _gp
 .extern     _sp
@@ -22,7 +22,8 @@ _start_bios:
     lui     $s7, 0
     lui     $k0, 0
     lui     $k1, 0
-    lui     $gp, _gp
+    lui     $gp, %hi(_gp)
+    addiu   $gp, $gp, %lo(_gp)
     lui     $fp, %hi(_fp)
     addiu   $fp, $fp, %lo(_fp)
     lui     $sp, %hi(_sp)
