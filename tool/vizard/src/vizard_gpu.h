@@ -26,6 +26,9 @@ typedef struct {
 
 bool vizard_gpu_init(VizardGpu *gpu, unsigned width, unsigned height);
 void vizard_gpu_dispose(VizardGpu *gpu);
+/* Suspected (unconfirmed) stream size above which the FPGA GP hangs. */
+#define VIZARD_GPU_STREAM_WARN_WORDS 512u
+
 bool vizard_gpu_stream_word_count(const uint32_t *words, size_t max_word_count,
                                  size_t *word_count);
 bool vizard_gpu_submit(VizardGpu *gpu, const uint32_t *words, size_t word_count,

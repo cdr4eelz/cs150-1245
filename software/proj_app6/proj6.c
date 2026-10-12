@@ -12,34 +12,51 @@
 
 int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located
 
-void frame_gp_generate(uint32_t frame) {
+void frame_gp_generate(uint32_t frame, uint32_t frameCounter) {
     gpcode_p pINST;
     const gpcode_p pSEQUENCE = (gpcode_p)FRAME_EXTRA_TAIL(frame);
 
     pINST = pSEQUENCE;
+    // Background clear to near black
     pINST = hwq_fill(pINST, 0x00002233u);
-    pINST = hwq_line(pINST, 0x00FFFFFFu,  10, 10,  700,300);
-    pINST = hwq_line(pINST, 0x00FFFFFFu, 400, 10,   10,500);
-    pINST = hwq_rect(pINST, 0x00FFFFFFu, 550,150,  750,250,  0xFFF0F020u);
+    // Draw the border rectangles 10-pixel thick around the edges of the screen
+    pINST = hwq_rect(pINST, 0x00114488u,   0,  0,  799, 10, 0xFF114488u);
+    pINST = hwq_rect(pINST, 0x00114488u,   0,  0,   10,599, 0xFF114488u);
+    pINST = hwq_rect(pINST, 0x00114488u, 789,  0,  799,599, 0xFF114488u);
+    pINST = hwq_rect(pINST, 0x00114488u,   0,589,  799,599, 0xFF114488u);
 
-    for (int i = 0; i < 10; i++) {
-        uint16_t xc = 100 + (i * 20);
-        uint16_t yc = 300 - (i * 25);
-        uint16_t r = 10 + (i * 6);
-        pINST = hwq_elip(pINST, 0x00FF0000u, xc, yc, r, r, 0xFF1A7F0Fu);
-    }
+    // Use for "sweeping" dots & lines
+    const int x_something_r = 1024 - (((frameCounter*8) % 1024) - ((1024-800)/2));
+    const int x_something_f = ((frameCounter*8) % 1024) - ((1024-800)/2);
 
-    for (int x = 400; x < 500; x += 4) {
-        for (int y = 0; y < 600; y += 16) {
-            pINST = hwq_pixl(pINST, 0x00FFFFFFu, x, y);
+    //uwrite_int8s_ISR(uint32_to_ascii_hex(x_something, tbuff, TBUF_SIZE));
+    //uint32_to_ascii_hex(x_something, tbuff, TBUF_SIZE);
+    // This prints a dot to the ISR to prevent lockup
+    uwrite_int8s_ISR(".");
+
+    // Loop through the "sweeping" x positions and draw lines and dots
+    for (int x = x_something_f; x <= x_something_f + 24; x += 4) { //+=4
+        if ((x >= 0) && (x < 800)) {
+            pINST = hwq_line(pINST, 0x00FF3018u, x,250, x,350);
+            for (int y = (frameCounter % 16); y < 600; y += 16) { //+=16 freezes +=24 freezes later
+                pINST = hwq_pixl(pINST, 0x00FFFFFFu, x, y);
+                //pINST = hwq_line(pINST, 0x00FFFFFFu, 10,9, x,y);
+            }
         }
     }
-    
-    pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 100, 299, 0x00000000);
-    pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 399, 299, 0x00000000);
 
+    // Draw concentric ellipses that look vaguely like a "globe"
+    pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 100, 299, 0x00000000);
+    pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 250, 299, 0x00000000);
+    pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 398, 299, 0x00000000);
+
+    //TODO: Add main "character" that moves based on keyboard
+    
+    //TODO: Add "bouncers" that can be added & removed dynamically
+
+    // End of frame sequence
     pINST = hwq_stop(pINST);
-    GP_WAIT();
+    //GP_WAIT();
 }
 
 void frame_gp_render(uint32_t frame) {
@@ -54,6 +71,7 @@ void frame_gp_render(uint32_t frame) {
 void main() {
     struct SM_DATA* share = SM_BASE;
     uint32_t tClock, prevClock;
+    uint32_t frameCounter = 0;
 
     //TODO: Clear "Cause" register???
     //TODO: Should macro mask "Cause" based on enabled "Status" bits???
@@ -66,7 +84,7 @@ void main() {
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
     uwait_ISR(); // Get off to a clean start with nobody sending yet
 
-    uwrite_int8s_ISR("\r\n\r\nPROJ-6.0:\r\n");
+    uwrite_int8s_ISR("\r\n\r\nPROJ-6.01:\r\n");
     uwrite_int8s_ISR("MAGIC: ");
     uwrite_int8s_ISR(uint32_to_ascii_hex(share->magic, tbuff, TBUF_SIZE));
     uwrite_int8s_ISR("\n\r");
@@ -86,11 +104,9 @@ void main() {
             prevClock = tClock; // Advance whether or not printing enabled
         }
 
-        // Temporarily swap frames with a hack
-        frame_gp_generate(1);
-        frame_gp_render(1);
-        frame_gp_generate(2);
-        frame_gp_render(2);
+        frame_gp_generate((frameCounter % 2) + 1, frameCounter);
+        frame_gp_render((frameCounter % 2) + 1);
+        frameCounter++;
     }
 
     uwait_ISR();

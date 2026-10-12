@@ -210,6 +210,12 @@ bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clo
                             "(limit %u words)\n", VIZARD_GPU_COMMAND_CAPACITY);
             gpu.fault = true;
         } else {
+            static size_t largest_warned;
+            if (word_count > VIZARD_GPU_STREAM_WARN_WORDS && word_count > largest_warned) {
+                largest_warned = word_count;
+                fprintf(stderr, "Vizard: GP stream is %zu words (> %u); FPGA froze at about this size\n",
+                        word_count, VIZARD_GPU_STREAM_WARN_WORDS);
+            }
             vizard_host_gpu_submit(words, word_count, frame_number(vizard_gp_frame));
         }
         vizard_gp_gcode = NULL;
