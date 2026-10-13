@@ -1,10 +1,11 @@
 # Build one app-paired ISR image, following the standalone proj_isr flow.
 ISR_TARGET ?= isr
 ISR_LD ?= ../link/isr.ld
-ISR_ASMOPTS ?= --warn -g
-ISR_ASMOPTS += -ahlsgmd=$(ISR_TARGET).list -I../common -I.
-ISR_DUMPOPTS ?= -xsD --wide --disassembler-options=reg-names=n32,reg-names=mips32
+ISR_ASMOPTS ?= --warn -g -ahlsgmd=$(ISR_TARGET).list
+ISR_ASMOPTS += -I../common -I.
+ISR_DUMPOPTS ?= $(DUMPOPTS) --source
 
+.DEFAULT_GOAL := all
 .PHONY: isr isr-clean
 
 all: isr

@@ -53,13 +53,13 @@ $(TARGET).elf: $(ELF_INPUT) $(FIXED_ELF)
 	-$(PSTRIP) --strip-debug -o $@ $^
 	-chmod -x $@
 %.dump: %-strip.elf
-	-$(PDUMP) $^ -xsD >$@
+	-$(PDUMP) $^ $(DUMPOPTS) >$@
 %.inst.dump: %.elf
-	-$(PDUMP) -j .text $^ -xsSDl >$@
+	-$(PDUMP) -j .text $^ $(DUMPOPTS) --source --line-numbers >$@
 %.data.dump: %.elf
-	-($(PDUMP) -j .data $^ -xS >$@ || exit 0)
+	-($(PDUMP) -j .data $^ --all-headers --source >$@ || exit 0)
 %.syms: %.elf
-	$(PNM) --numeric-sort --line-numbers --print-size --radix=x $< > $@
+	$(PNM) $(NMOPTS) $< > $@
 
 
 %.mif: %.bin

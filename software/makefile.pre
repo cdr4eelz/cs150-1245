@@ -68,6 +68,9 @@ CCMIPS ?= -mips1 -march=mips1 -mabi=32 -mno-abicalls -msoft-float -mno-dsp -mno-
 # -G0
 # -Wl,--strip-debug
 
+DUMPOPTS ?= --all-headers --full-contents --disassemble-all
+DUMPOPTS += --wide --disassembler-options=reg-names=n32,reg-names=mips32
+NMOPTS ?= --numeric-sort --line-numbers --print-size --radix=x
 
 # -pedantic
 PCLANG ?= $(CLANG) -cc1 -triple=$(M_TRI) -target-cpu mips1 -target-abi o32 -mrelocation-model static
