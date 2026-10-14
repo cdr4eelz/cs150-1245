@@ -11,6 +11,9 @@
 #define WINDOW_HEIGHT VIZARD_SCREEN_HEIGHT
 #define IM_GLOBAL (1u << 0)
 #define IM_TIMER (1u << 15)
+#define IM_UARX (1u << 10)
+#define SMM_FLAGS_PAUSE 0x1u
+#define SMM_FLAGS_NOTIMER 0x2u
 
 static VizardGpu gpu;
 static VizardUart uart;
@@ -25,6 +28,8 @@ static int last_key;
 static volatile unsigned int *active_seconds;
 static volatile unsigned int *active_clock;
 static volatile unsigned int *active_rtc_count;
+static volatile unsigned int *active_flags;
+static volatile unsigned int idle_flags;
 static volatile unsigned int idle_seconds;
 static volatile unsigned int idle_clock;
 static volatile unsigned int idle_rtc_count;
@@ -181,12 +186,29 @@ void vizard_host_isr_compare(unsigned int compare)
     next_timer = GetTime() + 1.0;
 }
 
+static void service_uart_rx(volatile unsigned int *flags)
+{
+    unsigned int enabled = IM_GLOBAL | IM_UARX;
+    while ((interrupt_status & enabled) == enabled &&
+           vizard_uart_read32(&uart, VIZARD_UART_RX_VALID) != 0) {
+        int byte = (int)vizard_uart_read32(&uart, VIZARD_UART_RX_DATA);
+        if (byte == ' ') {
+            *flags ^= SMM_FLAGS_PAUSE;
+        } else if (byte == 'd') {
+            *flags |= SMM_FLAGS_NOTIMER;
+        } else if (byte == 'e') {
+            *flags &= ~SMM_FLAGS_NOTIMER;
+        }
+    }
+}
+
 bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clock,
-                      volatile unsigned int *rtc_count)
+                      volatile unsigned int *rtc_count, volatile unsigned int *flags)
 {
     active_seconds = seconds;
     active_clock = clock;
     active_rtc_count = rtc_count;
+    active_flags = flags;
     if (WindowShouldClose()) {
         return false;
     }
@@ -200,6 +222,7 @@ bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clo
         }
         character = GetCharPressed();
     }
+    service_uart_rx(flags);
 
     if (vizard_gp_gcode != NULL) {
         const unsigned int *words = vizard_gp_gcode;
@@ -259,8 +282,9 @@ void vizard_host_wait_gpu(void)
     volatile unsigned int *seconds = active_seconds ? active_seconds : &idle_seconds;
     volatile unsigned int *clock = active_clock ? active_clock : &idle_clock;
     volatile unsigned int *rtc_count = active_rtc_count ? active_rtc_count : &idle_rtc_count;
+    volatile unsigned int *flags = active_flags ? active_flags : &idle_flags;
     while (vizard_gp_gcode != NULL) {
-        if (!vizard_host_poll(seconds, clock, rtc_count)) {
+        if (!vizard_host_poll(seconds, clock, rtc_count, flags)) {
             break;
         }
     }
@@ -279,8 +303,9 @@ void vizard_host_wait_pf_frame(unsigned int frame)
     volatile unsigned int *seconds = active_seconds ? active_seconds : &idle_seconds;
     volatile unsigned int *clock = active_clock ? active_clock : &idle_clock;
     volatile unsigned int *rtc_count = active_rtc_count ? active_rtc_count : &idle_rtc_count;
+    volatile unsigned int *flags = active_flags ? active_flags : &idle_flags;
     while (frame_number(vizard_pf_frame) != frame_number((volatile void *)(uintptr_t)target)) {
-        if (!vizard_host_poll(seconds, clock, rtc_count)) {
+        if (!vizard_host_poll(seconds, clock, rtc_count, flags)) {
             break;
         }
     }
@@ -298,7 +323,8 @@ int vizard_host_uart_read(void)
         volatile unsigned int *seconds = active_seconds ? active_seconds : &idle_seconds;
         volatile unsigned int *clock = active_clock ? active_clock : &idle_clock;
         volatile unsigned int *rtc_count = active_rtc_count ? active_rtc_count : &idle_rtc_count;
-        if (!vizard_host_poll(seconds, clock, rtc_count)) {
+        volatile unsigned int *flags = active_flags ? active_flags : &idle_flags;
+        if (!vizard_host_poll(seconds, clock, rtc_count, flags)) {
             return -1;
         }
     }

@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-void vizard_app_main(void);
+void main_imem(void);
 
 int main(void)
 {
@@ -12,7 +12,7 @@ int main(void)
         return 1;
     }
 
-    vizard_app_main();
+    main_imem();
     vizard_host_shutdown();
     return 0;
 }
