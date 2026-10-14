@@ -1,5 +1,6 @@
 #include "vizard_host.h"
 #include "vizard_gpu.h"
+#include "vizard_mips.h"
 
 #include "raylib.h"
 
@@ -9,17 +10,11 @@
 #define PANEL_WIDTH 280
 #define WINDOW_WIDTH (VIZARD_SCREEN_WIDTH + PANEL_WIDTH)
 #define WINDOW_HEIGHT VIZARD_SCREEN_HEIGHT
-#define IM_GLOBAL (1u << 0)
-#define IM_TIMER (1u << 15)
-#define IM_UARX (1u << 10)
-#define SMM_FLAGS_PAUSE 0x1u
-#define SMM_FLAGS_NOTIMER 0x2u
-
 static VizardGpu gpu;
 static VizardUart uart;
+static VizardMips cpu;
 static Texture2D canvas;
 static Color *upload_pixels;
-static unsigned int interrupt_status;
 static bool compare_armed;
 static double next_timer;
 static double next_draw;
@@ -52,18 +47,18 @@ static unsigned int frame_address(unsigned int frame)
     return 0x10000000u | ((frame_number((volatile void *)(uintptr_t)frame) & 0x3fu) << 22);
 }
 
-static unsigned int increment_bcd_clock(unsigned int clock)
+static uint32_t cpu_mmio_read(void *ctx, uint32_t address)
 {
-    static const unsigned int maximum[] = { 9, 5, 9, 5 };
-    for (unsigned int digit = 0; digit < 4; ++digit) {
-        unsigned int shift = digit * 4;
-        unsigned int value = (clock >> shift) & 0xfu;
-        clock &= ~(0xfu << shift);
-        if (value < maximum[digit]) {
-            return clock | ((value + 1u) << shift);
-        }
+    (void)ctx;
+    return vizard_uart_read32(&uart, address);
+}
+
+static void cpu_mmio_write(void *ctx, uint32_t address, uint32_t value)
+{
+    (void)ctx;
+    if (address == VIZARD_UART_TX_DATA) {
+        vizard_host_uart_write((unsigned char)value);
     }
-    return clock;
 }
 
 static void draw_host_view(unsigned int seconds, unsigned int clock)
@@ -102,7 +97,7 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
              (Color){ 67, 82, 89, 255 });
 
     char status[96];
-    snprintf(status, sizeof(status), "APP5  %s", gpu.fault ? "GPU FAULT" : "RUNNING");
+    snprintf(status, sizeof(status), "AppN  %s", gpu.fault ? "GPU FAULT" : "RUNNING");
     DrawText(status, VIZARD_SCREEN_WIDTH + 20, 104, 16,
              gpu.fault ? RED : (Color){ 145, 218, 157, 255 });
     snprintf(status, sizeof(status), "Clock: %02X:%02X",
@@ -137,6 +132,12 @@ bool vizard_host_init(void)
         return false;
     }
     vizard_uart_init(&uart);
+    vizard_mips_init(&cpu, (VizardMipsMmio){ cpu_mmio_read, cpu_mmio_write, NULL });
+    if (!vizard_mips_load(&cpu, VIZARD_ISR_IMAGE)) {
+        fprintf(stderr, "Vizard: unable to load ISR image %s\n", VIZARD_ISR_IMAGE);
+        vizard_gpu_dispose(&gpu);
+        return false;
+    }
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vizard | MIPS150 app host");
     if (!IsWindowReady()) {
@@ -170,34 +171,30 @@ void vizard_host_shutdown(void)
 
 void vizard_host_isr_status(unsigned int keep, unsigned int set)
 {
-    unsigned int previous = interrupt_status;
-    interrupt_status = (interrupt_status & keep) | set;
-    unsigned int timer_mask = IM_GLOBAL | IM_TIMER;
+    unsigned int previous = cpu.status;
+    cpu.status = (cpu.status & keep) | set;
+    unsigned int timer_mask = VIZARD_IM_GLOBAL | VIZARD_IM_TIMER;
     if ((previous & timer_mask) != timer_mask &&
-        (interrupt_status & timer_mask) == timer_mask && compare_armed) {
+        (cpu.status & timer_mask) == timer_mask && compare_armed) {
         next_timer = GetTime() + 1.0;
     }
 }
 
 void vizard_host_isr_compare(unsigned int compare)
 {
-    (void)compare;
+    cpu.compare = compare;
+    cpu.count = 0;
     compare_armed = true;
     next_timer = GetTime() + 1.0;
 }
 
-static void service_uart_rx(volatile unsigned int *flags)
+static void service_uart_rx(void)
 {
-    unsigned int enabled = IM_GLOBAL | IM_UARX;
-    while ((interrupt_status & enabled) == enabled &&
+    unsigned int enabled = VIZARD_IM_GLOBAL | VIZARD_IM_UARX;
+    while ((cpu.status & enabled) == enabled &&
            vizard_uart_read32(&uart, VIZARD_UART_RX_VALID) != 0) {
-        int byte = (int)vizard_uart_read32(&uart, VIZARD_UART_RX_DATA);
-        if (byte == ' ') {
-            *flags ^= SMM_FLAGS_PAUSE;
-        } else if (byte == 'd') {
-            *flags |= SMM_FLAGS_NOTIMER;
-        } else if (byte == 'e') {
-            *flags &= ~SMM_FLAGS_NOTIMER;
+        if (!vizard_mips_interrupt(&cpu, VIZARD_IM_UARX)) {
+            break;
         }
     }
 }
@@ -209,6 +206,7 @@ bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clo
     active_clock = clock;
     active_rtc_count = rtc_count;
     active_flags = flags;
+    vizard_mips_map_shared(&cpu, seconds, clock, rtc_count, flags);
     if (WindowShouldClose()) {
         return false;
     }
@@ -222,7 +220,7 @@ bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clo
         }
         character = GetCharPressed();
     }
-    service_uart_rx(flags);
+    service_uart_rx();
 
     if (vizard_gp_gcode != NULL) {
         const unsigned int *words = vizard_gp_gcode;
@@ -245,11 +243,11 @@ bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clo
     }
 
     double now = GetTime();
-    if (compare_armed && (interrupt_status & (IM_GLOBAL | IM_TIMER)) == (IM_GLOBAL | IM_TIMER)) {
-        while (now >= next_timer) {
-            ++*seconds;
-            *clock = increment_bcd_clock(*clock);
-            next_timer += 1.0;
+    unsigned int timer_mask = VIZARD_IM_GLOBAL | VIZARD_IM_TIMER;
+    while (compare_armed && now >= next_timer && (cpu.status & timer_mask) == timer_mask) {
+        next_timer += 1.0;
+        if (!vizard_mips_interrupt(&cpu, VIZARD_IM_TIMER)) {
+            break;
         }
     }
     if (now >= next_draw) {
