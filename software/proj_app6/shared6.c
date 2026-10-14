@@ -41,8 +41,8 @@ void SM_INIT6(struct SM_DATA *sm)
         // "notimer" default is zero... so timer shown
     sm->seconds = 0;
     sm->clock = 0;
-    sm->player_y = 400;
-    sm->player_x = 300;
+    sm->player_y = 300;
+    sm->player_x = 400;
     sm->buff_size = K_SHBUF_SIZEB;
     sm->buff_head = 0;
     sm->buff_tail = 0;
