@@ -5,7 +5,7 @@
 .global     _entry, _isr
 
 .include "mmio_intr_cop0.s.inc"
-.include "shared6.s"
+.include "shared6.s.inc"
 
 # A simple jump-table for JALing in...
 # ...from BIOS to utility functions
@@ -126,11 +126,11 @@ ISR_TIMER:
     # OUT: $t0 = that value + 1    (BCD)
     # TMP: $t1, $k0, $k1
     # (This BCD code is from GROK and slightly tweaked)
-bcd4_inc:
+timer_bcd4_inc:
     andi    $t1, $t0, 0x000F        # ones
     addiu   $t1, $t1, 1
     sltiu   $k0, $t1, 10            # 1 => no carry
-    bne     $k0, $zero, bcd4_ones
+    bne     $k0, $zero, timer_bcd4_ones
     andi    $t0, $t0, 0xFFF0        # D; clear ones
 
     # ones was 9 -> 0, carry into tens
@@ -138,7 +138,7 @@ bcd4_inc:
     andi    $t1, $t1, 0x000F
     addiu   $t1, $t1, 1
     sltiu   $k0, $t1, 6             # Normally 10
-    bne     $k0, $zero, bcd4_tens
+    bne     $k0, $zero, timer_bcd4_tens
     andi    $t0, $t0, 0xFF0F        # D; clear tens
 
     # tens was 9 -> 0, carry into hundreds
@@ -146,7 +146,7 @@ bcd4_inc:
     andi    $t1, $t1, 0x000F
     addiu   $t1, $t1, 1
     sltiu   $k0, $t1, 10
-    bne     $k0, $zero, bcd4_hundreds
+    bne     $k0, $zero, timer_bcd4_hundreds
     andi    $t0, $t0, 0xF0FF        # D; clear hundreds
 
     # hundreds was 9 -> 0, carry into thousands
@@ -154,31 +154,31 @@ bcd4_inc:
     andi    $t1, $t1, 0x000F
     addiu   $t1, $t1, 1
     sltiu   $k0, $t1, 6             # Normally 10
-    bne     $k0, $zero, bcd4_thousands
+    bne     $k0, $zero, timer_bcd4_thousands
     andi    $t0, $t0, 0x0FFF        # D; clear thousands
 
     # 9999 + 1 -> 0000
-    b       bcd4_done
+    b       timer_bcd4_done
     or      $t0, $zero, $zero       # D;
 
-bcd4_thousands:
+timer_bcd4_thousands:
     sll     $t1, $t1, 12
-    b       bcd4_done
+    b       timer_bcd4_done
     or      $t0, $t0, $t1           # D;
 
-bcd4_hundreds:
+timer_bcd4_hundreds:
     sll     $t1, $t1, 8
-    b       bcd4_done
+    b       timer_bcd4_done
     or      $t0, $t0, $t1           # D;
 
-bcd4_tens:
+timer_bcd4_tens:
     sll     $t1, $t1, 4
-    b       bcd4_done
+    b       timer_bcd4_done
     or      $t0, $t0, $t1           # D;
 
-bcd4_ones:
+timer_bcd4_ones:
     or      $t0, $t0, $t1
-bcd4_done:
+timer_bcd4_done:
 
     la      $k1, SM_BASE
     sw      $t0, SMO_clock($k1)
@@ -201,11 +201,63 @@ ISR_RTC:
     j       done_cause
     addi    $k1, $zero, (~IM_RTC & 0x0000FFFF)
 
+#END: ISR_RTC
+
 
 # Triggered when UART Character has arrived and is readable:
 ISR_UARX:
-    j       done_cause
-    addi    $k1, $zero, (~IM_UARX & 0x0000FFFF)
+#TODO: Go ahead and utilize $t0 and $t1 for temporary storage...
+    la      $k0, MMIO_BASE
+    lw      $k1, OW_UARX_VALID($k0) #UART recv truly/still valid?
+    nop                             #H; Hazard below since $k1 loaded above
+    andi    $k1, $k1, MM_UART_RVA_BIT
+    beq     $k1, $zero, _uarx_done  #Interrupt without char so just return
+    nop                             #D;
+    lw      $k1, OB_UARX_DATA($k0)  #UART recv byte
+#"case" checking for controlling characters:
+    ori     $k0, $zero, ' '         #D;
+    beq     $k0, $k1, _uarx_toggle_pause
+    nop
+    ori     $k0, $zero, 'd'         #D;
+    beq     $k0, $k1, _uarx_disable_timer
+    nop
+    ori     $k0, $zero, 'e'         #D;
+    beq     $k0, $k1, _uarx_enable_timer
+    nop
+    b       _uarx_done              #H: $k0 not used so no hazard here
+    nop
+
+_uarx_toggle_pause:
+    la      $k0, SM_BASE
+    lw      $k1, SMO_flags($k0)
+    nop                             #H; Hazard below since $k1 loaded above
+    xori    $k1, $k1, SMM_flags_pause
+    b       _uarx_done
+    sw      $k1, SMO_flags($k0)
+
+_uarx_disable_timer:
+    la      $k0, SM_BASE
+    lw      $k1, SMO_flags($k0)
+    nop                             #H; Hazard below since $k1 loaded above
+    ori     $k1, $k1, SMM_flags_notimer
+    b       _uarx_done
+    sw      $k1, SMO_flags($k0)      #D;
+
+_uarx_enable_timer:
+    la      $k0, SM_BASE
+    lw      $k1, SMO_flags($k0)
+    nop                             #H; Hazard below since $k1 loaded above
+    andi    $k1, $k1, !SMM_flags_notimer
+    sw      $k1, SMO_flags($k0)
+#    b       _uarx_done
+#    nop                             #D;
+#FALLTHROUGH...
+
+_uarx_done:
+    b       done_cause
+    addiu   $k1, $zero, (~IM_UARX & 0x0000FFFF)
+
+#END: ISR_UARX
 
 
 # Triggered when UART Transmit transitions from busy to available:
@@ -215,7 +267,7 @@ ISR_UATX:
     lw      $t0, SMO_buff_head($k1)
     lw      $t1, SMO_buff_tail($k1)
     nop     #Delay Slot: Avoid hazard with $t1 fetch
-    beq     $t0, $t1, UATX_DONE         # Empty buffer
+    beq     $t0, $t1, _uatx_done        # Empty buffer
     nop
 
     la      $k1, SM_BASE #REDUNDANT
@@ -234,13 +286,15 @@ ISR_UATX:
     sw      $t0, SMO_buff_tail($k1)     # Store new offset
     la      $k1, MMIO_BASE              # Memory mapped XMIT char
     sw      $k0, OW_UATX_DATA($k1)      # Send character
-#    j       UATX_DONE
+#    j       _uatx_done
 #    nop
 # ...FALLTHROUGH...
 # ISR return here (restore stashed vals & reset cause)...
-UATX_DONE:
+_uatx_done:
     j       done_cause
     addi    $k1, $zero, (~IM_UATX & 0x0000FFFF)
+
+#END: ISR_UATX
 
 
 # Various utility functions reachable by "vector" jump-table above
