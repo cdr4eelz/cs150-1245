@@ -5,7 +5,7 @@
 .global     _entry, _isr
 
 .include "mmio_intr_cop0.s.inc"
-.include "shared.s"
+.include "shared.s.inc"
 
 # A simple jump-table for JALing in...
 # ...from BIOS to utility functions

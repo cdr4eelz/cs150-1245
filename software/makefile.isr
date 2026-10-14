@@ -12,7 +12,7 @@ all: isr
 isr: $(ISR_TARGET).mif $(ISR_TARGET).coe $(ISR_TARGET).dump
 clean: isr-clean
 
-$(ISR_TARGET).s.o: $(ISR_TARGET).s $(ISR_SHARED).s ../common/mmio_intr_cop0.s.inc
+$(ISR_TARGET).s.o: $(ISR_TARGET).s $(ISR_SHARED).s.inc ../common/mmio_intr_cop0.s.inc
 	$(PGAS) $(ISR_ASMOPTS) $< -o $@
 
 $(ISR_TARGET).elf: $(ISR_LD) $(ISR_TARGET).s.o
