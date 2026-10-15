@@ -22,33 +22,23 @@ bool vizard_mips_load(VizardMips *cpu, const char *path)
     return count > 0 && !too_big;
 }
 
-void vizard_mips_map_shared(VizardMips *cpu, volatile uint32_t *seconds,
-                            volatile uint32_t *clock, volatile uint32_t *rtc_count,
-                            volatile uint32_t *flags)
+void vizard_mips_map_shared(VizardMips *cpu, volatile struct SM_DATA *shared_data)
 {
-    cpu->shared[0].offset = SMO_seconds;
-    cpu->shared[0].word = seconds;
-    cpu->shared[1].offset = SMO_clock;
-    cpu->shared[1].word = clock;
-    cpu->shared[2].offset = SMO_RTC_count;
-    cpu->shared[2].word = rtc_count;
-    cpu->shared[3].offset = SMO_flags;
-    cpu->shared[3].word = flags;
+    cpu->shared_data = shared_data;
 }
 
-/* Host-endian pointer into the shared block (the C app sees the same bytes). */
-static uint8_t *sm_ptr(VizardMips *cpu, uint32_t address, unsigned size)
+static volatile uint8_t *sm_ptr(VizardMips *cpu, uint32_t address, unsigned size)
 {
-    if (address < VIZARD_MIPS_SM_BASE ||
-        address - VIZARD_MIPS_SM_BASE + size > VIZARD_MIPS_SM_BYTES) {
+    if (address < VIZARD_MIPS_SM_BASE) {
         return NULL;
     }
     uint32_t offset = address - VIZARD_MIPS_SM_BASE;
-    for (size_t i = 0; i < sizeof(cpu->shared) / sizeof(cpu->shared[0]); ++i) {
-        if (cpu->shared[i].word != NULL && offset >= cpu->shared[i].offset &&
-            offset < cpu->shared[i].offset + 4) {
-            return (uint8_t *)cpu->shared[i].word + (offset - cpu->shared[i].offset);
-        }
+    if (offset > VIZARD_MIPS_SM_BYTES || size > VIZARD_MIPS_SM_BYTES - offset) {
+        return NULL;
+    }
+    if (cpu->shared_data != NULL && offset <= sizeof(*cpu->shared_data) &&
+        size <= sizeof(*cpu->shared_data) - offset) {
+        return (volatile uint8_t *)cpu->shared_data + offset;
     }
     return cpu->sm + offset;
 }
@@ -78,12 +68,14 @@ static bool mem_read(VizardMips *cpu, uint32_t address, unsigned size, uint32_t 
         *value = result;
         return true;
     }
-    uint8_t *p = sm_ptr(cpu, address, size);
+    volatile uint8_t *p = sm_ptr(cpu, address, size);
     if (p == NULL) {
         return false;
     }
     *value = 0;
-    memcpy(value, p, size);
+    for (unsigned i = 0; i < size; ++i) {
+        *value |= (uint32_t)p[i] << (i * 8);
+    }
     return true;
 }
 
@@ -101,11 +93,13 @@ static bool mem_write(VizardMips *cpu, uint32_t address, unsigned size, uint32_t
     if (address & (size - 1)) {
         return false;
     }
-    uint8_t *p = sm_ptr(cpu, address, size);
+    volatile uint8_t *p = sm_ptr(cpu, address, size);
     if (p == NULL) {
         return false;
     }
-    memcpy(p, &value, size);
+    for (unsigned i = 0; i < size; ++i) {
+        p[i] = (uint8_t)(value >> (i * 8));
+    }
     return true;
 }
 

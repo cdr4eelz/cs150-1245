@@ -20,14 +20,8 @@ static double next_timer;
 static double next_draw;
 static unsigned int rx_total;
 static int last_key;
-static volatile unsigned int *active_seconds;
-static volatile unsigned int *active_clock;
-static volatile unsigned int *active_rtc_count;
-static volatile unsigned int *active_flags;
-static volatile unsigned int idle_flags;
-static volatile unsigned int idle_seconds;
-static volatile unsigned int idle_clock;
-static volatile unsigned int idle_rtc_count;
+static volatile struct SM_DATA *active_shared_data;
+static volatile struct SM_DATA idle_shared_data;
 static volatile void *pending_pf_frame;
 static bool pf_frame_pending;
 
@@ -199,14 +193,13 @@ static void service_uart_rx(void)
     }
 }
 
-bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clock,
-                      volatile unsigned int *rtc_count, volatile unsigned int *flags)
+bool vizard_host_poll(volatile struct SM_DATA *shared_data)
 {
-    active_seconds = seconds;
-    active_clock = clock;
-    active_rtc_count = rtc_count;
-    active_flags = flags;
-    vizard_mips_map_shared(&cpu, seconds, clock, rtc_count, flags);
+    if (shared_data == NULL) {
+        shared_data = &idle_shared_data;
+    }
+    active_shared_data = shared_data;
+    vizard_mips_map_shared(&cpu, shared_data);
     if (WindowShouldClose()) {
         return false;
     }
@@ -255,7 +248,7 @@ bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clo
             vizard_pf_frame = pending_pf_frame;
             pf_frame_pending = false;
         }
-        draw_host_view(*seconds, *clock);
+        draw_host_view(shared_data->seconds, shared_data->clock);
         next_draw = now + (1.0 / 60.0);
     }
     WaitTime(0.001);
@@ -277,12 +270,10 @@ bool vizard_host_gpu_submit(const unsigned int *words, size_t word_count,
 
 void vizard_host_wait_gpu(void)
 {
-    volatile unsigned int *seconds = active_seconds ? active_seconds : &idle_seconds;
-    volatile unsigned int *clock = active_clock ? active_clock : &idle_clock;
-    volatile unsigned int *rtc_count = active_rtc_count ? active_rtc_count : &idle_rtc_count;
-    volatile unsigned int *flags = active_flags ? active_flags : &idle_flags;
+    volatile struct SM_DATA *shared_data = active_shared_data != NULL ?
+                                           active_shared_data : &idle_shared_data;
     while (vizard_gp_gcode != NULL) {
-        if (!vizard_host_poll(seconds, clock, rtc_count, flags)) {
+        if (!vizard_host_poll(shared_data)) {
             break;
         }
     }
@@ -298,12 +289,10 @@ void vizard_host_wait_pf_frame(unsigned int frame)
     pending_pf_frame = (volatile void *)(uintptr_t)target;
     pf_frame_pending = true;
 
-    volatile unsigned int *seconds = active_seconds ? active_seconds : &idle_seconds;
-    volatile unsigned int *clock = active_clock ? active_clock : &idle_clock;
-    volatile unsigned int *rtc_count = active_rtc_count ? active_rtc_count : &idle_rtc_count;
-    volatile unsigned int *flags = active_flags ? active_flags : &idle_flags;
+    volatile struct SM_DATA *shared_data = active_shared_data != NULL ?
+                                           active_shared_data : &idle_shared_data;
     while (frame_number(vizard_pf_frame) != frame_number((volatile void *)(uintptr_t)target)) {
-        if (!vizard_host_poll(seconds, clock, rtc_count, flags)) {
+        if (!vizard_host_poll(shared_data)) {
             break;
         }
     }
@@ -318,11 +307,9 @@ void vizard_host_uart_write(unsigned char byte)
 int vizard_host_uart_read(void)
 {
     while (vizard_uart_read32(&uart, VIZARD_UART_RX_VALID) == 0) {
-        volatile unsigned int *seconds = active_seconds ? active_seconds : &idle_seconds;
-        volatile unsigned int *clock = active_clock ? active_clock : &idle_clock;
-        volatile unsigned int *rtc_count = active_rtc_count ? active_rtc_count : &idle_rtc_count;
-        volatile unsigned int *flags = active_flags ? active_flags : &idle_flags;
-        if (!vizard_host_poll(seconds, clock, rtc_count, flags)) {
+        volatile struct SM_DATA *shared_data = active_shared_data != NULL ?
+                               active_shared_data : &idle_shared_data;
+        if (!vizard_host_poll(shared_data)) {
             return -1;
         }
     }

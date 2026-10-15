@@ -11,8 +11,8 @@ bool vizard_host_init(void);
 void vizard_host_shutdown(void);
 void vizard_host_isr_status(unsigned int keep, unsigned int set);
 void vizard_host_isr_compare(unsigned int compare);
-bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clock,
-                      volatile unsigned int *rtc_count, volatile unsigned int *flags);
+struct SM_DATA;
+bool vizard_host_poll(volatile struct SM_DATA *shared_data);
 bool vizard_host_gpu_submit(const unsigned int *words, size_t word_count,
                             unsigned int frame);
 void vizard_host_uart_write(unsigned char byte);

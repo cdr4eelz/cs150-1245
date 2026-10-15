@@ -33,19 +33,14 @@ typedef struct {
     uint8_t rom[VIZARD_MIPS_ROM_BYTES];
     size_t rom_bytes;
     uint8_t sm[VIZARD_MIPS_SM_BYTES];
-    struct {
-        uint32_t offset;
-        volatile uint32_t *word;
-    } shared[4];
+    volatile struct SM_DATA *shared_data;
     VizardMipsMmio mmio;
 } VizardMips;
 
 void vizard_mips_init(VizardMips *cpu, VizardMipsMmio mmio);
 bool vizard_mips_load(VizardMips *cpu, const char *path);
-/* Point the SM words the host owns (seconds, clock, ...) at host variables. */
-void vizard_mips_map_shared(VizardMips *cpu, volatile uint32_t *seconds,
-                            volatile uint32_t *clock, volatile uint32_t *rtc_count,
-                            volatile uint32_t *flags);
+/* Map the complete shared block to the app's shared data structure. */
+void vizard_mips_map_shared(VizardMips *cpu, volatile struct SM_DATA *shared_data);
 /* Raise Cause bits and run the ISR to completion; false on fault. */
 bool vizard_mips_interrupt(VizardMips *cpu, uint32_t cause_bits);
 

@@ -100,12 +100,11 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 #ifdef VIZARD
 void vizard_host_isr_status(unsigned int keep, unsigned int set);
 void vizard_host_isr_compare(unsigned int compare);
-bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clock,
-                      volatile unsigned int *rtc_count, volatile unsigned int *flags);
+struct SM_DATA;
+bool vizard_host_poll(volatile struct SM_DATA *shared_data);
 #define ISR_STATUS(KEEP, SET) vizard_host_isr_status((KEEP), (SET))
 #define ISR_COMPARE(COMPARE) vizard_host_isr_compare(COMPARE)
-#define ISR_POLL(share) \
-    vizard_host_poll(&(share)->seconds, &(share)->clock, &(share)->RTC_count, &(share)->flags)
+#define ISR_POLL(share) vizard_host_poll((share))
 #else
 #define ISR_STATUS(KEEP, SET)                   \
     asm (                                       \

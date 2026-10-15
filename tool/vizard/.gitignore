@@ -1,5 +1,6 @@
-/vizard
+/build/
 /tests/test_core
 /tests/test_graphics_bridge
 /tests/test_frame_extra_overflow
-/build/
+/tests/test_mips
+/vizard
