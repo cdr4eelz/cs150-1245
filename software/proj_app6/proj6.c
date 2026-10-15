@@ -114,7 +114,7 @@ void main_imem(void) {
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
     uwait_ISR(); // Get off to a clean start with nobody sending yet
 
-    uwrite_int8s_ISR("\r\n\r\nPROJ-6.7:\r\n");
+    uwrite_int8s_ISR("\r\n\r\nPROJ-6.8:\r\n");
     uwrite_int8s_ISR("MAGIC: ");
     uwrite_int8s_ISR(uint32_to_ascii_hex(share->magic, tbuff, TBUF_SIZE));
     uwrite_int8s_ISR("\n\r");
@@ -124,9 +124,13 @@ void main_imem(void) {
     //NOTE: We set "Compare" here on init, but after that the ISR handles it
 
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX | IM_UARX | IM_RTC | IM_TIMER); //GPU?
-    
-    //TODO: Fill frame buffer tail(s) with hwq_stop so we can call frame_gp_render safely
-    //    : and point pSEQUENCE to first frame's tail
+
+
+    pSEQUENCE = (gpcode_p)FRAME_EXTRA_TAIL(1);
+    hwq_stop(pSEQUENCE);
+    pSEQUENCE = (gpcode_p)FRAME_EXTRA_TAIL(2);
+    hwq_stop(pSEQUENCE);
+
     tClock = prevClock = 0;
     while (ISR_POLL(share)) {
         tClock = share->clock;
@@ -136,14 +140,14 @@ void main_imem(void) {
         }
 
         if (!(share->flags & SMM_flags_pause)) {
+            uint32_t nextFrame = (frameCounter & 0x01u) + 1;
             //TODO: Render and Generate simultaneously (overlap)
             //TODO: Add frame_prep which moves objects and such (prior to generate)
             //TODO: Change % 2 to a mask of first bit
-            pSEQUENCE = frame_gp_generate((frameCounter % 2) + 1, frameCounter);
-            frame_gp_render((frameCounter % 2) + 1, pSEQUENCE);
-            //Right here is where generate should be performed (in next frame tail)
+            frame_gp_render(nextFrame, pSEQUENCE); // Draw asynchronously into inactive frame using its tail sequence
+            pSEQUENCE = frame_gp_generate(nextFrame, frameCounter);
             GP_WAIT(); // Wait until GPU/GP operations completed
-            PF_WAIT((frameCounter % 2) + 1); // Swap frame and wait until it is live
+            PF_WAIT(nextFrame); // Swap frame and wait until it is live
             frameCounter++;
         }
 
