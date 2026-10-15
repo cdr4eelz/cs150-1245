@@ -131,7 +131,7 @@ timer_bcd4_inc:
     addiu   $t1, $t1, 1
     sltiu   $k0, $t1, 10            # 1 => no carry
     bne     $k0, $zero, timer_bcd4_ones
-    andi    $t0, $t0, 0xFFF0        # D; clear ones
+    andi    $t0, $t0, 0xFFF0        #D; clear ones
 
     # ones was 9 -> 0, carry into tens
     srl     $t1, $t0, 4
@@ -139,7 +139,7 @@ timer_bcd4_inc:
     addiu   $t1, $t1, 1
     sltiu   $k0, $t1, 6             # Normally 10
     bne     $k0, $zero, timer_bcd4_tens
-    andi    $t0, $t0, 0xFF0F        # D; clear tens
+    andi    $t0, $t0, 0xFF0F        #D; clear tens
 
     # tens was 9 -> 0, carry into hundreds
     srl     $t1, $t0, 8
@@ -147,7 +147,7 @@ timer_bcd4_inc:
     addiu   $t1, $t1, 1
     sltiu   $k0, $t1, 10
     bne     $k0, $zero, timer_bcd4_hundreds
-    andi    $t0, $t0, 0xF0FF        # D; clear hundreds
+    andi    $t0, $t0, 0xF0FF        #D; clear hundreds
 
     # hundreds was 9 -> 0, carry into thousands
     srl     $t1, $t0, 12
@@ -155,26 +155,26 @@ timer_bcd4_inc:
     addiu   $t1, $t1, 1
     sltiu   $k0, $t1, 6             # Normally 10
     bne     $k0, $zero, timer_bcd4_thousands
-    andi    $t0, $t0, 0x0FFF        # D; clear thousands
+    andi    $t0, $t0, 0x0FFF        #D; clear thousands
 
     # 9999 + 1 -> 0000
     b       timer_bcd4_done
-    or      $t0, $zero, $zero       # D;
+    or      $t0, $zero, $zero       #D;
 
 timer_bcd4_thousands:
     sll     $t1, $t1, 12
     b       timer_bcd4_done
-    or      $t0, $t0, $t1           # D;
+    or      $t0, $t0, $t1           #D;
 
 timer_bcd4_hundreds:
     sll     $t1, $t1, 8
     b       timer_bcd4_done
-    or      $t0, $t0, $t1           # D;
+    or      $t0, $t0, $t1           #D;
 
 timer_bcd4_tens:
     sll     $t1, $t1, 4
     b       timer_bcd4_done
-    or      $t0, $t0, $t1           # D;
+    or      $t0, $t0, $t1           #D;
 
 timer_bcd4_ones:
     or      $t0, $t0, $t1
@@ -214,42 +214,66 @@ ISR_UARX:
     beq     $k1, $zero, _uarx_done  #Interrupt without char so just return
     nop                             #D;
     lbu     $k1, OB_UARX_DATA($k0)  #UART recv byte
+    la      $t1, SM_BASE            #Set up register for SM access below
+
 #"case" checking for controlling characters:
-    ori     $k0, $zero, ' '         #D;
+    ori     $k0, $zero, ' '
     beq     $k0, $k1, _uarx_toggle_pause
-    nop
-    ori     $k0, $zero, 'd'         #D;
+    ori     $k0, $zero, 'd'         #D; Harmless if branch taken
     beq     $k0, $k1, _uarx_disable_timer
-    nop
-    ori     $k0, $zero, 'e'         #D;
+    ori     $k0, $zero, 'e'         #D; Harmless if branch taken
     beq     $k0, $k1, _uarx_enable_timer
-    nop
-    b       _uarx_done              #H: $k0 not used so no hazard here
-    nop
+    ori     $k0, $zero, 'i'         #D; Harmless if branch taken
+    beq     $k0, $k1, _uarx_player_y
+    addiu   $k0, $zero, -1          #D; Decrement player_y if branch taken
+    ori     $k0, $zero, 'm'
+    beq     $k0, $k1, _uarx_player_y
+    addiu   $k0, $zero, 1           #D; Increment player_y if branch taken
+    ori     $k0, $zero, 'j'
+    beq     $k0, $k1, _uarx_player_x
+    addiu   $k0, $zero, -1          #D; Decrement player_x if branch taken
+    ori     $k0, $zero, 'l'
+    beq     $k0, $k1, _uarx_player_x
+    addiu   $k0, $zero, 1           #D; Increment player_x if branch taken
+
+    b       _uarx_done              #H: ???
+    nop                             #D;
 
 _uarx_toggle_pause:
-    la      $k0, SM_BASE
-    lh      $k1, SMO_flags($k0)
+    lh      $k1, SMO_flags($t1)
     nop                             #H; Hazard below since $k1 loaded above
     xori    $k1, $k1, SMM_flags_pause
     b       _uarx_done
-    sh      $k1, SMO_flags($k0)
+    sh      $k1, SMO_flags($t1)
 
 _uarx_disable_timer:
-    la      $k0, SM_BASE
-    lh      $k1, SMO_flags($k0)
+    lh      $k1, SMO_flags($t1)
     nop                             #H; Hazard below since $k1 loaded above
     ori     $k1, $k1, SMM_flags_notimer
     b       _uarx_done
-    sh      $k1, SMO_flags($k0)      #D;
+    sh      $k1, SMO_flags($t1)      #D;
 
 _uarx_enable_timer:
-    la      $k0, SM_BASE
-    lh      $k1, SMO_flags($k0)
+    lh      $k1, SMO_flags($t1)
     nop                             #H; Hazard below since $k1 loaded above
     andi    $k1, $k1, SMI_flags_notimer
-    sh      $k1, SMO_flags($k0)
+    b       _uarx_done
+    sh      $k1, SMO_flags($t1)
+
+_uarx_player_y:
+    lh      $k1, SMO_player_y($t1)
+    nop                             #H; Hazard below since $k1 loaded above
+    addu    $k1, $k1, $k0
+    sh      $k1, SMO_player_y($t1)
+    b       _uarx_done
+    nop
+
+_uarx_player_x:
+    lh      $k1, SMO_player_x($t1)
+    nop                             #H; Hazard below since $k1 loaded above
+    addu    $k1, $k1, $k0
 #    b       _uarx_done
+    sh      $k1, SMO_player_x($t1)
 #    nop                             #D;
 #FALLTHROUGH...
 

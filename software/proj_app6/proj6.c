@@ -71,7 +71,7 @@ void frame_gp_generate(uint32_t frame, uint32_t frameCounter) {
     //TODO: Add main "character" that moves based on keyboard
     pINST = hwq_elip(pINST, 0x00FF6644u,
                         share->player_x, share->player_y,
-                        6, 6, 0xFF4466FFu);
+                        5, 7, 0xFF4466FFu);
     
     pINST = generate_sweeper(pINST, frameCounter);
 
@@ -105,7 +105,7 @@ void main_imem(void) {
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
     uwait_ISR(); // Get off to a clean start with nobody sending yet
 
-    uwrite_int8s_ISR("\r\n\r\nPROJ-6.02:\r\n");
+    uwrite_int8s_ISR("\r\n\r\nPROJ-6.3:\r\n");
     uwrite_int8s_ISR("MAGIC: ");
     uwrite_int8s_ISR(uint32_to_ascii_hex(share->magic, tbuff, TBUF_SIZE));
     uwrite_int8s_ISR("\n\r");
