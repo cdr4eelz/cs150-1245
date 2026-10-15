@@ -21,19 +21,19 @@ int main(void)
     assert(vizard_mips_load(&cpu, VIZARD_ISR_IMAGE));
     vizard_mips_map_shared(&cpu, &seconds, &clock, &rtc, &flags);
 
-    cpu.status = VIZARD_IM_GLOBAL | VIZARD_IM_TIMER | VIZARD_IM_UARX;
+    cpu.status = IM_GLOBAL | IM_TIMER | IM_UARX;
     cpu.compare = 50000000u;
-    assert(vizard_mips_interrupt(&cpu, VIZARD_IM_TIMER));
+    assert(vizard_mips_interrupt(&cpu, IM_TIMER));
     assert(seconds == 6);
     assert(clock == 0x0100);
     assert(cpu.compare == 100000000u);
-    assert((cpu.cause & VIZARD_IM_TIMER) == 0);
-    assert(cpu.status & VIZARD_IM_GLOBAL);
+    assert((cpu.cause & IM_TIMER) == 0);
+    assert(cpu.status & IM_GLOBAL);
 
-    assert(vizard_mips_interrupt(&cpu, VIZARD_IM_UARX));
+    assert(vizard_mips_interrupt(&cpu, IM_UARX));
     assert(flags == 1);
     rx_byte = 'd';
-    assert(vizard_mips_interrupt(&cpu, VIZARD_IM_UARX));
+    assert(vizard_mips_interrupt(&cpu, IM_UARX));
     assert(flags == 3);
 
     puts("Vizard MIPS ISR tests passed.");

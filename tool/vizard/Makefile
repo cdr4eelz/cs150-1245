@@ -22,10 +22,11 @@ APP_SHARED_OBJ := $(VIZARD_BUILD_DIR)/$(notdir $(APP_SHARED_SRC:.c=_vizard.o))
 #ISR image (built by the app's own makefile; Vizard only loads it):
 APP_ISR_BIN := $(APP_SRC_DIR)/$(APP_INAME).bin
 APP_ISR_SRC := $(addprefix $(APP_SRC_DIR)/,isr$(APP_PROJ_VERSION).s shared$(APP_PROJ_VERSION).s.inc)
+VIZARD_SHARED_CPPFLAGS := -iquote $(APP_SRC_DIR) -iquote $(APP_COMMON_DIR) -DVIZARD_SHARED_HEADER='"$(APP_SNAME).h"'
 
 VIZARD_GPU_SRC := src/vizard_gpu.c
 VIZARD_SRCS := src/vizard_main.c src/vizard_host.c src/vizard_mips.c
-VIZARD_HDRS := src/vizard_host.h src/vizard_uart.h src/vizard_gpu.h src/vizard_mips.h
+VIZARD_HDRS := src/vizard_host.h src/vizard_uart.h src/vizard_gpu.h src/vizard_mips.h $(APP_COMMON_DIR)/mmio_intr_cop0.h
 VIZARD_COMMON_DIR := sw_common
 VIZARD_UART_SRC := $(VIZARD_COMMON_DIR)/uart_vizard.c
 VIZARD_GRAPHICS_SRC := $(VIZARD_COMMON_DIR)/graphics_vizard.c

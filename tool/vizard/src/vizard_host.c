@@ -1,6 +1,6 @@
+#include "vizard_mips.h"
 #include "vizard_host.h"
 #include "vizard_gpu.h"
-#include "vizard_mips.h"
 
 #include "raylib.h"
 
@@ -173,7 +173,7 @@ void vizard_host_isr_status(unsigned int keep, unsigned int set)
 {
     unsigned int previous = cpu.status;
     cpu.status = (cpu.status & keep) | set;
-    unsigned int timer_mask = VIZARD_IM_GLOBAL | VIZARD_IM_TIMER;
+    unsigned int timer_mask = IM_GLOBAL | IM_TIMER;
     if ((previous & timer_mask) != timer_mask &&
         (cpu.status & timer_mask) == timer_mask && compare_armed) {
         next_timer = GetTime() + 1.0;
@@ -190,10 +190,10 @@ void vizard_host_isr_compare(unsigned int compare)
 
 static void service_uart_rx(void)
 {
-    unsigned int enabled = VIZARD_IM_GLOBAL | VIZARD_IM_UARX;
+    unsigned int enabled = IM_GLOBAL | IM_UARX;
     while ((cpu.status & enabled) == enabled &&
            vizard_uart_read32(&uart, VIZARD_UART_RX_VALID) != 0) {
-        if (!vizard_mips_interrupt(&cpu, VIZARD_IM_UARX)) {
+        if (!vizard_mips_interrupt(&cpu, IM_UARX)) {
             break;
         }
     }
@@ -243,10 +243,10 @@ bool vizard_host_poll(volatile unsigned int *seconds, volatile unsigned int *clo
     }
 
     double now = GetTime();
-    unsigned int timer_mask = VIZARD_IM_GLOBAL | VIZARD_IM_TIMER;
+    unsigned int timer_mask = IM_GLOBAL | IM_TIMER;
     while (compare_armed && now >= next_timer && (cpu.status & timer_mask) == timer_mask) {
         next_timer += 1.0;
-        if (!vizard_mips_interrupt(&cpu, VIZARD_IM_TIMER)) {
+        if (!vizard_mips_interrupt(&cpu, IM_TIMER)) {
             break;
         }
     }

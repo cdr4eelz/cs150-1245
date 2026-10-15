@@ -1,6 +1,8 @@
 #ifndef VIZARD_MIPS_H
 #define VIZARD_MIPS_H
 
+#include "mmio_intr_cop0.h"
+#include VIZARD_SHARED_HEADER
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -11,23 +13,11 @@
 #define VIZARD_MIPS_ROM_BYTES  0x4000u
 #define VIZARD_MIPS_ISR_VECTOR 0xC0000180u
 #define VIZARD_MIPS_RETURN     0xFFFFFFF0u
-#define VIZARD_MIPS_SM_BASE    0x50000000u
+#define VIZARD_MIPS_SM_BASE    SM_BASE_ADDRESS
 #define VIZARD_MIPS_SM_BYTES   0x200u
-#define VIZARD_MIPS_MMIO_BASE  0x80000000u
+#define VIZARD_MIPS_MMIO_BASE  MMIO_BASE
 #define VIZARD_MIPS_MMIO_BYTES 0x100u
 #define VIZARD_MIPS_MAX_STEPS  100000u
-
-/* Offsets within the shared block; keep in sync with sharedN.h. */
-#define VIZARD_SMO_FLAGS     0x14u
-#define VIZARD_SMO_RTC_COUNT 0x18u
-#define VIZARD_SMO_SECONDS   0x1Cu
-#define VIZARD_SMO_CLOCK     0x20u
-
-#define VIZARD_IM_GLOBAL (1u << 0)
-#define VIZARD_IM_UARX   (1u << 10)
-#define VIZARD_IM_UATX   (1u << 11)
-#define VIZARD_IM_RTC    (1u << 14)
-#define VIZARD_IM_TIMER  (1u << 15)
 
 typedef struct {
     uint32_t (*read)(void *ctx, uint32_t address);

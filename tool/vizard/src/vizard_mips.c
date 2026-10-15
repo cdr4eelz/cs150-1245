@@ -26,13 +26,13 @@ void vizard_mips_map_shared(VizardMips *cpu, volatile uint32_t *seconds,
                             volatile uint32_t *clock, volatile uint32_t *rtc_count,
                             volatile uint32_t *flags)
 {
-    cpu->shared[0].offset = VIZARD_SMO_SECONDS;
+    cpu->shared[0].offset = SMO_seconds;
     cpu->shared[0].word = seconds;
-    cpu->shared[1].offset = VIZARD_SMO_CLOCK;
+    cpu->shared[1].offset = SMO_clock;
     cpu->shared[1].word = clock;
-    cpu->shared[2].offset = VIZARD_SMO_RTC_COUNT;
+    cpu->shared[2].offset = SMO_RTC_count;
     cpu->shared[2].word = rtc_count;
-    cpu->shared[3].offset = VIZARD_SMO_FLAGS;
+    cpu->shared[3].offset = SMO_flags;
     cpu->shared[3].word = flags;
 }
 
@@ -64,7 +64,7 @@ static bool mem_read(VizardMips *cpu, uint32_t address, unsigned size, uint32_t 
     if (is_mmio(address)) {
         /* The hardware ignores the low bits, and isrN.s relies on that for byte offsets. */
         *value = cpu->mmio.read != NULL ? cpu->mmio.read(cpu->mmio.ctx, address & ~3u) : 0;
-        return size == 4;
+        return size == 1 || size == 4;
     }
     if (address & (size - 1)) {
         return false;
@@ -228,7 +228,7 @@ bool vizard_mips_interrupt(VizardMips *cpu, uint32_t cause_bits)
     }
     cpu->cause |= cause_bits;
     cpu->epc = VIZARD_MIPS_RETURN;
-    cpu->status &= ~VIZARD_IM_GLOBAL;
+    cpu->status &= ~IM_GLOBAL;
     cpu->pc = VIZARD_MIPS_ISR_VECTOR;
     cpu->npc = cpu->pc + 4;
 
