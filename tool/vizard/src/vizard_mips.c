@@ -1,16 +1,29 @@
 #include "vizard_mips.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+static void mips_contract_failure(const char *message)
+{
+    fprintf(stderr, "Vizard fatal: %s\n", message);
+    abort();
+}
 
 void vizard_mips_init(VizardMips *cpu, VizardMipsMmio mmio)
 {
+    if (cpu == NULL) {
+        mips_contract_failure("vizard_mips_init received a null CPU");
+    }
     memset(cpu, 0, sizeof(*cpu));
     cpu->mmio = mmio;
 }
 
 bool vizard_mips_load(VizardMips *cpu, const char *path)
 {
+    if (cpu == NULL || path == NULL) {
+        mips_contract_failure("vizard_mips_load received a null argument");
+    }
     FILE *file = fopen(path, "rb");
     if (file == NULL) {
         return false;
@@ -24,6 +37,9 @@ bool vizard_mips_load(VizardMips *cpu, const char *path)
 
 void vizard_mips_map_shared(VizardMips *cpu, volatile struct SM_DATA *shared_data)
 {
+    if (cpu == NULL || shared_data == NULL) {
+        mips_contract_failure("vizard_mips_map_shared received a null argument");
+    }
     cpu->shared_data = shared_data;
 }
 
@@ -53,7 +69,10 @@ static bool mem_read(VizardMips *cpu, uint32_t address, unsigned size, uint32_t 
 {
     if (is_mmio(address)) {
         /* The hardware ignores the low bits, and isrN.s relies on that for byte offsets. */
-        *value = cpu->mmio.read != NULL ? cpu->mmio.read(cpu->mmio.ctx, address & ~3u) : 0;
+        if (cpu->mmio.read == NULL) {
+            return false;
+        }
+        *value = cpu->mmio.read(cpu->mmio.ctx, address & ~3u);
         return size == 1 || size == 4;
     }
     if (address & (size - 1)) {
@@ -85,9 +104,10 @@ static bool mem_write(VizardMips *cpu, uint32_t address, unsigned size, uint32_t
         if (size != 4) {
             return false;
         }
-        if (cpu->mmio.write != NULL) {
-            cpu->mmio.write(cpu->mmio.ctx, address & ~3u, value);
+        if (cpu->mmio.write == NULL) {
+            return false;
         }
+        cpu->mmio.write(cpu->mmio.ctx, address & ~3u, value);
         return true;
     }
     if (address & (size - 1)) {
@@ -191,7 +211,7 @@ static bool step(VizardMips *cpu, uint32_t *bad_instruction)
             r[rt] = *c0;
         } else if (rs == 4 && c0 != NULL) {
             *c0 = r[rt];
-        } else if (rs != 4) {
+        } else {
             return false;
         }
         break;
@@ -217,7 +237,12 @@ static bool step(VizardMips *cpu, uint32_t *bad_instruction)
 
 bool vizard_mips_interrupt(VizardMips *cpu, uint32_t cause_bits)
 {
+    if (cpu == NULL) {
+        mips_contract_failure("vizard_mips_interrupt received a null CPU");
+    }
     if (cpu->faulted || cpu->rom_bytes == 0) {
+        fprintf(stderr, "Vizard: cannot run ISR (CPU faulted=%s, ISR bytes=%zu)\n",
+                cpu->faulted ? "yes" : "no", cpu->rom_bytes);
         return false;
     }
     cpu->cause |= cause_bits;

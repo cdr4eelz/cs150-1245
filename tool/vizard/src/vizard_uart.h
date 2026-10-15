@@ -2,13 +2,14 @@
 #define VIZARD_UART_H
 
 #include <stdbool.h>
+#include "mmio_intr_cop0.h"
 
 #define VIZARD_UART_CAPACITY 256
 
-#define VIZARD_UART_TX_READY 0x80000000u
-#define VIZARD_UART_RX_VALID 0x80000004u
-#define VIZARD_UART_TX_DATA  0x80000008u
-#define VIZARD_UART_RX_DATA  0x8000000cu
+#define VIZARD_UART_TX_READY MM_UATX_READY
+#define VIZARD_UART_RX_VALID MM_UARX_VALID
+#define VIZARD_UART_TX_DATA  MM_UATX_DATA
+#define VIZARD_UART_RX_DATA  MM_UARX_DATA
 
 typedef struct {
     unsigned char tx[VIZARD_UART_CAPACITY];

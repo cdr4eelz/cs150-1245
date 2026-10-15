@@ -1,4 +1,5 @@
 #include "vizard_gpu.h"
+#include "vizard_uart.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -41,6 +42,7 @@ static void test_gpu_commands(void)
     assert(pixel(&gpu, 1, 8, 8) == 0xff303030u);
     assert(pixel(&gpu, 1, 11, 11) == 0xffffff00u);
     assert(pixel(&gpu, 1, 12, 12) == 0xff101010u);
+    assert(gpu.commands_processed == 5);
 
     const uint32_t bad_stop[] = { 0x00000001u };
     assert(!vizard_gpu_submit(&gpu, bad_stop, 1, 1));
@@ -52,6 +54,10 @@ static void test_gpu_commands(void)
 
     const uint32_t missing_stop[] = { 0x10000000u };
     assert(!vizard_gpu_submit(&gpu, missing_stop, 1, 1));
+    assert(gpu.fault);
+
+    const uint32_t stop[] = { 0 };
+    assert(!vizard_gpu_submit(&gpu, stop, 1, VIZARD_FRAME_COUNT));
     assert(gpu.fault);
     vizard_gpu_dispose(&gpu);
 }

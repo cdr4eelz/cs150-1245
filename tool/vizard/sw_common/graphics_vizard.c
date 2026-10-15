@@ -1,12 +1,42 @@
 #include "graphics.h"
 #include "vizard_host.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 gpcode_t vizard_gptemp[GPTEMP_SZW + VIZARD_GPU_COMMAND_CAPACITY];
 uint32_t vizard_frame_extra[VIZARD_EXTRA_FRAME_COUNT][FRAME_XTRAP]
     __attribute__((aligned(FRAME_ALIGN_BYTES)));
 
+unsigned vizard_frame_index(uint32_t frame)
+{
+    unsigned index;
+    if (frame & FPMASK) {
+        index = (frame >> FSHIFT) & FNMASK;
+    } else {
+        if (frame > FNMASK) {
+            fprintf(stderr, "Vizard: frame number %u is outside the supported range.\n", frame);
+            abort();
+        }
+        index = frame;
+    }
+    if (index >= VIZARD_EXTRA_FRAME_COUNT) {
+        fprintf(stderr, "Vizard: frame %u exceeds the supported range 0-%u.\n",
+                index, VIZARD_EXTRA_FRAME_COUNT - 1);
+        abort();
+    }
+    return index;
+}
+
+uint32_t *vizard_frame_extra_tail(uint32_t frame)
+{
+    unsigned index = vizard_frame_index(frame);
+    return vizard_frame_extra[index];
+}
+
 void pf_wait(uint32_t frame)
 {
+    vizard_frame_index(frame);
     vizard_host_wait_pf_frame((uint32_t)(uintptr_t)FRAME_PTR(frame));
 }
 

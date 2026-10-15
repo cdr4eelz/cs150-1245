@@ -135,16 +135,17 @@ typedef volatile gframe_tp gframe_tv, *gframe_pv;
     ((uint32_t)(FP)) | ((Y)<<(YSHIFT)) | ((X)<<(XSHIFT)) ) )
 #define FRAME_PTR(F)  ( std_frame((uint32_t)(F)) )
 #ifdef VIZARD
-#define FRAME_INDEX(F) ((((uint32_t)(uintptr_t)FRAME_PTR(F)) >> FSHIFT) & FNMASK)
+unsigned vizard_frame_index(uint32_t frame);
+#define FRAME_INDEX(F) vizard_frame_index((uint32_t)(F))
 #else
 #define FRAME_INDEX(F) ((((uint32_t)FRAME_PTR(F)) >> FSHIFT) & FNMASK)
 #endif
 
 #ifdef VIZARD
-#define VIZARD_EXTRA_FRAME_COUNT (10)
+#define VIZARD_EXTRA_FRAME_COUNT (16)
 extern uint32_t vizard_frame_extra[VIZARD_EXTRA_FRAME_COUNT][FRAME_XTRAP];
-#define FRAME_EXTRA_TAIL(F) \
-    (vizard_frame_extra[FRAME_INDEX(F)])
+uint32_t *vizard_frame_extra_tail(uint32_t frame);
+#define FRAME_EXTRA_TAIL(F) vizard_frame_extra_tail((uint32_t)(F))
 #else
 #define FRAME_EXTRA_TAIL(F) \
     ((uint32_t *)((((uint32_t)FRAME_PTR(F) + \
@@ -156,6 +157,9 @@ extern uint32_t vizard_frame_extra[VIZARD_EXTRA_FRAME_COUNT][FRAME_XTRAP];
 inline __attribute__((always_inline))
 gframe_pv std_frame(uint32_t const fn_or_fp)
 {
+#ifdef VIZARD
+    vizard_frame_index(fn_or_fp);
+#endif
     uint32_t fp = (fn_or_fp & (FPMASK));
     if (!fp) fp = (0x10000000 | ((fn_or_fp & (FNMASK)) << (FSHIFT)));
 #ifdef VIZARD

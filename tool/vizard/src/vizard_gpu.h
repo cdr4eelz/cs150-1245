@@ -5,8 +5,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "vizard_uart.h"
-
 #define VIZARD_SCREEN_WIDTH 800
 #define VIZARD_SCREEN_HEIGHT 600
 #define VIZARD_FRAME_COUNT 16
@@ -26,7 +24,7 @@ typedef struct {
 
 bool vizard_gpu_init(VizardGpu *gpu, unsigned width, unsigned height);
 void vizard_gpu_dispose(VizardGpu *gpu);
-/* Suspected (unconfirmed) stream size above which the FPGA GP hangs. */
+/* Warn above this empirical threshold; it is not a guaranteed FPGA limit. */
 #define VIZARD_GPU_STREAM_WARN_WORDS 512u
 
 bool vizard_gpu_stream_word_count(const uint32_t *words, size_t max_word_count,

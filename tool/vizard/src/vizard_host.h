@@ -9,6 +9,8 @@
 void vizard_host_wait_pf_frame(unsigned int frame);
 bool vizard_host_init(void);
 void vizard_host_shutdown(void);
+void vizard_host_report_error(const char *message);
+bool vizard_host_failed(void);
 void vizard_host_isr_status(unsigned int keep, unsigned int set);
 void vizard_host_isr_compare(unsigned int compare);
 struct SM_DATA;

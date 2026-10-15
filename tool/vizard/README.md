@@ -1,22 +1,26 @@
 # Vizard
 
-Vizard provides a fast graphical preview of the current final-project
-application, App N (`software/proj_appN/projN.c`). Its purpose is to make the
-application's appearance and interactive behavior easy to review before
-building and testing it in situ on the FPGA, which takes longer.
+Vizard is a Linux preview for the project application selected by
+`APP_PROJ_VERSION` in `Makefile` (App 6 by default). It compiles the app's C
+sources with `VIZARD` defined and runs them against host-side graphics and UART
+implementations.
 
-The Vizard target compiles the app's C control flow for the Linux host with
-`VIZARD` defined. It is **not an instruction-level MIPS or FPGA emulator**: it
-does not execute MIPS instructions, run the app's assembly ISR, or reproduce
-cycle-accurate hardware timing. Host-specific graphics and UART implementations
-live in `sw_common/*_vizard.c`; shared interfaces and portable sources come
-from `software/common`.
+Vizard also loads the paired ISR binary and executes its instructions with a
+small MIPS interpreter. The interpreter supports the instructions used by the
+ISR; it is not a complete MIPS CPU or FPGA simulator and does not reproduce
+cycle-accurate timing. The host supplies timer and UART events, while the GPU
+command stream is rendered synchronously in software. Shared interfaces and
+portable sources remain in `software/common`.
 
-## Artificial Intelligence Declaration
+## AI Assistance
 
-Vizard is almost entirely implemented using A.I. generation and modification. This is an exception compared to the rest of the CS150 project. Any use of A.I. elsewhere is explicitly documented with an exception... Vizard A.I. development occasionally touches a few files that are shared with the larger CS150 project, notably the "common" software declarations/headers and implementations in "C" source code. Compiler macros are used to distinguish each of these but there may be minimal adjustments to truly shared code. Another exception is that debugging of Vizard had a couple very minor crossovers with bugs in the main project and the A.I. recommendation was used if it was essentially trivial.
-
-The addition of "Vizard" represents a "time acceleration" to project work. The time limits of the project were already significantly violated by extended manual work. Additionally, the original project premise involves working with a partner however no partner was available to assist with development, debugging, design, planning, etc. Use of A.I. can be seen as a virtual partner.
+Vizard was developed substantially with AI assistance. Vizard-specific changes
+to shared software are guarded with `VIZARD` where practical; shared headers
+and implementations should still be reviewed for effects on non-Vizard builds.
+The rest of the CS150 project was developed without AI assistance except for
+separately documented exceptions. AI assistance was used here to support
+implementation, debugging, design, and planning in the absence of a project
+partner.
 
 ## Requirements
 
@@ -31,12 +35,22 @@ Xilinx ISE and ModelSim flows.
 
 ## Build and run
 
-With the requirements installed, run:
+If the selected ISR source has changed, rebuild its binary first. For the
+default App 6 configuration:
+
+```sh
+make -C ../../software/proj_app6 isr
+```
+
+Then build and run Vizard from `tool/vizard`:
 
 ```sh
 make
 ./vizard
 ```
+
+Vizard warns when the selected ISR binary is older than its assembly sources;
+it does not rebuild the application ISR automatically.
 
 The GPU command interpreter, UART model, common graphics bridge, and expected
 ASan overflow tests do not require a Raylib window. Run them with:
@@ -86,7 +100,8 @@ Words use the hardware opcode and field layout:
 - A zero word stops the stream. Malformed or unterminated streams set GPU fault.
 
 Each point packs X in bits 25:16 and Y in bits 9:0. Frames accept either a
-frame number or the hardware frame address encoding.
+frame number or the hardware frame address encoding. Vizard currently stores
+16 frames, numbered 0 through 15.
 
 ## UART model
 
@@ -98,24 +113,25 @@ projN ISR-style output and common UART writes print to the Vizard launch
 terminal. The host timer emulates the paired `isrN.s` 1 Hz seconds/BCD clock
 update; Escape exits the app.
 
-`projN.c` demonstrates the timer, UART output, and common GPU command helpers.
-Vizard is synchronous at GPU submission and approximates ISR timing; it does
-not model MIPS instruction execution or cycle-accurate hardware timing.
+`projN.c` exercises the timer, UART output, common GPU command helpers, and the
+paired ISR. Vizard executes that ISR through its limited MIPS interpreter;
+timer scheduling and GPU submission remain host-driven and are not
+cycle-accurate.
 
 ## Runtime integration
 
-On the FPGA, the final app is closely paired with its `projN` assembly ISR
-(currently `isr5.s`), which handles interrupt-driven state updates. Vizard does
-not execute that ISR. It substitutes host callbacks and a polled timer to keep
-the app's visible seconds/BCD clock behavior moving, while approximating rather
-than reproducing interrupt timing and scheduling.
+On the FPGA, the app is paired with `isrN.s` for interrupt-driven state
+updates. Vizard loads the selected `isrN.bin` and runs its supported MIPS
+instructions for timer and UART interrupts. Its interrupt schedule is driven
+by the host event loop, so timing and scheduling only approximate the FPGA.
 
 The source of MMIO-like behavior also differs: native code accesses FPGA
 registers, while Vizard maps selected registers to host variables and callbacks.
 For example, a `GP_GCODE` write stores the command pointer; Vizard notices it
-on a later main-loop poll and processes the stream. This keeps the app-facing
-behavior and interfaces sufficiently correlated for a useful preview, often in
-a literal-looking way, but does not simulate live FPGA CPU/GPU execution.
+on a later main-loop poll and processes the stream. MIPS shared-memory accesses
+are mapped to the app's complete `SM_DATA` object so ISR updates are visible to
+the C application. This provides a useful behavioral preview, not live FPGA
+CPU/GPU execution.
 
 There is no physical UART or serial-port emulation. Raylib keypress events feed
 the app's host-side receive queue; common `uread_int8()` reads from that queue

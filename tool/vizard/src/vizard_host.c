@@ -1,6 +1,7 @@
 #include "vizard_mips.h"
 #include "vizard_host.h"
 #include "vizard_gpu.h"
+#include "vizard_uart.h"
 
 #include "raylib.h"
 
@@ -20,6 +21,7 @@ static double next_timer;
 static double next_draw;
 static unsigned int rx_total;
 static int last_key;
+static bool host_error;
 static volatile struct SM_DATA *active_shared_data;
 static volatile struct SM_DATA idle_shared_data;
 static volatile void *pending_pf_frame;
@@ -52,12 +54,18 @@ static void cpu_mmio_write(void *ctx, uint32_t address, uint32_t value)
     (void)ctx;
     if (address == VIZARD_UART_TX_DATA) {
         vizard_host_uart_write((unsigned char)value);
+    } else {
+        vizard_host_report_error("write to an unsupported MMIO register");
     }
 }
 
 static void draw_host_view(unsigned int seconds, unsigned int clock)
 {
     unsigned int display_frame = frame_number(vizard_pf_frame);
+    if (display_frame >= VIZARD_FRAME_COUNT) {
+        vizard_host_report_error("pixel feeder selected an unsupported frame");
+        return;
+    }
     const uint32_t *pixels = vizard_gpu_frame(&gpu, display_frame);
     size_t pixel_count = (size_t)VIZARD_SCREEN_WIDTH * VIZARD_SCREEN_HEIGHT;
     if (pixels == NULL) {
@@ -122,29 +130,48 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
 
 bool vizard_host_init(void)
 {
+    host_error = false;
     if (!vizard_gpu_init(&gpu, VIZARD_SCREEN_WIDTH, VIZARD_SCREEN_HEIGHT)) {
+        vizard_host_report_error("unable to initialize the software GPU");
         return false;
     }
     vizard_uart_init(&uart);
     vizard_mips_init(&cpu, (VizardMipsMmio){ cpu_mmio_read, cpu_mmio_write, NULL });
     if (!vizard_mips_load(&cpu, VIZARD_ISR_IMAGE)) {
-        fprintf(stderr, "Vizard: unable to load ISR image %s\n", VIZARD_ISR_IMAGE);
+        char message[256];
+        snprintf(message, sizeof(message), "unable to load ISR image %s", VIZARD_ISR_IMAGE);
+        vizard_host_report_error(message);
         vizard_gpu_dispose(&gpu);
         return false;
     }
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vizard | MIPS150 app host");
     if (!IsWindowReady()) {
+        vizard_host_report_error("Raylib failed to create the preview window");
         vizard_gpu_dispose(&gpu);
         return false;
     }
     SetTargetFPS(60);
 
     Image image = GenImageColor(VIZARD_SCREEN_WIDTH, VIZARD_SCREEN_HEIGHT, BLACK);
+    if (!IsImageValid(image)) {
+        vizard_host_report_error("unable to allocate the preview image");
+        UnloadImage(image);
+        CloseWindow();
+        vizard_gpu_dispose(&gpu);
+        return false;
+    }
     canvas = LoadTextureFromImage(image);
     UnloadImage(image);
+    if (!IsTextureValid(canvas)) {
+        vizard_host_report_error("unable to create the preview texture");
+        CloseWindow();
+        vizard_gpu_dispose(&gpu);
+        return false;
+    }
     upload_pixels = malloc((size_t)VIZARD_SCREEN_WIDTH * VIZARD_SCREEN_HEIGHT * sizeof(Color));
     if (upload_pixels == NULL) {
+        vizard_host_report_error("unable to allocate the preview pixel buffer");
         UnloadTexture(canvas);
         CloseWindow();
         vizard_gpu_dispose(&gpu);
@@ -152,6 +179,19 @@ bool vizard_host_init(void)
     }
     next_draw = GetTime();
     return true;
+}
+
+void vizard_host_report_error(const char *message)
+{
+    if (!host_error) {
+        fprintf(stderr, "Vizard error: %s\n", message != NULL ? message : "unspecified failure");
+    }
+    host_error = true;
+}
+
+bool vizard_host_failed(void)
+{
+    return host_error;
 }
 
 void vizard_host_shutdown(void)
@@ -182,21 +222,27 @@ void vizard_host_isr_compare(unsigned int compare)
     next_timer = GetTime() + 1.0;
 }
 
-static void service_uart_rx(void)
+static bool service_uart_rx(void)
 {
     unsigned int enabled = IM_GLOBAL | IM_UARX;
     while ((cpu.status & enabled) == enabled &&
            vizard_uart_read32(&uart, VIZARD_UART_RX_VALID) != 0) {
         if (!vizard_mips_interrupt(&cpu, IM_UARX)) {
-            break;
+            vizard_host_report_error("MIPS ISR failed while servicing UART receive");
+            return false;
         }
     }
+    return true;
 }
 
 bool vizard_host_poll(volatile struct SM_DATA *shared_data)
 {
+    if (host_error) {
+        return false;
+    }
     if (shared_data == NULL) {
-        shared_data = &idle_shared_data;
+        vizard_host_report_error("poll received a null shared-data pointer");
+        return false;
     }
     active_shared_data = shared_data;
     vizard_mips_map_shared(&cpu, shared_data);
@@ -207,13 +253,21 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
     int character = GetCharPressed();
     while (character > 0) {
         if (((character >= 32 && character <= 255) || character == '\r' || character == '\n') &&
-            vizard_uart_receive(&uart, (uint8_t)character)) {
+            !vizard_uart_receive(&uart, (uint8_t)character)) {
+            vizard_host_report_error("UART RX FIFO is full; input was lost");
+            return false;
+        } else if ((character >= 32 && character <= 255) || character == '\r' || character == '\n') {
             last_key = character;
             ++rx_total;
         }
         character = GetCharPressed();
     }
-    service_uart_rx();
+    if (!service_uart_rx()) {
+        return false;
+    }
+    if (host_error) {
+        return false;
+    }
 
     if (vizard_gp_gcode != NULL) {
         const unsigned int *words = vizard_gp_gcode;
@@ -223,14 +277,20 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
             fprintf(stderr, "Vizard: malformed or unterminated GP_GCODE stream "
                             "(limit %u words)\n", VIZARD_GPU_COMMAND_CAPACITY);
             gpu.fault = true;
+            vizard_gp_gcode = NULL;
+            vizard_host_report_error("malformed or unterminated GP_GCODE stream");
+            return false;
         } else {
             static size_t largest_warned;
             if (word_count > VIZARD_GPU_STREAM_WARN_WORDS && word_count > largest_warned) {
                 largest_warned = word_count;
-                fprintf(stderr, "Vizard: GP stream is %zu words (> %u); FPGA froze at about this size\n",
+                fprintf(stderr, "Vizard: GP stream is %zu words (> %u-word warning threshold); FPGA limits are not modeled\n",
                         word_count, VIZARD_GPU_STREAM_WARN_WORDS);
             }
             vizard_host_gpu_submit(words, word_count, frame_number(vizard_gp_frame));
+            if (host_error) {
+                return false;
+            }
         }
         vizard_gp_gcode = NULL;
     }
@@ -240,8 +300,12 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
     while (compare_armed && now >= next_timer && (cpu.status & timer_mask) == timer_mask) {
         next_timer += 1.0;
         if (!vizard_mips_interrupt(&cpu, IM_TIMER)) {
-            break;
+            vizard_host_report_error("MIPS ISR failed while servicing timer interrupt");
+            return false;
         }
+    }
+    if (host_error) {
+        return false;
     }
     if (now >= next_draw) {
         if (pf_frame_pending) {
@@ -249,6 +313,9 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
             pf_frame_pending = false;
         }
         draw_host_view(shared_data->seconds, shared_data->clock);
+        if (host_error) {
+            return false;
+        }
         next_draw = now + (1.0 / 60.0);
     }
     WaitTime(0.001);
@@ -263,7 +330,9 @@ bool vizard_host_gpu_submit(const unsigned int *words, size_t word_count,
                               ((gpu.frame & 0x3fu) << 18) |
                               (gpu.fault ? (1u << 16) : 0u);
     if (!success) {
-        fprintf(stderr, "Vizard: GPU command stream fault on frame %u\n", gpu.frame);
+        char message[96];
+        snprintf(message, sizeof(message), "GPU command stream failed on frame %u", gpu.frame);
+        vizard_host_report_error(message);
     }
     return success;
 }
@@ -281,6 +350,10 @@ void vizard_host_wait_gpu(void)
 
 void vizard_host_wait_pf_frame(unsigned int frame)
 {
+    if (frame_number((volatile void *)(uintptr_t)frame) >= VIZARD_FRAME_COUNT) {
+        vizard_host_report_error("requested pixel-feeder frame is unsupported");
+        return;
+    }
     unsigned int target = frame_address(frame);
     if (frame_number(vizard_pf_frame) == frame_number((volatile void *)(uintptr_t)target)) {
         return;

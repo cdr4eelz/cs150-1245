@@ -8,11 +8,14 @@ void main_imem(void);
 int main(void)
 {
     if (!vizard_host_init()) {
-        fputs("Unable to initialize the Vizard host.\n", stderr);
+        if (!vizard_host_failed()) {
+            vizard_host_report_error("unable to initialize the host");
+        }
         return 1;
     }
 
     main_imem();
+    bool failed = vizard_host_failed();
     vizard_host_shutdown();
-    return 0;
+    return failed ? 1 : 0;
 }

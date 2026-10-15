@@ -1,5 +1,6 @@
 #include "vizard_gpu.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -11,6 +12,14 @@ enum {
     GOP_RECT = 4
 };
 
+static void gpu_contract_failure(const char *message) __attribute__((noreturn));
+
+static void gpu_contract_failure(const char *message)
+{
+    fprintf(stderr, "Vizard fatal: %s\n", message);
+    abort();
+}
+
 static unsigned frame_index(uint32_t frame)
 {
     return (frame >> 28) ? ((frame >> 22) & 0x3fu) : (frame & 0x3fu);
@@ -18,6 +27,9 @@ static unsigned frame_index(uint32_t frame)
 
 static uint32_t *get_frame(VizardGpu *gpu, unsigned frame)
 {
+    if (frame >= VIZARD_FRAME_COUNT) {
+        return NULL;
+    }
     if (gpu->frames[frame].pixels == NULL) {
         size_t pixel_count = (size_t)gpu->width * gpu->height;
         gpu->frames[frame].pixels = calloc(pixel_count, sizeof(uint32_t));
@@ -113,14 +125,6 @@ static void draw_ellipse_scanlines(VizardGpu *gpu, uint32_t *pixels,
     }
 }
 
-static uint32_t swelip_mul16u32u(uint16_t left, uint16_t right)
-    __attribute__((unused));
-
-static uint32_t swelip_mul16u32u(uint16_t left, uint16_t right)
-{
-    return (uint32_t)(left * right);
-}
-
 static uint32_t swelip_mul32u_full(uint32_t left, uint32_t right)
 {
     return left * right;
@@ -174,9 +178,12 @@ static void draw_ellipse(VizardGpu *gpu, uint32_t *pixels,
 
 bool vizard_gpu_init(VizardGpu *gpu, unsigned width, unsigned height)
 {
-    if (gpu == NULL || width == 0 || height == 0 ||
+    if (gpu == NULL) {
+        gpu_contract_failure("vizard_gpu_init received a null GPU");
+    }
+    if (width == 0 || height == 0 ||
         (size_t)width > SIZE_MAX / height / sizeof(uint32_t)) {
-        return false;
+        gpu_contract_failure("vizard_gpu_init received invalid dimensions");
     }
     memset(gpu, 0, sizeof(*gpu));
     gpu->width = width;
@@ -187,7 +194,7 @@ bool vizard_gpu_init(VizardGpu *gpu, unsigned width, unsigned height)
 void vizard_gpu_dispose(VizardGpu *gpu)
 {
     if (gpu == NULL) {
-        return;
+        gpu_contract_failure("vizard_gpu_dispose received a null GPU");
     }
     for (unsigned i = 0; i < VIZARD_FRAME_COUNT; ++i) {
         free(gpu->frames[i].pixels);
@@ -198,7 +205,7 @@ void vizard_gpu_dispose(VizardGpu *gpu)
 const uint32_t *vizard_gpu_frame(const VizardGpu *gpu, unsigned frame)
 {
     if (gpu == NULL || frame >= VIZARD_FRAME_COUNT) {
-        return NULL;
+        gpu_contract_failure("vizard_gpu_frame received an invalid GPU or frame");
     }
     return gpu->frames[frame].pixels;
 }
@@ -207,7 +214,7 @@ bool vizard_gpu_stream_word_count(const uint32_t *words, size_t max_word_count,
                                   size_t *word_count)
 {
     if (words == NULL || word_count == NULL) {
-        return false;
+        gpu_contract_failure("vizard_gpu_stream_word_count received a null argument");
     }
 
     size_t index = 0;
@@ -245,13 +252,18 @@ bool vizard_gpu_stream_word_count(const uint32_t *words, size_t max_word_count,
 bool vizard_gpu_submit(VizardGpu *gpu, const uint32_t *words, size_t word_count,
                        uint32_t frame)
 {
-    if (gpu == NULL || words == NULL || word_count == 0) {
-        return false;
+    if (gpu == NULL) {
+        gpu_contract_failure("vizard_gpu_submit received a null GPU");
     }
 
     gpu->fault = false;
     gpu->commands_processed = 0;
     gpu->frame = frame_index(frame);
+    if (words == NULL || word_count == 0 || gpu->frame >= VIZARD_FRAME_COUNT) {
+        gpu->fault = true;
+        return false;
+    }
+
     uint32_t *pixels = get_frame(gpu, gpu->frame);
     if (pixels == NULL) {
         gpu->fault = true;
@@ -296,16 +308,12 @@ bool vizard_gpu_submit(VizardGpu *gpu, const uint32_t *words, size_t word_count,
         int y0 = (int)(first & 0x3ffu);
         int x1 = (int)((second >> 16) & 0x3ffu);
         int y1 = (int)(second & 0x3ffu);
-        ++gpu->commands_processed;
-        ++gpu->commands_processed;
-
         if (opcode == GOP_LINE) {
             draw_line(gpu, pixels, x0, y0, x1, y1, edge);
             continue;
         }
 
         uint32_t fill = words[index++];
-        ++gpu->commands_processed;
         if (opcode == GOP_RECT) {
             draw_rect(gpu, pixels, x0, y0, x1, y1, edge, fill);
         } else {

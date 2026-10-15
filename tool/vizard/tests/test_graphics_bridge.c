@@ -1,4 +1,5 @@
 #include "graphics.h"
+#include "vizard_gpu.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -54,10 +55,11 @@ int main(void)
 
     uint32_t *extra0 = FRAME_EXTRA_TAIL(0);
     uint32_t *extra1 = FRAME_EXTRA_TAIL(1);
-    uint32_t *extra9 = FRAME_EXTRA_TAIL(9);
+    uint32_t *extra15 = FRAME_EXTRA_TAIL(15);
+    assert(VIZARD_EXTRA_FRAME_COUNT == VIZARD_FRAME_COUNT);
     assert((uintptr_t)extra0 % FRAME_ALIGN_BYTES == 0);
     assert(extra1 - extra0 == FRAME_XTRAP);
-    assert(extra9 - extra0 == 9 * FRAME_XTRAP);
+    assert(extra15 - extra0 == 15 * FRAME_XTRAP);
     assert(FRAME_XTRAP == FRAME_XTRAR * ROW_OFFSETP + ROW_XTRAP);
     assert(FRAME_XTRAP == 434400);
 
