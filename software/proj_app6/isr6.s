@@ -311,7 +311,7 @@ _uarx_player_downright:
 #    Fall through to _uarx_player_move
 
 _uarx_player_move:      # Pass delta-X & delta-Y in $k0 & $K1 respectively
-    lh      $t0, SMO_player_x($t1)
+    lh      $t0, SMO_player_x($t1)  # Player x & y are signed 16-bit int
     nop                             #H; Hazard below since $t0 loaded above
     addu    $t0, $t0, $k0
     sh      $t0, SMO_player_x($t1)
@@ -353,7 +353,7 @@ ISR_UATX:
     la      $k1, SM_BASE #REDUNDANT
     lw      $t1, SMO_buff_tail($k1) #REDUNDANT
     addi    $t0, $t1, 1                 # Advance to next char
-    andi    $t0, $t0, K_SHBUF_ROLLOVER
+    andi    $t0, $t0, K_SHBUF_ROLLOVERB
     sw      $t0, SMO_buff_tail($k1)     # Store new offset
     la      $k1, MMIO_BASE              # Memory mapped XMIT char
     sw      $k0, OW_UATX_DATA($k1)      # Send character

@@ -60,7 +60,7 @@ void uwrite_int8s_ISR(int8_t* src) { //Should use MAX/TIMEOUT???
             UTRAN_DATA = ch; // Simple send direct to UART
         } else { // Utilize ring-buffer
             uint32_t head = share->buff_head;
-            uint32_t nextHead = (head + 1) & K_SHBUF_ROLLOVER;
+            uint32_t nextHead = (head + 1) & K_SHBUF_ROLLOVERB;
             while (nextHead == share->buff_tail) { } //Buffer is full
             share->buff_data[head] = ch;
             share->buff_head = nextHead;

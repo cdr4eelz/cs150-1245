@@ -18,7 +18,7 @@ gpcode_p generate_sweeper(gpcode_p pINST, uint32_t frameCounter) {
     if (1) { //(sweepForward || sweepReverse) {
         const uint32_t sweepFrame = (frameCounter >= sweepBase) ? frameCounter - sweepBase : 0;
         // Forward vs reverse x coordinates:
-      //const int32_t x_something_f = ((sweepFrame*8) % 1024) - ((1024-800)/2);
+    //const int32_t x_something_f = ((sweepFrame*8) % 1024) - ((1024-800)/2);
         const int32_t x_something_f = (int32_t)((sweepFrame << 3) & 0x03FFu) - 112;
         const int32_t x_something_r = 1024 - x_something_f;
 
@@ -43,48 +43,57 @@ gpcode_p generate_sweeper(gpcode_p pINST, uint32_t frameCounter) {
     return pINST;
 }
 
-void frame_gp_generate(uint32_t frame, uint32_t frameCounter) {
-    struct SM_DATA* share = SM_BASE;
-    gpcode_p pINST;
-    const gpcode_p pSEQUENCE = (gpcode_p)FRAME_EXTRA_TAIL(frame);
-
-    pINST = pSEQUENCE;
-    // Background clear to near black
-    pINST = hwq_fill(pINST, 0x00002233u);
+gpcode_p generate_borders(gpcode_p pINST) {
     // Draw the border rectangles 10-pixel thick around the edges of the screen
     pINST = hwq_rect(pINST, 0x00114488u,   0,  0,  799, 10, 0xFF114488u);
     pINST = hwq_rect(pINST, 0x00114488u,   0,  0,   10,599, 0xFF114488u);
     pINST = hwq_rect(pINST, 0x00114488u, 789,  0,  799,599, 0xFF114488u);
     pINST = hwq_rect(pINST, 0x00114488u,   0,589,  799,599, 0xFF114488u);
+    return pINST;
+}
 
-    // This prints a dot to the ISR to prevent lockup
-//////    uwrite_int8s_ISR(".");
-
+gpcode_p generate_globe(gpcode_p pINST) {
     // Draw concentric ellipses that look vaguely like a "globe"
     pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 100, 299, 0x00000000u);
     pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 250, 299, 0x00000000u);
     pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 398, 299, 0x00000000u);
-
-    //TODO: Add "bouncers" that can be added & removed dynamically
-
-    //TODO: Add main "character" that moves based on keyboard
-    pINST = hwq_elip(pINST, 0x00FF6644u,
-                        share->player_x, share->player_y,
-                        5, 7, 0xFF4466FFu);
-    
-    pINST = generate_sweeper(pINST, frameCounter);
-
-    // End of frame sequence
-    pINST = hwq_stop(pINST);
-    //GP_WAIT();
+    return pINST;
 }
 
-void frame_gp_render(uint32_t frame) {
+gpcode_p generate_bouncers(gpcode_p pINST) {
+    return pINST;
+}
+
+gpcode_p generate_player(gpcode_p pINST, uint16_t x, uint16_t y) {
+    pINST = hwq_elip(pINST, 0x00FF6644u, x,y, 5,7, 0xFF4466FFu);
+    return pINST;
+}
+
+BOOL point_is_on_screen(int16_t x, int16_t y, int16_t border) {
+    return (x >= border && x < (800 - border) && y >= border && y < (600 - border));
+}
+
+gpcode_p frame_gp_generate(uint32_t frame, uint32_t frameCounter) {
+    struct SM_DATA* share = SM_BASE;
+    const gpcode_p pSEQUENCE = (gpcode_p)FRAME_EXTRA_TAIL(frame);
+    gpcode_p pINST = pSEQUENCE; // Start fresh graphics ops in this frame's tail
+
+    pINST = hwq_fill(pINST, 0x00002233u); // Background clear to near black
+    pINST = generate_borders(pINST);
+    pINST = generate_globe(pINST);
+    pINST = generate_bouncers(pINST);
+    if (point_is_on_screen(share->player_x, share->player_y, 0)) {
+        pINST = generate_player(pINST, (uint16_t)share->player_x, (uint16_t)share->player_y);
+    }
+    pINST = generate_sweeper(pINST, frameCounter);
+    pINST = hwq_stop(pINST); // End of frame sequence
+    return pSEQUENCE;
+}
+
+void frame_gp_render(uint32_t frame, gpcode_p pSEQUENCE) {
     GP_WAIT(); //Just in case, harmless if not needed
     GP_FRAME = FRAME_PTR(frame);
-    GP_GCODE = (gpcode_p)FRAME_EXTRA_TAIL(frame);
-    GP_WAIT(); //TODO: Consider 3-frame flipping and performing CPU actions rather than waiting here
-    PF_WAIT(frame); //WAS: PF_FRAME = frame;
+    GP_GCODE = pSEQUENCE;
 }
 
 
@@ -92,6 +101,7 @@ void main_imem(void) {
     struct SM_DATA* share = SM_BASE;
     uint32_t tClock, prevClock;
     uint32_t frameCounter = 0;
+    gpcode_p pSEQUENCE = NULL;
 
     //TODO: Clear "Cause" register???
     //TODO: Should macro mask "Cause" based on enabled "Status" bits???
@@ -115,19 +125,25 @@ void main_imem(void) {
 
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX | IM_UARX | IM_RTC | IM_TIMER); //GPU?
     
+    //TODO: Fill frame buffer tail(s) with hwq_stop so we can call frame_gp_render safely
+    //    : and point pSEQUENCE to first frame's tail
     tClock = prevClock = 0;
     while (ISR_POLL(share)) {
         tClock = share->clock;
         if (tClock != prevClock) {
-            //TODO: Conditional based on a flag
             if (!(share->flags & SMM_flags_notimer)) uwrite_clock_ISR(tClock);
             prevClock = tClock; // Advance whether or not printing enabled
         }
 
         if (!(share->flags & SMM_flags_pause)) {
-            //TODO: Generate current frame & render next at same time (flip PF between)...
-            frame_gp_generate((frameCounter % 2) + 1, frameCounter);
-            frame_gp_render((frameCounter % 2) + 1);
+            //TODO: Render and Generate simultaneously (overlap)
+            //TODO: Add frame_prep which moves objects and such (prior to generate)
+            //TODO: Change % 2 to a mask of first bit
+            pSEQUENCE = frame_gp_generate((frameCounter % 2) + 1, frameCounter);
+            frame_gp_render((frameCounter % 2) + 1, pSEQUENCE);
+            //Right here is where generate should be performed (in next frame tail)
+            GP_WAIT(); // Wait until GPU/GP operations completed
+            PF_WAIT((frameCounter % 2) + 1); // Swap frame and wait until it is live
             frameCounter++;
         }
 

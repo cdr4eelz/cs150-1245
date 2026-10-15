@@ -9,15 +9,15 @@
 
 /* Minimal MIPS-I interpreter that runs the app's ISR image (isrN.s). */
 
-#define VIZARD_MIPS_ROM_BASE   0xC0000000u
-#define VIZARD_MIPS_ROM_BYTES  0x4000u
-#define VIZARD_MIPS_ISR_VECTOR 0xC0000180u
-#define VIZARD_MIPS_RETURN     0xFFFFFFF0u
-#define VIZARD_MIPS_SM_BASE    SM_BASE_ADDRESS
-#define VIZARD_MIPS_SM_BYTES   0x200u
-#define VIZARD_MIPS_MMIO_BASE  MMIO_BASE
-#define VIZARD_MIPS_MMIO_BYTES 0x100u
-#define VIZARD_MIPS_MAX_STEPS  100000u
+#define VIZARD_MIPS_ROM_BASE   (0xC0000000u)
+#define VIZARD_MIPS_ROM_BYTES  (0x4000u)
+#define VIZARD_MIPS_ISR_VECTOR (0xC0000180u)
+#define VIZARD_MIPS_RETURN     (0xFFFFFFF0u)
+#define VIZARD_MIPS_SM_BASE    (SM_BASE_ADDR)
+#define VIZARD_MIPS_SM_BYTES   (0x200u)
+#define VIZARD_MIPS_MMIO_BASE  (MMIO_BASE)
+#define VIZARD_MIPS_MMIO_BYTES (0x100u)
+#define VIZARD_MIPS_MAX_STEPS  (100000u)
 
 typedef struct {
     uint32_t (*read)(void *ctx, uint32_t address);
