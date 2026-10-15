@@ -263,19 +263,32 @@ module ml505top #(
 
 
     wire cpu_clk, dvi_clk, clk200, clk0, clk90, clkdiv0, pll_fb;
-    PLL_BASE #(
+    PLL_BASE #( // Among these, the MIG is driven at 200 MHz
         .CLKIN_PERIOD(  10.0), .CLKFBOUT_PHASE(0.0),
         .CLKFBOUT_MULT( 24),
         .DIVCLK_DIVIDE(  4),
         .BANDWIDTH("OPTIMIZED"),
-        .CLKOUT0_DIVIDE(12),    .CLKOUT0_PHASE(  0.0),  .CLKOUT0_DUTY_CYCLE(0.5), //  50 MHz
-        .CLKOUT1_DIVIDE(15),    .CLKOUT1_PHASE(  0.0),  .CLKOUT1_DUTY_CYCLE(0.5), //  40 MHz
-        .CLKOUT2_DIVIDE( 3),    .CLKOUT2_PHASE(  0.0),  .CLKOUT2_DUTY_CYCLE(0.5), // 200 MHz
-        .CLKOUT3_DIVIDE( 3),    .CLKOUT3_PHASE(  0.0),  .CLKOUT3_DUTY_CYCLE(0.5), // 200 MHz
-        .CLKOUT4_DIVIDE( 3),    .CLKOUT4_PHASE( 90.0),  .CLKOUT4_DUTY_CYCLE(0.5), // 200 @90deg
-        .CLKOUT5_DIVIDE( 6),    .CLKOUT5_PHASE(  0.0),  .CLKOUT5_DUTY_CYCLE(0.5), // 100 MHz
+        .CLKOUT0_DIVIDE(12),    .CLKOUT0_PHASE(  0.0),  .CLKOUT0_DUTY_CYCLE(0.5), //  50 MHz CPU
+        .CLKOUT1_DIVIDE(15),    .CLKOUT1_PHASE(  0.0),  .CLKOUT1_DUTY_CYCLE(0.5), //  40 MHz DVI
+        .CLKOUT2_DIVIDE( 3),    .CLKOUT2_PHASE(  0.0),  .CLKOUT2_DUTY_CYCLE(0.5), // 200 MHz IDELAY ref
+        .CLKOUT3_DIVIDE( 3),    .CLKOUT3_PHASE(  0.0),  .CLKOUT3_DUTY_CYCLE(0.5), // 200 MHz MIG clk0
+        .CLKOUT4_DIVIDE( 3),    .CLKOUT4_PHASE( 90.0),  .CLKOUT4_DUTY_CYCLE(0.5), // 200 @90deg MIG clk90
+        .CLKOUT5_DIVIDE( 6),    .CLKOUT5_PHASE(  0.0),  .CLKOUT5_DUTY_CYCLE(0.5), // 100 MHz MIG clkdiv0
         .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
-    ) user_clk_pll ( // 100MHz *24 /4 = 600 MHz (then apply DIVIDEs above)
+/*  These are alternative PLL settings to drive MIG at 267 MHz */
+        .CLKIN_PERIOD(  10.0), .CLKFBOUT_PHASE(0.0),
+        .CLKFBOUT_MULT( 32),
+        .DIVCLK_DIVIDE(  4),
+        .BANDWIDTH("OPTIMIZED"),
+        .CLKOUT0_DIVIDE(16),    .CLKOUT0_PHASE(  0.0),  .CLKOUT0_DUTY_CYCLE(0.5), //  50 MHz CPU
+        .CLKOUT1_DIVIDE(20),    .CLKOUT1_PHASE(  0.0),  .CLKOUT1_DUTY_CYCLE(0.5), //  40 MHz DVI
+        .CLKOUT2_DIVIDE( 4),    .CLKOUT2_PHASE(  0.0),  .CLKOUT2_DUTY_CYCLE(0.5), // 200 MHz IDELAY reference
+        .CLKOUT3_DIVIDE( 3),    .CLKOUT3_PHASE(  0.0),  .CLKOUT3_DUTY_CYCLE(0.5), // 266.7 MHz MIG clk0
+        .CLKOUT4_DIVIDE( 3),    .CLKOUT4_PHASE( 90.0),  .CLKOUT4_DUTY_CYCLE(0.5), // 266.7 MHz MIG clk90
+        .CLKOUT5_DIVIDE( 6),    .CLKOUT5_PHASE(  0.0),  .CLKOUT5_DUTY_CYCLE(0.5), // 133.3 MHz MIG clkdiv0
+        .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
+*/
+    ) user_clk_pll ( // 100MHz *32 /4 = 800 MHz VCO (then apply output divides)
         .CLKIN(user_clk_g), .RST(rst_user_base), .LOCKED(pll_lock),
         .CLKOUT0(cpu_clk),
         .CLKOUT1(dvi_clk),
