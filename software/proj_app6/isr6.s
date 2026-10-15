@@ -216,26 +216,35 @@ ISR_UARX:
     lbu     $k1, OB_UARX_DATA($k0)  #UART recv byte
     la      $t1, SM_BASE            #Set up register for SM access below
 
-#"case" checking for controlling characters:
+#"switch/case" checking for controlling characters:
+    # General graphics/timer controlling characters:
     ori     $k0, $zero, ' '
     beq     $k0, $k1, _uarx_toggle_pause
     ori     $k0, $zero, 'd'         #D; Harmless if branch taken
     beq     $k0, $k1, _uarx_disable_timer
     ori     $k0, $zero, 'e'         #D; Harmless if branch taken
     beq     $k0, $k1, _uarx_enable_timer
+    # Player movement: /uio/j_l/m,./ => 3 rows on keyboard
+    ori     $k0, $zero, 'u'         #D; Harmless if branch taken
+    beq     $k0, $k1, _uarx_player_upleft
     ori     $k0, $zero, 'i'         #D; Harmless if branch taken
-    beq     $k0, $k1, _uarx_player_y
-    addiu   $k0, $zero, -1          #D; Decrement player_y if branch taken
-    ori     $k0, $zero, 'm'
-    beq     $k0, $k1, _uarx_player_y
-    addiu   $k0, $zero, 1           #D; Increment player_y if branch taken
-    ori     $k0, $zero, 'j'
-    beq     $k0, $k1, _uarx_player_x
-    addiu   $k0, $zero, -1          #D; Decrement player_x if branch taken
-    ori     $k0, $zero, 'l'
-    beq     $k0, $k1, _uarx_player_x
-    addiu   $k0, $zero, 1           #D; Increment player_x if branch taken
-
+    beq     $k0, $k1, _uarx_player_up
+    ori     $k0, $zero, 'o'         #D; Harmless if branch taken
+    beq     $k0, $k1, _uarx_player_upright
+    ori     $k0, $zero, 'j'         #D; Harmless if branch taken
+    beq     $k0, $k1, _uarx_player_left
+    ori     $k0, $zero, 'k'         #D; Harmless if branch taken
+    beq     $k0, $k1, _uarx_done    # Not implemented "center" key
+    ori     $k0, $zero, 'l'         #D; Harmless if branch taken
+    beq     $k0, $k1, _uarx_player_right
+    ori     $k0, $zero, 'm'         #D; Harmless if branch taken
+    beq     $k0, $k1, _uarx_player_downleft
+    ori     $k0, $zero, ','         #D; Harmless if branch taken
+    beq     $k0, $k1, _uarx_player_down
+    ori     $k0, $zero, '.'         #D; Harmless if branch taken
+    beq     $k0, $k1, _uarx_player_downright
+    nop                             #D;
+    # End of "keyboard" controls.
     b       _uarx_done              #H: ???
     nop                             #D;
 
@@ -260,22 +269,60 @@ _uarx_enable_timer:
     b       _uarx_done
     sh      $k1, SMO_flags($t1)
 
-_uarx_player_y:
-    lh      $k1, SMO_player_y($t1)
-    nop                             #H; Hazard below since $k1 loaded above
-    addu    $k1, $k1, $k0
-    sh      $k1, SMO_player_y($t1)
-    b       _uarx_done
-    nop
+_uarx_player_upleft:
+    addiu   $k1, $zero, -4          # Delta-Y for "upleft" movement
+    b       _uarx_player_move
+    addiu   $k0, $zero, -4          #D; Delta-X for "upleft" movement
 
-_uarx_player_x:
-    lh      $k1, SMO_player_x($t1)
-    nop                             #H; Hazard below since $k1 loaded above
-    addu    $k1, $k1, $k0
+_uarx_player_up:
+    addiu   $k1, $zero, -6
+    b       _uarx_player_move
+    addiu   $k0, $zero, 0           #D;
+
+_uarx_player_upright:
+    addiu   $k1, $zero, -4
+    b       _uarx_player_move
+    addiu   $k0, $zero, 4           #D;
+
+_uarx_player_left:
+    addiu   $k1, $zero, 0
+    b       _uarx_player_move
+    addiu   $k0, $zero, -6          #D;
+
+_uarx_player_right:
+    addiu   $k1, $zero, 0
+    b       _uarx_player_move
+    addiu   $k0, $zero, 6           #D;
+
+_uarx_player_downleft:
+    addiu   $k1, $zero, 4           # Delta-Y for "downleft" movement
+    b       _uarx_player_move
+    addiu   $k0, $zero, -4          #D; Delta-X
+
+_uarx_player_down:
+    addiu   $k1, $zero, 6
+    b       _uarx_player_move
+    addiu   $k0, $zero, 0           #D;
+
+_uarx_player_downright:
+    addiu   $k1, $zero, 4
+#    b       _uarx_player_move
+    addiu   $k0, $zero, 4           #D;
+#    Fall through to _uarx_player_move
+
+_uarx_player_move:      # Pass delta-X & delta-Y in $k0 & $K1 respectively
+    lh      $t0, SMO_player_x($t1)
+    nop                             #H; Hazard below since $t0 loaded above
+    addu    $t0, $t0, $k0
+    sh      $t0, SMO_player_x($t1)
+    #nop                             #H; Not a hazard
+    lh      $t0, SMO_player_y($t1)
+    nop                             #H; Hazard below since $t0 loaded above
+    addu    $t0, $t0, $k1
+    sh      $t0, SMO_player_y($t1)
+#    Fall through to _uarx_done
 #    b       _uarx_done
-    sh      $k1, SMO_player_x($t1)
-#    nop                             #D;
-#FALLTHROUGH...
+#    nop
 
 _uarx_done:
     b       done_cause

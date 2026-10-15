@@ -14,20 +14,24 @@ int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located!
 
 
 gpcode_p generate_sweeper(gpcode_p pINST, uint32_t frameCounter) {
-    int sweepBase = 0; //TODO: Lock in at start of sweep
+    uint32_t sweepBase = 0; //TODO: Lock in at start of sweep
     if (1) { //(sweepForward || sweepReverse) {
-        const int sweepFrame = frameCounter - sweepBase;
-        // Forward vs reverse:
-        const int x_something_f = ((sweepFrame*8) % 1024) - ((1024-800)/2);
-        const int x_something_r = 1024 - (((sweepFrame*8) % 1024) - ((1024-800)/2));
+        const uint32_t sweepFrame = (frameCounter >= sweepBase) ? frameCounter - sweepBase : 0;
+        // Forward vs reverse x coordinates:
+      //const int32_t x_something_f = ((sweepFrame*8) % 1024) - ((1024-800)/2);
+        const int32_t x_something_f = (int32_t)((sweepFrame << 3) & 0x03FFu) - 112;
+        const int32_t x_something_r = 1024 - x_something_f;
 
         // Loop through the "sweeping" x positions and draw lines and dots
-        for (int x = x_something_f; x <= x_something_f + 24; x += 4) { //+=4
+        for (int32_t x = x_something_f; x <= x_something_f + 24; x += 4) { //+=4
             if ((x >= 0) && (x < 800)) { //If line/dots are on screen
                 pINST = hwq_line(pINST, 0x00FF3018u, x,250, x,350);
-                for (int y = (sweepFrame % 16); y < 600; y += 16) { //+=16 freezes +=24 freezes later
-                    pINST = hwq_pixl(pINST, 0x00FFFFFFu, x, y);
-                    //pINST = hwq_line(pINST, 0x00FFFFFFu, 10,9, x,y);
+                for (int32_t y = (sweepFrame % 16); y < 600; y += 16) { //+=16 freezes +=24 freezes later
+                    if (0) { //sweepLines) {
+                        pINST = hwq_line(pINST, 0x00FFFFFFu, 10,9, x,y);
+                    } else {
+                        pINST = hwq_pixl(pINST, 0x00FFFFFFu, x, y);
+                    }
                 }
             }
         }
@@ -53,13 +57,8 @@ void frame_gp_generate(uint32_t frame, uint32_t frameCounter) {
     pINST = hwq_rect(pINST, 0x00114488u, 789,  0,  799,599, 0xFF114488u);
     pINST = hwq_rect(pINST, 0x00114488u,   0,589,  799,599, 0xFF114488u);
 
-    //Temporary while debugging missing animation in FPGA environment...
-    pINST = hwq_elip(pINST,0x00FF6644u,100+(frameCounter%256),100,8,9,0xFF4466FFu);
-
-    //uwrite_int8s_ISR(uint32_to_ascii_hex(x_something, tbuff, TBUF_SIZE));
-    //uint32_to_ascii_hex(x_something, tbuff, TBUF_SIZE);
     // This prints a dot to the ISR to prevent lockup
-    uwrite_int8s_ISR(".");
+//////    uwrite_int8s_ISR(".");
 
     // Draw concentric ellipses that look vaguely like a "globe"
     pINST = hwq_elip(pINST, 0x0000FF00u, 400, 300, 100, 299, 0x00000000u);
@@ -105,7 +104,7 @@ void main_imem(void) {
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX);
     uwait_ISR(); // Get off to a clean start with nobody sending yet
 
-    uwrite_int8s_ISR("\r\n\r\nPROJ-6.3:\r\n");
+    uwrite_int8s_ISR("\r\n\r\nPROJ-6.7:\r\n");
     uwrite_int8s_ISR("MAGIC: ");
     uwrite_int8s_ISR(uint32_to_ascii_hex(share->magic, tbuff, TBUF_SIZE));
     uwrite_int8s_ISR("\n\r");
@@ -131,6 +130,8 @@ void main_imem(void) {
             frame_gp_render((frameCounter % 2) + 1);
             frameCounter++;
         }
+
+        //TODO: Count up frames and compute FPS or other performance metrics
     }
 
     uwait_ISR();
