@@ -80,6 +80,8 @@ $display("LineEngine: Fake memory/SLR...");
         drawLine( 500, 700,     0,   0,  32'h44_7F_00_00);
         drawLine(   0,   0,   400, 652,  32'h55_7F_00_00);
         drawLine( 200, 200,   100, 500,  32'h66_7F_00_FF);
+        drawLine( 400, 250,   400, 350,  32'h77_FF_30_18);
+        drawLine( 400, 300,   400, 300,  32'h88_FF_FF_FF);
 
         #(10*Cycle);
 $display("LineEngine: Done.");

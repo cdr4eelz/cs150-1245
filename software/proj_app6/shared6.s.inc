@@ -12,7 +12,8 @@
 .equiv  SMO_stash1,         0x0008
 .equiv  SMO_stash2,         0x000C
 .equiv  SMO_stash3,         0x0010
-.equiv  SMO_flags,          0x0014
+.equiv  SMO_state,           0x0014
+.equiv  SMO_flags,           0x0016
 .equiv  SMO_RTC_count,      0x0018
 .equiv  SMO_seconds,        0x001C
 .equiv  SMO_clock,          0x0020
@@ -28,16 +29,24 @@
 .equiv  SMA_stash1,         (SM_BASE + SMO_stash1)
 .equiv  SMA_stash2,         (SM_BASE + SMO_stash2)
 .equiv  SMA_stash3,         (SM_BASE + SMO_stash3)
-.equiv  SMA_flags,          (SM_BASE + SMO_flags)
+.equiv  SMA_state,           (SM_BASE + SMO_flags)
+.equiv  SMA_flags,           (SM_BASE + SMO_flags)
 .equiv  SMA_RTC_count,      (SM_BASE + SMO_RTC_count)
 .equiv  SMA_seconds,        (SM_BASE + SMO_seconds)
 .equiv  SMA_clock,          (SM_BASE + SMO_clock)
-.equiv  SMA_player_y,       (SM_BASE + SMO_player_y)
-.equiv  SMA_player_x,       (SM_BASE + SMO_player_x)
+.equiv  SMA_player_y,        (SM_BASE + SMO_player_y)
+.equiv  SMA_player_x,        (SM_BASE + SMO_player_x)
 .equiv  SMA_buff_size,      (SM_BASE + SMO_buff_size)
 .equiv  SMA_buff_head,      (SM_BASE + SMO_buff_head)
 .equiv  SMA_buff_tail,      (SM_BASE + SMO_buff_tail)
 .equiv  SMA_buff_data,      (SM_BASE + SMO_buff_data)
 
-.equiv  SMM_flags_pause, (0x00000001)
-.equiv  SMM_flags_notimer, (0x00000002)
+# Bit numbers (offsets?) for {SMO/SMA}_flags:
+.equiv  SMB_flags_pause,    (0)
+.equiv  SMB_flags_notimer,  (1)
+# Flag masks for testing or setting flags
+.equiv  SMM_flags_pause,    ((1 << SMB_flags_pause) & 0xFFFF)
+.equiv  SMM_flags_notimer,  ((1 << SMB_flags_notimer) & 0xFFFF)
+# Inverted flag masks, kept at 16-bits, for clearing flags
+.equiv  SMI_flags_pause,    (~SMM_flags_pause & 0xFFFF)
+.equiv  SMI_flags_notimer,  (~SMM_flags_notimer & 0xFFFF)

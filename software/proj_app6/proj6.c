@@ -53,6 +53,9 @@ void frame_gp_generate(uint32_t frame, uint32_t frameCounter) {
     pINST = hwq_rect(pINST, 0x00114488u, 789,  0,  799,599, 0xFF114488u);
     pINST = hwq_rect(pINST, 0x00114488u,   0,589,  799,599, 0xFF114488u);
 
+    //Temporary while debugging missing animation in FPGA environment...
+    pINST = hwq_elip(pINST,0x00FF6644u,100+(frameCounter%256),100,8,9,0xFF4466FFu);
+
     //uwrite_int8s_ISR(uint32_to_ascii_hex(x_something, tbuff, TBUF_SIZE));
     //uint32_to_ascii_hex(x_something, tbuff, TBUF_SIZE);
     // This prints a dot to the ISR to prevent lockup

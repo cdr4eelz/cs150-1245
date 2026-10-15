@@ -213,7 +213,7 @@ ISR_UARX:
     andi    $k1, $k1, MM_UART_RVA_BIT
     beq     $k1, $zero, _uarx_done  #Interrupt without char so just return
     nop                             #D;
-    lw      $k1, OB_UARX_DATA($k0)  #UART recv byte
+    lbu     $k1, OB_UARX_DATA($k0)  #UART recv byte
 #"case" checking for controlling characters:
     ori     $k0, $zero, ' '         #D;
     beq     $k0, $k1, _uarx_toggle_pause
@@ -229,26 +229,26 @@ ISR_UARX:
 
 _uarx_toggle_pause:
     la      $k0, SM_BASE
-    lw      $k1, SMO_flags($k0)
+    lh      $k1, SMO_flags($k0)
     nop                             #H; Hazard below since $k1 loaded above
     xori    $k1, $k1, SMM_flags_pause
     b       _uarx_done
-    sw      $k1, SMO_flags($k0)
+    sh      $k1, SMO_flags($k0)
 
 _uarx_disable_timer:
     la      $k0, SM_BASE
-    lw      $k1, SMO_flags($k0)
+    lh      $k1, SMO_flags($k0)
     nop                             #H; Hazard below since $k1 loaded above
     ori     $k1, $k1, SMM_flags_notimer
     b       _uarx_done
-    sw      $k1, SMO_flags($k0)      #D;
+    sh      $k1, SMO_flags($k0)      #D;
 
 _uarx_enable_timer:
     la      $k0, SM_BASE
-    lw      $k1, SMO_flags($k0)
+    lh      $k1, SMO_flags($k0)
     nop                             #H; Hazard below since $k1 loaded above
-    andi    $k1, $k1, !SMM_flags_notimer
-    sw      $k1, SMO_flags($k0)
+    andi    $k1, $k1, SMI_flags_notimer
+    sh      $k1, SMO_flags($k0)
 #    b       _uarx_done
 #    nop                             #D;
 #FALLTHROUGH...
