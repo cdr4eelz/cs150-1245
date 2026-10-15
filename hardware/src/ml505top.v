@@ -275,7 +275,7 @@ module ml505top #(
         .CLKOUT4_DIVIDE( 3),    .CLKOUT4_PHASE( 90.0),  .CLKOUT4_DUTY_CYCLE(0.5), // 200 @90deg MIG clk90
         .CLKOUT5_DIVIDE( 6),    .CLKOUT5_PHASE(  0.0),  .CLKOUT5_DUTY_CYCLE(0.5), // 100 MHz MIG clkdiv0
         .COMPENSATION("SYSTEM_SYNCHRONOUS"), .REF_JITTER(0.100)
-/*  These are alternative PLL settings to drive MIG at 267 MHz */
+/*  These are alternative PLL settings to drive MIG at 267 MHz
         .CLKIN_PERIOD(  10.0), .CLKFBOUT_PHASE(0.0),
         .CLKFBOUT_MULT( 32),
         .DIVCLK_DIVIDE(  4),

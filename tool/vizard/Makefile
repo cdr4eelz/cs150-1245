@@ -22,7 +22,6 @@ APP_SHARED_OBJ := $(VIZARD_BUILD_DIR)/$(notdir $(APP_SHARED_SRC:.c=_vizard.o))
 #ISR image (built by the app's own makefile; Vizard only loads it):
 APP_ISR_BIN := $(APP_SRC_DIR)/$(APP_INAME).bin
 APP_ISR_SRC := $(addprefix $(APP_SRC_DIR)/,isr$(APP_PROJ_VERSION).s shared$(APP_PROJ_VERSION).s.inc)
-VIZARD_SHARED_CPPFLAGS := -iquote $(APP_SRC_DIR) -iquote $(APP_COMMON_DIR) -DVIZARD_SHARED_HEADER='"$(APP_SNAME).h"'
 
 VIZARD_GPU_SRC := src/vizard_gpu.c
 VIZARD_SRCS := src/vizard_main.c src/vizard_host.c src/vizard_mips.c
@@ -35,6 +34,14 @@ VIZARD_GRAPHICS_OBJ := $(VIZARD_BUILD_DIR)/$(notdir $(VIZARD_GRAPHICS_SRC:.c=.o)
 #EXTERNAL LIBRARY DEPENDENCIES:
 RAYLIB_CFLAGS := $(shell pkg-config --cflags raylib 2>/dev/null)
 RAYLIB_LIBS := $(shell pkg-config --libs raylib 2>/dev/null)
+RAYLIB_LOG_LEVEL := LOG_WARNING		# Passed as a "Define" to application code
+
+#TODO: Utilize DEFINES in more places and instead of including SHARED_CPPFLAGS!
+VIZARD_DEFINES := -DVIZARD -DVIZARD_SHARED_HEADER='"$(APP_SNAME).h"' \
+					-DVIZARD_ISR_IMAGE='"$(abspath $(APP_ISR_BIN))"' \
+					-DRAYLIB_LOG_LEVEL=$(RAYLIB_LOG_LEVEL)
+#TODO: Eliminate VIZARD_MAIN???
+VIZARD_SHARED_CPPFLAGS := -iquote $(APP_SRC_DIR) -iquote $(APP_COMMON_DIR) $(VIZARD_DEFINES)
 
 CC ?= gcc
 CPPFLAGS ?= -I.

@@ -43,6 +43,7 @@ int main(void)
     assert((cpu.cause & IM_TIMER) == 0);
     assert(cpu.status & IM_GLOBAL);
 
+    //TODO: Use constants offsets and test diagonals too!
     assert(vizard_mips_interrupt(&cpu, IM_UARX));
     assert(shared.flags == 1);
     rx_byte = 'd';
@@ -53,13 +54,13 @@ int main(void)
     assert(shared.flags == 1);
     rx_byte = 'i';
     assert(vizard_mips_interrupt(&cpu, IM_UARX));
-    assert(shared.player_y == 299);
-    rx_byte = 'm';
+    assert(shared.player_y == 300 - 6);
+    rx_byte = ',';
     assert(vizard_mips_interrupt(&cpu, IM_UARX));
     assert(shared.player_y == 300);
     rx_byte = 'j';
     assert(vizard_mips_interrupt(&cpu, IM_UARX));
-    assert(shared.player_x == 399);
+    assert(shared.player_x == 400 - 6);
     rx_byte = 'l';
     assert(vizard_mips_interrupt(&cpu, IM_UARX));
     assert(shared.player_x == 400);

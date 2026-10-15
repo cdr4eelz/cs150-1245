@@ -130,6 +130,7 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
 
 bool vizard_host_init(void)
 {
+    SetTraceLogLevel(RAYLIB_LOG_LEVEL); // Passed from Makefile
     host_error = false;
     if (!vizard_gpu_init(&gpu, VIZARD_SCREEN_WIDTH, VIZARD_SCREEN_HEIGHT)) {
         vizard_host_report_error("unable to initialize the software GPU");
@@ -137,7 +138,7 @@ bool vizard_host_init(void)
     }
     vizard_uart_init(&uart);
     vizard_mips_init(&cpu, (VizardMipsMmio){ cpu_mmio_read, cpu_mmio_write, NULL });
-    if (!vizard_mips_load(&cpu, VIZARD_ISR_IMAGE)) {
+    if (!vizard_mips_load(&cpu, VIZARD_ISR_IMAGE)) { // Passed from Makefile
         char message[256];
         snprintf(message, sizeof(message), "unable to load ISR image %s", VIZARD_ISR_IMAGE);
         vizard_host_report_error(message);
@@ -151,7 +152,7 @@ bool vizard_host_init(void)
         vizard_gpu_dispose(&gpu);
         return false;
     }
-    SetTargetFPS(60);
+    SetTargetFPS(60); // Set RayLib framerate to match current DVI output from hardware
 
     Image image = GenImageColor(VIZARD_SCREEN_WIDTH, VIZARD_SCREEN_HEIGHT, BLACK);
     if (!IsImageValid(image)) {

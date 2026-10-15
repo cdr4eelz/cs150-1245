@@ -14,7 +14,7 @@ isr-warn:
 	fi
 
 $(APP_OBJ): $(APP_SRC) $(VIZARD_HDRS) $(APP_COMMON_HEADERS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(APP_COMMON_DIR) -Isrc -DVIZARD -Dmain=vizard_app_main -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(APP_COMMON_DIR) -Isrc -DVIZARD -c $< -o $@
 
 $(APP_SHARED_OBJ): $(APP_SHARED_SRC) $(APP_SHARED_HEADER) $(VIZARD_HDRS) $(APP_COMMON_HEADERS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -iquote $(APP_COMMON_DIR) -Isrc -DVIZARD -c $< -o $@
