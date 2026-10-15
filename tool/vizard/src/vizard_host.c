@@ -5,8 +5,10 @@
 
 #include "raylib.h"
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define PANEL_WIDTH 280
 #define WINDOW_WIDTH (VIZARD_SCREEN_WIDTH + PANEL_WIDTH)
@@ -21,7 +23,11 @@ static double next_timer;
 static double next_draw;
 static unsigned int rx_total;
 static int last_key;
-static bool host_error;
+static volatile bool host_error;
+static pthread_mutex_t gpu_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_t gpu_thread;
+static bool gpu_thread_started;
+static volatile bool gpu_thread_stop;
 static volatile struct SM_DATA *active_shared_data;
 static volatile struct SM_DATA idle_shared_data;
 static volatile void *pending_pf_frame;
@@ -66,6 +72,7 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
         vizard_host_report_error("pixel feeder selected an unsupported frame");
         return;
     }
+    pthread_mutex_lock(&gpu_lock);
     const uint32_t *pixels = vizard_gpu_frame(&gpu, display_frame);
     size_t pixel_count = (size_t)VIZARD_SCREEN_WIDTH * VIZARD_SCREEN_HEIGHT;
     if (pixels == NULL) {
@@ -82,6 +89,9 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
             };
         }
     }
+    bool gpu_fault = gpu.fault;
+    size_t gpu_commands = gpu.commands_processed;
+    pthread_mutex_unlock(&gpu_lock);
     UpdateTexture(canvas, upload_pixels);
 
     BeginDrawing();
@@ -99,16 +109,16 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
              (Color){ 67, 82, 89, 255 });
 
     char status[96];
-    snprintf(status, sizeof(status), "AppN  %s", gpu.fault ? "GPU FAULT" : "RUNNING");
+    snprintf(status, sizeof(status), "AppN  %s", gpu_fault ? "GPU FAULT" : "RUNNING");
     DrawText(status, VIZARD_SCREEN_WIDTH + 20, 104, 16,
-             gpu.fault ? RED : (Color){ 145, 218, 157, 255 });
+             gpu_fault ? RED : (Color){ 145, 218, 157, 255 });
     snprintf(status, sizeof(status), "Clock: %02X:%02X",
              (clock >> 8) & 0xffu, clock & 0xffu);
     DrawText(status, VIZARD_SCREEN_WIDTH + 20, 142, 20, RAYWHITE);
     snprintf(status, sizeof(status), "Timer seconds: %u", seconds);
     DrawText(status, VIZARD_SCREEN_WIDTH + 20, 172, 14, LIGHTGRAY);
     snprintf(status, sizeof(status), "GPU frame: %u   commands: %zu",
-             display_frame, gpu.commands_processed);
+             display_frame, gpu_commands);
     DrawText(status, VIZARD_SCREEN_WIDTH + 20, 198, 12, LIGHTGRAY);
 
     DrawLine(VIZARD_SCREEN_WIDTH + 20, 238, WINDOW_WIDTH - 20, 238,
@@ -126,6 +136,38 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
     DrawText("Escape closes Vizard", VIZARD_SCREEN_WIDTH + 20, 552, 12, LIGHTGRAY);
     DrawFPS(WINDOW_WIDTH - 68, WINDOW_HEIGHT - 26);
     EndDrawing();
+}
+
+/* Asynchronous GPU: consumes the stream the CPU publishes via GP_GCODE, then clears it. */
+static void *gpu_thread_main(void *arg)
+{
+    (void)arg;
+    while (!gpu_thread_stop) {
+        const unsigned int *words = vizard_gp_gcode;
+        if (words == NULL) {
+            nanosleep(&(struct timespec){ 0, 100000 }, NULL);
+            continue;
+        }
+        size_t word_count;
+        if (!vizard_gpu_stream_word_count(words, VIZARD_GPU_COMMAND_CAPACITY, &word_count)) {
+            fprintf(stderr, "Vizard: malformed or unterminated GP_GCODE stream "
+                            "(limit %u words)\n", VIZARD_GPU_COMMAND_CAPACITY);
+            pthread_mutex_lock(&gpu_lock);
+            gpu.fault = true;
+            pthread_mutex_unlock(&gpu_lock);
+            vizard_host_report_error("malformed or unterminated GP_GCODE stream");
+        } else {
+            static size_t largest_warned;
+            if (word_count > VIZARD_GPU_STREAM_WARN_WORDS && word_count > largest_warned) {
+                largest_warned = word_count;
+                fprintf(stderr, "Vizard: GP stream is %zu words (> %u-word warning threshold); FPGA limits are not modeled\n",
+                        word_count, VIZARD_GPU_STREAM_WARN_WORDS);
+            }
+            vizard_host_gpu_submit(words, word_count, frame_number(vizard_gp_frame));
+        }
+        vizard_gp_gcode = NULL;
+    }
+    return NULL;
 }
 
 bool vizard_host_init(void)
@@ -178,6 +220,17 @@ bool vizard_host_init(void)
         vizard_gpu_dispose(&gpu);
         return false;
     }
+    gpu_thread_stop = false;
+    if (pthread_create(&gpu_thread, NULL, gpu_thread_main, NULL) != 0) {
+        vizard_host_report_error("unable to start the GPU thread");
+        free(upload_pixels);
+        upload_pixels = NULL;
+        UnloadTexture(canvas);
+        CloseWindow();
+        vizard_gpu_dispose(&gpu);
+        return false;
+    }
+    gpu_thread_started = true;
     next_draw = GetTime();
     return true;
 }
@@ -197,6 +250,11 @@ bool vizard_host_failed(void)
 
 void vizard_host_shutdown(void)
 {
+    if (gpu_thread_started) {
+        gpu_thread_stop = true;
+        pthread_join(gpu_thread, NULL);
+        gpu_thread_started = false;
+    }
     free(upload_pixels);
     upload_pixels = NULL;
     UnloadTexture(canvas);
@@ -270,32 +328,6 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
         return false;
     }
 
-    if (vizard_gp_gcode != NULL) {
-        const unsigned int *words = vizard_gp_gcode;
-        size_t word_count;
-        if (!vizard_gpu_stream_word_count(words, VIZARD_GPU_COMMAND_CAPACITY,
-                                         &word_count)) {
-            fprintf(stderr, "Vizard: malformed or unterminated GP_GCODE stream "
-                            "(limit %u words)\n", VIZARD_GPU_COMMAND_CAPACITY);
-            gpu.fault = true;
-            vizard_gp_gcode = NULL;
-            vizard_host_report_error("malformed or unterminated GP_GCODE stream");
-            return false;
-        } else {
-            static size_t largest_warned;
-            if (word_count > VIZARD_GPU_STREAM_WARN_WORDS && word_count > largest_warned) {
-                largest_warned = word_count;
-                fprintf(stderr, "Vizard: GP stream is %zu words (> %u-word warning threshold); FPGA limits are not modeled\n",
-                        word_count, VIZARD_GPU_STREAM_WARN_WORDS);
-            }
-            vizard_host_gpu_submit(words, word_count, frame_number(vizard_gp_frame));
-            if (host_error) {
-                return false;
-            }
-        }
-        vizard_gp_gcode = NULL;
-    }
-
     double now = GetTime();
     unsigned int timer_mask = IM_GLOBAL | IM_TIMER;
     while (compare_armed && now >= next_timer && (cpu.status & timer_mask) == timer_mask) {
@@ -326,13 +358,16 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
 bool vizard_host_gpu_submit(const unsigned int *words, size_t word_count,
                             unsigned int frame)
 {
+    pthread_mutex_lock(&gpu_lock);
     bool success = vizard_gpu_submit(&gpu, words, word_count, frame);
     vizard_gp_state_storage = 0xf8000000u |
                               ((gpu.frame & 0x3fu) << 18) |
                               (gpu.fault ? (1u << 16) : 0u);
+    unsigned int failed_frame = gpu.frame;
+    pthread_mutex_unlock(&gpu_lock);
     if (!success) {
         char message[96];
-        snprintf(message, sizeof(message), "GPU command stream failed on frame %u", gpu.frame);
+        snprintf(message, sizeof(message), "GPU command stream failed on frame %u", failed_frame);
         vizard_host_report_error(message);
     }
     return success;

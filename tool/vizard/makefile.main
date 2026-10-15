@@ -3,7 +3,7 @@ vizard: $(APP_ISR_BIN) $(VIZARD_SRCS) $(VIZARD_HDRS) $(VIZARD_GPU_SRC) $(APP_COM
 		echo "Raylib is required to build the graphical app (pkg-config package: raylib)." >&2; \
 		exit 1; \
 	fi
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(VIZARD_SHARED_CPPFLAGS) -Isrc -DVIZARD -DVIZARD_ISR_IMAGE='"$(abspath $(APP_ISR_BIN))"' $(RAYLIB_CFLAGS) $(VIZARD_SRCS) $(VIZARD_GPU_SRC) $(APP_COMMON_DIR)/ascii.c $(VIZARD_GRAPHICS_SRC) $(APP_UART_SRC) $(VIZARD_UART_SRC) $(APP_OBJ) $(APP_SHARED_OBJ) -o $@ $(RAYLIB_LIBS) -lm
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(VIZARD_SHARED_CPPFLAGS) -Isrc -DVIZARD -DVIZARD_ISR_IMAGE='"$(abspath $(APP_ISR_BIN))"' $(RAYLIB_CFLAGS) $(VIZARD_SRCS) $(VIZARD_GPU_SRC) $(APP_COMMON_DIR)/ascii.c $(VIZARD_GRAPHICS_SRC) $(APP_UART_SRC) $(VIZARD_UART_SRC) $(APP_OBJ) $(APP_SHARED_OBJ) -o $@ $(RAYLIB_LIBS) -lm -pthread
 
 $(APP_ISR_BIN):
 	@echo "error: $@ file missing; build it in $(APP_SRC_DIR) first" >&2; exit 1
