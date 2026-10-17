@@ -670,8 +670,11 @@ INST "*/u_phy_calib/gen_gate[7].u_en_dqs_ff"  LOC = SLICE_X0Y131;
 # In general PAR should be able to route this
 # within 900ps over all speed grades.
 NET "*/u_phy_io/en_dqs*" MAXDELAY = 600 ps;
-NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 850 ps;
-#NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 900 ps;
+#NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 850 ps; #300MHz
+#NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 900 ps; #267MHz
+#NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 950 ps; #200MHz
+# The MIG is running at only 200MHz so we could use 950ps but tigher is ok:
+NET "*/u_phy_io/gen_dqs*.u_iob_dqs/en_dqs_sync" MAXDELAY = 900 ps;
 
 ###############################################################################
 # "Half-cycle" path constraint from IDDR to CE pin for all DQ IDDR's
