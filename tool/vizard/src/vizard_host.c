@@ -49,9 +49,39 @@ static unsigned int frame_address(unsigned int frame)
     return 0x10000000u | ((frame_number((volatile void *)(uintptr_t)frame) & 0x3fu) << 22);
 }
 
+#define VIZARD_CLOCK_HZ 50000000ull
+#define VIZARD_INST_PERCENT 90ull  // Fraction of cycles that retire an instruction (fakes stalls)
+
+static unsigned long long cnt_origin;
+
+static unsigned long long cycles_now(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ((unsigned long long)ts.tv_sec * 1000000000ull + (unsigned long long)ts.tv_nsec) *
+           (VIZARD_CLOCK_HZ / 1000000ull) / 1000ull;
+}
+
+unsigned int vizard_host_cnt_cycle(void)
+{
+    return (unsigned int)(cycles_now() - cnt_origin);
+}
+
+unsigned int vizard_host_cnt_inst(void)
+{
+    return (unsigned int)((cycles_now() - cnt_origin) * VIZARD_INST_PERCENT / 100ull);
+}
+
+void vizard_host_cnt_reset(void)
+{
+    cnt_origin = cycles_now();
+}
+
 static uint32_t cpu_mmio_read(void *ctx, uint32_t address)
 {
     (void)ctx;
+    if (address == MM_CNT_CYCLE) return vizard_host_cnt_cycle();
+    if (address == MM_CNT_INST) return vizard_host_cnt_inst();
     return vizard_uart_read32(&uart, address);
 }
 
@@ -60,6 +90,8 @@ static void cpu_mmio_write(void *ctx, uint32_t address, uint32_t value)
     (void)ctx;
     if (address == VIZARD_UART_TX_DATA) {
         vizard_host_uart_write((unsigned char)value);
+    } else if (address == MM_CNT_RESET) {
+        vizard_host_cnt_reset();
     } else {
         vizard_host_report_error("write to an unsupported MMIO register");
     }

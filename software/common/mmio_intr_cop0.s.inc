@@ -1,4 +1,4 @@
-# ASM "HEADER" file for Coprocessor, Interrupts & MMIO
+### MIPS-32 Assembly "HEADER" file for Coprocessor, Interrupts & MMIO
 
 # COP0 register names (also c0_sr, c0_cause, etc.)
 .equiv  COP0_Count,     $9
@@ -6,7 +6,6 @@
 .equiv  COP0_Status,    $12
 .equiv  COP0_Cause,     $13
 .equiv  COP0_EPC,       $14
-
 
 # COP0 interrupt BIT-offsets (STATUS & CAUSE)
 .equiv IB_GLOBAL,   0

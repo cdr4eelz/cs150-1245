@@ -7,13 +7,14 @@
 
 // C HEADER file for Coprocessor, Interrupts & MMIO
 
-// COP0 register names (also c0_sr, c0_cause, etc.)
-#define COP0_Count      "$9"    // For inclusion in "asm" sections...
-#define COP0_Compare    "$11"   //   as strings.
-#define COP0_Status     "$12"
-#define COP0_Cause      "$13"
-#define COP0_EPC        "$14"
-
+// COP0 reg names for inline "__asm__" sections (inserted as strings):
+#define COP0_Count       "$9"   // There can also be "official" names
+#define COP0_Compare    "$11"   //   like "C0_Compare" and although
+#define COP0_Status     "$12"   //   these names should match the
+#define COP0_Cause      "$13"   //   official register names, we use
+#define COP0_EPC        "$14"   //   numbers to ensure to match HW.
+// Example:
+// __asm__ __volatile__("mfc0 %0, " COP0_Count : "=r"(cycle_count));
 
 // COP0 interrupt BIT-offsets (STATUS & CAUSE)
 #define IB_GLOBAL   (0)
@@ -32,7 +33,7 @@
 #define IM_FRAME        (1 << IB_FRAME)
 #define IM_RTC          (1 << IB_RTC)
 #define IM_TIMER        (1 << IB_TIMER)
-#define     IM_POSSIBLE     (0xFC00u)
+#define     IM_POSSIBLE     (0xFC00u) // All except IM_GLOBAL
 
 
 /*  Verilog MemMapIO (word offsets and mapped byte addresses)
@@ -69,9 +70,9 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 #define OW_UATX_READY   (0x0000u)
 #define OW_UARX_VALID   (0x0004u)
 #define OW_UATX_DATA    (0x0008u)
-#define  OB_UATX_DATA    (OW_UATX_DATA+3)   //TODO: Eliminate this!
+#define  OB_UATX_DATA    (OW_UATX_DATA+3)
 #define OW_UARX_DATA    (0x000Cu)
-#define  OB_UARX_DATA    (OW_UARX_DATA+3)   //TODO: Eliminate this!
+#define  OB_UARX_DATA    (OW_UARX_DATA+3)
 #define OW_CNT_CYCLE    (0x0010u)
 #define OW_CNT_INST     (0x0014u)
 #define OW_CNT_RESET    (0x0018u)
@@ -97,17 +98,28 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 
 
 //TODO: Should we implicitly AND "Cause" with "KEEP" mask?
+//    :   In other words, ensure a waiting interrupt doesn't fire.
+
 #ifdef VIZARD
 void vizard_host_isr_status(unsigned int keep, unsigned int set);
 void vizard_host_isr_compare(unsigned int compare);
-struct SM_DATA;
+struct SM_DATA; //TODO: Reference real definition
 bool vizard_host_poll(volatile struct SM_DATA *shared_data);
-#define ISR_STATUS(KEEP, SET) vizard_host_isr_status((KEEP), (SET))
-#define ISR_COMPARE(COMPARE) vizard_host_isr_compare(COMPARE)
-#define ISR_POLL(share) vizard_host_poll((share))
-#else
+unsigned int vizard_host_cnt_cycle(void);
+unsigned int vizard_host_cnt_inst(void);
+void vizard_host_cnt_reset(void);
+#define ISR_STATUS(KEEP, SET)   vizard_host_isr_status((KEEP), (SET))
+#define ISR_COMPARE(COMPARE)    vizard_host_isr_compare(COMPARE)
+#define ISR_POLL(share)         vizard_host_poll((share))
+#define CYCLE_COUNTER           (vizard_host_cnt_cycle())
+#define INSTRUCTION_COUNTER     (vizard_host_cnt_inst())
+#define COUNTER_RST             (*(vizard_host_cnt_reset(), &(uint32_t){0}))
+
+#else // VIZARD
+
+//TODO: Use named variables for clarity.
 #define ISR_STATUS(KEEP, SET)                   \
-    asm (                                       \
+    __asm__ __volatile__ (                      \
         "li     $t0,%0\n\t"                     \
         "li     $t1,%1\n\t"                     \
         "mfc0   $t2," COP0_Status "\n\t"        \
@@ -120,15 +132,20 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data);
 
 // ISR_COMPARE implicitly resets "Count"
 #define ISR_COMPARE(COMPARE)                    \
-    asm (                                       \
+    __asm__ __volatile__ (                      \
         "li     $t0,%0\n\t"                     \
         "mtc0   $zero," COP0_Count "\n\t"       \
         "mtc0   $t0," COP0_Compare "\n\t"       \
         :                                       \
         : "i" (COMPARE)                         \
         : "t0" )
-    #define ISR_POLL(share) (1)
-    #endif
 
+#define ISR_POLL(share) (1)
 
-#endif // COP0_INTR_MMIO_H_
+#define CYCLE_COUNTER         (*((volatile uint32_t*)MM_CNT_CYCLE))
+#define INSTRUCTION_COUNTER   (*((volatile uint32_t*)MM_CNT_INST))
+#define COUNTER_RST           (*((volatile uint32_t*)MM_CNT_RESET))
+
+#endif // VIZARD
+
+#endif // MMIO_INTR_COP0_H_
