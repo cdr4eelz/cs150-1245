@@ -22,6 +22,7 @@ static bool compare_armed;
 static double next_timer;
 static double next_draw;
 static unsigned int rx_total;
+static unsigned int app_frame_counter; /* Mirror of the app's frameCounter, for display only */
 static int last_key;
 static volatile bool host_error;
 static pthread_mutex_t gpu_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -152,6 +153,8 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
     snprintf(status, sizeof(status), "GPU frame: %u   commands: %zu",
              display_frame, gpu_commands);
     DrawText(status, VIZARD_SCREEN_WIDTH + 20, 198, 12, LIGHTGRAY);
+    snprintf(status, sizeof(status), "frameCounter: %u", app_frame_counter);
+    DrawText(status, VIZARD_SCREEN_WIDTH + 20, 216, 12, LIGHTGRAY);
 
     DrawLine(VIZARD_SCREEN_WIDTH + 20, 238, WINDOW_WIDTH - 20, 238,
              (Color){ 67, 82, 89, 255 });
@@ -437,6 +440,12 @@ void vizard_host_wait_pf_frame(unsigned int frame)
             break;
         }
     }
+}
+
+/* Called by the app (under VIZARD) so the panel can show its frameCounter. */
+void vizard_host_set_frame_counter(unsigned int frame_counter)
+{
+    app_frame_counter = frame_counter;
 }
 
 void vizard_host_uart_write(unsigned char byte)
