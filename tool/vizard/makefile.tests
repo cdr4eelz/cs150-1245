@@ -1,7 +1,8 @@
-check: tests/test_core tests/test_graphics_bridge tests/test_frame_extra_overflow tests/test_mips
+check: tests/test_core tests/test_graphics_bridge tests/test_frame_extra_overflow tests/test_mips tests/test_gios_parser
 	./tests/test_core
 	./tests/test_mips
 	./tests/test_graphics_bridge
+	./tests/test_gios_parser
 	@output=$$(ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 ./tests/test_frame_extra_overflow 2>&1); status=$$?; \
 	if test $$status -eq 0 || ! printf '%s\n' "$$output" | grep -q 'AddressSanitizer: global-buffer-overflow'; then \
 		printf '%s\n' "$$output"; \
@@ -17,6 +18,9 @@ tests/test_core: tests/test_core.c $(VIZARD_GPU_SRC) $(APP_UART_SRC) $(VIZARD_UA
 tests/test_mips: tests/test_mips.c src/vizard_mips.c src/vizard_mips.h $(APP_SHARED_HEADER) $(APP_ISR_BIN) | isr-warn
 	$(CC) $(CPPFLAGS) $(CFLAGS) -UNDEBUG $(VIZARD_SHARED_CPPFLAGS) -Isrc -DVIZARD_ISR_IMAGE='"$(abspath $(APP_ISR_BIN))"' tests/test_mips.c src/vizard_mips.c -o $@
 
+tests/test_gios_parser: tests/test_gios_parser.c ../../software/common/parse.c ../../software/common/ascii.c ../../software/common/string.c $(APP_COMMON_DIR)/parse.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -UNDEBUG -iquote $(APP_COMMON_DIR) $< ../../software/common/parse.c ../../software/common/ascii.c ../../software/common/string.c -o $@
+
 tests/test_graphics_bridge: tests/test_graphics_bridge.c $(VIZARD_GRAPHICS_OBJ) $(APP_COMMON_DIR)/graphics.h $(VIZARD_HDRS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -UNDEBUG -iquote $(APP_COMMON_DIR) -Isrc -DVIZARD $< $(VIZARD_GRAPHICS_OBJ) -o $@
 
@@ -24,4 +28,4 @@ tests/test_frame_extra_overflow: tests/test_frame_extra_overflow.c $(VIZARD_GRAP
 	$(CC) $(CPPFLAGS) $(CFLAGS) -UNDEBUG -iquote $(APP_COMMON_DIR) -Isrc -DVIZARD $< $(VIZARD_GRAPHICS_OBJ) -o $@
 
 clean-tests:
-	rm -f tests/test_core tests/test_graphics_bridge tests/test_frame_extra_overflow tests/test_mips
+	rm -f tests/test_core tests/test_graphics_bridge tests/test_frame_extra_overflow tests/test_mips tests/test_gios_parser
