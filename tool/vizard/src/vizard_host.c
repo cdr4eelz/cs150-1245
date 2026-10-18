@@ -26,6 +26,11 @@ static double next_draw;
 #ifndef VIZARD_TARGET_FPS
 #define VIZARD_TARGET_FPS 60
 #endif
+/* FPS readout turns red below this. raylib's averaged GetFPS() reads 59-60 at the
+   60 cap, so allow 2 FPS of jitter before flagging a real Vizard or proj6 slowdown. */
+#ifndef VIZARD_FPS_WARN
+#define VIZARD_FPS_WARN 58
+#endif
 static unsigned int rx_total;
 static unsigned int app_frame_counter; /* Mirror of the app's frameCounter, for display only */
 static int last_key;
@@ -174,7 +179,10 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
         DrawText(status, VIZARD_SCREEN_WIDTH + 20, 325, 14, RAYWHITE);
     }
     DrawText("Escape closes Vizard", VIZARD_SCREEN_WIDTH + 20, 552, 12, LIGHTGRAY);
-    DrawFPS(WINDOW_WIDTH - 68, WINDOW_HEIGHT - 26);
+    int fps = GetFPS();
+    snprintf(status, sizeof(status), "%2i FPS", fps);
+    DrawText(status, WINDOW_WIDTH - MeasureText(status, 20) - 12, WINDOW_HEIGHT - 26, 20,
+             (fps < VIZARD_FPS_WARN) ? RED : LIME); /* Red = below the 60 FPS cap */
     EndDrawing();
 }
 
