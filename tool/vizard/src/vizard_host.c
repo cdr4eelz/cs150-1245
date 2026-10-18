@@ -21,6 +21,11 @@ static Color *upload_pixels;
 static bool compare_armed;
 static double next_timer;
 static double next_draw;
+
+/* Host window frame-rate cap (set from the Makefile); 60 by default, 0 means unlimited. */
+#ifndef VIZARD_TARGET_FPS
+#define VIZARD_TARGET_FPS 60
+#endif
 static unsigned int rx_total;
 static unsigned int app_frame_counter; /* Mirror of the app's frameCounter, for display only */
 static int last_key;
@@ -229,7 +234,7 @@ bool vizard_host_init(void)
         vizard_gpu_dispose(&gpu);
         return false;
     }
-    SetTargetFPS(60); // Set RayLib framerate to match current DVI output from hardware
+    SetTargetFPS(VIZARD_TARGET_FPS); // 60 matches the hardware DVI output; 0 = unlimited
 
     Image image = GenImageColor(VIZARD_SCREEN_WIDTH, VIZARD_SCREEN_HEIGHT, BLACK);
     if (!IsImageValid(image)) {
@@ -375,7 +380,12 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
     if (host_error) {
         return false;
     }
-    if (now >= next_draw) {
+    /* Capped: draw on the FPS schedule. Unlimited: draw as soon as the app
+       requests a frame swap, plus a 60 Hz refresh while it is idle/paused, so
+       draws are not wasted while the GPU is still rendering. */
+    bool draw_due = (VIZARD_TARGET_FPS > 0) ? (now >= next_draw)
+                                            : (pf_frame_pending || now >= next_draw);
+    if (draw_due) {
         if (pf_frame_pending) {
             vizard_pf_frame = pending_pf_frame;
             pf_frame_pending = false;
@@ -384,9 +394,13 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
         if (host_error) {
             return false;
         }
-        next_draw = now + (1.0 / 60.0);
+        next_draw = now + ((VIZARD_TARGET_FPS > 0) ? (1.0 / VIZARD_TARGET_FPS) : (1.0 / 60.0));
     }
-    WaitTime(0.001);
+    /* Only nap when the app is not waiting on a GPU render or frame swap, so an
+       unlimited frame rate is not throttled by this poll loop. */
+    if (VIZARD_TARGET_FPS > 0 || (!pf_frame_pending && vizard_gp_gcode == NULL)) {
+        WaitTime(0.001);
+    }
     return true;
 }
 

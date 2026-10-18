@@ -35,11 +35,13 @@ VIZARD_GRAPHICS_OBJ := $(VIZARD_BUILD_DIR)/$(notdir $(VIZARD_GRAPHICS_SRC:.c=.o)
 RAYLIB_CFLAGS := $(shell pkg-config --cflags raylib 2>/dev/null)
 RAYLIB_LIBS := $(shell pkg-config --libs raylib 2>/dev/null)
 RAYLIB_LOG_LEVEL := LOG_WARNING		# Passed as a "Define" to application code
+VIZARD_TARGET_FPS ?= 60			# Host window FPS cap (60 = hardware DVI rate; 0 = unlimited)
 
 #TODO: Utilize DEFINES in more places and instead of including SHARED_CPPFLAGS!
 VIZARD_DEFINES := -DVIZARD -DVIZARD_SHARED_HEADER='"$(APP_SNAME).h"' \
 					-DVIZARD_ISR_IMAGE='"$(abspath $(APP_ISR_BIN))"' \
-					-DRAYLIB_LOG_LEVEL=$(RAYLIB_LOG_LEVEL)
+					-DRAYLIB_LOG_LEVEL=$(RAYLIB_LOG_LEVEL) \
+					-DVIZARD_TARGET_FPS=$(VIZARD_TARGET_FPS)
 #TODO: Eliminate VIZARD_MAIN???
 VIZARD_SHARED_CPPFLAGS := -iquote $(APP_SRC_DIR) -iquote $(APP_COMMON_DIR) $(VIZARD_DEFINES)
 
