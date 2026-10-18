@@ -43,7 +43,6 @@ int main(void)
     assert((cpu.cause & IM_TIMER) == 0);
     assert(cpu.status & IM_GLOBAL);
 
-    //TODO: Use constants offsets and test diagonals too!
     assert(vizard_mips_interrupt(&cpu, IM_UARX));
     assert(shared.flags == 1);
     rx_byte = 'd';
@@ -65,10 +64,41 @@ int main(void)
     assert(vizard_mips_interrupt(&cpu, IM_UARX));
     assert(shared.player_x == 400);
 
+    rx_byte = 'u';
+    assert(vizard_mips_interrupt(&cpu, IM_UARX));
+    assert(shared.player_x == 400 - 4);
+    assert(shared.player_y == 300 - 4);
+    rx_byte = 'o';
+    assert(vizard_mips_interrupt(&cpu, IM_UARX));
+    assert(shared.player_x == 400);
+    assert(shared.player_y == 300 - 8);
+    rx_byte = 'm';
+    assert(vizard_mips_interrupt(&cpu, IM_UARX));
+    assert(shared.player_x == 400 - 4);
+    assert(shared.player_y == 300 - 4);
+    rx_byte = '.';
+    assert(vizard_mips_interrupt(&cpu, IM_UARX));
+    assert(shared.player_x == 400);
+    assert(shared.player_y == 300);
+
     cpu.status |= IM_UATX;
     assert(vizard_mips_interrupt(&cpu, IM_UATX));
     assert(shared.buff_tail == 1);
     assert(tx_byte == 'X');
+
+    shared.buff_head = 0;
+    shared.buff_tail = K_SHBUF_ROLLOVERB;
+    shared.buff_data[K_SHBUF_ROLLOVERB] = 'Z';
+    assert(vizard_mips_interrupt(&cpu, IM_UATX));
+    assert(shared.buff_tail == 0);
+    assert(tx_byte == 'Z');
+
+    shared.clock = 0x5959;
+    assert(vizard_mips_interrupt(&cpu, IM_TIMER));
+    assert(shared.seconds == 7);
+    assert(shared.clock == 0);
+    assert(cpu.compare == 150000000u);
+    assert((cpu.cause & IM_TIMER) == 0);
 
     puts("Vizard MIPS ISR tests passed.");
     return 0;
