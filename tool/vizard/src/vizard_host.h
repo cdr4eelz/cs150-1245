@@ -18,6 +18,7 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data);
 bool vizard_host_gpu_submit(const unsigned int *words, size_t word_count,
                             unsigned int frame);
 void vizard_host_uart_write(unsigned char byte);
+void vizard_host_set_frame_counter(unsigned int frame_counter);
 int vizard_host_uart_read(void);
 
 #define VIZARD_SUFFIX_INNER(name) name##_VIZARD

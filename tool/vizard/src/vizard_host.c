@@ -21,7 +21,18 @@ static Color *upload_pixels;
 static bool compare_armed;
 static double next_timer;
 static double next_draw;
+
+/* Host window frame-rate cap (set from the Makefile); 60 by default, 0 means unlimited. */
+#ifndef VIZARD_TARGET_FPS
+#define VIZARD_TARGET_FPS 60
+#endif
+/* FPS readout turns red below this. raylib's averaged GetFPS() reads 59-60 at the
+   60 cap, so allow 2 FPS of jitter before flagging a real Vizard or proj6 slowdown. */
+#ifndef VIZARD_FPS_WARN
+#define VIZARD_FPS_WARN 58
+#endif
 static unsigned int rx_total;
+static unsigned int app_frame_counter; /* Mirror of the app's frameCounter, for display only */
 static int last_key;
 static volatile bool host_error;
 static pthread_mutex_t gpu_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -152,6 +163,8 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
     snprintf(status, sizeof(status), "GPU frame: %u   commands: %zu",
              display_frame, gpu_commands);
     DrawText(status, VIZARD_SCREEN_WIDTH + 20, 198, 12, LIGHTGRAY);
+    snprintf(status, sizeof(status), "frameCounter: %u", app_frame_counter);
+    DrawText(status, VIZARD_SCREEN_WIDTH + 20, 216, 12, LIGHTGRAY);
 
     DrawLine(VIZARD_SCREEN_WIDTH + 20, 238, WINDOW_WIDTH - 20, 238,
              (Color){ 67, 82, 89, 255 });
@@ -166,7 +179,10 @@ static void draw_host_view(unsigned int seconds, unsigned int clock)
         DrawText(status, VIZARD_SCREEN_WIDTH + 20, 325, 14, RAYWHITE);
     }
     DrawText("Escape closes Vizard", VIZARD_SCREEN_WIDTH + 20, 552, 12, LIGHTGRAY);
-    DrawFPS(WINDOW_WIDTH - 68, WINDOW_HEIGHT - 26);
+    int fps = GetFPS();
+    snprintf(status, sizeof(status), "%2i FPS", fps);
+    DrawText(status, WINDOW_WIDTH - MeasureText(status, 20) - 12, WINDOW_HEIGHT - 26, 20,
+             (fps < VIZARD_FPS_WARN) ? RED : LIME); /* Red = below the 60 FPS cap */
     EndDrawing();
 }
 
@@ -226,7 +242,7 @@ bool vizard_host_init(void)
         vizard_gpu_dispose(&gpu);
         return false;
     }
-    SetTargetFPS(60); // Set RayLib framerate to match current DVI output from hardware
+    SetTargetFPS(VIZARD_TARGET_FPS); // 60 matches the hardware DVI output; 0 = unlimited
 
     Image image = GenImageColor(VIZARD_SCREEN_WIDTH, VIZARD_SCREEN_HEIGHT, BLACK);
     if (!IsImageValid(image)) {
@@ -372,7 +388,12 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
     if (host_error) {
         return false;
     }
-    if (now >= next_draw) {
+    /* Capped: draw on the FPS schedule. Unlimited: draw as soon as the app
+       requests a frame swap, plus a 60 Hz refresh while it is idle/paused, so
+       draws are not wasted while the GPU is still rendering. */
+    bool draw_due = (VIZARD_TARGET_FPS > 0) ? (now >= next_draw)
+                                            : (pf_frame_pending || now >= next_draw);
+    if (draw_due) {
         if (pf_frame_pending) {
             vizard_pf_frame = pending_pf_frame;
             pf_frame_pending = false;
@@ -381,9 +402,13 @@ bool vizard_host_poll(volatile struct SM_DATA *shared_data)
         if (host_error) {
             return false;
         }
-        next_draw = now + (1.0 / 60.0);
+        next_draw = now + ((VIZARD_TARGET_FPS > 0) ? (1.0 / VIZARD_TARGET_FPS) : (1.0 / 60.0));
     }
-    WaitTime(0.001);
+    /* Only nap when the app is not waiting on a GPU render or frame swap, so an
+       unlimited frame rate is not throttled by this poll loop. */
+    if (VIZARD_TARGET_FPS > 0 || (!pf_frame_pending && vizard_gp_gcode == NULL)) {
+        WaitTime(0.001);
+    }
     return true;
 }
 
@@ -437,6 +462,12 @@ void vizard_host_wait_pf_frame(unsigned int frame)
             break;
         }
     }
+}
+
+/* Called by the app (under VIZARD) so the panel can show its frameCounter. */
+void vizard_host_set_frame_counter(unsigned int frame_counter)
+{
+    app_frame_counter = frame_counter;
 }
 
 void vizard_host_uart_write(unsigned char byte)
