@@ -90,10 +90,13 @@ gpcode_p frame_gp_generate(uint32_t frame, uint32_t frameCounter) {
     return pSEQUENCE;
 }
 
-void frame_gp_render(uint32_t frame, gpcode_p pSEQUENCE) {
+uint32_t frame_start_render(uint32_t frame, gpcode_p pSEQUENCE) {
+    uint32_t startTime;
     GP_WAIT(); //Just in case, harmless if not needed
     GP_FRAME = FRAME_PTR(frame);
-    GP_GCODE = pSEQUENCE;
+    startTime = 0; //TODO: Capture timestamp to measure duration of GPU rendering???
+    GP_GCODE = pSEQUENCE; // Launch render (asynchronous with CPU)
+    return startTime;
 }
 
 
@@ -125,7 +128,7 @@ void main_imem(void) {
 
     ISR_STATUS(0x00000000, IM_GLOBAL | IM_UATX | IM_UARX | IM_RTC | IM_TIMER); //GPU?
 
-
+    // This allows us to "render" these tail sequences safely before their real content is generated
     pSEQUENCE = (gpcode_p)FRAME_EXTRA_TAIL(1);
     hwq_stop(pSEQUENCE);
     pSEQUENCE = (gpcode_p)FRAME_EXTRA_TAIL(2);
@@ -140,13 +143,14 @@ void main_imem(void) {
         }
 
         if (!(share->flags & SMM_flags_pause)) {
-            uint32_t nextFrame = (frameCounter & 0x01u) + 1;
+            uint32_t thisFrame = ((frameCounter & 0x01)       ) + 1;
+            uint32_t nextFrame = ((frameCounter & 0x01) ^ 0x01) + 1;
             //TODO: Render and Generate simultaneously (overlap)
             //TODO: Add frame_prep which moves objects and such (prior to generate)
             //TODO: Change % 2 to a mask of first bit
-            frame_gp_render(nextFrame, pSEQUENCE); // Draw asynchronously into inactive frame using its tail sequence
-            pSEQUENCE = frame_gp_generate(nextFrame, frameCounter);
-            GP_WAIT(); // Wait until GPU/GP operations completed
+            frame_start_render(nextFrame, pSEQUENCE); // Draw asynchronously to inactive frame
+            pSEQUENCE = frame_gp_generate(thisFrame, frameCounter);
+            GP_WAIT(); // Wait until GPU/GP render operations completed
             PF_WAIT(nextFrame); // Swap frame and wait until it is live
             frameCounter++;
         }
@@ -158,6 +162,7 @@ void main_imem(void) {
     ISR_STATUS(0x00000000, 0x00000000);
 }
 
+//TODO: Update this output to reflect the recent results of the program!
 /* Resulting output..
 > jal 60000000
 ...
