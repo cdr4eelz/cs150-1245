@@ -134,3 +134,6 @@ After an Update to a fresh box, `setup-box.sh` ran start to finish with exit 0 i
 `x11-utils` (`xwininfo`, `xdpyinfo`) was added to the script for checking windows on the desktop. It was installed by hand during this test.
 
 Raylib 6 is required. `setup-box.sh` installs `libraylib6-dev` from the texus PPA and then confirms that `pkg-config --modversion raylib` reports 6.x. If it reports anything else, the script exits with an error. The fresh-box run got 6.2.0.
+
+## 2026-10-19 rclone
+`rclone` 1.60.1 (Debian `rclone` package) was installed with apt so large files, such as the VM download, can be moved. It is also in the `setup-box.sh` base package line.
