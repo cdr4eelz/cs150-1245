@@ -3,13 +3,14 @@
 # Debian 13 (trixie) box image. Idempotent: safe to re-run.
 # DRAFT - review before running. Logins are printed as manual steps at the end.
 #
-# Usage: bash setup-box.sh [--no-virtualbox] [--no-docker] [--no-raylib]
+# Usage: bash setup-box.sh [--no-docker] [--no-raylib]
+# VirtualBox is intentionally not installed: its vboxdrv kernel module cannot load
+# on this box (modules disabled). Use QEMU/KVM, installed below, for VMs.
 set -euo pipefail
 
-WANT_VBOX=1; WANT_DOCKER=1; WANT_RAYLIB=1
+WANT_DOCKER=1; WANT_RAYLIB=1
 for a in "$@"; do
   case "$a" in
-    --no-virtualbox) WANT_VBOX=0 ;;
     --no-docker)     WANT_DOCKER=0 ;;
     --no-raylib)     WANT_RAYLIB=0 ;;
     *) echo "unknown option: $a" >&2; exit 2 ;;
@@ -55,16 +56,6 @@ if [ "$WANT_RAYLIB" = 1 ]; then
     'deb [signed-by=/usr/share/keyrings/texus-raylib.gpg] https://ppa.launchpadcontent.net/texus/raylib/ubuntu noble main'
 fi
 
-if [ "$WANT_VBOX" = 1 ]; then
-  log "Oracle VirtualBox repo"
-  add_key https://www.virtualbox.org/download/oracle_vbox_2016.asc \
-          /usr/share/keyrings/oracle-virtualbox-2016.gpg B9F8D658297AF3EFC18D5CDFA2F683C52980AECF
-  VBOX_SUITE="$CODENAME"
-  curl -fsI "https://download.virtualbox.org/virtualbox/debian/dists/$VBOX_SUITE/Release" >/dev/null 2>&1 || VBOX_SUITE=bookworm
-  add_list /etc/apt/sources.list.d/virtualbox.list \
-    "deb [arch=amd64 signed-by=/usr/share/keyrings/oracle-virtualbox-2016.gpg] https://download.virtualbox.org/virtualbox/debian $VBOX_SUITE contrib"
-fi
-
 $SUDO apt-get update -q
 
 # ---------------------------------------------------------------- packages
@@ -87,14 +78,6 @@ fi
 if [ "$WANT_DOCKER" = 1 ]; then
   log "Docker + QEMU/KVM"
   "${APT_INSTALL[@]}" docker.io qemu-system-x86 qemu-utils
-fi
-
-if [ "$WANT_VBOX" = 1 ]; then
-  log "VirtualBox 7.2 (userland only; vboxdrv cannot load on this box's kernel - see INSTALLED.md)"
-  # --no-install-recommends avoids pulling linux-headers-amd64 + a Debian kernel image/initramfs
-  # that are useless here (the box boots an external 6.12.94+ kernel with modules disabled).
-  $SUDO apt-get install -y -q --no-install-recommends virtualbox-7.2 || \
-    echo "WARN: virtualbox-7.2 postinst reported problems (expected: no kernel module)" >&2
 fi
 
 # ---------------------------------------------------------------- non-apt
@@ -123,6 +106,5 @@ cat <<'MSG'
   3. Docker daemon (no systemd here):  sudo dockerd > /tmp/dockerd.log 2>&1 &
   4. Optional, per shell, for CS150 build helpers (bin2mif etc.):
        export PATH="/workspace/cs150-1245/bin:$PATH"
-  5. VirtualBox VMs will NOT start on this box (vboxdrv cannot be loaded: kernel
-     booted with 'nomodule', kernel.modules_disabled=1). See INSTALLED.md.
+  5. QEMU/KVM: /dev/kvm needs root or the kvm group (sudo usermod -aG kvm "$USER").
 MSG

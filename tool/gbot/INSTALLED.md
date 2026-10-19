@@ -8,6 +8,8 @@ Reinstall script draft: `tool/gbot/setup-box.sh` in this directory.
 Box: Debian 13 trixie, external kernel `6.12.94+` (cmdline has `nomodule`,
 `kernel.modules_disabled=1`), init = tini (no systemd), user `box` with passwordless sudo.
 
+> **2026-10-18:** VirtualBox was removed from `setup-box.sh`. It installs, but its kernel driver can never load on this box, so VMs run under QEMU/KVM instead. The VirtualBox notes below are kept as history.
+
 ## 0. Stock box image (not ours, for reference)
 Installed 2026-10-17 15:04-15:08 by the image build (no `Requested-By`): bash bubblewrap
 ca-certificates curl ffmpeg git iproute2 jq nodejs node-corepack libssl-dev patch
