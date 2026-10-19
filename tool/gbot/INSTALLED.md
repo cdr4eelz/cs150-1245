@@ -121,3 +121,14 @@ assistant chose is inferred from timing; all are marked manual by apt.
    and this kernel is 6.12, so no help.
 4. Run VirtualBox somewhere with a normal kernel (the user's own PC / a cloud VM with a stock distro kernel).
 5. Ask the box provider for a kernel without `nomodule`/`modules_disabled` (out of our control).
+
+## 2026-10-18 fresh-box test
+After an Update to a fresh box, `setup-box.sh` ran start to finish with exit 0 in about 4 minutes. Everything worked afterward:
+- `gh` and Grok Build were still installed and signed in, because Update keeps the home directory.
+- The `mips-linux-gnu-gcc` 14.2 toolchain built `gios`, `bios150v3` and `proj_app6`, including `make fresh`.
+- `tool/vizard` passed `make fresh`, all its tests passed, and the window ran at about 58–60 FPS.
+- Icarus ran `make icarus TB=ALUTestbench` from the `sim-icarus-option` branch, and it passed.
+- Docker ran `hello-world` after a manual `sudo dockerd &`.
+- QEMU ran with `-enable-kvm` under sudo.
+
+`x11-utils` (`xwininfo`, `xdpyinfo`) was added to the script for checking windows on the desktop. It was installed by hand during this test.

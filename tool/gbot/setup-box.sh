@@ -60,7 +60,7 @@ $SUDO apt-get update -q
 
 # ---------------------------------------------------------------- packages
 log "Core dev tools"
-"${APT_INSTALL[@]}" make g++ ripgrep tmux
+"${APT_INSTALL[@]}" make g++ ripgrep tmux x11-utils   # x11-utils: xwininfo/xdpyinfo for desktop checks
 
 log "CS150 MIPS toolchain + HDL sim (GCC 14 cross; gcc-12-mips variant is not in trixie)"
 "${APT_INSTALL[@]}" gcc-mips-linux-gnu binutils-mips-linux-gnu iverilog
