@@ -73,6 +73,12 @@ if [ "$WANT_RAYLIB" = 1 ]; then
   "${APT_INSTALL[@]}" pkg-config cmake libasound2-dev libx11-dev libxrandr-dev libxi-dev \
     libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
   "${APT_INSTALL[@]}" libraylib6-dev
+  # Vizard requires raylib 6.x; fail loudly if anything else got installed.
+  RAYLIB_VER="$(pkg-config --modversion raylib 2>/dev/null || true)"
+  case "$RAYLIB_VER" in
+    6.*) log "raylib $RAYLIB_VER OK" ;;
+    *)   echo "ERROR: raylib 6.x required, found '${RAYLIB_VER:-none}'" >&2; exit 1 ;;
+  esac
 fi
 
 if [ "$WANT_DOCKER" = 1 ]; then
