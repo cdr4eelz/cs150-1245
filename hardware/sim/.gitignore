@@ -3,3 +3,5 @@ results
 modelsim_libs
 tests/*.do
 !tests/src/*.do
+build_icarus
+results_icarus
