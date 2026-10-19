@@ -2,5 +2,6 @@
 /tests/test_core
 /tests/test_graphics_bridge
 /tests/test_frame_extra_overflow
+/tests/test_gios_parser
 /tests/test_mips
 /vizard
