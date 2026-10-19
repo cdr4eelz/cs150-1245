@@ -137,3 +137,6 @@ Raylib 6 is required. `setup-box.sh` installs `libraylib6-dev` from the texus PP
 
 ## 2026-10-19 rclone
 `rclone` 1.60.1 (Debian `rclone` package) was installed with apt so large files, such as the VM download, can be moved. It is also in the `setup-box.sh` base package line.
+
+## 2026-10-19 hostname
+This computer is named **DEB13**. `setup-box.sh` runs `sudo hostname DEB13`. The name may reset after an Update, so rerun the script afterward.

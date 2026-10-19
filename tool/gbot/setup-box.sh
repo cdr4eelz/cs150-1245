@@ -44,6 +44,9 @@ add_list() {  # add_list <file> <line>
   fi
 }
 
+log "Hostname DEB13 (box name; may not persist across Update)"
+sudo hostname DEB13 2>/dev/null || echo "WARN: could not set hostname" >&2
+
 log "Base tools needed by this script"
 $SUDO apt-get update -q
 "${APT_INSTALL[@]}" ca-certificates curl wget gnupg
