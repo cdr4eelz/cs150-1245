@@ -17,8 +17,14 @@ IS_ZERO:
 ===========================================================================
 ===========================================================================
 
-Update next proj_isr{N} and proj_app{N} to use proper circular buffer for UATX.
-
+[DONE]  Add loop limit for app6 UART ISR based transmit. (Need elsewhere too)
+[DONE]  Update next proj_isr{N} and proj_app{N} to use proper circular buffer for UATX.
+        Enhanced testing.
+        Bouncers in proj6 (or 7)
+        Key to add/remove bounsers.
+        Vertical sweeper and two directions (trigger somehow?)
+        Collision detection? Add it to hardware?
+        
 ===========================================================================
 ===========================================================================
 
