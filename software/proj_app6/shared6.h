@@ -12,6 +12,9 @@
 
 //NOTE: It can be important to surround #define values with parens...
 
+#define DBG_UWAIT_MAX (0xCFFFFFF0u)
+//#define DBG_UWAIT_MAX (0x0Fu)
+
 // Basic constants:
 #define K_MAJOR_VERSION    6
 #define K_MAGIC_VERSION    (0xFEDBEEF2u)

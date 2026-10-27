@@ -61,7 +61,13 @@ void uwrite_int8s_ISR(int8_t* src) { //Should use MAX/TIMEOUT???
         } else { // Utilize ring-buffer
             uint32_t head = share->buff_head;
             uint32_t nextHead = (head + 1) & K_SHBUF_ROLLOVERB;
-            while (nextHead == share->buff_tail) { } //Buffer is full
+            uint32_t cntr = 0;
+            while (nextHead == share->buff_tail) { //Buffer is full
+                if ((cntr++) > DBG_UWAIT_MAX) {
+                    //TODO: Drop a breadcrum or immediate "exception" into BIOS
+                    return;
+                }
+            }
             share->buff_data[head] = ch;
             share->buff_head = nextHead;
         }
@@ -103,8 +109,14 @@ void uwait_ISR(void) {
 
     // Wait until interrupt based sending is done, BUT...
     //TODO: Should only check buffer IIF UATX interrupt on???
+    uint32_t cntr = 0;
     while ((share->buff_tail != share->buff_head)
-             || (!UTRAN_CTRL)) { } //Wait on prior sends
+             || (!UTRAN_CTRL)) {
+        if ((cntr++) > DBG_UWAIT_MAX) {
+            //TODO: Drop a breadcrum or immediate "exception" into BIOS
+            return;
+        }
+    } //Wait on prior sends
 }
 #endif
 
