@@ -210,7 +210,15 @@ static bool step(VizardMips *cpu, uint32_t *bad_instruction)
         if (rs == 0 && c0 != NULL) {
             r[rt] = *c0;
         } else if (rs == 4 && c0 != NULL) {
-            *c0 = r[rt];
+            if (rd == 13) {
+                uint32_t write_value = r[rt];
+                uint32_t pending_interrupts = cpu->cause & IM_POSSIBLE;
+                /* Cause's interrupt-pending bits are cleared by writing zero. */
+                *c0 = (write_value & ~IM_POSSIBLE) |
+                      (pending_interrupts & write_value & IM_POSSIBLE);
+            } else {
+                *c0 = r[rt];
+            }
         } else {
             return false;
         }
