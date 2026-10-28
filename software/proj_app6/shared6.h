@@ -47,7 +47,9 @@
 #define SMO_PAST_END        (SMO_buff_data + K_SHBUF_SIZEB)
 
 // Shared memory data structure corresponding to the offsets defined above:
+// These are all volatile because they may be accessed by both the main program and ISRs asynchronously.
 struct SM_DATA {
+    // 16-bit or otherwise "packed" members are indented to stand out...
     volatile uint32_t magic;
     volatile uint32_t stash0, stash1, stash2, stash3;
     volatile uint16_t  state;
@@ -60,7 +62,7 @@ struct SM_DATA {
     volatile uint32_t buff_size;
     volatile uint32_t buff_head;
     volatile uint32_t buff_tail;
-    int8_t buff_data[K_SHBUF_SIZEB];
+    volatile int8_t buff_data[K_SHBUF_SIZEB];
 };
 
 // Bit numbers (offsets?) for {SMO/SMA}_flags:
