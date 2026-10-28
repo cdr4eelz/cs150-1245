@@ -109,8 +109,10 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         ._inst(INST_F_), .couldBranch(INST_CouldBranch_F_)
     );
 //  assign DO_ISR = {BRA_IRQPending_DX2F_,stall,INST_CouldBranch_F_,WAS_Branch,WAS_ISR} == 5'b10000;
-    assign DO_ISR = BRA_IRQPending_DX2F_ && ~|{stall,INST_CouldBranch_F_,WAS_Branch,WAS_ISR};
-
+//  assign DO_ISR = BRA_IRQPending_DX2F_ && ~|{stall,INST_CouldBranch_F_,WAS_Branch,WAS_ISR};
+    wire INST_IsMTC0_F_ = (INST_F_[31:21] == 11'b010000_00100); // Detect "mtc0" instruction
+    assign DO_ISR = BRA_IRQPending_DX2F_ && ~|{stall,INST_CouldBranch_F_,INST_IsMTC0_F_,WAS_Branch,WAS_ISR};
+    // DO_ISR waits if instruction is "mtc0" so that a stale value doesn't end up in EPC and ISR loops forever
 
 //=============--- "PIPELINE"-PEEK: F/DX ---=============
     wire [31: 0] PC_DX, INST_DX;

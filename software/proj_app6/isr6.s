@@ -89,11 +89,18 @@ _isr:
     nop
    
 
+### This commented code leaves a tiny window in which a newly arrived
+###   interrupt can be missed if we clear the Cause too early.
+###   Note that masking in software is unnecessary because the hardware
+###   handles it already and Cause write can only clear interrupt bits,
+###   never set them.
+###done_cause:     # Set $k1 to BITS-TO-KEEP mask for Cause
+###    mfc0    $k0, COP0_Cause
+###    and     $k0, $k0, $k1
+###    mtc0    $k0, COP0_Cause
 # Each handler returns here to clear related Cause bit
-done_cause:     # Set $k1 to BITS-TO-KEEP mask for Cause
-    mfc0    $k0, COP0_Cause
-    and     $k0, $k0, $k1
-    mtc0    $k0, COP0_Cause
+done_cause:     # $k1 = BITS-TO-KEEP mask (e.g. IM_POSSIBLE & ~IM_UATX)
+    mtc0    $k1, COP0_Cause
 # Drop-thru
 
 done_stash:     # Return from handler to here to restore stashed vals
@@ -188,7 +195,8 @@ timer_bcd4_done:
     addu    $k0, $k0, $k1
     mtc0    $k0, COP0_Compare
     j       done_cause
-    addi    $k1, $zero, (~IM_TIMER & 0x0000FFFF)
+    ori     $k1, $zero, (IM_POSSIBLE & ~IM_TIMER)   # 0x7C00
+###BUGGY, sets extra bits: addi    $k1, $zero, (~IM_TIMER & 0x0000FFFF)
 
 
 # Triggered when cpu-clock counter rolls over from "-1":
@@ -199,7 +207,8 @@ ISR_RTC:
     addiu   $k0, $k0, 1
     sw      $k0, SMO_RTC_count($k1)
     j       done_cause
-    addi    $k1, $zero, (~IM_RTC & 0x0000FFFF)
+    ori     $k1, $zero, (IM_POSSIBLE & ~IM_RTC)     # 0xBC00
+###BUGGY, sets extra bits: addi    $k1, $zero, (~IM_RTC & 0x0000FFFF)
 
 #END: ISR_RTC
 
@@ -326,7 +335,8 @@ _uarx_player_move:      # Pass delta-X & delta-Y in $k0 & $K1 respectively
 
 _uarx_done:
     b       done_cause
-    addiu   $k1, $zero, (~IM_UARX & 0x0000FFFF)
+    ori     $k1, $zero, (IM_POSSIBLE & ~IM_UARX)    # 0xF800
+###BUGGY: Sets extra bits: addiu   $k1, $zero, (~IM_UARX & 0x0000FFFF)
 
 #END: ISR_UARX
 
@@ -363,7 +373,8 @@ ISR_UATX:
 # ISR return here (restore stashed vals & reset cause)...
 _uatx_done:
     j       done_cause
-    addi    $k1, $zero, (~IM_UATX & 0x0000FFFF)
+    ori     $k1, $zero, (IM_POSSIBLE & ~IM_UATX)    # 0xF400
+###BUGGY: Sets extra bits: addi    $k1, $zero, (~IM_UATX & 0x0000FFFF)
 
 #END: ISR_UATX
 

@@ -55,7 +55,8 @@ module StageF #(
 
     reg [(PCWIDTH-1):0] REG_PCNEXT;
     always @(posedge clk) begin:_REG_PCNEXT_
-        REG_PCNEXT <= MUX_PCNEXT; //After DoISR, remembers the "replaced" PC
+        if (!stall) REG_PCNEXT <= MUX_PCNEXT; //After DoISR, remembers the "replaced" PC
+        //NOTE: The "!stall" fixes a huge bug where the ISR addr itself would end up in EPC!
     end
 
     assign PC_ = REG_PC, PCNEXT_ = REG_PCNEXT;
