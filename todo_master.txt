@@ -28,4 +28,21 @@ IS_ZERO:
 ===========================================================================
 ===========================================================================
 
+BUG: lb/lh do not sign-extend (they behave like lbu/lhu).
+        The sign-extend control is decoded but left unconnected (CPUMIPS.v:162),
+        and ByteAccess4.v:49-57 always zero-pads loaded bytes/halfwords.
+        Affects software, e.g. isr7.s:323,328 uses lh on signed player x/y.
+        Fix: wire the sign signal through to ByteAccess4 and sign-extend for lb/lh.
+        (vvizard currently sign-extends, i.e. standard MIPS behavior.)
 
+===========================================================================
+===========================================================================
+
+BUG: jalr rd always links to $31 (ignores the rd field).
+        Standard MIPS writes the return address to rd (usually $31, but any register
+        is legal, e.g. "jalr $t9, $t0"). Hardware hard-wires the link register to $31.
+        Fix: select rd for jalr (keep $31 for jal) in the writeback register mux.
+        (vvizard currently writes rd, i.e. standard MIPS behavior.)
+
+===========================================================================
+===========================================================================
