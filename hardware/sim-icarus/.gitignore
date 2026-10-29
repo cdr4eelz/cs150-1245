@@ -1,0 +1,8 @@
+# Everything transient goes under build/; the rest are strays from manual runs.
+/build/
+*.vvp
+*.vcd
+*.fst
+*.lxt
+*.lxt2
+/*.log
