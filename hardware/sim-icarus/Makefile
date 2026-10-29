@@ -1,14 +1,17 @@
 # Icarus Verilog test rig (see README.md).
 #
-#   make [all]          run every test in tests/*.mk (except SKIP ones), print a summary,
+#   make [all]          run the default-group tests in tests/*.mk, print a summary,
 #                       exit nonzero if any test FAILed (or XPASSed)
+#   make slow           run the "slow" group (<name>.GROUP := slow), e.g. DDR/full-system sims
+#   make everything     run both groups
 #   make <test>         run one test, e.g. `make prng32lfsr` (SKIP is ignored when named)
 #   make list           list tests
 #   make clean          remove build/
 #   WAVES=1             also dump build/<test>/<test>.vcd (testbenches that honor +vcd=<file>)
 #   DEFINES="A B=1"     extra `define`s for every compile (e.g. DEFINES=FORCE_FAIL)
 #   PLUSARGS="+n=10"    extra vvp plusargs
-#   RUN_SKIPPED=1       make all also runs tests marked SKIP
+#   RUN_SKIPPED=1       also run tests marked SKIP
+#   XILINX_SRC=<dir>    ISE verilog/src (unisims, XilinxCoreLib, glbl.v); auto-detected, see below
 #   make hex            rebuild tb/data/*.hex from the .s sources
 
 SHELL := /bin/bash
@@ -27,10 +30,44 @@ SRC      := ../src
 TBSRC    := $(SRC)/testbench
 # Library dirs for tests that let iverilog find modules by file name (<name>.YDIRS := $(SRC_YDIRS))
 SRC_YDIRS := $(addprefix $(SRC)/,. cpu innerds base_util base_io base_mem gpu base_vid cross)
+# CoreGen wrapper dirs (BRAM/FIFO cores; need XILINX_SRC) and the whole-system dirs
+CORE_YDIRS := $(patsubst %/,%,$(sort $(dir $(wildcard $(SRC)/core_ip/*/*.v $(SRC)/core_ip/*/*/*.v))))
+SYS_YDIRS  := $(SRC_YDIRS) $(SRC)/base_mem/mig_v3_61 $(CORE_YDIRS)
 DEFINES  ?=
 PLUSARGS ?=
 WAVES    ?=
 RUN_SKIPPED ?=
+
+# ---- external requirements (<name>.NEEDS) -----------------------------------
+# A test whose NEEDS are not all available is reported as SKIP (with the reason), not FAIL.
+#   xilinx : Xilinx ISE 14.7 simulation sources (BUFG/PLL/BRAM/FIFO cores). Never copied
+#            into the repo: XILINX_SRC points at an ISE install's verilog/src directory.
+#   mips   : MIPS cross toolchain (M_PRE-as/-gcc/-objcopy) to build programs from ../../software
+ISE_SUBDIR := 14.7/ISE_DS/ISE/verilog/src
+XILINX_SRC_CANDIDATES := \
+  $(if $(XILINX),$(XILINX)/verilog/src) \
+  $(if $(ISE_DOCKER_DIR),$(ISE_DOCKER_DIR)/opt/Xilinx/$(ISE_SUBDIR)) \
+  /tmp/vmfs/opt/Xilinx/$(ISE_SUBDIR) \
+  $(HOME)/ise-docker/opt/Xilinx/$(ISE_SUBDIR) \
+  /workspace/ise-docker/opt/Xilinx/$(ISE_SUBDIR) \
+  /opt/Xilinx/$(ISE_SUBDIR)
+XILINX_SRC ?= $(firstword $(foreach d,$(XILINX_SRC_CANDIDATES),$(if $(wildcard $(d)/XilinxCoreLib/BLK_MEM_GEN_V7_3.v),$(d))))
+M_PRE ?= mips-linux-gnu
+HAVE := $(if $(and $(XILINX_SRC),$(wildcard $(XILINX_SRC)/glbl.v),$(wildcard $(XILINX_SRC)/unisims/BUFG.v)),xilinx) \
+        $(if $(shell command -v $(M_PRE)-gcc >/dev/null 2>&1 && command -v $(M_PRE)-objcopy >/dev/null 2>&1 && echo y),mips)
+NEED_HINT.xilinx := needs Xilinx sim sources: set XILINX_SRC=<ISE>/verilog/src
+NEED_HINT.mips   := needs the MIPS toolchain ($(M_PRE)-gcc)
+missing = $(filter-out $(HAVE),$($(1).NEEDS))
+# Xilinx library dirs: -y only, so iverilog compiles just the modules a test uses (no caching needed)
+XILINX_YFLAGS = -y $(XILINX_SRC)/unisims -y $(XILINX_SRC)/XilinxCoreLib -s glbl
+# Noise from Xilinx/Micron/CoreGen sources under -Wall
+XILINX_WFLAGS ?= -Wall -Wno-timescale -Wno-anachronisms -Wno-implicit-dimensions -Wno-portbind -Wno-select-range -Wno-sensitivity-entire-array -Wno-implicit -Wno-floating-nets
+
+# Patched copy of the Micron DDR2 model (Icarus rejects one declaration style; see the script)
+DDR2_DIR   := $(SRC)/base_mem/mig_v3_61
+DDR2_MODEL := $(BUILD)/_ddr2/ddr2_model.v
+$(DDR2_MODEL): $(DDR2_DIR)/ddr2_model.v scripts/patch-ddr2-model.sh
+	scripts/patch-ddr2-model.sh $< $@
 
 # Defaults for the per-test judging knobs (override per test as <name>.PASS_RE etc.)
 PASS_RE ?= ^PASS
@@ -42,31 +79,48 @@ include $(wildcard tests/*.mk)
 # per-test value with fallback: $(call tv,<test>,<VAR>,<default>)
 tv = $(if $(filter undefined,$(origin $(1).$(2))),$(3),$($(1).$(2)))
 
-RUN_TESTS := $(if $(RUN_SKIPPED),$(TESTS),$(foreach t,$(TESTS),$(if $(strip $($(t).SKIP)),,$(t))))
-SKIPPED   := $(filter-out $(RUN_TESTS),$(TESTS))
+group     = $(if $(strip $($(1).GROUP)),$(strip $($(1).GROUP)),default)
+in_group  = $(foreach t,$(TESTS),$(if $(filter $(1),$(call group,$(t))),$(t)))
+runnable  = $(if $(RUN_SKIPPED),$(1),$(foreach t,$(1),$(if $(strip $($(t).SKIP)),,$(t))))
+skipped   = $(filter-out $(call runnable,$(1)),$(1))
 
-.PHONY: all list clean hex $(TESTS)
+.PHONY: all slow everything list clean hex env $(TESTS)
 
 # Regenerate tb/data/*.hex from tb/data/*.s (needs mips-linux-gnu-as; the .hex files are checked in)
 hex:
 	$(MAKE) -C tb/data
 
-all:
-	@rm -f $(addprefix $(BUILD)/,$(addsuffix .status,$(TESTS)))
-	@for t in $(RUN_TESTS); do $(MAKE) --no-print-directory $$t; done; \
+# $(call run_group,<tests>): run each test, then print a summary; fail if any FAIL/XPASS
+define run_group
+	@rm -f $(addprefix $(BUILD)/,$(addsuffix .status,$(1)))
+	@for t in $(call runnable,$(1)); do $(MAKE) --no-print-directory $$t; done; \
 	echo "==================== sim-icarus summary ===================="; \
-	bad=0; np=0; \
-	for t in $(RUN_TESTS); do \
+	bad=0; np=0; ns=0; \
+	for t in $(call runnable,$(1)); do \
 	  s=$$(cat $(BUILD)/$$t.status 2>/dev/null || echo FAIL); \
-	  printf '  %-6s %-24s %s\n' $$s $$t "$(BUILD)/$$t.log"; \
-	  case $$s in PASS|XFAIL) np=$$((np+1));; *) bad=$$((bad+1));; esac; \
+	  r=$$(cat $(BUILD)/$$t.reason 2>/dev/null); \
+	  printf '  %-6s %-24s %s\n' $$s $$t "$${r:-$(BUILD)/$$t.log}"; \
+	  case $$s in PASS|XFAIL) np=$$((np+1));; SKIP) ns=$$((ns+1));; *) bad=$$((bad+1));; esac; \
 	done; \
-	$(foreach t,$(SKIPPED),printf '  %-6s %-24s %s\n' SKIP $(t) '$(strip $($(t).SKIP))';) \
-	echo "  $$np/$(words $(RUN_TESTS)) ok (PASS or expected XFAIL), $$bad failed, $(words $(SKIPPED)) skipped"; \
+	$(foreach t,$(call skipped,$(1)),printf '  %-6s %-24s %s\n' SKIP $(t) '$(strip $($(t).SKIP))'; ns=$$((ns+1));) \
+	echo "  $$np ok (PASS or expected XFAIL), $$bad failed, $$ns skipped  [XILINX_SRC=$(if $(filter xilinx,$(HAVE)),$(XILINX_SRC),none)]"; \
 	[ $$bad -eq 0 ]
+endef
+
+all:
+	$(call run_group,$(call in_group,default))
+
+slow:
+	$(call run_group,$(call in_group,slow))
+
+everything:
+	$(call run_group,$(TESTS))
+
+env:
+	@echo "XILINX_SRC=$(XILINX_SRC)"; echo "HAVE=$(strip $(HAVE))"; echo "M_PRE=$(M_PRE)"
 
 list:
-	@$(foreach t,$(TESTS),printf '  %-24s %-28s %s\n' '$(t)' '$($(t).TOP)' '$(if $($(t).SKIP),[SKIP] )$(if $($(t).XFAIL),[XFAIL] )$($(t).TB)';)
+	@$(foreach t,$(TESTS),printf '  %-24s %-28s %s\n' '$(t)' '$($(t).TOP)' '$(if $($(t).SKIP),[SKIP] )$(if $($(t).XFAIL),[XFAIL] )$(if $($(t).GROUP),[$($(t).GROUP)] )$(if $($(t).NEEDS),[needs $($(t).NEEDS)] )$($(t).TB)';)
 
 clean:
 	rm -rf $(BUILD)
@@ -81,9 +135,20 @@ clean:
 #   XFAIL     reason: test is expected to fail (known bug); XFAIL is ok, XPASS fails
 #   SKIP      reason: not run by `make all` unless RUN_SKIPPED=1
 #   TIMEOUT   wall-clock seconds
-#   WFLAGS    iverilog warning flags (default $(WFLAGS))
+#   WFLAGS    iverilog warning flags (default $(WFLAGS), or $(XILINX_WFLAGS) with NEEDS xilinx)
+#   NEEDS     xilinx and/or mips: SKIP (not FAIL) when not available
+#   GROUP     default (make all) or slow (make slow)
+#   PREREQS   extra make prerequisites of the compile (e.g. generated .hex/.mif files)
+define SKIP_template
+$(1):
+	@mkdir -p $(BUILD); echo SKIP > $(BUILD)/$(1).status
+	@echo '$(foreach n,$(call missing,$(1)),$(NEED_HINT.$(n)))' > $(BUILD)/$(1).reason
+	@echo "SIM-ICARUS SKIP: $(1) ($$$$(cat $(BUILD)/$(1).reason))"
+endef
+
 define TEST_template
 $(1): $(BUILD)/$(1)/$(1).vvp $$($(1).RUNFILES)
+	@rm -f $(BUILD)/$(1).reason
 	@echo "---- $(1): running $$($(1).TOP) ----"
 	@VVP='$(VVP)' TIMEOUT='$(call tv,$(1),TIMEOUT,$(TIMEOUT))' \
 	 PLUSARGS='$$($(1).PLUSARGS) $(PLUSARGS) $(if $(WAVES),+vcd=$(1).vcd)' \
@@ -91,21 +156,24 @@ $(1): $(BUILD)/$(1)/$(1).vvp $$($(1).RUNFILES)
 	 QUIET_RE='$$($(1).QUIET_RE)' RUNFILES='$$($(1).RUNFILES)' XFAIL='$$(strip $$($(1).XFAIL))' \
 	 scripts/run-test.sh $(1) $(BUILD)
 
-$(BUILD)/$(1)/$(1).vvp: $$($(1).TB) $$($(1).SRCS) tests/$(1).mk $(BUILD)/$(1)/flags
+$(BUILD)/$(1)/$(1).vvp: $$($(1).TB) $$($(1).SRCS) $$($(1).PREREQS) tests/$(1).mk $(BUILD)/$(1)/flags
 	@mkdir -p $(BUILD)/$(1)
-	$(IVERILOG) $(STD) $(IFLAGS) $(call tv,$(1),WFLAGS,$(WFLAGS)) -s $$($(1).TOP) \
-	  $$(addprefix -I,$$($(1).INCS)) $$(addprefix -y ,$$($(1).YDIRS)) $$(if $$($(1).YDIRS),-Y .v) \
+	$(IVERILOG) $(STD) $(IFLAGS) $$(call wflags,$(1)) -s $$($(1).TOP) \
+	  $$(addprefix -I,$$($(1).INCS)) $$(addprefix -y ,$$($(1).YDIRS)) \
+	  $$(if $$(filter xilinx,$$($(1).NEEDS)),$$(XILINX_YFLAGS)) -Y .v \
 	  $$(addprefix -D,$$($(1).DEFS) $(DEFINES)) \
-	  -o $$@ $$($(1).TB) $$($(1).SRCS) 2>&1 | tee $(BUILD)/$(1)/compile.log
+	  -o $$@ $$($(1).TB) $$($(1).SRCS) $$(if $$(filter xilinx,$$($(1).NEEDS)),$$(XILINX_SRC)/glbl.v) 2>&1 | tee $(BUILD)/$(1)/compile.log
 
 # Rebuild when compile-affecting knobs change (e.g. DEFINES=FORCE_FAIL).
 $(BUILD)/$(1)/flags: FORCE_CHECK
 	@mkdir -p $(BUILD)/$(1)
-	@echo '$(IVERILOG) $(STD) $(IFLAGS) $(call tv,$(1),WFLAGS,$(WFLAGS)) $$($(1).DEFS) $(DEFINES)' > $$@.new; \
+	@echo '$(IVERILOG) $(STD) $(IFLAGS) $$(call wflags,$(1)) $$($(1).DEFS) $(DEFINES) $$(if $$(filter xilinx,$$($(1).NEEDS)),$$(XILINX_SRC))' > $$@.new; \
 	 cmp -s $$@.new $$@ && rm -f $$@.new || mv -f $$@.new $$@
 endef
 
 .PHONY: FORCE_CHECK
 FORCE_CHECK:
 
-$(foreach t,$(TESTS),$(eval $(call TEST_template,$(t))))
+wflags = $(call tv,$(1),WFLAGS,$(if $(filter xilinx,$($(1).NEEDS)),$(XILINX_WFLAGS),$(WFLAGS)))
+
+$(foreach t,$(TESTS),$(eval $(call $(if $(call missing,$(t)),SKIP_template,TEST_template),$(t))))
