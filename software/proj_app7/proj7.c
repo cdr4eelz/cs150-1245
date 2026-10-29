@@ -6,13 +6,6 @@
 
 #include "shared7.h"
 
-#ifdef VIZARD
-#include "vizard_host.h"
-#define VIZARD_REPORT_FRAME_COUNTER(n) vizard_host_set_frame_counter(n)
-#else
-#define VIZARD_REPORT_FRAME_COUNTER(n) ((void)0)
-#endif
-
 int8_t tbuff[TBUF_SIZE]; // Can be confusing as to where this gets located!
 
 
@@ -156,7 +149,6 @@ void main_imem(void) {
             GP_WAIT(); // Wait until GPU/GP render operations completed
             PF_WAIT(nextFrame); // Swap frame and wait until it is live
             frameCounter++;
-            VIZARD_REPORT_FRAME_COUNTER(frameCounter);
         }
 
         //TODO: Count up frames and compute FPS or other performance metrics

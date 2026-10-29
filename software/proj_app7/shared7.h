@@ -76,12 +76,7 @@ struct SM_DATA {
 #define SMI_flags_notimer   ((uint16_t)(~SMM_flags_notimer))
 
 
-#ifdef VIZARD
-extern struct SM_DATA vizard_shared;
-#define SM_BASE (&vizard_shared)
-#else
 #define SM_BASE ((struct SM_DATA *)SM_BASE_ADDR)
-#endif
 
 #ifndef ISR_POLL
 #define ISR_POLL(share) (1)

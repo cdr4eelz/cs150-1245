@@ -1,8 +1,5 @@
 #include "uart.h"
 #include "shared7.h"
-#ifdef VIZARD
-#include "vizard_host.h"
-#endif
 
 // These nifty offset checks came from an AI recommendation...
 #define SM_CHECK_OFFSET(member, expected) \
@@ -24,10 +21,6 @@ SM_CHECK_OFFSET(buff_head, SMO_buff_head);
 SM_CHECK_OFFSET(buff_tail, SMO_buff_tail);
 SM_CHECK_OFFSET(buff_data, SMO_buff_data);
 typedef char sm_size_check[(sizeof(struct SM_DATA) == SMO_buff_data + K_SHBUF_SIZEB) ? 1 : -1];
-
-#ifdef VIZARD
-struct SM_DATA vizard_shared;
-#endif
 
 void SM_INIT7(struct SM_DATA *sm)
 {
@@ -53,7 +46,6 @@ void SM_INIT7(struct SM_DATA *sm)
 }
 
 
-#ifndef VIZARD
 //TODO: Rewrite this to properly handle critical sections or RACE conditions
 //        between this function and the associated ISR actions.
 //      Right now, it makes simplifications under assumption that corrupt output
@@ -112,10 +104,8 @@ void uwrite_int8s_ISR(int8_t* src) { //Should use MAX/TIMEOUT???
     }
     // Should there be a return a value (indicating success vs. timeout)?
 }
-#endif
 
 // FULLY drain the ring-buffer and ensure UART ready flag active:
-#ifndef VIZARD
 void uwait_ISR(void) { //NOTE: Should probably mention "flush" or "drain" in name???
     struct SM_DATA* share = SM_BASE; //Should pass as argument???
 
@@ -131,7 +121,6 @@ void uwait_ISR(void) { //NOTE: Should probably mention "flush" or "drain" in nam
         }
     } //Wait on prior sends and basically guarantee that a new send can proceed immediately
 }
-#endif
 
 /*  UNNEEDED FUNCTION? Certainly should be optional or inline/macro if defined
 //TODO: Put in simple string library (perhaps as INLINE)
