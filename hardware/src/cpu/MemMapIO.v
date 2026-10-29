@@ -50,19 +50,22 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 //h016    32'h80000058    GP_CODE                       Write
     A_GPCode        =6'h16, // Write also launches GraphicsProcessor
 //h017    32'h8000005C    GPU status                    Read
-    A_GPUStatus     =6'h17; // See Memory150 for concatenated signals
+    A_GPUStatus     =6'h17, // See Memory150 for concatenated signals
+//h020    32'h80000080    Random 32-bits from PRNG      Read / write seed
+    A_Random32      =6'h20; // A LFSR output with writeable seed
 //
 //[Maps onto multiple addresses to reduce # of address lines checked]
     localparam H_D0TxReady = 0,   H_D0RxValid = 1,   H_D0TxData  = 2,
                H_D0RxData  = 3,   H_CntCycle  = 4,   H_CntInst   = 5,
                H_ResetCnt  = 6,   H_PFFrame   = 7,   H_GPFrame   = 8,
-               H_GPCode    = 9,   H_GPUStatus =10;
-    localparam H__LAST = H_GPUStatus;
+               H_GPCode    = 9,   H_GPUStatus =10,
+               H_Random32  =11;
+    localparam H__LAST = H_Random32;
 
     wire isWrite = (ena &&  |wea); // != 4'b0000
     wire isRead  = (ena && ~|wea); // == 4'b0000
 
-    reg  [(H__LAST-1):0] HOT_ADDR;
+    reg  [H__LAST:0] HOT_ADDR; // "Last" isn't size... so include it in the range!
     always @(*) begin:_HOT_ADDR_
         case (addra[5:0])
             A_D0TxReady : HOT_ADDR = (1 << H_D0TxReady);
@@ -76,6 +79,7 @@ localparam [5:0]            //   DATA-ENCODING/DESC
             A_GPFrame   : HOT_ADDR = (1 << H_GPFrame);
             A_GPCode    : HOT_ADDR = (1 << H_GPCode);
             A_GPUStatus : HOT_ADDR = (1 << H_GPUStatus);
+            A_Random32  : HOT_ADDR = (1 << H_Random32);
             default: HOT_ADDR = 0;
         endcase
     end
@@ -131,13 +135,19 @@ localparam [5:0]            //   DATA-ENCODING/DESC
           gp_vcode_r <= 1'b1;
         end else gp_vcode_r <= 1'b0;
 
-        //  1-cycle latency (don't check too quick after trigger)!
+        //  1-cycle latency to ease timing
+        //    (Don't check too quick after trigger!)
         gpu_status_r <= { pf_status, gp_status };
     end
     assign pf_wframe = pf_wframe_r, pf_vframe = pf_vframe_r;
     assign gp_wframe = gp_wframe_r, gp_vframe = gp_vframe_r;
     assign gp_wcode  = gp_wcode_r,  gp_vcode  = gp_vcode_r;
 
+    wire [31:0] prng_out;
+    reg  [31:0] prng_out_r;
+    always @(posedge clk) begin
+        prng_out_r <= prng_out;
+    end
 
 // Reading operations
     reg [31:0] MUX_DOUTA;
@@ -152,6 +162,7 @@ localparam [5:0]            //   DATA-ENCODING/DESC
             A_PFFrame   : MUX_DOUTA = {4'h1, pf_status[13:8], 22'd0};
             //A_ResetCnt,A_GPFrame,A_GPCode
             A_GPUStatus : MUX_DOUTA = gpu_status_r;
+            A_Random32  : MUX_DOUTA = prng_out_r;
             default: MUX_DOUTA = (BADNESS) ? BAD_WORD : 32'dx;
         endcase
     end
@@ -171,6 +182,13 @@ localparam [5:0]            //   DATA-ENCODING/DESC
     ( ._BUS_(RVa_TX), //Outgoing
         .DataValid(Tx_Valid), .Data(Tx_Data),
         .DataReady(Tx_Ready)
+    );
+
+    PRNG32LFSR  Random32
+    ( .clk(clk), .rst_n(!rst), // Active-low reset
+        .load_seed(isWrite && HOT_ADDR[H_Random32]),
+        .seed_val(dina),
+        .prng_out(prng_out)
     );
 
 

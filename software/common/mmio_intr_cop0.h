@@ -62,7 +62,9 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 //h016    32'h80000058    GP_CODE                       Write
     A_GPCode        =6'h16, // Write also launches GraphicsProcessor
 //h017    32'h8000005C    GPU status                    Read
-    A_GPUStatus     =6'h17; // See Memory150 for concatenated signals
+    A_GPUStatus     =6'h17, // See Memory150 for concatenated signals
+//h020    32'h80000080    Random 32-bits from PRNG      Read / write seed
+    A_Random32      =6'h20; // A LFSR output with writeable seed
 */
 
 // MEMORY-MAPPED IO locations (byte offsets)
@@ -80,6 +82,7 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 #define OW_GP_FRAME     (0x0054u)
 #define OW_GP_GCODE     (0x0058u)
 #define OW_GP_STATE     (0x005Cu)
+#define OW_RANDOM32     (0x0080u)
 
 // MEMORY-MAPPED IO locations (addresses)
 #define MM_UATX_READY   (MMIO_BASE + OW_UATX_READY)
@@ -95,6 +98,7 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 #define MM_GP_FRAME     (MMIO_BASE + OW_GP_FRAME)
 #define MM_GP_GCODE     (MMIO_BASE + OW_GP_GCODE)
 #define MM_GP_STATE     (MMIO_BASE + OW_GP_STATE)
+#define MM_RANDOM32     (MMIO_BASE + OW_RANDOM32)
 
 
 //TODO: Should we implicitly AND "Cause" with "KEEP" mask?
