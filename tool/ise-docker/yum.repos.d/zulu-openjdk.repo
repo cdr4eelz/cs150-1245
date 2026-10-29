@@ -1,0 +1,7 @@
+[zulu-openjdk]
+name=zulu-openjdk - Azul Systems Inc., Zulu packages
+baseurl=https://repos.azul.com/zulu/rpm
+gpgkey=https://repos.azul.com/azul-repo.key
+enabled=1
+gpgcheck=1
+protect=1

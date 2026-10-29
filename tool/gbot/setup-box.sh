@@ -106,6 +106,24 @@ else
   log "Grok Build CLI already installed: $("$HOME/.grok/bin/grok" --version 2>/dev/null || echo present)"
 fi
 
+# ---------------------------------------------------------------- ISE docker image (opt-in)
+# Builds ise14.7:ol6 with tool/ise-docker/setup-ise-docker.sh (see tool/ise-docker/README.md) when the
+# tools copied from the ISE VM are present in ISE_DOCKER_DIR (opt/Xilinx, opt/intelFPGA, home/home/ise).
+ISE_DOCKER_DIR=${ISE_DOCKER_DIR:-/workspace/ise-docker}
+ISE_SETUP="$(cd "$(dirname "$0")/.." && pwd)/ise-docker/setup-ise-docker.sh"
+if [ -d "$ISE_DOCKER_DIR/opt/Xilinx/14.7" ] && command -v docker >/dev/null; then
+  if ! sudo docker image inspect ise14.7:ol6 >/dev/null 2>&1; then
+    if [ "$(id -u)" -eq 0 ]; then
+      log "Skipping ise14.7:ol6 build: run $ISE_SETUP as a normal sudo user"
+    else
+      log "Building ise14.7:ol6 docker image from $ISE_DOCKER_DIR"
+      ISE_DIR="$ISE_DOCKER_DIR" IMAGE=ise14.7:ol6 bash "$ISE_SETUP" || log "ISE image build failed (dockerd running?)"
+    fi
+  else
+    log "ise14.7:ol6 image already present"
+  fi
+fi
+
 # ---------------------------------------------------------------- manual steps
 cat <<'MSG'
 

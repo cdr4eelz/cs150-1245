@@ -1,0 +1,6 @@
+[ol6_software_collections]
+name=Software Collection Library release 3.0 packages for Oracle Linux 6 (x86_64)
+baseurl=https://yum$ociregion.oracle.com/repo/OracleLinux/OL6/SoftwareCollections/x86_64/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+gpgcheck=1
+enabled=1

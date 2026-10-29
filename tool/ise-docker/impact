@@ -1,0 +1,23 @@
+#!/bin/bash
+# iMPACT wrapper for the ISE container: no windrvr6 kernel driver needed.
+# 1. Loads firmware into any un-initialised Xilinx Platform Cable USB (03fd:00xx) with fxload
+#    (normally done by a host udev rule; done here so the host needs no Xilinx files).
+# 2. Runs impact with LD_PRELOAD=libusb-driver.so (userspace windrvr6 emulation over libusb).
+# Needs /dev/bus/usb mounted with write access (run.sh does that) and passwordless sudo (image default).
+ISE_BIN=${ISE_BIN:-/opt/Xilinx/14.7/ISE_DS/ISE/bin/lin64}
+fw_for() {  # product id -> firmware file (from Xilinx's xusbdfwu.rules)
+  case $1 in
+    0007) echo xusbdfwu.hex ;; 0009) echo xusb_xup.hex ;; 000d) echo xusb_emb.hex ;;
+    000f) echo xusb_xlp.hex ;; 0013) echo xusb_xp2.hex ;; 0015) echo xusb_xse.hex ;;
+  esac
+}
+loaded=0
+for d in /sys/bus/usb/devices/*; do
+  [ "$(cat "$d/idVendor" 2>/dev/null)" = 03fd ] || continue
+  pid=$(cat "$d/idProduct"); fw=$(fw_for "$pid"); [ -n "$fw" ] || continue
+  dev=$(printf '/dev/bus/usb/%03d/%03d' "$(cat "$d/busnum")" "$(cat "$d/devnum")")
+  echo "impact wrapper: loading $fw into cable 03fd:$pid at $dev" >&2
+  sudo /sbin/fxload -v -t fx2 -I "$ISE_BIN/$fw" -D "$dev" && loaded=1
+done
+[ $loaded = 1 ] && sleep 4   # cable re-enumerates as 03fd:0008
+LD_PRELOAD=/usr/local/lib/libusb-driver.so${LD_PRELOAD:+:$LD_PRELOAD} exec "$ISE_BIN/impact" "$@"

@@ -1,0 +1,53 @@
+[ol6_UEKR4]
+name=Latest Unbreakable Enterprise Kernel Release 4 for Oracle Linux $releasever ($basearch)
+baseurl=https://yum$ociregion.oracle.com/repo/OracleLinux/OL6/UEKR4/$basearch/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+gpgcheck=1
+enabled=0
+
+[ol6_UEKR3_latest]
+name=Latest Unbreakable Enterprise Kernel for Oracle Linux $releasever ($basearch)
+baseurl=https://yum$ociregion.oracle.com/repo/OracleLinux/OL6/UEKR3/latest/$basearch/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+gpgcheck=1
+enabled=0
+
+[ol6_UEK_latest]
+name=Latest Unbreakable Enterprise Kernel for Oracle Linux $releasever ($basearch)
+baseurl=https://yum$ociregion.oracle.com/repo/OracleLinux/OL6/UEK/latest/$basearch/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+gpgcheck=1
+###enabled=1
+enabled=0
+
+[ol6_UEK_base]
+name=Unbreakable Enterprise Kernel for Oracle Linux $releasever ($basearch)
+baseurl=https://yum$ociregion.oracle.com/repo/OracleLinux/OL6/UEK/base/$basearch/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+gpgcheck=1
+enabled=0
+
+[ol6_UEKR4_archive]
+name=Unbreakable Enterprise Kernel Release 4 for Oracle Linux $releasever ($basearch) - Archive
+baseurl=https://yum$ociregion.oracle.com/repo/OracleLinux/OL6/UEKR4/archive/$basearch/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+gpgcheck=1
+enabled=0
+
+
+[ol6_ofed_UEK]
+name=OFED supporting tool packages for Unbreakable Enterprise Kernel on Oracle Linux 6 ($basearch)
+baseurl=https://yum$ociregion.oracle.com/repo/OracleLinux/OL6/ofed_UEK/$basearch/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+gpgcheck=1
+enabled=0
+priority=20
+
+[ol6_UEKR4_OFED]
+name=OFED supporting tool packages for Unbreakable Enterprise Kernel Release 4 on Oracle Linux 6 ($basearch)
+baseurl=https://yum$ociregion.oracle.com/repo/OracleLinux/OL6/UEKR4/OFED/$basearch/
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+gpgcheck=1
+enabled=0
+priority=20
+
