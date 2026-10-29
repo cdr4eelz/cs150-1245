@@ -8,4 +8,7 @@ SECTIONS
     . = ALIGN(4); *(.rodata.*)
     . = ALIGN(4);
   }
+
+  /* Not needed for bare metal; orphaned at VMA 0 they bloat the ELF */
+  /DISCARD/ : { *(.MIPS.abiflags) *(.gnu.attributes) }
 }

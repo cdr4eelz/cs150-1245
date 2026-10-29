@@ -32,5 +32,6 @@ SECTIONS
 /DISCARD/ : { *(.reginfo) }
 /DISCARD/ : { *(.comment) }
 /DISCARD/ : { *(.pdr) }
+/DISCARD/ : { *(.MIPS.abiflags) *(.gnu.attributes) } /* else orphaned at VMA 0 -> huge ELF */
 
 }
