@@ -69,6 +69,9 @@ reminder to remove the marker.
 | `cop0` | `tb/COP0150_tb.v` | COP0150: Status/Cause/EPC/Count/Compare, interrupt request, timer |
 | `isr_epc_*`, `isr_mtc0_collision` | `tb/ISR_EPC_tb.v` | Periodic interrupts vs. stalls / mtc0: EPC must point into main code (regression for 5cba58a) |
 | `cpu_isa`, `cpu_isa_ddr` | `tb/CPU_prog_tb.v` + `tb/data/cpu_isa.s` | Self-checking MIPS program: ALU, shifts, forwarding, loads/stores, branches, jumps/links, COP0 (`_ddr`: stalls on every store) |
+| `line_engine` | `tb/LineEngine_check_tb.v` | `gpu/LineEngine.v`: each line's pixels vs. the ideal line (count, one per major step, <= 1/2 pixel off, connected), SLR fields, random back-pressure; 228 lines |
+| `frame_filler` | `tb/FrameFiller_check_tb.v` | `gpu/FrameFiller.v`: one SLR request per row 0..599 spanning 0..799, frame clipping, colors, `FF_ready` |
+| `gpu_raster_lw1`, `gpu_raster_lw0` | `tb/GpuRaster_tb.v` | FrameFiller + LineEngine -> ScanLineRunner (2 clients) -> DDR write-FIFO model with back-pressure; whole 1024x1024 frame vs. a reference (fill edges/interior, `swline` C model from `LineEngine.v`), for `LITTLEWORDIAN` 1 and 0 |
 | `sys_bios` (xilinx, mips) | `tb/SysUART_tb.v` | Whole `MIPS150` (CPU, BIOS/ISR/IMEM/DMEM BRAMs, MemMapIO, UART) running the real BIOS (`software/bios150v3`) over its serial port: sw/sh/sb/lw/lhu/lbu on DMEM and cache-side memory, code stored to IMEM and run with `jal`, PRNG reads at `0x80000080` |
 | `sys_echo`, `sys_math`, `sys_mmult` (xilinx, mips) | `tb/SysUART_tb.v` | BIOS `jal`s to `software/echo_c` / `math` / `mmult` loaded at `0x10000000`; UART transcript vs. `tb/data/sys/*.golden` |
 | `memory150_ddr` (slow, xilinx) | `tb/Memory150_ddr_tb.v` | `Memory150` caches + MIG + Micron DDR2 model: write-through, read-miss fills, hits, byte masks, same-index eviction, icache fill from DDR, 100 random ops vs. a shadow memory |
