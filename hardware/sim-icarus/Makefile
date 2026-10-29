@@ -145,7 +145,7 @@ clean:
 define SKIP_template
 $(1):
 	@mkdir -p $(BUILD); echo SKIP > $(BUILD)/$(1).status
-	@echo '$(foreach n,$(call missing,$(1)),$(NEED_HINT.$(n)))' > $(BUILD)/$(1).reason
+	@echo '$(foreach n,$(call missing,$(1)),$(NEED_HINT.$(n));)' > $(BUILD)/$(1).reason
 	@echo "SIM-ICARUS SKIP: $(1) ($$$$(cat $(BUILD)/$(1).reason))"
 endef
 
