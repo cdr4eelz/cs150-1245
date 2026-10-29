@@ -13,25 +13,53 @@
 //   +gap=<n>        clocks between input bytes (default 3 character times)
 //   +ddr=<file>     $readmemh image for the behavioral cache-side memory (see below)
 //
-// The UART baud divider is ClockFreq/BaudRate, so CPU_FREQ = 16 * 115200 makes one serial bit
-// 16 clocks (the real board uses 50 MHz = 434 clocks/bit); timing-wise nothing else changes.
+// The UART baud divider is ClockFreq/BaudRate, so CPU_FREQ = SYS_BIT_CLKS * 115200 makes one
+// serial bit SYS_BIT_CLKS clocks (default 16; the board uses 50 MHz = 434 clocks/bit).
+// With `define SYS_DDR the cache ports go to the real Memory150 + DDR2 model instead of the
+// behavioral memory (slow: see tests/sys_ddr_bios.mk).
 // Stops when all input has been sent and either the output is as long as the golden
 // transcript or the line has been idle for IDLE_CYCLES. Prints PASS / FAIL.
 `timescale 1ns/1ps
 module SysUART_tb;
     localparam BAUD = 115_200;
-    localparam CPU_FREQ = 16 * BAUD;
-    localparam IDLE_CYCLES = 20 * 10 * 16 * 4;   // ~80 character times
+`ifndef SYS_BIT_CLKS
+  `define SYS_BIT_CLKS 16
+`endif
+    localparam BIT_CLKS = `SYS_BIT_CLKS;
+    localparam CPU_FREQ = BIT_CLKS * BAUD;
+    localparam CHAR_CLKS = 10 * BIT_CLKS;
+    localparam IDLE_CYCLES = 80 * CHAR_CLKS;     // ~80 character times
 `ifdef SYS_PC_BOOT
     localparam PC_BOOT = `SYS_PC_BOOT;
 `else
     localparam PC_BOOT = 32'h4000_0000;     // BIOS
 `endif
 
+    wire cpu_rx, cpu_tx;   // from the CPU's point of view
+
+`ifdef SYS_DDR
+    // The real memory system, as in ml505top: PLL/BUFG clocks, Memory150 (caches, MIG, GPU,
+    // PixelFeeder) and the Micron DDR2 model, from src/testbench/base_clock.vh + base_mem.vh.
+    parameter LITTLEWORDIAN = 1;
+    parameter HalfCycle = 5;                // 100 MHz board clock
+`include "base_clock.vh"
+`include "base_mem.vh"
+    wire clk = cpu_clk_g;
+    wire rst = rst_cpu_cpu;
+    assign video_ready = 1'b0;
+    MIPS150 #(.CPU_FREQ(CPU_FREQ), .PC_BOOT(PC_BOOT)) DUT (
+        .clk(clk), .rst(rst), .stall(d_stall || i_stall),
+        .FPGA_SERIAL_RX(cpu_rx), .FPGA_SERIAL_TX(cpu_tx),
+        .dcache_addr(dcache_addr), .icache_addr(icache_addr), .dcache_we(dcache_we), .icache_we(icache_we),
+        .dcache_re(dcache_re), .icache_re(icache_re), .dcache_din(dcache_din), .icache_din(icache_din),
+        .dcache_dout(dcache_dout), .icache_dout(icache_dout),
+        .pf_vframe(pf_vframe), .gp_vcode(gp_vcode), .gp_vframe(gp_vframe),
+        .pf_wframe(pf_wframe), .gp_wcode(gp_wcode), .gp_wframe(gp_wframe),
+        .gp_rcode(gp_rcode), .pf_status(pf_status), .gp_status(gp_status),
+        .irq_pf_frame(irq_pf_frame), .irq_gp_done(irq_gp_done));
+`else
     reg clk = 0, rst = 1;
     always #10 clk = ~clk;
-
-    wire cpu_rx, cpu_tx;   // from the CPU's point of view
 
     // Behavioral stand-in for Memory150 (caches + DDR) at 0x0xxxxxxx-0x3xxxxxxx: one shared
     // 1 MB array (addresses alias modulo 1 MB), synchronous read like the cache BRAMs, no stalls.
@@ -60,6 +88,7 @@ module SysUART_tb;
         .pf_vframe(), .gp_vcode(), .gp_vframe(), .pf_wframe(), .gp_wcode(), .gp_wframe(),
         .gp_rcode(32'b0), .pf_status(16'b0), .gp_status(16'b0),
         .irq_pf_frame(1'b0), .irq_gp_done(1'b0));
+`endif
 
     // Testbench side of the serial line: the course UART at the same clock/baud.
     reg  [7:0] tx_data = 0;
@@ -100,7 +129,7 @@ module SysUART_tb;
     integer   ngold = 0;
     reg [8*256-1:0] fname, prompt;
     integer   plen = 0;
-    integer   prompt_lines = 1 << 30, nline = 0, gap = 3 * 10 * 16, fd, c, i, mark, errors = 0, max_cycles = 3_000_000;
+    integer   prompt_lines = 1 << 30, nline = 0, gap = 3 * CHAR_CLKS, fd, c, i, mark, errors = 0, max_cycles = 3_000_000;
 
     function prompt_seen;
         input dummy;
@@ -128,8 +157,10 @@ module SysUART_tb;
     initial begin
         if ($test$plusargs("vcd")) begin $dumpfile("SysUART_tb.vcd"); $dumpvars(0, SysUART_tb); end
         // golden
+`ifndef SYS_DDR
         for (di = 0; di < 262144; di = di + 1) ddr[di] = 0;
         if ($value$plusargs("ddr=%s", fname)) $readmemh(fname, ddr);
+`endif
         if (!$value$plusargs("golden=%s", fname)) begin $display("FAIL: no +golden="); $finish; end
         fd = $fopen(fname, "rb");
         if (fd == 0) begin $display("FAIL: cannot open golden %0s", fname); $finish; end
@@ -140,11 +171,16 @@ module SysUART_tb;
         plen = 0;
         for (i = 0; i < 256; i = i + 1) if (prompt[8*i +: 8] != 0) plen = i + 1;
         if (!$value$plusargs("max_cycles=%d", max_cycles)) max_cycles = 3_000_000;
-        if (!$value$plusargs("gap=%d", gap)) gap = 3 * 10 * 16;
+        if (!$value$plusargs("gap=%d", gap)) gap = 3 * CHAR_CLKS;
         if (!$value$plusargs("prompt_lines=%d", prompt_lines)) prompt_lines = 1 << 30;
 
+`ifdef SYS_DDR
+        BaseClockReset();
+        $display("DDR calibrated, CPU out of reset at %0t ps", $time);
+`else
         repeat (20) @(posedge clk);
         rst = 0;
+`endif
 
         // input script
         fd = 0;

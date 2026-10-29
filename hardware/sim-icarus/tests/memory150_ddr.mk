@@ -8,3 +8,4 @@ memory150_ddr.YDIRS   := $(SYS_YDIRS)
 memory150_ddr.NEEDS   := xilinx
 memory150_ddr.GROUP   := slow
 memory150_ddr.TIMEOUT := 1200
+memory150_ddr.QUIET_RE := ^blk_mem_gen_v7_3 collision detected

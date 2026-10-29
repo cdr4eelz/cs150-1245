@@ -74,6 +74,7 @@ reminder to remove the marker.
 | `gpu_raster_lw1`, `gpu_raster_lw0` | `tb/GpuRaster_tb.v` | FrameFiller + LineEngine -> ScanLineRunner (2 clients) -> DDR write-FIFO model with back-pressure; whole 1024x1024 frame vs. a reference (fill edges/interior, `swline` C model from `LineEngine.v`), for `LITTLEWORDIAN` 1 and 0 |
 | `sys_bios` (xilinx, mips) | `tb/SysUART_tb.v` | Whole `MIPS150` (CPU, BIOS/ISR/IMEM/DMEM BRAMs, MemMapIO, UART) running the real BIOS (`software/bios150v3`) over its serial port: sw/sh/sb/lw/lhu/lbu on DMEM and cache-side memory, code stored to IMEM and run with `jal`, PRNG reads at `0x80000080` |
 | `sys_echo`, `sys_math`, `sys_mmult` (xilinx, mips) | `tb/SysUART_tb.v` | BIOS `jal`s to `software/echo_c` / `math` / `mmult` loaded at `0x10000000`; UART transcript vs. `tb/data/sys/*.golden` |
+| `sys_ddr_bios` (slow, xilinx, mips) | `tb/SysUART_tb.v` with `SYS_DDR` | As on the board (`ml505top`): MIPS150 + `Memory150` (caches, MIG) + Micron DDR2 model; BIOS boots with its stack in DDR, then `sw`/`lw` through the dcache to DDR |
 | `memory150_ddr` (slow, xilinx) | `tb/Memory150_ddr_tb.v` | `Memory150` caches + MIG + Micron DDR2 model: write-through, read-miss fills, hits, byte masks, same-index eviction, icache fill from DDR, 100 random ops vs. a shadow memory |
 | `cpu_lb_lh_sign`, `cpu_jalr_rd`, `cpu_bal_untaken_link` | `tb/CPU_prog_tb.v` | **XFAIL**: known CPU bugs/deviations (lb/lh sign extension, jalr rd, untaken bltzal/bgezal link) |
 
@@ -103,6 +104,10 @@ it reports the offset; the full transcript is in `build/<test>/uart_out.txt`. In
 are spaced 3 character times apart: the BIOS echoes each character and the UARTs have no
 FIFO, so back-to-back characters get dropped (as they would on the board).
 
+With `` `define SYS_DDR `` (test `sys_ddr_bios`) the testbench instead uses the real memory
+system from `../src/testbench/base_clock.vh` + `base_mem.vh` (PLL, `Memory150`, DDR2 model),
+wired like `ml505top.v`, and 8 clocks per serial bit (`SYS_BIT_CLKS`).
+
 ### DDR2 model
 
 The Micron model `../src/base_mem/mig_v3_61/ddr2_model.v` declares some ports as
@@ -110,6 +115,12 @@ The Micron model `../src/base_mem/mig_v3_61/ddr2_model.v` declares some ports as
 copy to `build/_ddr2/ddr2_model.v` (`input [n:0] x;`, 10 lines) at build time; the original is
 not modified. DDR tests are slow: the MIG calibration alone takes ~83 us of sim time (~30 s
 wall), and the whole `memory150_ddr` test about 70 s.
+
+Both DDR tests filter (and count) `blk_mem_gen_v7_3 collision detected` warnings: the cache's
+data/tag BRAMs are written on port A (`index_hold`) while port B reads the next request's
+`index` in the same cycle, often the same row. The behavioral model only warns; on real
+Virtex-5 block RAM a same-clock read of a row being written on the other port (WRITE_FIRST)
+is not guaranteed to return valid data, so this is worth a look.
 
 `../src/testbench/Memory150TestBench.v` itself does not work under Icarus: `cachetesttasks.vh`
 clears the request right at `@(posedge cpu_clk_g)`, racing with the cache's posedge sampling,
