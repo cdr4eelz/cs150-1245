@@ -57,7 +57,7 @@ void main() {
     uint32_t bios = 0x40000000;
     entry_t start = (entry_t) (bios);
     start();
-    return 0;
+    return;
 }
 
 
