@@ -33,6 +33,7 @@ SRC_YDIRS := $(addprefix $(SRC)/,. cpu innerds base_util base_io base_mem gpu ba
 # CoreGen wrapper dirs (BRAM/FIFO cores; need XILINX_SRC) and the whole-system dirs
 CORE_YDIRS := $(patsubst %/,%,$(sort $(dir $(wildcard $(SRC)/core_ip/*/*.v $(SRC)/core_ip/*/*/*.v))))
 SYS_YDIRS  := $(SRC_YDIRS) $(SRC)/base_mem/mig_v3_61 $(CORE_YDIRS)
+SW       := ../../software
 DEFINES  ?=
 PLUSARGS ?=
 WAVES    ?=
@@ -138,6 +139,8 @@ clean:
 #   WFLAGS    iverilog warning flags (default $(WFLAGS), or $(XILINX_WFLAGS) with NEEDS xilinx)
 #   NEEDS     xilinx and/or mips: SKIP (not FAIL) when not available
 #   GROUP     default (make all) or slow (make slow)
+#   SW_BIOS SW_PROG SW_ARGS  programs from ../../software to build (scripts/build-sw.sh) into
+#             the run dir before each run: BIOS image -> bios_mem.mif, program -> ddr.hex
 #   PREREQS   extra make prerequisites of the compile (e.g. generated .hex/.mif files)
 define SKIP_template
 $(1):
@@ -149,6 +152,7 @@ endef
 define TEST_template
 $(1): $(BUILD)/$(1)/$(1).vvp $$($(1).RUNFILES)
 	@rm -f $(BUILD)/$(1).reason
+	$$(if $$($(1).SW_BIOS),@scripts/build-sw.sh $(SW) $(BUILD)/$(1)/sw $(BUILD)/$(1) $$($(1).SW_BIOS) $$($(1).SW_PROG) $$($(1).SW_ARGS) || { echo FAIL > $(BUILD)/$(1).status; exit 1; })
 	@echo "---- $(1): running $$($(1).TOP) ----"
 	@VVP='$(VVP)' TIMEOUT='$(call tv,$(1),TIMEOUT,$(TIMEOUT))' \
 	 PLUSARGS='$$($(1).PLUSARGS) $(PLUSARGS) $(if $(WAVES),+vcd=$(1).vcd)' \

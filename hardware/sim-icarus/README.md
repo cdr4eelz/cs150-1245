@@ -69,6 +69,8 @@ reminder to remove the marker.
 | `cop0` | `tb/COP0150_tb.v` | COP0150: Status/Cause/EPC/Count/Compare, interrupt request, timer |
 | `isr_epc_*`, `isr_mtc0_collision` | `tb/ISR_EPC_tb.v` | Periodic interrupts vs. stalls / mtc0: EPC must point into main code (regression for 5cba58a) |
 | `cpu_isa`, `cpu_isa_ddr` | `tb/CPU_prog_tb.v` + `tb/data/cpu_isa.s` | Self-checking MIPS program: ALU, shifts, forwarding, loads/stores, branches, jumps/links, COP0 (`_ddr`: stalls on every store) |
+| `sys_bios` (xilinx, mips) | `tb/SysUART_tb.v` | Whole `MIPS150` (CPU, BIOS/ISR/IMEM/DMEM BRAMs, MemMapIO, UART) running the real BIOS (`software/bios150v3`) over its serial port: sw/sh/sb/lw/lhu/lbu on DMEM and cache-side memory, code stored to IMEM and run with `jal`, PRNG reads at `0x80000080` |
+| `sys_echo`, `sys_math`, `sys_mmult` (xilinx, mips) | `tb/SysUART_tb.v` | BIOS `jal`s to `software/echo_c` / `math` / `mmult` loaded at `0x10000000`; UART transcript vs. `tb/data/sys/*.golden` |
 | `memory150_ddr` (slow, xilinx) | `tb/Memory150_ddr_tb.v` | `Memory150` caches + MIG + Micron DDR2 model: write-through, read-miss fills, hits, byte masks, same-index eviction, icache fill from DDR, 100 random ops vs. a shadow memory |
 | `cpu_lb_lh_sign`, `cpu_jalr_rd`, `cpu_bal_untaken_link` | `tb/CPU_prog_tb.v` | **XFAIL**: known CPU bugs/deviations (lb/lh sign extension, jalr rd, untaken bltzal/bgezal link) |
 
@@ -79,6 +81,24 @@ code at `0x60000000`, ISR at `0xC0000180`, scratch RAM at `0x5xxxxxxx`, stalling
 `check #N` = the N-th `CHECK` (from 0) in the program. Remember the MIPS-I load delay slot
 (the instruction right after a load must not use it). The `.hex` images are checked in;
 run `make hex` after editing a `.s`.
+
+### Whole-system tests (`sys_*`)
+
+`tb/SysUART_tb.v` instantiates `MIPS150` as on the board, minus `Memory150`: the cache ports
+go to a behavioral 1 MB memory (synchronous read, no stalls; addresses alias modulo 1 MB)
+that holds the BIOS stack (`0x1F000000`) and programs linked at `0x10000000`
+(`LDSTYLE=inject_cache`). `scripts/build-sw.sh` builds the BIOS and the program from
+`../../software` into `build/<test>/sw/` (the software tree is not touched) and stages
+`bios_mem.mif` (BIOS) and `ddr.hex` (program); the other BRAMs get their CoreGen `.mif`.
+
+The testbench talks to the CPU through the course `UART` at 16 clocks per bit
+(`CPU_FREQ = 16 * 115200`, so the CPU's UART divider shrinks the same way). It sends
+`<test>.in` line by line (waiting for the BIOS prompt `2>`; `+prompt_lines=1` stops waiting
+after the first line, for programs without a prompt) and compares every byte the CPU sends
+with `<test>.golden`, where `~` matches any byte (cycle counts, PRNG values). On a mismatch
+it reports the offset; the full transcript is in `build/<test>/uart_out.txt`. Input bytes
+are spaced 3 character times apart: the BIOS echoes each character and the UARTs have no
+FIFO, so back-to-back characters get dropped (as they would on the board).
 
 ### DDR2 model
 
