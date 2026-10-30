@@ -108,7 +108,7 @@ reminder to remove the marker.
 | `pixel_feeder` (xilinx, coregen) | `tb/PixelFeeder_check_tb.v` | `gpu/PixelFeeder.v` + CoreGen `pixel_fifo` vs. a RequestController/MIG read model (random grants, latency, beat gaps; known data per address) and a random-ready sink: request addresses, frame wrap and `pf_vframe`/`pf_wframe` frame select, `irq_frame`, `pf_status`, every pixel of a displayed frame + 2 rows of the next, FIFO under/overflow |
 | `pixel_feeder_dvi`, `pixel_feeder_stress` (slow) | `tb/PixelFeeder_check_tb.v` | As `pixel_feeder` for 2 frames + 2 rows: with the real `base_vid/DVIData` (800x600@60, 1040x666 raster: `video_ready`, `DVI_DE/H/V`, `DVI_D`); with a slow bursty memory, long stalls, 40 vs. 42.5 MHz clocks and a 60%-ready sink |
 | `cache_tb`, `cache_tb_sv`, `memory150_tb` (slow) | `../src/testbench/CacheTestBench.v`, `Memory150TestBench.v` | The original cache benches on `Memory150` + MIG + DDR2 model (`_sv`: compiled with `-g2012`, see below) |
-| `pixel_feeder_fwft` | `tb/PixelFeeder_check_tb.v` | **XFAIL**: PixelFeeder uses the Standard-mode `pixel_fifo` as if it were first-word-fall-through, so every displayed pixel is one position late (the other `pixel_feeder*` tests allow for that with `+fifo_lat=1`) |
+| `pixel_feeder_fwft` | `tb/PixelFeeder_check_tb.v` | Strict first-row check that `pixel_fifo` is First_Word_Fall_Through, as PixelFeeder expects (a Standard FIFO shows every pixel one position late) |
 | `cpu_lb_lh_sign`, `cpu_jalr_rd`, `cpu_bal_untaken_link` | `tb/CPU_prog_tb.v` | **XFAIL**: known CPU bugs/deviations (lb/lh sign extension, jalr rd, untaken bltzal/bgezal link) |
 
 The CPU tests run `CPUMIPS` + `RegFile` + `COP0150` on `tb/CoreHarness.v` (behavioral memories:
