@@ -7,7 +7,7 @@ sys_ddr_bios.SRCS     := $(SRC)/tuntap.vh $(SRC)/TunTap.v $(SRC)/cpu/MemMapIO.v 
 sys_ddr_bios.INCS     := $(TBSRC) $(SRC) $(DDR2_DIR)
 sys_ddr_bios.YDIRS    := $(SYS_YDIRS)
 sys_ddr_bios.DEFS     := SYS_DDR SYS_BIT_CLKS=8
-sys_ddr_bios.NEEDS    := xilinx mips
+sys_ddr_bios.NEEDS    := xilinx mips coregen
 sys_ddr_bios.GROUP    := slow
 sys_ddr_bios.TIMEOUT  := 3600
 sys_ddr_bios.SW_BIOS  := bios150v3

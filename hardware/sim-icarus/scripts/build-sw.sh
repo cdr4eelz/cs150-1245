@@ -40,7 +40,7 @@ build() {  # build <prog> [make args] -> $scratch/<prog>/<prog>.{inst,data}.bin
   find "$scratch/$p" "$scratch/common" -name '*.o' -delete
   make -s -C "$scratch/$p" "$@" "$p.inst.bin" "$p.data.bin" >"$scratch/$p.build.log" 2>&1 \
     || { cat "$scratch/$p.build.log"; echo "build-sw: building $p failed"; exit 1; }
-  echo "build-sw: built $p ($(stat -c %s "$scratch/$p/$p.inst.bin") bytes code, $(stat -c %s "$scratch/$p/$p.data.bin") bytes data)"
+  echo "build-sw: built $p ($(wc -c < "$scratch/$p/$p.inst.bin" | tr -d " ") bytes code, $(wc -c < "$scratch/$p/$p.data.bin" | tr -d " ") bytes data)"
 }
 
 for m in isr_mem imem_blk_ram dmem_blk_ram; do cp -f "$src/core_ip/brams/$m/$m.mif" "$run/"; done

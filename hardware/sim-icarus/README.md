@@ -3,8 +3,16 @@
 Small self-checking testbenches run with [Icarus Verilog](https://steveicarus.github.io/iverilog/).
 The ModelSim tests in `../sim` are separate and unchanged.
 
-Needs `iverilog`/`vvp` 11 or newer (developed with 12.0), GNU make and bash.
+Needs `iverilog`/`vvp` 11 or newer (developed with 12.0; 13.0 works too), GNU make (3.81 or
+newer), bash (3.2 or newer), perl, python3 and `timeout` (GNU coreutils).
 On Debian/Ubuntu: `sudo apt install iverilog`.
+
+On macOS (tested on Apple Silicon): `brew install icarus-verilog coreutils` (coreutils provides
+`gtimeout`, which the rig uses when there is no `timeout`). The stock `/usr/bin/make` (3.81),
+`/bin/bash` (3.2) and BSD `awk`/`sed`/`stat`/`od` are fine: the scripts avoid GNU-only options.
+For the `mips` tests put a MIPS cross toolchain (`mips-linux-gnu-gcc` etc.) on `PATH`. The
+Xilinx and CoreGen requirements below need files from a machine with ISE 14.7 (ISE does not
+run natively on macOS); copy them as described there.
 
 ## Usage
 
@@ -39,11 +47,31 @@ environment / command line, else the first of these that exists:
 4. `~/ise-docker/opt/Xilinx/14.7/ISE_DS/ISE/verilog/src` (the install bind-mounted into the ISE docker image)
 5. `/workspace/ise-docker/opt/Xilinx/14.7/ISE_DS/ISE/verilog/src`
 6. `/opt/Xilinx/14.7/ISE_DS/ISE/verilog/src`
+7. `~/opt/xilinx-verilog/src` (a plain copy of an ISE install's `verilog/src`, e.g. on a Mac)
 
 A test whose `NEEDS` are missing is reported as **SKIP** with the reason (e.g. `needs Xilinx sim
 sources: set XILINX_SRC=<ISE>/verilog/src`) and does not fail the run. The other requirement
 is `mips` (the `mips-linux-gnu-` toolchain, prefix `M_PRE`), for tests that build programs from
 `../../software`.
+
+### CoreGen outputs (`coregen`)
+
+The whole-system tests (`sys_*`, `memory150_ddr`) also need the CoreGen wrappers of the block
+RAM cores, `../src/core_ip/{brams,base_mem}/<core>/<core>.v`, and for `brams/` the initial
+contents `<core>.mif`. Only the `.xco`/`.coe` inputs are in git (`../src/core_ip/.gitignore`);
+the outputs are made by ISE's `coregen` (`make -C ../src/core_ip`, e.g. in the ISE docker
+image). Without them these tests are **SKIP** (`needs CoreGen outputs ...`; `make env` lists
+`COREGEN_MISSING`). On a machine without ISE (macOS), copy them from one that has run
+coregen, into the same paths (they stay git-ignored; never commit them):
+
+```
+# on the ISE machine, from hardware/src/core_ip:
+tar czf /tmp/coregen-outputs.tgz $(ls */*/*.v */*/*.mif)
+# on the other machine, from hardware/src/core_ip:
+tar xzf coregen-outputs.tgz
+```
+
+Re-copy them after changing a `.xco`/`.coe`.
 
 Everything generated goes under `build/`:
 

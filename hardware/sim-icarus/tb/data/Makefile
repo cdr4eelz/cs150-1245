@@ -12,7 +12,7 @@ all: $(HEXES)
 define assemble
 	$(M_PRE)-as $(ASFLAGS) $(2) $< -o $@.o
 	$(M_PRE)-objcopy -O binary -j .text $@.o $@.bin
-	od -An -v -tx1 -w4 $@.bin | tr -d ' ' > $@
+	perl -e 'binmode STDIN; local $$/; print map "$$_\n", unpack "(H8)*", <STDIN>' < $@.bin > $@
 	rm -f $@.o $@.bin
 endef
 

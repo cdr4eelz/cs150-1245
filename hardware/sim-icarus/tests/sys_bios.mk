@@ -6,7 +6,7 @@ sys_bios.TB       := tb/SysUART_tb.v
 sys_bios.SRCS     := $(SRC)/tuntap.vh $(SRC)/TunTap.v $(SRC)/cpu/MemMapIO.v $(SRC)/cpu/MemBank.v $(SRC)/base_io/UARTRVA.v
 sys_bios.INCS     := $(SRC)
 sys_bios.YDIRS    := $(SYS_YDIRS)
-sys_bios.NEEDS    := xilinx mips
+sys_bios.NEEDS    := xilinx mips coregen
 sys_bios.SW_BIOS  := bios150v3
 sys_bios.RUNFILES := tb/data/sys/bios.in tb/data/sys/bios.golden
 sys_bios.PLUSARGS := +in=bios.in +golden=bios.golden +prompt=2> +max_cycles=1000000

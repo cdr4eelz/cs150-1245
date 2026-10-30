@@ -13,13 +13,20 @@ cd "$build/$name" || exit 1
 
 if [ -n "$QUIET_RE" ]; then
   # Drop known-noise lines from the log but say how many were dropped.
-  filter() { awk -v re="$QUIET_RE" '$0 ~ re {n++; next} {print; fflush()} END {if (n) printf "(sim-icarus: filtered %d lines matching /%s/)\n", n, re}'; }
+  # The regex goes in through ENVIRON, not -v: awk -v processes backslash escapes, so
+  # "\(" would reach the regex as "(" (BSD/macOS awk then aborts: "illegal primary").
+  export QUIET_RE
+  filter() { awk 'BEGIN {re = ENVIRON["QUIET_RE"]} $0 ~ re {n++; next} {print; fflush()} END {if (n) printf "(sim-icarus: filtered %d lines matching /%s/)\n", n, re}'; }
 else
   filter() { cat; }
 fi
 
+# GNU timeout (macOS: Homebrew coreutils installs it as gtimeout, or timeout with gnubin)
+if command -v timeout >/dev/null 2>&1; then to=timeout
+elif command -v gtimeout >/dev/null 2>&1; then to=gtimeout
+else to=""; echo "sim-icarus: no timeout/gtimeout command, running $name without a time limit" >&2; fi
 # shellcheck disable=SC2086
-timeout "${TIMEOUT:-600}" "${VVP:-vvp}" -n "$name.vvp" $PLUSARGS 2>&1 | filter | tee "../$name.log"
+${to:+$to "${TIMEOUT:-600}"} "${VVP:-vvp}" -n "$name.vvp" $PLUSARGS 2>&1 | filter | tee "../$name.log"
 st=$?
 
 why=""
