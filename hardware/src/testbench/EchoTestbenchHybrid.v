@@ -30,22 +30,20 @@ BaseClockReset();
 
     // Wait until transmit is ready
 -> now_reset;
-    repeat (5) @( posedge cpu_clk_g ) ;
+    repeat (5) @( negedge cpu_clk_g ) ;
 -> now_listening;
 
+    // UART inputs change on falling edges of cpu_clk_g (the UART samples on
+    // rising edges). Keep DataOutReady high and sample DataOutValid on falling
+    // edges: a byte seen there is taken by the UART on the next rising edge.
+    DataOutReady = 1;
     while (countIN < MAXCHARS) begin
-        DataOutReady = 1; #1;
         // Wait for something to come back
-        @( posedge DataOutValid ) ;
-        @( posedge cpu_clk_g ) ;
-//      @(posedge cpu_clk_g);
-//      while (!DataOutValid) begin
-//          @(posedge cpu_clk_g);
-//      end
-        DataOutReady = 0; countIN = countIN + 1;
+        @( negedge cpu_clk_g ) ;
+        while (!DataOutValid) @( negedge cpu_clk_g ) ;
+        countIN = countIN + 1;
 -> got_something;
         $display("[%d GOT: 0x%h %b '%c' %d  @%t", countIN, DataOut, DataOut, DataOut, DataOut, $time);
-        #1;
     end
     $finish();
 end
@@ -57,30 +55,30 @@ initial begin
     @(now_reset); // Wait until reset completes
     $display("Xmit] Getting ready...");
     @(now_listening); // Wait until listener is listening
-    @(negedge USER_CLK);
+    @( negedge cpu_clk_g ) ;
 
     DataIn = 8'h7a;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
-    repeat (250) @( posedge cpu_clk_g );
+    repeat (250) @( negedge cpu_clk_g );
 
     forever begin
         DataIn = DataIn+1;
         DataInValid = 1'b1;
-        @( posedge cpu_clk_g ) ;
+        @( negedge cpu_clk_g ) ;
         DataInValid = 1'b0;
-        repeat (100) @( posedge cpu_clk_g );
+        repeat (100) @( negedge cpu_clk_g );
 
         DataIn = DataIn+1;
         DataInValid = 1'b1;
-        @( posedge cpu_clk_g ) ;
+        @( negedge cpu_clk_g ) ;
         DataInValid = 1'b0;
-        repeat (100) @( posedge cpu_clk_g );
+        repeat (100) @( negedge cpu_clk_g );
 
         DataIn = DataIn+1;
         DataInValid = 1'b1;
-        @( posedge cpu_clk_g ) ;
+        @( negedge cpu_clk_g ) ;
         DataInValid = 1'b0;
 
         @(got_something); // Wait for a char to come back

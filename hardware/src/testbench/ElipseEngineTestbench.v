@@ -61,7 +61,7 @@ module ElipseEngineTestbench;
    );
 
     initial begin
-        @(posedge Clock);
+        @(negedge Clock);
         caf_full = 1'b0;
         wdf_full = 1'b0;
         EL_color_valid = 1'b0;
@@ -107,43 +107,41 @@ $display("ElipseEngine: Done.");
         input [31:0] color;
     begin
         $display("el-TB: Wait...");
-        #1;
-        @(posedge Clock);
-        while (!EL_ready) #(Cycle); // wait for EL_ready
-        @(posedge Clock); #1;
+        // Inputs are driven on the falling edge; the engine samples them on the
+        // rising edge half a cycle later.
+        @(negedge Clock);
+        while (!EL_ready) @(negedge Clock); // wait for EL_ready
+        @(negedge Clock);
         EL_color = color;
         EL_color_valid = 1'b1;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         EL_color_valid = 1'b0;
         EL_color = 32'bz;
         EL_point = xc;
         EL_xc_valid = 1'b1;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         EL_xc_valid = 1'b0;
         EL_point = yc;
         EL_yc_valid = 1'b1;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         EL_yc_valid = 1'b0;
         EL_a_valid = 1'b1;
         EL_point = a;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         EL_a_valid = 1'b0;
         EL_b_valid = 1'b1;
         EL_point = b;
         EL_frame = 32'h1040_0000;
         EL_trigger  = 1'b1;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         $display("el-TB: TRIG (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h frame=%h",
                 xc,yc, a,b, xc,yc, a,b, color, EL_frame);
         EL_point = 32'bz;
         EL_frame = 32'bz;
         EL_b_valid = 1'b0;
         EL_trigger  = 1'b0;
-        @(posedge Clock);
-        while (!EL_ready) begin
-            #1;
-            @(posedge Clock);
-        end
+        @(negedge Clock);
+        while (!EL_ready) @(negedge Clock);
         $display("el-TB: Done. (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h",
                  xc,yc, a,b, xc,yc, a,b, color);
     end endtask

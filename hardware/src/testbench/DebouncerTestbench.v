@@ -46,9 +46,10 @@ module DebouncerTestbench;
         Enable = 1;
         In = 1;
 
+        // Inputs change on the falling edge; outputs are sampled on the
+        // falling edge too, half a cycle after the rising edge that updates them.
         for (i = 0; i < 32; i = i + 1) begin
-            @(posedge Clock);
-            #1;
+            @(negedge Clock);
             if (LatchedOut !== 1'b0 && LatchedOut !== 1'b1) begin
                 $display("FAIL: latched output is unknown during stable input.");
                 $finish;
@@ -70,8 +71,7 @@ module DebouncerTestbench;
 
         @(negedge Clock);
         In = 0;
-        repeat (8) @(posedge Clock);
-        #1;
+        repeat (8) @(negedge Clock);
         if (LatchedOut !== 1'b0 || ContinuousOut !== 1'b0) begin
             $display("FAIL: outputs did not settle low after stable low input.");
             $finish;

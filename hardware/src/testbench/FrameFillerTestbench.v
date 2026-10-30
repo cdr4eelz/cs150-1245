@@ -48,7 +48,7 @@ module FrameFillerTestbench;
 
     initial begin
         #(Cycle);
-        @(posedge Clock);
+        @(negedge Clock);
         FF_valid = 1'b0;
         rst = 1'b1;
         #(10*Cycle);
@@ -66,24 +66,21 @@ $display("FrameFiller: Done.");
         input [31:0] color;
         input [31:0] framebase;
     begin
-        @(posedge Clock);
+        // Inputs are driven on the falling edge; the FrameFiller samples them
+        // on the rising edge half a cycle later.
+        @(negedge Clock);
 $display("fill-TB: Wait...");
-        while (!FF_ready) #(Cycle); // wait for FF_ready
-        #1;
+        while (!FF_ready) @(negedge Clock); // wait for FF_ready
         FF_color = color;
         FF_frame = framebase;
         FF_valid = 1'b1;
 $display("fill-TB: color=%h  frame=%h", FF_color, FF_frame);
-        @(posedge Clock);
-        #1;
+        @(negedge Clock);
         FF_valid = 1'b0;
         FF_color = 32'bz;
         FF_frame = 32'bz;
-        @(posedge Clock);
-        while (!FF_ready) begin
-            #1;
-            @(posedge Clock);
-        end
+        @(negedge Clock);
+        while (!FF_ready) @(negedge Clock);
 $display("fill-TB: Done.");
     end endtask
 

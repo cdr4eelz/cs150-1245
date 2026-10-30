@@ -196,15 +196,17 @@ begin
 end
 endtask
 
+// Requests are set up (Setup*) and cleared on falling edges of cpu_clk_g;
+// the caches sample them on the rising edge in between.
 task ClockInRequest;
 begin
-  @( posedge cpu_clk_g ) ;
+  @( posedge cpu_clk_g ) ; // caches clock in the re/we requests
+  @( negedge cpu_clk_g ) ; // wait for stall
   // start fresh after clocking in re/we requests:
   O_icache_re = 1'b0;
   O_dcache_re = 1'b0;
   O_icache_we = 4'b0;
   O_dcache_we = 4'b0;
-  @( negedge cpu_clk_g ) ; // wait for stall
 // TODO ** disable we for pixel and line
   //_we = 4'b0;
   //_we = 4'b0;

@@ -72,7 +72,7 @@ BaseClockReset();
 
     PerformanceCacheExample();
 
-    repeat (10) @( posedge cpu_clk_g ) ;
+    repeat (10) @( negedge cpu_clk_g ) ;
 
     ICacheIdleTest_WT();
     ICacheReadHitTest_WT();
@@ -88,7 +88,7 @@ BaseClockReset();
         $display("%d tests failed.", numFails);
     end
 
-    repeat (10) @( posedge cpu_clk_g ) ;
+    repeat (10) @( negedge cpu_clk_g ) ;
     $finish();
 end
 

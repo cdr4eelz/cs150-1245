@@ -124,7 +124,7 @@ module GraphicsProcessorTestbench;
 
 // Little convenience tasks for error tracking
 
-reg ELOG_errors = 0;
+integer ELOG_errors = 0; // was a 1-bit reg: an even number of errors printed "ERRORS: 0"
 
     task ELOG_ERROR;
         input [100*8:1] unit_name;
@@ -144,7 +144,7 @@ reg ELOG_errors = 0;
 
     initial begin
         #(Cycle);
-        @(posedge cpu_clk_g);
+        @(negedge cpu_clk_g); // drive inputs on the falling edge (DUT samples on the rising edge)
         {GP_vcode, GP_wcode, GP_wframe} = 0;
         rst_cpu_bus = 1'b1;
         #(10*Cycle);
@@ -156,8 +156,8 @@ reg ELOG_errors = 0;
 //        execGP( 32'h1200_3080, 1 );
         execGP( 32'h1200_3000, 1 );
 
-        @(posedge cpu_clk_g);
-        while (!ENGINES_ready) #(Cycle); // GP should have waited already
+        @(negedge cpu_clk_g);
+        while (!ENGINES_ready) @(negedge cpu_clk_g); // GP should have waited already
         $display("GraphicsProcessor: Done.");
         ELOG_TALLY;
         $finish();
@@ -409,13 +409,14 @@ reg  [0:1023] GPCODE_SAMPLE2 = { //Ascending bit order
             if (LE_trigger) begin
                 LE__frame <= LE_frame;
                 if (!ENGINES_ready) ELOG_ERROR("LINE", "Overlap");
-                #1; //Might have simultaneously assigned other values above!
-                $display("[=LINE=] frame=%h", LE__frame);
-                $display("[-LINE-] color=%h (%0d,%0d,%0d)", LE__color,
+                // $strobe prints at the end of the time step, after the nonblocking
+                // assignments above (incl. values latched this cycle) have landed; no #1.
+                $strobe("[=LINE=] frame=%h", LE__frame);
+                $strobe("[-LINE-] color=%h (%0d,%0d,%0d)", LE__color,
                          LE__color[23:16], LE__color[15:8], LE__color[7:0]);
-                $display("[-LINE-] P0=%h,%h (%0d,%0d)",
+                $strobe("[-LINE-] P0=%h,%h (%0d,%0d)",
                          LE__x0, LE__y0, LE__x0, LE__y0);
-                $display("[-LINE-] P1=%h,%h (%0d,%0d)",
+                $strobe("[-LINE-] P1=%h,%h (%0d,%0d)",
                          LE__x1, LE__y1, LE__x1, LE__y1);
                 LE_ready <= 0;
                 LE__countdown <= 3;
@@ -456,15 +457,16 @@ reg  [0:1023] GPCODE_SAMPLE2 = { //Ascending bit order
             if (EL_trigger) begin
                 EL__frame <= EL_frame;
                 if (!ENGINES_ready) ELOG_ERROR("ELIP", "Overlap");
-                #1; //Might have simultaneously assigned other values above!
-                $display("[=ELIP=] frame=%h", EL__frame);
-                $display("[-ELIP-] color=%h (%0d,%0d,%0d)", EL__color,
+                // $strobe prints at the end of the time step, after the nonblocking
+                // assignments above (incl. values latched this cycle) have landed; no #1.
+                $strobe("[=ELIP=] frame=%h", EL__frame);
+                $strobe("[-ELIP-] color=%h (%0d,%0d,%0d)", EL__color,
                          EL__color[23:16], EL__color[15:8], EL__color[7:0]);
-                $display("[-ELIP-] backc=%h (%0d,%0d,%0d)", EL__backc,
+                $strobe("[-ELIP-] backc=%h (%0d,%0d,%0d)", EL__backc,
                          EL__backc[23:16], EL__backc[15:8], EL__backc[7:0]);
-                $display("[-ELIP-] CENTER=%h,%h (%0d,%0d)",
+                $strobe("[-ELIP-] CENTER=%h,%h (%0d,%0d)",
                          EL__xc, EL__yc, EL__xc, EL__yc);
-                $display("[-ELIP-] SIZE=%h,%h (%0d,%0d)",
+                $strobe("[-ELIP-] SIZE=%h,%h (%0d,%0d)",
                          EL__a, EL__b, EL__a, EL__b);
                 EL_ready <= 0;
                 EL__countdown <= 3;
@@ -505,15 +507,16 @@ reg  [0:1023] GPCODE_SAMPLE2 = { //Ascending bit order
             if (RE_trigger) begin
                 RE__frame <= RE_frame;
                 if (!ENGINES_ready) ELOG_ERROR("RECT", "Overlap");
-                #1; //Might have simultaneously assigned other values above!
-                $display("[=RECT=] frame=%h", RE__frame);
-                $display("[-RECT-] color=%h (%0d,%0d,%0d)", RE__color,
+                // $strobe prints at the end of the time step, after the nonblocking
+                // assignments above (incl. values latched this cycle) have landed; no #1.
+                $strobe("[=RECT=] frame=%h", RE__frame);
+                $strobe("[-RECT-] color=%h (%0d,%0d,%0d)", RE__color,
                          RE__color[23:16], RE__color[15:8], RE__color[7:0]);
-                $display("[-RECT-] backc=%h (%0d,%0d,%0d)", RE__backc,
+                $strobe("[-RECT-] backc=%h (%0d,%0d,%0d)", RE__backc,
                          RE__backc[23:16], RE__backc[15:8], RE__backc[7:0]);
-                $display("[-RECT-] LEFTTOP=%h,%h (%0d,%0d)",
+                $strobe("[-RECT-] LEFTTOP=%h,%h (%0d,%0d)",
                          RE__xl, RE__yt, RE__xl, RE__yt);
-                $display("[-RECT-] RIGHTBOTTOM=%h,%h (%0d,%0d)",
+                $strobe("[-RECT-] RIGHTBOTTOM=%h,%h (%0d,%0d)",
                          RE__xr, RE__yb, RE__xr, RE__yb);
                 RE_ready <= 0;
                 RE__countdown <= 3;

@@ -1,6 +1,6 @@
 # GraphicsProcessor command fetch with fake memory/engines (hardware/src/testbench/GraphicsProcessorTestbench.v).
-# NOTE: that bench's error counter is a 1-bit reg (ELOG_errors), so 'ERRORS: 0' can hide an even number of
-# errors; FAIL_RE therefore also catches the individual 'ERROR: (' lines.
+# FAIL_RE also catches the individual 'ERROR: (' lines (belt and braces: the bench's ELOG_errors counter
+# used to be a 1-bit reg, so 'ERRORS: 0' could hide an even number of errors).
 graphics_processor.TOP     := GraphicsProcessorTestbench
 graphics_processor.TB      := $(TBSRC)/GraphicsProcessorTestbench.v
 graphics_processor.YDIRS   := $(SRC_YDIRS)

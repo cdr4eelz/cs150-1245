@@ -63,29 +63,29 @@ module ALUTestVectorTestbench;
     // testvector input file, which you can find with the command:
     // % wc -l ../sim/tests/testvectors.input
     // //////////////////////////////////////////////////////////////
-    localparam testcases = 585;
+    localparam testcases = 584;
 
     reg [107:0] testvector [0:testcases-1]; // Each testcase has 108 bits:
     // 64 for A and B, 32 for REFout, 6 for
     // opcode, 6 for funct
 
     integer i; // integer used for looping in non-generate statement
-    always @(posedge Clock) begin
-        // aaaaaaaabbbbbbbbccccccccddddddddAAAAAAAABBBBBBBBCCCCCCCCDDDDDDDDaaaaaaaabbbbbbbbccccccccddddddddXXXXXXyyyyyy
-        #1; { opcode, funct, A, B, REFout } = testvector[i];
-        #1; checkOutput(opcode,funct);
-        i = i + 1;
-    end
 
-    initial 
+    // Drive each vector on the falling edge and check it on the following
+    // rising edge, half a cycle later (no #-delays needed for settling).
+    initial
     begin
         $readmemb("testvectors.input", testvector);
-        i = 0;
-
-        // Wait "concurrently" until all tests tested a fail will call $finish() for us.
-        while (i < testcases) #20;
-            $display("\n\nALL TESTS PASSED!");
-            $finish();
+        for (i = 0; i < testcases; i = i + 1) begin
+            @(negedge Clock);
+            // aaaaaaaabbbbbbbbccccccccddddddddAAAAAAAABBBBBBBBCCCCCCCCDDDDDDDDaaaaaaaabbbbbbbbccccccccddddddddXXXXXXyyyyyy
+            { opcode, funct, A, B, REFout } = testvector[i];
+            @(posedge Clock);
+            checkOutput(opcode,funct);
         end
+        // A failing check calls $finish() itself.
+        $display("\n\nALL TESTS PASSED!");
+        $finish();
+    end
 
 endmodule

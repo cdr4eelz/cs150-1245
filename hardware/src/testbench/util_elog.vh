@@ -1,7 +1,7 @@
 // Little convenience tasks for error tracking:
 //   include within the testbench module (not above it)
 
-reg ELOG_errors = 0;
+integer ELOG_errors = 0; // was a 1-bit reg: an even number of errors printed "ERRORS: 0"
 
 task ELOG_ERROR;
     input [20*8:1] unit_name;

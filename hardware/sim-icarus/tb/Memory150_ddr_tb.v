@@ -4,8 +4,10 @@
 // PLL/BUFGs, Memory150 with SIM_ONLY=1, mt4htf3264hy DDR2 SODIMM model) but drives the
 // caches with its own tasks instead of cachetesttasks.vh: requests are presented on the
 // negedge of cpu_clk_g and held while stalled, the way StageF/StageMW do. (The original
-// Memory150TestBench changes its inputs right at @(posedge cpu_clk_g), which races with
-// the Cache's posedge sampling; under Icarus the cache never sees a request.)
+// Memory150TestBench used to clear its requests right at @(posedge cpu_clk_g), racing the
+// Cache's posedge sampling, so under Icarus the cache never saw a request; its
+// cachetesttasks.vh now clears them on the negedge, but under Icarus its first read miss
+// to address 0 still never completes.)
 //
 // Checks: write-through + read-miss fill (dcache), icache fill from DDR written by dcache,
 // read hits (no stall), byte-masked writes (hit and miss), same-index conflict eviction,

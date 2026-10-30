@@ -78,15 +78,17 @@ module CPUDumpMemMapTestbench;
         Reset = 0; DataInValid = 0; DataOutReady = 0; #(3*Cycle)
         
         Reset = 1; #(6*Cycle)
-        Reset = 0; #1;
+        Reset = 0;
+        // Reset changes on falling edges (multiples of Cycle). Keep DataOutReady
+        // high and sample DataOutValid on the falling edge: a byte seen there is
+        // taken by the UART on the next rising edge (one-cycle valid pulse).
+        DataOutReady = 1;
         while (finalcountdowneurope > 0) begin
-            DataOutReady = 1;
-            while (DataOutReady) begin
-                @ (posedge Clock) ;
-                if (DataOutValid) DataOutReady = 0;
+            @(negedge Clock);
+            if (DataOutValid) begin
+                $display("Got %b  %h (%d)", DataOut, DataOut, DataOut);
+                finalcountdowneurope = finalcountdowneurope - 1;
             end
-            $display("Got %b  %h (%d)", DataOut, DataOut, DataOut);
-            #1; finalcountdowneurope = finalcountdowneurope - 1;
         end
         $display("Got enough.");
         $stop();

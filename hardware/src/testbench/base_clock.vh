@@ -44,23 +44,25 @@
 
 task BaseClockReset;
 begin
+    // Resets are released on falling edges (the logic samples on rising edges),
+    // and the task returns on a falling edge of cpu_clk_g so callers can drive
+    // their inputs right away.
     $display("Resetting clocks...");
     {rst_pll, rst_dvi_bus, rst_cpu_bus, rst_cpu_mem, rst_cpu_cpu} = 5'b11111;
-    repeat (2) @( posedge user_clk_g ) ;
+    repeat (2) @( negedge user_clk_g ) ;
     rst_pll = 0;
     wait ( pll_lock ) ; // wait for pll to lock
-    repeat (10) @( posedge cpu_clk_g ) ; // reset for 10 cc
+    repeat (10) @( negedge cpu_clk_g ) ; // reset for 10 cc
     rst_cpu_mem = 0;
     wait ( init_done ) ; // wait for ddr init done
-    repeat (2) @( posedge cpu_clk_g ) ;
-    @( negedge cpu_clk_g ) ;
+    repeat (3) @( negedge cpu_clk_g ) ;
     fork
-        @( posedge cpu_clk_g ) rst_cpu_bus = 0;
-        @( posedge dvi_clk_g ) rst_dvi_bus = 0;
+        @( negedge cpu_clk_g ) rst_cpu_bus = 0;
+        @( negedge dvi_clk_g ) rst_dvi_bus = 0;
     join
-    repeat (2) @( posedge cpu_clk_g ) ;
+    repeat (2) @( negedge cpu_clk_g ) ;
     {rst_pll, rst_dvi_bus, rst_cpu_bus, rst_cpu_mem, rst_cpu_cpu} = 0;
-    repeat (2) @( posedge cpu_clk_g ) ;
+    repeat (2) @( negedge cpu_clk_g ) ;
     $display("Resetting clocks... done.");
 end
 endtask

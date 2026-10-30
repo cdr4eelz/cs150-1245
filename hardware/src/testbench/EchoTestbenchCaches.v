@@ -19,92 +19,95 @@ initial begin
 
 BaseClockReset();
 
-    repeat (5) @( posedge cpu_clk_g ) ;
+    // UART inputs change on falling edges of cpu_clk_g (the UART samples on
+    // rising edges): DataInValid is high for exactly one rising edge per byte.
+
+    repeat (5) @( negedge cpu_clk_g ) ;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
 
     // Wait for something to come back
     @( posedge DataOutValid ) ;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     $display("Got %h", DataOut);
 
     DataIn = 8'h80;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
-    repeat (100) @( posedge cpu_clk_g );
+    repeat (100) @( negedge cpu_clk_g );
 
     // Wait for something to come back
     @( posedge DataOutValid ) ;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     $display("Got %h", DataOut);
 
     DataIn = 8'h81;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
-    repeat (100) @( posedge cpu_clk_g );
+    repeat (100) @( negedge cpu_clk_g );
     // Wait for something to come back
     @( posedge DataOutValid ) ;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     $display("Got %h", DataOut);
     // Add more test cases!
 
     DataIn = 8'h82;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
-    repeat (100) @( posedge cpu_clk_g );
+    repeat (100) @( negedge cpu_clk_g );
 
     // Wait for something to come back
     @( posedge DataOutValid ) ;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     $display("Got %h", DataOut);
 
     DataIn = 8'h83;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
-    repeat (100) @( posedge cpu_clk_g );
+    repeat (100) @( negedge cpu_clk_g );
     // Wait for something to come back
     @( posedge DataOutValid ) ;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     $display("Got %h", DataOut);
 
     DataIn = 8'h84;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
-    repeat (100) @( posedge cpu_clk_g );
+    repeat (100) @( negedge cpu_clk_g );
     // Wait for something to come back
     @( posedge DataOutValid ) ;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     $display("Got %h", DataOut);
 
     DataIn = 8'h85;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
-    repeat (100) @( posedge cpu_clk_g );
+    repeat (100) @( negedge cpu_clk_g );
     // Wait for something to come back
     @( posedge DataOutValid ) ;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     $display("Got %h", DataOut);
 
     DataIn = 8'h86;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
-    repeat (100) @( posedge cpu_clk_g );
+    repeat (100) @( negedge cpu_clk_g );
 
     DataIn = 8'h87;
     DataInValid = 1'b1;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     DataInValid = 1'b0;
     // Wait for something to come back
     @( posedge DataOutValid ) ;
-    @( posedge cpu_clk_g ) ;
+    @( negedge cpu_clk_g ) ;
     $display("Got %h", DataOut);
     $finish();
 end

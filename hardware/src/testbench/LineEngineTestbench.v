@@ -61,7 +61,7 @@ module LineEngineTestbench;
     );
 
     initial begin
-        @(posedge Clock);
+        @(negedge Clock);
         LE_color_valid = 1'b0;
         LE_x0_valid = 1'b0;
         LE_y0_valid = 1'b0;
@@ -96,43 +96,41 @@ $display("LineEngine: Done.");
         input [31:0] color;
     begin
         $display("le-TB: Wait...");
-        #1;
-        @(posedge Clock);
-        while (!LE_ready) #(Cycle); // wait for LE_ready
-        @(posedge Clock); #1;
+        // Inputs are driven on the falling edge; the engine samples them on the
+        // rising edge half a cycle later.
+        @(negedge Clock);
+        while (!LE_ready) @(negedge Clock); // wait for LE_ready
+        @(negedge Clock);
         LE_color = color;
         LE_color_valid = 1'b1;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         LE_color_valid = 1'b0;
         LE_color = 32'bz;
         LE_point = x0;
         LE_x0_valid = 1'b1;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         LE_x0_valid = 1'b0;
         LE_point = y0;
         LE_y0_valid = 1'b1;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         LE_y0_valid = 1'b0;
         LE_x1_valid = 1'b1;
         LE_point = x1;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         LE_x1_valid = 1'b0;
         LE_y1_valid = 1'b1;
         LE_point = y1;
         LE_frame = 32'h1040_0000;
         LE_trigger  = 1'b1;
-        @(posedge Clock); #1;
+        @(negedge Clock);
         $display("le-TB: TRIG (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h frame=%h",
                 x0,y0, x1,y1, x0,y0, x1,y1, color, LE_frame);
         LE_point = 32'bz;
         LE_frame = 32'bz;
         LE_y1_valid = 1'b0;
         LE_trigger  = 1'b0;
-        @(posedge Clock);
-        while (!LE_ready) begin
-            #1;
-            @(posedge Clock);
-        end
+        @(negedge Clock);
+        while (!LE_ready) @(negedge Clock);
         $display("le-TB: Done. (%0d,%0d)-=>(%0d,%0d) [%h,%h]-=>[%h,%h] color=%h",
                  x0,y0, x1,y1, x0,y0, x1,y1, color);
     end endtask

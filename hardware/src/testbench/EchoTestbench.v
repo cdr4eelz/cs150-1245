@@ -4,7 +4,7 @@
 
 module EchoTestbench;
 
-    reg Clock, Reset; wire Stall;
+    reg Clock, Reset, Stall;
     wire FPGA_SERIAL_RX, FPGA_SERIAL_TX;
 
     parameter HalfCycle = 10; //TODO: Change to 5 & use PLL
@@ -32,7 +32,8 @@ module EchoTestbench;
         end
         StallReg <= StallRing[StallRingSize-1];
     end
-    assign #HalfCycle Stall = StallReg;
+    // Present the stall to the CPU on the falling edge (was: assign #HalfCycle).
+    always @(negedge Clock) Stall <= StallReg;
     wire StallClock = Clock || Stall; // Gated clock for reference/cheating
 
     reg [7:0] Check1, Check2, Check3, Check4, Check5, Check6, Check7;
@@ -129,15 +130,15 @@ initial begin
 
     // Wait for something to come back
     -> now_listening;
+    // We are on a falling edge here (times are multiples of Cycle). Keep
+    // DataOutReady high and sample DataOutValid on falling edges: a byte seen
+    // there is taken by the UART on the next rising edge (one-cycle valid pulse).
+    DataOutReady = 1;
     while (countIN < maxchars) begin
-        DataOutReady = 1; #1;
-        @(posedge Clock);
-        while (!DataOutValid) begin
-            @(posedge Clock);
-        end
-        DataOutReady = 0; countIN = countIN + 1;
+        @(negedge Clock);
+        while (!DataOutValid) @(negedge Clock);
+        countIN = countIN + 1;
         $display("[%d GOT: 0x%h %b '%c' %d  @%t", countIN, DataOut, DataOut, DataOut, DataOut, $time);
-        #1;
     end
 
     $finish();
@@ -166,7 +167,9 @@ initial begin
             $display("%d] Offering: 0x%h %b '%c' %d  @%t", countOUT, DataIn, DataIn, DataIn, DataIn, $time);
             DataInValid = 1'b1;
             StallCounter = XMIT_STALL_CYCLES; // Max clock cycles to wait
-            @(posedge Clock);
+            // Inputs change on falling edges; DataInReady is sampled there too.
+            // Ready && valid on a falling edge means the UART takes DataIn on the
+            // next rising edge, so the next change waits for the falling edge after.
             while (!DataInReady) begin
                 if (StallCounter > 0) begin
                     StallCounter = StallCounter - 1;
@@ -174,8 +177,9 @@ initial begin
                         $display("Xmit] Stalled (STALL-CYCLES: %d  SENT-PRIOR: %d)", StallCounter, countOUT);
                     end
                 end
-                @(posedge Clock);
+                @(negedge Clock);
             end
+            @(negedge Clock);
             $display("%d] SENT: 0x%h %b '%c' %d  @%t", countOUT, DataIn, DataIn, DataIn, DataIn, $time);
             countOUT = countOUT + 1;
             if (XMIT_DELAY_TICKS > 0) begin

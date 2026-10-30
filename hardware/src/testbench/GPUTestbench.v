@@ -132,7 +132,7 @@ wire [0:1023] GPCODE_SAMPLE4 = { //Ascending bit order
     initial begin
         $display("GPU: Fake memory, real SLR/Engines...\n\n");
         #(Cycle);
-        @(posedge cpu_clk_g);
+        @(negedge cpu_clk_g); // drive inputs on the falling edge (DUT samples on the rising edge)
         {gp_vcode, gp_wcode, gp_wframe} = 0;
         rst_cpu_bus = 1'b1;
         #(10*Cycle);
@@ -151,8 +151,8 @@ wire [0:1023] GPCODE_SAMPLE4 = { //Ascending bit order
         force DDR2MEM = GPCODE_SAMPLE4;
         execGP( 32'h0000_4000, `STD_FRAME2 ); //Frame 2: 1080_0000?
 
-        @(posedge cpu_clk_g);
-        while (!ENGINES_ready) #(Cycle); // GP should have waited already
+        @(negedge cpu_clk_g);
+        while (!ENGINES_ready) @(negedge cpu_clk_g); // GP should have waited already
         $display("\n\nGPU: Done.");
         ELOG_TALLY;
         $finish();
