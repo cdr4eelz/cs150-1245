@@ -56,9 +56,10 @@ is `mips` (the `mips-linux-gnu-` toolchain, prefix `M_PRE`), for tests that buil
 
 ### CoreGen outputs (`coregen`)
 
-The whole-system tests (`sys_*`, `memory150_ddr`) also need the CoreGen wrappers of the block
-RAM cores, `../src/core_ip/{brams,base_mem}/<core>/<core>.v`, and for `brams/` the initial
-contents `<core>.mif`. Only the `.xco`/`.coe` inputs are in git (`../src/core_ip/.gitignore`);
+The whole-system tests (`sys_*`, `memory150_ddr`, `cache_tb`, ...) and `pixel_feeder*` also
+need the CoreGen wrappers of the block RAM / FIFO cores, `../src/core_ip/{brams,base_mem}/<core>/<core>.v`
+and `../src/core_ip/gpu/pixel_fifo/pixel_fifo.v`, and for `brams/` the initial contents
+`<core>.mif`. Only the `.xco`/`.coe` inputs are in git (`../src/core_ip/.gitignore`);
 the outputs are made by ISE's `coregen` (`make -C ../src/core_ip`, e.g. in the ISE docker
 image). Without them these tests are **SKIP** (`needs CoreGen outputs ...`; `make env` lists
 `COREGEN_MISSING`). On a machine without ISE (macOS), copy them from one that has run
@@ -104,6 +105,10 @@ reminder to remove the marker.
 | `sys_echo`, `sys_math`, `sys_mmult` (xilinx, mips) | `tb/SysUART_tb.v` | BIOS `jal`s to `software/echo_c` / `math` / `mmult` loaded at `0x10000000`; UART transcript vs. `tb/data/sys/*.golden` |
 | `sys_ddr_bios` (slow, xilinx, mips) | `tb/SysUART_tb.v` with `SYS_DDR` | As on the board (`ml505top`): MIPS150 + `Memory150` (caches, MIG) + Micron DDR2 model; BIOS boots with its stack in DDR, then `sw`/`lw` through the dcache to DDR |
 | `memory150_ddr` (slow, xilinx) | `tb/Memory150_ddr_tb.v` | `Memory150` caches + MIG + Micron DDR2 model: write-through, read-miss fills, hits, byte masks, same-index eviction, icache fill from DDR, 100 random ops vs. a shadow memory |
+| `pixel_feeder` (xilinx, coregen) | `tb/PixelFeeder_check_tb.v` | `gpu/PixelFeeder.v` + CoreGen `pixel_fifo` vs. a RequestController/MIG read model (random grants, latency, beat gaps; known data per address) and a random-ready sink: request addresses, frame wrap and `pf_vframe`/`pf_wframe` frame select, `irq_frame`, `pf_status`, every pixel of a displayed frame + 2 rows of the next, FIFO under/overflow |
+| `pixel_feeder_dvi`, `pixel_feeder_stress` (slow) | `tb/PixelFeeder_check_tb.v` | As `pixel_feeder` for 2 frames + 2 rows: with the real `base_vid/DVIData` (800x600@60, 1040x666 raster: `video_ready`, `DVI_DE/H/V`, `DVI_D`); with a slow bursty memory, long stalls, 40 vs. 42.5 MHz clocks and a 60%-ready sink |
+| `cache_tb`, `cache_tb_sv`, `memory150_tb` (slow) | `../src/testbench/CacheTestBench.v`, `Memory150TestBench.v` | The original cache benches on `Memory150` + MIG + DDR2 model (`_sv`: compiled with `-g2012`, see below) |
+| `pixel_feeder_fwft` | `tb/PixelFeeder_check_tb.v` | **XFAIL**: PixelFeeder uses the Standard-mode `pixel_fifo` as if it were first-word-fall-through, so every displayed pixel is one position late (the other `pixel_feeder*` tests allow for that with `+fifo_lat=1`) |
 | `cpu_lb_lh_sign`, `cpu_jalr_rd`, `cpu_bal_untaken_link` | `tb/CPU_prog_tb.v` | **XFAIL**: known CPU bugs/deviations (lb/lh sign extension, jalr rd, untaken bltzal/bgezal link) |
 
 The CPU tests run `CPUMIPS` + `RegFile` + `COP0150` on `tb/CoreHarness.v` (behavioral memories:
@@ -150,10 +155,25 @@ data/tag BRAMs are written on port A (`index_hold`) while port B reads the next 
 Virtex-5 block RAM a same-clock read of a row being written on the other port (WRITE_FIRST)
 is not guaranteed to return valid data, so this is worth a look.
 
-`../src/testbench/Memory150TestBench.v` itself does not work under Icarus: `cachetesttasks.vh`
-clears the request right at `@(posedge cpu_clk_g)`, racing with the cache's posedge sampling,
-so the cache never sees a request (all reads return 0, no stalls). `tb/Memory150_ddr_tb.v`
-drives requests on the negedge and holds them while stalled, as the CPU does.
+The original benches `../src/testbench/CacheTestBench.v` and `Memory150TestBench.v` run
+unmodified as `cache_tb` and `memory150_tb` (slow). Two things used to break them under Icarus:
+
+- before fb00126, `cachetesttasks.vh` cleared the request right at `@(posedge cpu_clk_g)`,
+  racing the cache's posedge sampling, so the cache never saw a request (all reads 0, no
+  stalls); it now clears it on the falling edge.
+- compiled with `-g2012` (SystemVerilog), the first read miss never completes, whatever the
+  stall limit. Icarus in SystemVerilog mode applies a variable's declaration initializer
+  (`reg x = 0;`) before time 0 without a value-change event, and the CoreGen
+  `FIFO_GENERATOR_V9_3` behavioral model passes every input through
+  `always @* x_delayed <= #TCQ X;`. An input that holds its initial value from time 0 never
+  wakes that block, so the model sees X forever. In `Memory150` that input is the MIG command
+  and write-data FIFOs' `rd_en = !app_af_afull` / `!app_wdf_afull`, constant 1 from time 0:
+  the cache's write and fetch commands sit in `mig_caf`, the MIG never gets them, no read data
+  comes back and the cache waits in `READ1`. Minimal case:
+  `reg a = 1; reg d; always @* d <= #1 a;` gives `d = x` with `-g2012` and `d = 1` with `-g2005`.
+  The rig compiles with `-g2005`, so it was never affected. `../src/testbench/base_mem.vh` now
+  pulses those two nets once in the first board-clock cycle under Icarus (`` `ifdef __ICARUS__ ``)
+  so `-g2012` works too; `cache_tb_sv` (`<name>.STD := -g2012`) checks that.
 
 ## Adding a test
 
@@ -173,7 +193,8 @@ drives requests on the negedge and holds them while stalled, as the CPU does.
 <name>.PLUSARGS :=                                  # vvp plusargs
 # optional: RUNFILES (copied into the sim's working dir), PASS_RE, FAIL_RE,
 #           QUIET_RE (drop known-noise log lines), XFAIL/SKIP (reason text), TIMEOUT, WFLAGS,
-#           NEEDS (xilinx/mips: SKIP when missing), GROUP (slow: only `make slow`), PREREQS
+#           NEEDS (xilinx/mips/coregen: SKIP when missing), GROUP (slow: only `make slow`),
+#           PREREQS, STD (language flag for this test, e.g. -g2012)
 ```
 
 Whole-system tests can use `$(SYS_YDIRS)` (all source dirs, `mig_v3_61` and the CoreGen
@@ -182,5 +203,9 @@ wrappers in `../src/core_ip`) with `NEEDS := xilinx`; Xilinx tests default to th
 
 `make all` picks it up automatically. Compiles use `-g2005 -grelative-include -Wall -Wno-timescale`
 (most sources in `../src` have no `` `timescale ``). Override with `STD=`, `WFLAGS=`, `IFLAGS=`.
+Sources using the GateLib `base_util` counters (`CountRegion`, `CountCompare`; e.g. `base_vid/DVIData`)
+need `MACROSAFE` (or `MODELSIM`) in `DEFS`: `base_util/Const.v` only defines it for ModelSim,
+synthesis or when another file happened to define it first, and without it `CountRegion`
+silently uses the wrong region logic (the DVI's active area never opens).
 Modules whose file name differs from the module name (`BUS_RVA_tap/tun` in `TunTap.v`) or that
 do not parse as `-y` library files (`MemMapIO.v`, `UARTRVA.v`) must be listed in `SRCS`.

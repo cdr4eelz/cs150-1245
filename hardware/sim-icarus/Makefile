@@ -59,9 +59,10 @@ XILINX_SRC_CANDIDATES := \
   $(HOME)/opt/xilinx-verilog/src
 XILINX_SRC ?= $(firstword $(foreach d,$(XILINX_SRC_CANDIDATES),$(if $(wildcard $(d)/XilinxCoreLib/BLK_MEM_GEN_V7_3.v),$(d))))
 M_PRE ?= mips-linux-gnu
-# CoreGen outputs the whole-system tests use: <core>.v for each BRAM core (brams/, base_mem/),
-# plus <core>.mif for the brams/ cores (their initial contents)
-COREGEN_XCO     := $(wildcard $(SRC)/core_ip/brams/*/*.xco $(SRC)/core_ip/base_mem/*/*.xco)
+# CoreGen outputs the whole-system tests use: <core>.v for each BRAM/FIFO core (brams/,
+# base_mem/, and gpu/pixel_fifo for PixelFeeder, inside Memory150), plus <core>.mif for the
+# brams/ cores (their initial contents)
+COREGEN_XCO     := $(wildcard $(SRC)/core_ip/brams/*/*.xco $(SRC)/core_ip/base_mem/*/*.xco $(SRC)/core_ip/gpu/pixel_fifo/pixel_fifo.xco)
 COREGEN_OUTPUTS := $(COREGEN_XCO:.xco=.v) $(patsubst %.xco,%.mif,$(filter $(SRC)/core_ip/brams/%,$(COREGEN_XCO)))
 COREGEN_MISSING := $(filter-out $(wildcard $(COREGEN_OUTPUTS)),$(COREGEN_OUTPUTS))
 HAVE := $(if $(and $(XILINX_SRC),$(wildcard $(XILINX_SRC)/glbl.v),$(wildcard $(XILINX_SRC)/unisims/BUFG.v)),xilinx) \
@@ -150,6 +151,7 @@ clean:
 #   SKIP      reason: not run by `make all` unless RUN_SKIPPED=1
 #   TIMEOUT   wall-clock seconds
 #   WFLAGS    iverilog warning flags (default $(WFLAGS), or $(XILINX_WFLAGS) with NEEDS xilinx)
+#   STD       iverilog language flag (default $(STD))
 #   NEEDS     xilinx and/or mips: SKIP (not FAIL) when not available
 #   GROUP     default (make all) or slow (make slow)
 #   SW_BIOS SW_PROG SW_ARGS  programs from ../../software to build (scripts/build-sw.sh) into
@@ -176,7 +178,7 @@ $(1): $(BUILD)/$(1)/$(1).vvp $$($(1).RUNFILES)
 $(BUILD)/$(1)/$(1).vvp: $$($(1).TB) $$($(1).SRCS) $$($(1).PREREQS) tests/$(1).mk $(BUILD)/$(1)/flags
 	@mkdir -p $(BUILD)/$(1)
 	set -o pipefail; \
-	$(IVERILOG) $(STD) $(IFLAGS) $$(call wflags,$(1)) -s $$($(1).TOP) \
+	$(IVERILOG) $(call tv,$(1),STD,$(STD)) $(IFLAGS) $$(call wflags,$(1)) -s $$($(1).TOP) \
 	  $$(addprefix -I,$$($(1).INCS)) $$(addprefix -y ,$$($(1).YDIRS)) \
 	  $$(if $$(filter xilinx,$$($(1).NEEDS)),$$(XILINX_YFLAGS)) -Y .v \
 	  $$(addprefix -D,$$($(1).DEFS) $(DEFINES)) \
@@ -185,7 +187,7 @@ $(BUILD)/$(1)/$(1).vvp: $$($(1).TB) $$($(1).SRCS) $$($(1).PREREQS) tests/$(1).mk
 # Rebuild when compile-affecting knobs change (e.g. DEFINES=FORCE_FAIL).
 $(BUILD)/$(1)/flags: FORCE_CHECK
 	@mkdir -p $(BUILD)/$(1)
-	@echo '$(IVERILOG) $(STD) $(IFLAGS) $$(call wflags,$(1)) $$($(1).DEFS) $(DEFINES) $$(if $$(filter xilinx,$$($(1).NEEDS)),$$(XILINX_SRC))' > $$@.new; \
+	@echo '$(IVERILOG) $(call tv,$(1),STD,$(STD)) $(IFLAGS) $$(call wflags,$(1)) $$($(1).DEFS) $(DEFINES) $$(if $$(filter xilinx,$$($(1).NEEDS)),$$(XILINX_SRC))' > $$@.new; \
 	 cmp -s $$@.new $$@ && rm -f $$@.new || mv -f $$@.new $$@
 endef
 
