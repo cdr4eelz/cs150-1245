@@ -93,3 +93,18 @@
         .pf_status(pf_status),                             .gp_status(gp_status),
         .irq_pf_frame(irq_pf_frame),  .irq_gp_done(irq_gp_done)
     );
+
+`ifdef __ICARUS__
+    // Icarus with -g2012 (SystemVerilog) does not issue a time-0 event for a variable's
+    // declaration initializer. The CoreGen FIFO_GENERATOR_V9_3 behavioral model delays its
+    // inputs with "always @* x <= #TCQ IN;", so an input that holds its initial value from
+    // time 0 never reaches the model (stays X). Here that is the MIG command/write FIFOs'
+    // rd_en = !app_af_afull / !app_wdf_afull: constant 1 from time 0, so the FIFOs never
+    // hand anything to the MIG and the first cache read miss stalls forever. Pulsing the two
+    // nets once in the first board-clock cycle (long before the MIG leaves reset) gives the
+    // model the event it needs; harmless under -g2005 (see sim-icarus/README.md).
+    initial begin
+        @(posedge USER_CLK) begin force mem_arch.fifo_caf_full = 1'b1; force mem_arch.fifo_wdf_full = 1'b1; end
+        @(negedge USER_CLK) begin release mem_arch.fifo_caf_full; release mem_arch.fifo_wdf_full; end
+    end
+`endif
