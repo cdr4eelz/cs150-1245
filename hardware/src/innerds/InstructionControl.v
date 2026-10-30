@@ -112,7 +112,7 @@ module InstructionControl (
                         ,  2, isMemory); // ~x == 3-x (1's complement)
     assign DestReg  = (isJump || isBranch)
                         ? ( (isLink) // JUMP-LINK/BRANCH-LINK to $ra else $0
-                            ? 5'd31
+                            ? (isRJump ? _rd_ : 5'd31) // This fixes "jalr"
                             : 5'd0)
                         : ( (isRType)
                             ? _rd_

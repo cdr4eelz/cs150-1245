@@ -5,6 +5,7 @@ module ByteAccess4 #(
 ) (
     input  [ 1: 0]  MemShift,
     input  [ 1: 0]  SubIndex,
+    input           IsSigned,
     output reg [ 3: 0]  ByteMask,
     input  [31: 0]  WordFull,
     output reg [31: 0]  WordMasked,
@@ -32,7 +33,7 @@ module ByteAccess4 #(
         4'b11_01: ByteMask = 4'b0100;
         4'b11_10: ByteMask = 4'b0010;
         4'b11_11: ByteMask = 4'b0001;
-        default: ByteMask = 4'b0000;
+        default: ByteMask = 4'b0000; // Default case IS used
     endcase
 
     always @(*) case ( {MemShift, SubIndex} )
@@ -43,18 +44,29 @@ module ByteAccess4 #(
         4'b11_01: WordMasked = {            8'd0, WordFull[ 7: 0],            8'd0,            8'd0 };
         4'b11_10: WordMasked = {            8'd0,            8'd0, WordFull[ 7: 0],            8'd0 };
         4'b11_11: WordMasked = {            8'd0,            8'd0,            8'd0, WordFull[ 7: 0] };
-        default: WordMasked = 32'd0;
+        default: WordMasked = 32'h00000000; // Default case IS used
     endcase
 
-    always @(*) case ( {MemShift, SubIndex} )
-        4'b00_00: ValExtract = { WordFull[31:24], WordFull[23:16], WordFull[15: 8], WordFull[ 7: 0] };
-        4'b10_00: ValExtract = {            8'd0,            8'd0, WordFull[31:24], WordFull[23:16] };
-        4'b10_10: ValExtract = {            8'd0,            8'd0, WordFull[15: 8], WordFull[ 7: 0] };
-        4'b11_00: ValExtract = {            8'd0,            8'd0,            8'd0, WordFull[31:24] };
-        4'b11_01: ValExtract = {            8'd0,            8'd0,            8'd0, WordFull[23:16] };
-        4'b11_10: ValExtract = {            8'd0,            8'd0,            8'd0, WordFull[15: 8] };
-        4'b11_11: ValExtract = {            8'd0,            8'd0,            8'd0, WordFull[ 7: 0] };
-        default: ValExtract = 32'd0;
+    wire [7:0] SExt8_31 ={8{WordFull[31]}};
+    wire [7:0] SExt8_23 ={8{WordFull[23]}};
+    wire [7:0] SExt8_15 ={8{WordFull[15]}};
+    wire [7:0] SExt8_07 ={8{WordFull[ 7]}};
+    always @(*) case ( {IsSigned, MemShift, SubIndex} )
+        5'b0_00_00: ValExtract = { WordFull[31:24], WordFull[23:16], WordFull[15: 8], WordFull[ 7: 0] };
+        5'b0_10_00: ValExtract = {           8'h00,           8'h00, WordFull[31:24], WordFull[23:16] };
+        5'b0_10_10: ValExtract = {           8'h00,           8'h00, WordFull[15: 8], WordFull[ 7: 0] };
+        5'b0_11_00: ValExtract = {           8'h00,           8'h00,           8'h00, WordFull[31:24] };
+        5'b0_11_01: ValExtract = {           8'h00,           8'h00,           8'h00, WordFull[23:16] };
+        5'b0_11_10: ValExtract = {           8'h00,           8'h00,           8'h00, WordFull[15: 8] };
+        5'b0_11_11: ValExtract = {           8'h00,           8'h00,           8'h00, WordFull[ 7: 0] };
+        5'b1_00_00: ValExtract = { WordFull[31:24], WordFull[23:16], WordFull[15: 8], WordFull[ 7: 0] };
+        5'b1_10_00: ValExtract = {        SExt8_31,        SExt8_31, WordFull[31:24], WordFull[23:16] };
+        5'b1_10_10: ValExtract = {        SExt8_15,        SExt8_15, WordFull[15: 8], WordFull[ 7: 0] };
+        5'b1_11_00: ValExtract = {        SExt8_31,        SExt8_31,        SExt8_31, WordFull[31:24] };
+        5'b1_11_01: ValExtract = {        SExt8_23,        SExt8_23,        SExt8_23, WordFull[23:16] };
+        5'b1_11_10: ValExtract = {        SExt8_15,        SExt8_15,        SExt8_15, WordFull[15: 8] };
+        5'b1_11_11: ValExtract = {        SExt8_07,        SExt8_07,        SExt8_07, WordFull[ 7: 0] };
+        default: ValExtract = 32'h00000000; // Default case IS used
     endcase
 endmodule
 

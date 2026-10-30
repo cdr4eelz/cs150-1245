@@ -32,6 +32,7 @@ module StageMW (
     input           _MemWrite,
 
     // Inputs held stable during our stage for us
+    input           MemSigned_MW,
     input  [ 1: 0]  MemShift_MW, MemAddrShift_MW,
     input  [31: 0]  RDataRaw,
     input  [ 4: 0]  DestReg_MW,
@@ -50,7 +51,8 @@ module StageMW (
 
     wire [3:0] _ByteMask;
     ByteAccess4 ba4_write (
-        .MemShift(_MemShift), .SubIndex(_MemAddrShift), .WordFull(_MemWValue),
+        .MemShift(_MemShift), .SubIndex(_MemAddrShift), .IsSigned(1'b0),
+        .WordFull(_MemWValue),
         .ByteMask(_ByteMask), .WordMasked(_WDataMasked), .ValExtract()
     );
     assign _WriteMask = (_MemWrite) ? _ByteMask : 4'b0000;
@@ -60,7 +62,8 @@ module StageMW (
 
     wire [31:0] DataLoad;
     ByteAccess4 ba4_read (
-        .MemShift(MemShift_MW), .SubIndex(MemAddrShift_MW), .WordFull(RDataRaw),
+        .MemShift(MemShift_MW), .SubIndex(MemAddrShift_MW), .IsSigned(MemSigned_MW),
+        .WordFull(RDataRaw),
         .ByteMask( ), .WordMasked(), .ValExtract(DataLoad)
     );
 

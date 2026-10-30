@@ -90,7 +90,8 @@ reminder to remove the marker.
 | Name | Testbench | Checks |
 |---|---|---|
 | `alu`, `alu_vectors` | `../src/testbench/ALU*Testbench.v` | ALU directed tests; ALU test vectors (`../sim/tests/testvectors.input`) |
-| `regfile`, `stage_dx`, `stage_mw`, `byteaccess4` | `../src/testbench/` | RegFile; StageDX decode/execute; StageMW (elaboration smoke only); ByteAccess4 store masks |
+| `regfile`, `stage_dx`, `stage_mw`, `byte_access4x` | `../src/testbench/` | RegFile; StageDX decode/execute; StageMW (elaboration smoke only); ByteAccess4 (legacy bench): store masks/lanes and zero-extended loads for the 7 valid MemShift/SubIndex pairs, one data word, `IsSigned` tied to 0 |
+| `byte_access4` | `tb/ByteAccess4_tb.v` | `innerds/ByteAccess4.v` exhaustively vs. a behavioral big-endian MIPS model: every MemShift x SubIndex x IsSigned for 246 data patterns (7872 vectors); `ByteMask`, `WordMasked` (sb/sh/sw), `ValExtract` (lb/lh sign-extend, lbu/lhu zero-extend, lw), all-zero outputs for unsupported/misaligned combos |
 | `counter_boundary`, `debouncer`, `graphics_processor` | `../src/testbench/` | Counter wrap; Debouncer modes; GraphicsProcessor with fake memory/engines |
 | `prng32lfsr` | `tb/PRNG32LFSR_tb.v` | `base_util/PRNG32LFSR.v`: model match (100k cycles), never zero, bit balance, seeding |
 | `memmapio_prng` | `tb/MemMapIO_prng_tb.v` | PRNG at MMIO `0x80000080` through `cpu/MemMapIO.v` |
@@ -109,7 +110,8 @@ reminder to remove the marker.
 | `pixel_feeder_dvi`, `pixel_feeder_stress` (slow) | `tb/PixelFeeder_check_tb.v` | As `pixel_feeder` for 2 frames + 2 rows: with the real `base_vid/DVIData` (800x600@60, 1040x666 raster: `video_ready`, `DVI_DE/H/V`, `DVI_D`); with a slow bursty memory, long stalls, 40 vs. 42.5 MHz clocks and a 60%-ready sink |
 | `cache_tb`, `cache_tb_sv`, `memory150_tb` (slow) | `../src/testbench/CacheTestBench.v`, `Memory150TestBench.v` | The original cache benches on `Memory150` + MIG + DDR2 model (`_sv`: compiled with `-g2012`, see below) |
 | `pixel_feeder_fwft` | `tb/PixelFeeder_check_tb.v` | Strict first-row check that `pixel_fifo` is First_Word_Fall_Through, as PixelFeeder expects (a Standard FIFO shows every pixel one position late) |
-| `cpu_lb_lh_sign`, `cpu_jalr_rd`, `cpu_bal_untaken_link` | `tb/CPU_prog_tb.v` | **XFAIL**: known CPU bugs/deviations (lb/lh sign extension, jalr rd, untaken bltzal/bgezal link) |
+| `cpu_lb_lh_sign`, `cpu_jalr_rd` | `tb/CPU_prog_tb.v` | Regression tests for fixed CPU bugs: lb/lh sign-extend (lbu/lhu zero-extend); jalr links to rd (not always `$31`) |
+| `cpu_bal_untaken_link` | `tb/CPU_prog_tb.v` | **XFAIL**: known deviation (untaken bltzal/bgezal do not link; MIPS32 always links) |
 
 The CPU tests run `CPUMIPS` + `RegFile` + `COP0150` on `tb/CoreHarness.v` (behavioral memories:
 code at `0x60000000`, ISR at `0xC0000180`, scratch RAM at `0x5xxxxxxx`, stalling "DDR" at

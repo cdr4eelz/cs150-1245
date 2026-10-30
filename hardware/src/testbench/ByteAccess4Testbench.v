@@ -15,7 +15,7 @@ module ByteAccess4Testbench;
 
 // Compute some mask bytes/bits/values
     ByteAccess4 DUT (
-        .MemShift(MemShift), .SubIndex(SubIndex), .WordFull(WordFull),
+        .MemShift(MemShift), .SubIndex(SubIndex), .IsSigned(1'b0), .WordFull(WordFull), // zero-extend (lbu/lhu), as the reference below
         .ByteMask(ByteMask), .WordMasked(WordMasked), .ValExtract(ValExtract)
     );
 

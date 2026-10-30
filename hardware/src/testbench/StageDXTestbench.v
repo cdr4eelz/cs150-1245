@@ -301,12 +301,16 @@ module StageDXTestbench;
         check_jumping(1, 0);
 
         $display("\nJALR:");
-        exec_inst({`OP_SPECIAL, 5'd1, 5'b00000, 5'd0, 5'b00000, `OF_JALR});
+        exec_inst({`OP_SPECIAL, 5'd1, 5'b00000, 5'd31, 5'b00000, `OF_JALR});
         check_jump(32'hBABECAFE);
         check_jumping(1, 1);
-        exec_inst({`OP_SPECIAL, 5'd31, 5'b00000, 5'd0, 5'b00000, `OF_JALR});
+        exec_inst({`OP_SPECIAL, 5'd31, 5'b00000, 5'd31, 5'b00000, `OF_JALR});
         check_jump(32'hFEDCBA98);
         check_jumping(1, 1);
+        // jalr with rd=0: jumps, but the link write goes to $0 (no link)
+        exec_inst({`OP_SPECIAL, 5'd1, 5'b00000, 5'd0, 5'b00000, `OF_JALR});
+        check_jump(32'hBABECAFE);
+        check_jumping(1, 0);
 
         $display("All tests passed!");
         $finish();

@@ -138,6 +138,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire [31: 0] MemAddrDX_, RegWValueDX_, MemWValueDX_;
     wire [ 4: 0] DestRegDX_;
     wire [ 1: 0] MemShiftDX_;
+    wire         MemSignedDX_;
     wire         COPWriteDX_;
 //  wire         MemToRegDX_, MemWriteDX_;
 
@@ -159,7 +160,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         //Global control signals
         .COPWrite_(COPWriteDX_), //COP0 write (mtc0), this cycle!
         .DestReg_(DestRegDX_),
-        .MemShift_(MemShiftDX_), .MemSigned_( /*Unimplemented*/ ),
+        .MemShift_(MemShiftDX_), .MemSigned_(MemSignedDX_),
         .MemToReg_(MemToRegDX_), .MemWrite_(MemWriteDX_),
         //Stage Outputs
         .MemAddr_(MemAddrDX_), .RegWValue_(RegWValueDX_),
@@ -174,7 +175,9 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
     wire  [31: 0]   RegWValue_MW;
     wire  [ 4: 0]   DestReg_MW;
     wire  [ 1: 0]   MemShift_MW;
+    wire            MemSigned_MW;
     wire            MemToReg_MW;
+//  wire            MemWrite_MW;
     PipelineRegister #( .Width(32) )
         PIPR_MemAddr_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
                             .In(MemAddrDX_  ),  .Out(MemAddr_MW   ) );
@@ -183,13 +186,16 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
                             .In(RegWValueDX_),  .Out(RegWValue_MW ) );
     PipelineRegister #( .Width(5) )
         PIPR_DestReg_MW   ( .clk(clk), .rst(1'b0), .stall(stall),
-                            .In(DestRegDX_ ),  .Out(DestReg_MW   ) );
+                            .In(DestRegDX_  ),  .Out(DestReg_MW   ) );
     PipelineRegister #( .Width(2) )
         PIPR_MemShift_MW  ( .clk(clk), .rst(1'b0), .stall(stall),
-                            .In(MemShiftDX_),  .Out(MemShift_MW  ) );
+                            .In(MemShiftDX_ ),  .Out(MemShift_MW  ) );
+    PipelineRegister #( .Width(1) )
+        PIPR_MemSigned_MW ( .clk(clk), .rst(1'b0), .stall(stall),
+                            .In(MemSignedDX_),  .Out(MemSigned_MW ) );
     PipelineRegister #( .Width(1) )
         PIPR_MemToReg_MW  ( .clk(clk), .rst(1'b0), .stall(stall),
-                            .In(MemToRegDX_),  .Out(MemToReg_MW  ) );
+                            .In(MemToRegDX_ ),  .Out(MemToReg_MW  ) );
 //Debug use only
     wire  [31: 0]   PC_MW;
     PipelineRegister #( .Width(32) )
@@ -206,6 +212,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
         ._MemShift(MemShiftDX_), ._MemAddrShift(DMEM_ADDR[1:0]),
         ._MemWValue(MemWValueDX_), ._MemWrite(MemWriteDX_),
         // Inputs (post-clock results)
+        .MemSigned_MW(MemSigned_MW),
         .MemShift_MW(MemShift_MW), .MemAddrShift_MW(MemAddr_MW[1:0]),
         .RDataRaw(DMEM_DATA),
         .DestReg_MW(DestReg_MW), .MemToReg_MW(MemToReg_MW),
