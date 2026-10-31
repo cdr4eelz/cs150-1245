@@ -50,7 +50,7 @@ int main(void) { // Could have _start pass basic memory info (base/stack pointer
 	const char *cm = (const char *)(0x10000000);
 	_tran_ch('&');
 
-	for (int cnt = 8 * 4; cnt > 0; cnt++) {
+	for (int cnt = 8 * 4; cnt > 0; cnt--) { //WAS: cnt++
 		_tran_ch(',');
 		send_ch( *cm++ ); // This rolls over (and hopefully back "around")
 	}
