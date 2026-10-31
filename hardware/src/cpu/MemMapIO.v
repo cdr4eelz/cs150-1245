@@ -52,15 +52,22 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 //h017    32'h8000005C    GPU status                    Read
     A_GPUStatus     =6'h17, // See Memory150 for concatenated signals
 //h020    32'h80000080    Random 32-bits from PRNG      Read / write seed
-    A_Random32      =6'h20; // A LFSR output with writeable seed
+    A_Random32      =6'h20, // A LFSR output with writeable seed
+//h021    32'h80000084    HALT value                    Read / write
+    A_HaltVal       =6'h21; // Store value for BIOS or emulator to see
+//
+//TODO: Add "breadcrum" location which writes the PC and a custom value for
+//    : debugging purposes. THe writes would go into a FIFO and reads would
+//    : pull the values out in sequence (the FIFO would overflow at capacity)
+//    : Might also be examined via ChipScope or similar tools (or emulator)
 //
 //[Maps onto multiple addresses to reduce # of address lines checked]
     localparam H_D0TxReady = 0,   H_D0RxValid = 1,   H_D0TxData  = 2,
                H_D0RxData  = 3,   H_CntCycle  = 4,   H_CntInst   = 5,
                H_ResetCnt  = 6,   H_PFFrame   = 7,   H_GPFrame   = 8,
-               H_GPCode    = 9,   H_GPUStatus =10,
-               H_Random32  =11;
-    localparam H__LAST = H_Random32;
+               H_GPCode    = 9,   H_GPUStatus =10, //Custom vals follow:
+               H_Random32  =11,   H_HaltVal   =12;
+    localparam H__LAST = H_HaltVal;
 
     wire isWrite = (ena &&  |wea); // != 4'b0000
     wire isRead  = (ena && ~|wea); // == 4'b0000
@@ -79,7 +86,9 @@ localparam [5:0]            //   DATA-ENCODING/DESC
             A_GPFrame   : HOT_ADDR = (1 << H_GPFrame);
             A_GPCode    : HOT_ADDR = (1 << H_GPCode);
             A_GPUStatus : HOT_ADDR = (1 << H_GPUStatus);
+            // Custom MMIO locations follow:
             A_Random32  : HOT_ADDR = (1 << H_Random32);
+            A_HaltVal   : HOT_ADDR = (1 << H_HaltVal);
             default: HOT_ADDR = 0;
         endcase
     end
@@ -118,6 +127,7 @@ localparam [5:0]            //   DATA-ENCODING/DESC
     reg          pf_vframe_r, gp_vframe_r, gp_vcode_r;
     reg  [31: 0] pf_wframe_r, gp_wframe_r, gp_wcode_r;
     reg  [31: 0] gpu_status_r;
+    reg  [31: 0] halt_val_r;
     //Stash these internally for isolation (trade latency)
     always @(posedge clk) begin:_REG_GPU_
         if (isWrite && HOT_ADDR[H_PFFrame]) begin
@@ -162,15 +172,28 @@ localparam [5:0]            //   DATA-ENCODING/DESC
             A_PFFrame   : MUX_DOUTA = {4'h1, pf_status[13:8], 22'd0};
             //A_ResetCnt,A_GPFrame,A_GPCode
             A_GPUStatus : MUX_DOUTA = gpu_status_r;
+            // Custom MMIO locations...
             A_Random32  : MUX_DOUTA = prng_out_r;
+            A_HaltVal   : MUX_DOUTA = halt_val_r;
+            // "default" sets special val to mark read of unmapped address:
             default: MUX_DOUTA = (BADNESS) ? BAD_WORD : 32'dx;
         endcase
     end
     always @(posedge clk) begin:_REG_DOUTA_
         //NOTE:Avoiding unnecessary resets -- if (rst) DOUTA <= 0; else
+        if (rst) begin
+            halt_val_r <= 0; //TODO: Consider NOT resetting so it persists
+        end else begin
+            if (isWrite && HOT_ADDR[H_HaltVal]) begin
+                // Really just a simple read/write register!
+                halt_val_r <= dina;
+            end
+        end
+        //TODO: In future, move this into "else" of "rst" clause:
         if (isRead) douta <= MUX_DOUTA;
     end
 
+// Sub-modules that are mapped into memory
 
     BUS_RVA_tap #(.InWidth(8)) TAP_RVA_Rx
     ( ._BUS_(RVa_RX), //Incoming
@@ -201,11 +224,15 @@ generate if (COLT45_SHAKE)
             12'h003: $display("MEMIO: Rx Shake (0x%h, %d, '%c')   @%t", Rx_Data, Rx_Data, Rx_Data, $time);
             12'h004: $display("MEMIO: Read Cycles (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
             12'h005: $display("MEMIO: Read Steps (C=%d, S=%d)   @%t", CNT_Cycle, CNT_Inst, $time);
+            12'h020: $display("MEMIO: Read Random32 (0x%h)   @%t", prng_out_r, $time);
+            12'h021: $display("MEMIO: Read HaltVal (0x%h)   @%t", halt_val_r, $time);
             default: $display("MEMIO: MISS-READ (%h)   @%t", addra, $time);
         endcase
         if (isWrite) case (addra)
             12'h002: $display("MEMIO: Tx Shake (0x%h, %d, '%c')  @%t", Tx_Data, Tx_Data, Tx_Data, $time);
             12'h006: $display("MEMIO: Counters reset. Were Cycles=%h Stalls=%h  @%t", CNT_Cycle, CNT_Inst, $time);
+            12'h020: $display("MEMIO: Seed Random32 (0x%h)  @%t", dina, $time);
+            12'h021: $display("MEMIO: Store HaltVal (0x%h, %d)  @%t", dina, dina, $time);
             //TODO: $display(...pix...)
             default: $display("MEMIO: MISS-WRITE (%h)   @%t", addra, $time);
         endcase

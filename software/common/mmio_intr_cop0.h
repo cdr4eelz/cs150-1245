@@ -1,8 +1,12 @@
-#ifndef COP0_INTR_MMIO_H_
-#define COP0_INTR_MMIO_H_
+#ifndef MMIO_INTR_COP0_H_
+#define MMIO_INTR_COP0_H_
 
 #ifdef VIZARD
 #include <stdbool.h>
+#include <stdlib.h>
+#include <stdint.h>
+#else
+#include "types.h"
 #endif
 
 // C HEADER file for Coprocessor, Interrupts & MMIO
@@ -64,17 +68,19 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 //h017    32'h8000005C    GPU status                    Read
     A_GPUStatus     =6'h17, // See Memory150 for concatenated signals
 //h020    32'h80000080    Random 32-bits from PRNG      Read / write seed
-    A_Random32      =6'h20; // A LFSR output with writeable seed
+    A_Random32      =6'h20, // A LFSR output with writeable seed
+//h021    32'h80000084    HALT value                    Read / write
+    A_HaltVal       =6'h21; // Store value for BIOS or emulator to see
 */
 
 // MEMORY-MAPPED IO locations (byte offsets)
-#define MMIO_BASE     (0x80000000u)
+#define MMIO_BASE   (0x80000000u)
 #define OW_UATX_READY   (0x0000u)
 #define OW_UARX_VALID   (0x0004u)
 #define OW_UATX_DATA    (0x0008u)
-#define  OB_UATX_DATA    (OW_UATX_DATA+3)
+#define     OB_UATX_DATA    (OW_UATX_DATA+3)
 #define OW_UARX_DATA    (0x000Cu)
-#define  OB_UARX_DATA    (OW_UARX_DATA+3)
+#define     OB_UARX_DATA    (OW_UARX_DATA+3)
 #define OW_CNT_CYCLE    (0x0010u)
 #define OW_CNT_INST     (0x0014u)
 #define OW_CNT_RESET    (0x0018u)
@@ -83,13 +89,14 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 #define OW_GP_GCODE     (0x0058u)
 #define OW_GP_STATE     (0x005Cu)
 #define OW_RANDOM32     (0x0080u)
+#define OW_HALTVAL      (0x0084u)
 
 // MEMORY-MAPPED IO locations (addresses)
 #define MM_UATX_READY   (MMIO_BASE + OW_UATX_READY)
 #define MM_UARX_VALID   (MMIO_BASE + OW_UARX_VALID)
+#define     MM_UART_RVA_BIT     (0x0001)
 #define MM_UATX_DATA    (MMIO_BASE + OW_UATX_DATA)
 #define MM_UARX_DATA    (MMIO_BASE + OW_UARX_DATA)
-#define     MM_UART_RVA_BIT     (0x0001)
 #define     MM_UART_DATA_BYTE   (0x00FF)
 #define MM_CNT_CYCLE    (MMIO_BASE + OW_CNT_CYCLE)
 #define MM_CNT_INST     (MMIO_BASE + OW_CNT_INST)
@@ -99,6 +106,7 @@ localparam [5:0]            //   DATA-ENCODING/DESC
 #define MM_GP_GCODE     (MMIO_BASE + OW_GP_GCODE)
 #define MM_GP_STATE     (MMIO_BASE + OW_GP_STATE)
 #define MM_RANDOM32     (MMIO_BASE + OW_RANDOM32)
+#define MM_HALTVAL      (MMIO_BASE + OW_HALTVAL)
 
 
 //TODO: Should we implicitly AND "Cause" with "KEEP" mask?
@@ -114,6 +122,7 @@ unsigned int vizard_host_cnt_inst(void);
 void vizard_host_cnt_reset(void);
 #define ISR_STATUS(KEEP, SET)   vizard_host_isr_status((KEEP), (SET))
 #define ISR_COMPARE(COMPARE)    vizard_host_isr_compare(COMPARE)
+#define HALT(HALTVAL)           exit(HALTVAL)
 #define ISR_POLL(share)         vizard_host_poll((share))
 #define CYCLE_COUNTER           (vizard_host_cnt_cycle())
 #define INSTRUCTION_COUNTER     (vizard_host_cnt_inst())
@@ -124,32 +133,54 @@ void vizard_host_cnt_reset(void);
 //TODO: Use named variables for clarity.
 #define ISR_STATUS(KEEP, SET)                   \
     __asm__ __volatile__ (                      \
-        "li     $t0,%0\n\t"                     \
-        "li     $t1,%1\n\t"                     \
-        "mfc0   $t2," COP0_Status "\n\t"        \
-        "and    $t2,$t2,$t0\n\t"                \
-        "or     $t2,$t2,$t1\n\t"                \
-        "mtc0   $t2," COP0_Status "\n\t"        \
+        "li     $t0,%0"                 "\n\t"  \
+        "mfc0   $t1," COP0_Status       "\n\t"  \
+        "and    $t1,$t1,$t0"            "\n\t"  \
+        "li     $t0,%1"                 "\n\t"  \
+        "or     $t1,$t1,$t0"            "\n\t"  \
+        "mtc0   $t1," COP0_Status       "\n\t"  \
         :                                       \
         : "i" (KEEP), "i" (SET)                 \
-        : "t0","t1","t2" )
+        : "t0","t1", "memory"                   \
+    )
 
 // ISR_COMPARE implicitly resets "Count"
 #define ISR_COMPARE(COMPARE)                    \
     __asm__ __volatile__ (                      \
-        "li     $t0,%0\n\t"                     \
-        "mtc0   $zero," COP0_Count "\n\t"       \
-        "mtc0   $t0," COP0_Compare "\n\t"       \
+        "li     $t0,%0"                 "\n\t"  \
+        "mtc0   $zero," COP0_Count      "\n\t"  \
+        "mtc0   $t0," COP0_Compare      "\n\t"  \
         :                                       \
         : "i" (COMPARE)                         \
-        : "t0" )
+        : "t0", "memory"                        \
+    )
 
-#define ISR_POLL(share) (1)
+// Disables interrupts, stashes retval & jumps to BIOS base
+//TODO: Consider special BIOS entrypoint for halting???
+//NOTE: Passing MM_HALTVAL because it is "C" format, not GAS
+#define HALT(HALTVAL) do {                      \
+    __asm__ __volatile__ (                      \
+        "mtc0   $zero," COP0_Status     "\n\t"  \
+        "li     $t0,%0"                 "\n\t"  \
+        "li     $t1,%1"                 "\n\t"  \
+        "sw     $t0,0($t1)"             "\n\t"  \
+        "la     $t0,0x40000000"         "\n\t"  \
+        "jr     $t0"                    "\n\t"  \
+        "nop"                           "\n\t"  \
+        :                                       \
+        : "i" (HALTVAL) , "i" (MM_HALTVAL)      \
+        : "t0", "t1", "memory"                  \
+    );                                          \
+    __builtin_unreachable();                    \
+} while(0)
+
 
 #define CYCLE_COUNTER         (*((volatile uint32_t*)MM_CNT_CYCLE))
 #define INSTRUCTION_COUNTER   (*((volatile uint32_t*)MM_CNT_INST))
 #define COUNTER_RST           (*((volatile uint32_t*)MM_CNT_RESET))
 
-#endif // VIZARD
+#define ISR_POLL(share) (1)
+
+#endif // ELSE VIZARD
 
 #endif // MMIO_INTR_COP0_H_

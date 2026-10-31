@@ -43,6 +43,7 @@
 .equiv  OW_GP_GCODE,    0x0058
 .equiv  OW_GP_STATE,    0x005C
 .equiv  OW_RANDOM32,    0x0080
+.equiv  OW_HALTVAL,     0x0084
 
 # MEMORY-MAPPED IO locations (addresses)
 .equiv  MM_UATX_READY,  (MMIO_BASE + OW_UATX_READY)
@@ -59,3 +60,4 @@
 .equiv  MM_GP_GCODE,    (MMIO_BASE + OW_GP_GCODE)
 .equiv  MM_GP_STATE,    (MMIO_BASE + OW_GP_STATE)
 .equiv  MM_RANDOM32,    (MMIO_BASE + OW_RANDOM32)
+.equiv  MM_HALTVAL,     (MMIO_BASE + OW_HALTVAL)
