@@ -2,6 +2,10 @@
     "chat.tools.terminal.autoApprove": {
         "make": true
     },
+    "files.associations": {
+        "*.s": "mips",
+        "*.s.inc": "mips"
+    },
     "files.exclude": {
         "**/*.log": true,
         "**/*.bin": true,

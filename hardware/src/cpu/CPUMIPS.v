@@ -231,7 +231,7 @@ WRONG?  OUTPUT is FROM an internal component that is unavoidably synchronous (ma
 
 wire [31:0] keywatch = {
     REGFILE_we,REGFILE_wa[4:0],REGFILE_ra2[4:0], REGFILE_ra1[4:0],
-    FWD_Allow,FWD_2,FWD_1,32'd0,//DBG_MEM150[31]
+    FWD_Allow,FWD_2,FWD_1,1'b0,//DBG_MEM150[31]
         4'b0000, //_hot_IO,_hot_BR,_hot_IC,_hot_DC,
         4'b0000, //hoti_[3:0],
         rst,BRA_IRQPending_DX2F_,BRA_DoBranch_DX2F_,stall

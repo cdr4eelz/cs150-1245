@@ -237,7 +237,7 @@ module ml505top #(
 
     reg  rst_user_base;
     always @(posedge user_clk_g) begin
-        rst_user_base = reset_lines[0] || (&reset_r); //USER-clock domain (already)
+        rst_user_base <= reset_lines[0] || (&reset_r); //USER-clock domain (already)
         //Though no need to sync here, nice to pin down signal origin to sync element
     end
 

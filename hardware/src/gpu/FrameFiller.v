@@ -75,10 +75,10 @@ module FrameFiller #(
             color_r <= FF_color;
             framebits <= FF_frame[27:22]; //Clip to standard frames
             y <= rT;
-            x <= {rL[9:3],3'b00};
+            x <= {rL[9:3],3'b000};
         end else if (T_DONE_LINE) begin
             y <= (y + 1);
-            x <= {rL[9:3],3'b00};
+            x <= {rL[9:3],3'b000};
         end else if (T_DONE_PIX4) begin
             x <= (x + 4);
         end
@@ -86,7 +86,7 @@ module FrameFiller #(
 
 
     assign SLR_valid        = (cs == S_RUN),
-            SLR_frame       = {4'h1, framebits[5:0], 22'b0},
+            SLR_frame       = {4'h1, framebits[5:0], 22'd0},
             SLR_color_edge  = color_r,
             SLR_color_fill  = 32'hFF000000 | color_r,
             SLR_row         = y,

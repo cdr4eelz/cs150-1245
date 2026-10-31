@@ -153,7 +153,7 @@ module Memory150 #(
     wire [143:0] bpas_wdf_mdat = {bpas_wdf_mask,bpas_wdf_data};
 
 
-wire DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!!!
+wire [15:0] DBG_MEM150 = { //DO NOT mix cross clock-domain signals here with ChipScope!!!
     d_stall, data_wdf_full, data_caf_full, data_rdf_wren,
         1'b0, data_wdf_wren, data_caf_wren, data_rdf_rden,
     i_stall, inst_wdf_full, inst_caf_full, inst_rdf_wren,

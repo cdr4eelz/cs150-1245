@@ -247,7 +247,7 @@ end endgenerate
 generate if (COLT45_SCRATCH) begin:_SCRATCH_
     always@(posedge clk) if (!stall && _hot_X5) begin
         $display("\n=============");
-        DUMP_PC();
+        //DUMP_PC();
         $display("TARG=%h WM=%b: IO=%b BR=%b IC=%b DC=%b X6=%b X5=%b",
             DMEM_ADDR[31:28], _WriteMask, _hot_IO, _hot_BR, _hot_IC, _hot_DC, _hot_X6, _hot_X5);
         if (|_WriteMask) begin

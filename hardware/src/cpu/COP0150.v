@@ -67,7 +67,7 @@ module COP0150 (
             if(rst) begin
                 epc     <= 32'b0;
                 count   <= 32'b0;
-                compare <= 32'hFFFF;
+                compare <= 32'h0000_FFFF; // Just a default value, I think???
                 status  <= 32'b0;
                 cause   <= 32'b0;
             end else begin
