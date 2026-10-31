@@ -95,7 +95,7 @@ module GPU #(
 
     assign gp_status = {
         gp_fault, 1'b0, gp_rframe[5:0],
-        4'b000, rect_ready, elip_ready, line_ready, fill_ready, gp_ready
+        3'b000, rect_ready, elip_ready, line_ready, fill_ready, gp_ready
     };
     assign irq_gp_done = gp_done_1shot_1cycle_sync_posedge;
 
