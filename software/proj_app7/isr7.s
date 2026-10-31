@@ -362,6 +362,7 @@ ISR_UATX:
 ### Consider sanity check regarding OW_UATX_READY(MMIO_BASE)???
     la      $k1, SM_BASE #REDUNDANT
     lw      $t1, SMO_buff_tail($k1) #REDUNDANT
+    nop     #Delay Slot if $t1 used next #REDUNDANT
     addi    $t0, $t1, 1                 # Advance to next char
     andi    $t0, $t0, K_SHBUF_ROLLOVERB
     sw      $t0, SMO_buff_tail($k1)     # Store new offset
